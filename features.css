@@ -1,0 +1,230 @@
+/* features.css -- the Features window (31 Oct 2026; features.js draws it, emby.js aboutSet opens it).
+ *
+ * Layout rhythm taken from moonfin.io (a hero with a stat strip, big feature groups with icons,
+ * a "which screen are you on" picker, comparison tables, then a grid of smaller extras), because
+ * a long list of features reads best broken into those blocks. Nothing else is taken from it:
+ * no text, no logo, no artwork, no colours. Every colour here is one of the site's own tokens,
+ * so the window follows the theme and the accent the visitor picked (the window's screen keeps
+ * the dark palette in light mode, like Home, Timeline and About: index.html .about-pop).
+ * All classes start with ft- so nothing here touches any other part of the page.
+ */
+.ft-page { --ft-gap: clamp(14px, 2vw, 20px); color: var(--text); min-width: 0; max-width: 100%;
+  /* Its contents never widen the window (a wide table scrolls inside its own box instead). */
+  contain: inline-size; overflow-x: clip; }
+.ft-page .section { padding-top: clamp(26px, 4vw, 48px); padding-bottom: clamp(26px, 4vw, 48px); }
+.ft-page .section + .section { border-top: 1px solid var(--line); }
+.ft-page .section-head { margin-bottom: clamp(16px, 2.4vw, 26px); }
+.ft-page .section-desc { margin-top: 10px; }
+.ft-page h3, .ft-page h4 { color: var(--text); }
+.ft-page a { color: var(--accent); }
+.ft-page :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
+
+/* ---------------------------------------------------------------- hero */
+.ft-hero { position: relative; overflow: hidden; border-radius: 24px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); padding: clamp(22px, 4vw, 48px); box-shadow: var(--shadow); }
+.ft-hero::before { content: ""; position: absolute; top: -45%; right: -20%; width: 75%; height: 180%;
+  background: radial-gradient(closest-side, rgba(var(--accent-rgb), .16), transparent 72%); pointer-events: none; }
+.ft-hero > * { position: relative; }
+.ft-hero h1 { font-size: clamp(30px, 5vw, 56px); line-height: 1.04; letter-spacing: -.02em; margin: 16px 0 14px; font-weight: 800; }
+.ft-hero h1 em { font-style: normal; color: var(--accent-2); }
+.ft-hero .ft-lede { color: var(--muted); font-size: clamp(15px, 1.6vw, 17px); line-height: 1.65; max-width: 62ch; margin: 0; }
+.ft-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: clamp(18px, 3vw, 30px); }
+.ft-stat { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: rgba(var(--accent-rgb), .05); }
+.ft-stat .v { font-size: clamp(22px, 3vw, 30px); font-weight: 800; color: var(--accent); line-height: 1.1; }
+.ft-stat .l { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+.ft-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.ft-jump button { font: inherit; font-size: 13px; font-weight: 700; padding: 8px 13px; min-height: 40px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); }
+.ft-jump button:hover, .ft-jump button:focus-visible { border-color: rgba(var(--accent-rgb), .5); color: var(--accent); background: rgba(var(--accent-rgb), .1); }
+
+/* ---------------------------------------------------------------- big feature groups */
+.ft-big { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ft-gap); }
+.ft-big > article { border-radius: 20px; border: 1px solid var(--line); padding: clamp(18px, 2.6vw, 28px);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); }
+.ft-big h3 { font-size: clamp(19px, 2.2vw, 23px); margin: 14px 0 8px; letter-spacing: -.01em; font-weight: 800; }
+.ft-big p { color: var(--muted); line-height: 1.65; margin: 0 0 10px; font-size: 15px; }
+
+.ft-ic { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  background: rgba(var(--accent-rgb), .1); border: 1px solid rgba(var(--accent-rgb), .3); color: var(--accent); }
+.ft-ic svg { width: 24px; height: 24px; }
+.ft-ic img { width: 34px; height: 34px; object-fit: contain; }
+
+/* ---------------------------------------------------------------- tiles */
+.ft-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ft-gap); }
+.ft-tiles.ft-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ft-tile { border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  padding: 20px; transition: border-color .18s, box-shadow .18s; min-width: 0; }
+.ft-tile:focus-visible, .ft-tile:hover { border-color: rgba(var(--accent-rgb), .45); box-shadow: var(--glow); }
+.ft-tile .ft-th { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ft-tile h4 { font-size: 16.5px; font-weight: 800; margin: 0; letter-spacing: -.01em; line-height: 1.25; }
+.ft-tile .ft-sys { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-3); margin-top: 3px; }
+.ft-tile p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 8px; }
+.ft-tile p:last-child { margin-bottom: 0; }
+.ft-tile ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+/* A machine: its picture beside the words */
+.ft-machine { display: block; }
+.ft-machine .ft-pic { width: 100%; height: 132px; margin-bottom: 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.ft-machine .ft-pic img { max-width: 86%; max-height: 88%; object-fit: contain; }
+
+/* The moved home write-ups (with their own narration) */
+.ft-story { border-radius: 18px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); padding: clamp(18px, 2.6vw, 26px); margin-bottom: var(--ft-gap); }
+.ft-story .section-kicker { color: var(--accent); font-weight: 800; }
+.ft-story .desc { color: var(--muted); line-height: 1.7; font-size: 15.5px; margin: 10px 0 0; }
+
+/* ---------------------------------------------------------------- artwork panels beside copy */
+.ft-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(18px, 3vw, 40px); align-items: center; margin-bottom: clamp(20px, 3vw, 34px); }
+.ft-row.rev > .ft-art { order: -1; }
+.ft-row h3 { font-size: clamp(20px, 2.4vw, 26px); margin: 12px 0 8px; font-weight: 800; letter-spacing: -.01em; }
+.ft-row p { color: var(--muted); line-height: 1.65; margin: 0 0 10px; }
+.ft-art { border-radius: 20px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); padding: clamp(14px, 2.4vw, 26px);
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.ft-art::before { content: ""; position: absolute; inset: -35%; background: radial-gradient(closest-side, rgba(var(--accent-rgb), .14), transparent 72%); pointer-events: none; }
+.ft-art > svg { position: relative; width: 100%; max-width: 460px; height: auto; }
+.ft-keys { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ft-key { display: inline-block; padding: 3px 9px; border-radius: 7px; border: 1px solid rgba(var(--accent-rgb), .3); background: rgba(var(--accent-rgb), .08);
+  font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+/* ---------------------------------------------------------------- tables */
+.ft-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 16px; border: 1px solid var(--line); max-width: 100%; }
+.ft-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+.ft-table caption { text-align: left; padding: 12px 14px 4px; color: var(--muted); font-size: 13px; caption-side: top; }
+.ft-table th, .ft-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.5; }
+.ft-table thead th { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); background: rgba(255,255,255,.03); }
+.ft-table tbody th { font-weight: 700; color: var(--text); }
+.ft-table td { color: var(--muted); }
+.ft-table tr:last-child th, .ft-table tr:last-child td { border-bottom: 0; }
+.ft-yes { color: var(--accent); font-weight: 800; }
+.ft-no { color: var(--muted); opacity: .7; }
+/* Checked by rebuilding (1 Nov 2026): drawn on the Home window by checked-rebuilding.js (this file
+   is loaded on every page). A real table at every size, no sideways scroll; see the 760 px rules. */
+.ft-crwrap { overflow-x: visible; }
+.ft-crtable { min-width: 0; table-layout: auto; }
+.ft-crtable code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; color: var(--text); overflow-wrap: anywhere; }
+.ft-crtable td.ft-cr-dcol { white-space: nowrap; }
+.ft-crtable .ft-cr-date { display: none; }
+/* Pass and fail (1 Nov): a green or red row, a coloured bar at its start, and the words
+   "Matches" / "Not yet" with a tick or cross, so colour is never the only sign. The Home window
+   keeps its black screen in both themes (measured: rgb(0,0,0) in dark and light), so one pair of
+   colours reads in both. */
+.ft-crtable { --cr-ok: #4ade80; --cr-no: #f87171; }
+.ft-crtable tbody tr.ft-cr-ok { background: rgba(74, 222, 128, .07); }
+.ft-crtable tbody tr.ft-cr-no { background: rgba(248, 113, 113, .08); }
+.ft-crtable tbody tr.ft-cr-ok > th { box-shadow: inset 4px 0 0 var(--cr-ok); }
+.ft-crtable tbody tr.ft-cr-no > th { box-shadow: inset 4px 0 0 var(--cr-no); }
+.ft-cr-mark { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+.ft-crtable .ft-yes { color: var(--text); }   /* the accent may itself be green or red: only the row's own mark carries colour */
+.ft-cr-ok .ft-cr-mark { color: var(--cr-ok); }
+.ft-cr-no .ft-cr-mark { color: var(--cr-no); }
+.ft-cr-sys { font: inherit; font-weight: 700; color: var(--text); background: none; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer;
+  text-decoration: underline; text-decoration-color: rgba(var(--accent-rgb), .6); text-underline-offset: 3px; border-radius: 4px; min-height: 24px; }
+.ft-cr-sys:hover { color: var(--accent); }
+.ft-cr-sys:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ft-cr-note { margin: 12px 2px 0; font-size: 13px; line-height: 1.55; color: var(--muted); max-width: 80ch; }
+.ft-cr-note + .ft-cr-note2 { margin-top: 4px; }
+
+/* ---------------------------------------------------------------- the connection diagram */
+.ft-diagram { border-radius: 20px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); padding: clamp(10px, 2vw, 22px); margin-bottom: var(--ft-gap); }
+.ft-diagram svg { display: block; width: 100%; height: auto; }
+.ft-diagram .ft-tall { display: none; }
+.ft-diagram svg text { font-family: inherit; }
+.ft-diagram .d-box { fill: var(--bg-1); stroke: var(--line); stroke-width: 1.5; }
+.ft-diagram .d-hub { fill: rgba(var(--accent-rgb), .1); stroke: var(--accent); stroke-width: 2; }
+.ft-diagram .d-t { fill: var(--text); font-size: 16px; font-weight: 800; }
+.ft-diagram .d-s { fill: var(--muted); font-size: 14px; }
+.ft-diagram .d-k { fill: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .1em; }
+.ft-diagram .d-ic { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ft-diagram .d-ic2 { fill: none; stroke: var(--accent-3); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ft-diagram .d-ic3 { fill: none; stroke: var(--accent-2); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ft-diagram .d-line { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.ft-diagram .d-lan { stroke: var(--accent-3); }
+.ft-diagram .d-net { stroke: var(--accent-2); stroke-dasharray: 7 5; }
+.ft-diagram .d-local { stroke: var(--accent); }
+.ft-diagram .d-media { stroke: var(--tft); }
+.ft-diagram .d-zone { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 3 5; }
+.ft-diagram .d-zt { fill: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.ft-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 4px 2px; font-size: 13px; color: var(--muted); }
+.ft-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.ft-legend i { display: inline-block; width: 26px; height: 0; border-top: 3px solid var(--muted); }
+.ft-legend .l-local { border-color: var(--accent); }
+.ft-legend .l-lan { border-color: var(--accent-3); }
+.ft-legend .l-net { border-color: var(--accent-2); border-top-style: dashed; }
+.ft-legend .l-media { border-color: var(--tft); }
+
+/* ---------------------------------------------------------------- which screen are you on */
+.ft-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.ft-tabs button { font: inherit; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 16px; border-radius: 14px; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); font-weight: 800; font-size: 15px; }
+.ft-tabs button svg { width: 22px; height: 22px; color: var(--accent); }
+.ft-tabs button[aria-selected="true"] { border-color: var(--accent); background: rgba(var(--accent-rgb), .12); }
+.ft-tabs button:hover { border-color: rgba(var(--accent-rgb), .5); }
+.ft-screen[hidden] { display: none; }
+.ft-screen { border-radius: 20px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); padding: clamp(16px, 2.6vw, 28px); }
+.ft-screen h3 { margin: 0 0 6px; font-size: clamp(19px, 2.2vw, 23px); font-weight: 800; }
+.ft-screen > p { color: var(--muted); line-height: 1.65; margin: 0 0 14px; max-width: 70ch; }
+.ft-screen ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 22px; margin: 0; padding: 0; list-style: none; }
+.ft-screen li { position: relative; padding-left: 22px; color: var(--muted); line-height: 1.55; font-size: 14.5px; }
+.ft-screen li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 8px; height: 8px; border-radius: 3px; background: var(--accent); }
+
+/* ---------------------------------------------------------------- small extras grid */
+.ft-more { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ft-more > div { border-radius: 14px; border: 1px solid var(--line); padding: 16px; background: rgba(255,255,255,.025); min-width: 0; }
+.ft-more > div:focus-visible { border-color: rgba(var(--accent-rgb), .5); }
+.ft-more h4 { font-size: 14.5px; margin: 10px 0 4px; font-weight: 800; }
+.ft-more p { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.55; }
+.ft-more .ft-ic { width: 36px; height: 36px; border-radius: 10px; }
+.ft-more .ft-ic svg { width: 19px; height: 19px; }
+
+/* ---------------------------------------------------------------- links out */
+.ft-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ft-gap); }
+.ft-links button { font: inherit; text-align: left; cursor: pointer; border-radius: 16px; border: 1px solid var(--line); padding: 18px 18px 16px; color: var(--text);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); min-height: 48px; }
+.ft-links button:hover, .ft-links button:focus-visible { border-color: rgba(var(--accent-rgb), .5); box-shadow: var(--glow); }
+.ft-links b { display: block; font-size: 16px; margin-bottom: 4px; }
+.ft-links span { color: var(--muted); font-size: 13.5px; line-height: 1.5; display: block; }
+.ft-links .go { color: var(--accent); font-weight: 800; font-size: 13px; margin-top: 10px; }
+.ft-inline-link { font: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+/* A call to action (Play with R.O.B.) */
+.ft-cta { font: inherit; font-weight: 800; font-size: 15px; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 18px; margin-top: 6px;
+  border-radius: 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); }
+.ft-cta svg { width: 22px; height: 22px; }
+.ft-cta:hover, .ft-cta:focus-visible { box-shadow: var(--glow); filter: brightness(1.08); }
+.ft-stat .v.ft-word { font-size: clamp(19px, 2.4vw, 24px); }
+
+/* ---------------------------------------------------------------- sizes */
+@media (max-width: 980px) {
+  .ft-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ft-more { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .ft-big, .ft-row, .ft-tiles.ft-2, .ft-links { grid-template-columns: minmax(0, 1fr); }
+  .ft-row.rev > .ft-art { order: 0; }
+  .ft-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ft-more { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ft-screen ul { grid-template-columns: minmax(0, 1fr); }
+  .ft-diagram .ft-wide { display: none; }
+  .ft-diagram .ft-tall { display: block; max-width: 460px; margin: 0 auto; }
+  /* Still a table (rows stay rows): the date goes under the system name, smaller type, tighter cells. */
+  .ft-crtable { font-size: 12.5px; }
+  .ft-crtable .ft-cr-dcol { display: none; }
+  .ft-crtable .ft-cr-date { display: block; margin-top: 2px; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+  .ft-crtable th, .ft-crtable td { padding: 8px 6px; overflow-wrap: break-word; }
+  .ft-crtable tbody th { padding-left: 10px; }
+  .ft-crtable thead th { font-size: 10px; letter-spacing: .04em; padding-top: 8px; padding-bottom: 8px; }
+  .ft-crtable thead th:first-child { padding-left: 10px; }
+  .ft-crtable code { font-size: 11px; }
+  .ft-cr-mark { font-size: 11.5px; }
+}
+@media (max-width: 560px) {
+  .ft-tiles { grid-template-columns: minmax(0, 1fr); }
+  .ft-machine .ft-pic { height: 112px; }
+}
+/* A short, wide screen (a phone on its side) lays out like a narrow one for the diagram. */
+@media (max-height: 500px) and (max-width: 1000px) {
+  .ft-diagram .ft-wide { display: none; }
+  .ft-diagram .ft-tall { display: block; max-width: 460px; margin: 0 auto; }
+}
+/* TV: bigger words for the far sofa. */
+body.gnw-tv .ft-page .ft-tile p, body.gnw-tv .ft-page .ft-screen li { font-size: 16px; }
+@media (prefers-reduced-motion: reduce) { .ft-tile, .ft-links button { transition: none; } }

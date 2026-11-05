@@ -1,0 +1,192 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "alynx",
+ "label": "Atari Lynx",
+ "device": "art",
+ "theme": {
+  "press": "rgba(210,105,30,.72)",
+  "pressInk": "#160a03"
+ },
+ "art": {
+  "size": [
+   1009,
+   540
+  ],
+  "controls": [
+   {
+    "id": "dpad",
+    "label": "D-pad",
+    "input": null,
+    "shape": "dpad",
+    "x": 0.1431,
+    "y": 0.4433,
+    "w": 0.1288,
+    "h": 0.2444
+   },
+   {
+    "id": "b",
+    "label": "B",
+    "input": "KeyZ",
+    "shape": "circle",
+    "x": 0.7958,
+    "y": 0.1722,
+    "w": 0.0634,
+    "h": 0.1185
+   },
+   {
+    "id": "a",
+    "label": "A",
+    "input": "KeyX",
+    "shape": "circle",
+    "x": 0.8746,
+    "y": 0.1333,
+    "w": 0.0634,
+    "h": 0.1185
+   },
+   {
+    "id": "b2",
+    "label": "B",
+    "input": "KeyZ",
+    "shape": "circle",
+    "x": 0.7958,
+    "y": 0.7176,
+    "w": 0.0634,
+    "h": 0.1185
+   },
+   {
+    "id": "a2",
+    "label": "A",
+    "input": "KeyX",
+    "shape": "circle",
+    "x": 0.8731,
+    "y": 0.7593,
+    "w": 0.0634,
+    "h": 0.1185
+   },
+   {
+    "id": "opt1",
+    "label": "Option 1",
+    "input": "Digit1",
+    "shape": "rect",
+    "x": 0.7319,
+    "y": 0.3218,
+    "w": 0.0357,
+    "h": 0.1
+   },
+   {
+    "id": "pause",
+    "label": "Pause",
+    "input": "Enter",
+    "shape": "rect",
+    "x": 0.7354,
+    "y": 0.4435,
+    "w": 0.0337,
+    "h": 0.0963
+   },
+   {
+    "id": "opt2",
+    "label": "Option 2",
+    "input": "Digit2",
+    "shape": "rect",
+    "x": 0.7328,
+    "y": 0.5637,
+    "w": 0.0357,
+    "h": 0.1
+   }
+  ]
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "b",
+      "label": "B",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.25,
+      "y": 0.73,
+      "w": 0.5,
+      "sq": true
+     },
+     {
+      "id": "a",
+      "label": "A",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.75,
+      "y": 0.41,
+      "w": 0.5,
+      "sq": true
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "opt1",
+   "label": "Option 1",
+   "input": "Digit1"
+  },
+  {
+   "id": "pause",
+   "label": "Pause",
+   "input": "Enter"
+  },
+  {
+   "id": "opt2",
+   "label": "Option 2",
+   "input": "Digit2"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "art buttons",
+   "source": "measured 2026-10-07 on AtariLynxConsole.png (images_atari_b64.json, 1009x540) on 4-5x crops ruled every 5 px: d-pad cross 80..209 x 174..305; B cap centre (803,93) radius 23, A (882,74), lower B (803,387.5), lower A (879,411) (the Lynx II's second pair for left-handed play); Option 1 723..754 x 148..200, Pause 729..756 x 215..264, Option 2 724..755 x 279..330. Hit circles 64 px (the cap plus a thumb), inside the 75 px recess. Re-measured 2026-10-17 on 4x gridded crops (A cap centre (882.5,72), lower A (881,410); the rest confirmed to a pixel). These are fractions of the WHOLE photograph: the host draws the body cut (play/cores/atari/art.mjs GEOM: 21,12 968x517), turned for a turned title, and says so through setArtView (overlayView), which maps every button onto the drawn art. Before 2026-10-17 the numbers were applied to the cut as if it were the whole photograph (about 15 px off sideways) and were never turned",
+   "licence": "site-owned measurement of the site's own artwork"
+  },
+  {
+   "what": "inputs",
+   "source": "play/play-pad.js FN.alynx (KeyX A, KeyZ B, Enter Pause, Digit1/2 Options); the d-pad sends SCREEN directions and play/atarilynx/app.js turns them for a turned title",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

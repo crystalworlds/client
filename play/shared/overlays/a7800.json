@@ -1,0 +1,121 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "a7800",
+ "label": "Atari 7800",
+ "device": "float",
+ "theme": {
+  "press": "rgba(210,105,30,.72)",
+  "pressInk": "#160a03"
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "fire1",
+      "label": "1",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.23,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     },
+     {
+      "id": "fire2",
+      "label": "2",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.77,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "diffL",
+   "label": "Left diff.",
+   "kind": "toggle",
+   "call": "switch",
+   "arg": 64,
+   "states": [
+    "B",
+    "A"
+   ]
+  },
+  {
+   "id": "pause",
+   "label": "Pause",
+   "input": "F3"
+  },
+  {
+   "id": "select",
+   "label": "Select",
+   "input": "F2"
+  },
+  {
+   "id": "reset",
+   "label": "Reset",
+   "input": "F1"
+  },
+  {
+   "id": "diffR",
+   "label": "Right diff.",
+   "kind": "toggle",
+   "call": "switch",
+   "arg": 128,
+   "states": [
+    "B",
+    "A"
+   ]
+  }
+ ],
+ "provenance": [
+  {
+   "what": "switch bits and keys",
+   "source": "play/atari7800/app.js (a7800_set_switches: 1 reset, 2 select, 8 pause, 64/128 difficulty A when set; F1 reset, F2 select, F3 pause) and play/play-pad.js FN.a7800",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

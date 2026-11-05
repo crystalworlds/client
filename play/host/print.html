@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/x-icon" href="../../FavIcon/favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Boy Printer</title>
+<!--
+  THE GAME BOY PRINTER'S PRINT PAGE (22 Oct 2026: print from a dedicated minimal
+  page, no header/footer). The Print window's Print (play/host/peripherals.mjs Printer.print)
+  leaves the job on its own window (window.__cwPrintJob: the roll as a PNG at a whole scale k, and
+  its dot lines) and opens this page in a hidden frame (desktop) or a tab of its own (Android
+  Chrome). This page holds only the strip (25 Oct: centred on the dialog's paper, @page margin 0, one page; was: 38k mm wide, 28k mm of print, sized by @page with no
+  margin, so the browser has no room for its date, title, address or page numbers. It prints itself
+  once the picture has loaded. Nothing is stored or sent anywhere.
+-->
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  .strip { box-sizing: border-box; overflow: hidden; }
+  .strip[hidden] { display: none !important; }
+  .strip img { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .note { font: 15px/1.4 system-ui, sans-serif; color: #333; padding: 12px 16px; }
+  .note button { font: inherit; margin-left: 8px; padding: 6px 14px; }
+  @media print { .note { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="strip" hidden><img alt="Printed picture"></div>
+<div class="note" hidden></div>
+<script>
+(function () {
+  'use strict';
+  var job = null;
+  try { if (window.opener && window.opener.__cwPrintJob) job = window.opener.__cwPrintJob; } catch (_) {}
+  try { if (!job && window.parent !== window && window.parent.__cwPrintJob) job = window.parent.__cwPrintJob; } catch (_) {}
+  var note = document.querySelector('.note');
+  var framed = window.parent !== window;
+  function say(t, close) {
+    note.textContent = t;
+    if (close) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Close';
+      b.onclick = function () { try { window.close(); } catch (_) {} };
+      note.appendChild(b);
+    }
+    note.hidden = false;
+  }
+  if (!job || !job.url) { say('Nothing to print. Go back to the game and choose Print again.', !framed); return; }
+  var k = Math.max(1, job.scale | 0), rows = Math.max(1, job.rows | 0);
+  var mm = function (v) { return (Math.round(v * 100) / 100) + 'mm'; };
+  var iw = 28 * k, ih = rows * 28 * k / 160;
+  var st = document.createElement('style');
+  /* 25 Oct: the paper the print dialog has (A4, Letter...), margin 0, one fixed
+     page-sized box, the picture centred and never larger than the page less a 10 mm edge. */
+  st.textContent = '@page{margin:0}' +
+    '@media print{.strip{position:fixed;left:0;top:0;width:100vw;height:100vh;padding:10mm;display:flex;align-items:center;justify-content:center}}' +
+    '.strip img{width:' + mm(iw) + ';height:' + mm(ih) + ';max-width:100%;max-height:100%;object-fit:contain}';
+  document.head.appendChild(st);
+  var strip = document.querySelector('.strip'), img = strip.querySelector('img');
+  var go = function () {
+    strip.hidden = false;
+    if (!framed) say('The paper is ready. When the print is done, close this page to go back to the game.', true);
+    try { window.__cwPrintReady = true; } catch (_) {}
+    setTimeout(function () { try { window.focus(); window.print(); } catch (_) {} }, 50);
+  };
+  img.onload = function () { if (img.decode) img.decode().then(go, go); else go(); };
+  img.onerror = function () { say('The picture could not be loaded. Go back to the game and choose Print again.', !framed); };
+  img.src = job.url;
+})();
+</script>
+</body>
+</html>

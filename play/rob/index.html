@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R.O.B. viewer</title>
+<style>
+  :root{
+    --bg:#15171a; --bg2:#0e1013; --fg:#e8e9eb; --dim:#9aa0a8;
+    --line:#2a2e34; --accent:#d9534f; --panel:rgba(20,23,27,.84); --on:#2f8f5b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--fg); overflow:hidden;
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  #stage{position:fixed; inset:0}
+  canvas{display:block; touch-action:none}
+  header{position:fixed; top:0; left:0; right:0; z-index:3; padding:14px 18px;
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(10,12,14,.75),transparent); pointer-events:none}
+  h1{margin:0; font-size:15px; font-weight:600; letter-spacing:.02em}
+  header .sub{color:var(--dim); font-size:12px}
+  #panel{position:fixed; z-index:3; right:14px; top:56px; width:292px;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:12px 13px 14px; backdrop-filter:blur(8px);
+    max-height:calc(100vh - 120px); overflow:auto}
+  #panel h2{margin:12px 0 5px; font-size:11px; font-weight:600; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--dim)}
+  #panel h2:first-child{margin-top:0}
+  .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:5px}
+  .grid3{grid-template-columns:repeat(3,1fr)}
+  .grid4{grid-template-columns:repeat(4,1fr)}
+  button{padding:6px 4px; font:inherit; font-size:12px; cursor:pointer; background:#1d2126;
+    color:var(--fg); border:1px solid var(--line); border-radius:6px; line-height:1.2}
+  button small{display:block; font-size:9px; color:var(--dim); letter-spacing:.04em; margin-top:2px}
+  button:hover{border-color:#4a515a}
+  button[aria-pressed=true]{background:var(--accent); border-color:var(--accent)}
+  button[aria-pressed=true] small{color:#f3d4d2}
+  button.on{background:var(--on); border-color:var(--on)}
+  button.wide{grid-column:span 2}
+  .row{display:flex; align-items:center; gap:8px; margin:5px 0}
+  .row label{flex:0 0 78px; font-size:12px; color:var(--dim)}
+  .row output{flex:0 0 52px; font-size:11px; color:var(--dim); text-align:right;
+    font-variant-numeric:tabular-nums}
+  input[type=range]{flex:1; min-width:0; accent-color:var(--accent); height:18px}
+  .tim{display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; font-size:11px; color:var(--dim)}
+  .tim label{display:flex; align-items:center; justify-content:space-between; gap:6px}
+  .tim input{width:52px; font:inherit; font-size:11px; background:#111419; color:var(--fg);
+    border:1px solid var(--line); border-radius:4px; padding:2px 4px; text-align:right}
+  .radios{display:flex; gap:4px; flex-wrap:wrap}
+  .radios label{flex:1; text-align:center; font-size:12px; padding:5px 0; border:1px solid var(--line);
+    border-radius:6px; cursor:pointer; background:#1d2126}
+  .radios input{display:none}
+  .radios input:checked + span{color:#fff}
+  .radios label:has(input:checked){background:var(--accent); border-color:var(--accent)}
+  hr{border:0; border-top:1px solid var(--line); margin:10px 0}
+  .stats{font-size:11px; color:var(--dim); line-height:1.65}
+  .stats b{color:var(--fg); font-weight:500; font-variant-numeric:tabular-nums}
+  .dot{display:inline-block; width:9px; height:9px; border-radius:50%; background:#3a2020;
+    border:1px solid #6b2a2a; vertical-align:middle; margin-left:6px}
+  .dot.lit{background:#ff3b2f; box-shadow:0 0 8px #ff3b2f}
+  footer{position:fixed; left:0; right:0; bottom:0; z-index:3; padding:11px 18px;
+    font-size:11.5px; line-height:1.55; color:var(--dim);
+    background:linear-gradient(0deg,rgba(10,12,14,.8),transparent)}
+  footer a{color:#b9c2cc}
+  #err{position:fixed; inset:0; z-index:5; display:none; place-content:center; text-align:center;
+    padding:40px; background:var(--bg2)}
+  #err code{display:block; margin-top:10px; color:var(--dim); font-size:12px}
+  #load{position:fixed; inset:0; z-index:4; display:grid; place-content:center; color:var(--dim);
+    font-size:13px; background:var(--bg2); transition:opacity .35s; pointer-events:none}
+  body.noui #panel, body.noui header, body.noui footer{display:none}
+  @media (max-width:720px){
+    #panel{right:10px; left:10px; width:auto; top:auto; bottom:76px; max-height:50vh}
+  }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<header>
+  <h1>R.O.B. (Robotic Operating Buddy)</h1>
+  <span class="sub">standalone viewer test &middot; drag to orbit, scroll to zoom</span>
+</header>
+
+<div id="panel">
+  <h2>Cycles (toggle, any together)</h2>
+  <div class="grid">
+    <button id="cyc-turn" aria-pressed="false">Base<small>5 stops, there and back</small></button>
+    <button id="cyc-lift" aria-pressed="false">Upper body<small>6 stops, down and up</small></button>
+    <button id="cyc-arms" aria-pressed="false">Arms<small>open, close, open</small></button>
+    <button id="cyc-head" aria-pressed="false">Head<small>45&deg; tilt, back and forth</small></button>
+    <button id="cyc-all" class="wide" aria-pressed="false">All four</button>
+  </div>
+
+  <h2>Commands (one at a time, as the toy does them)</h2>
+  <div class="grid grid3">
+    <button data-cmd="UP">UP<small>10111011</small></button>
+    <button data-cmd="DOWN">DOWN<small>11111011</small></button>
+    <button data-cmd="TEST" title="The toy's TEST code: turns the light on his head on and keeps it on. He does not move. (In the game's own Test mode the light blinks while he sees the screen.)">TEST<small>11101011</small></button>
+    <button data-cmd="UP1">Up 1<small>11111010</small></button>
+    <button data-cmd="DOWN1">Down 1<small>10101110</small></button>
+    <button data-cmd="RESET">RESET<small>10101011</small></button>
+    <button data-cmd="LEFT">LEFT<small>10111010</small></button>
+    <button data-cmd="RIGHT">RIGHT<small>11101010</small></button>
+    <button id="led-btn">LED<small id="led-sub">on</small><span class="dot" id="led-dot"></span></button>
+    <button data-cmd="OPEN">OPEN<small>11101110</small></button>
+    <button data-cmd="CLOSE">CLOSE<small>10111110</small></button>
+    <button id="stop-all">Stop all<small>cycles off</small></button>
+  </div>
+
+  <h2>Accessories (grab them by hand: drag, or arrows + OK)</h2>
+  <div class="radios" id="accset">
+    <label><input type="radio" name="accset" value="none" checked><span>None</span></label>
+    <label><input type="radio" name="accset" value="gyro"><span>Gyromite set</span></label>
+    <label><input type="radio" name="accset" value="block"><span>Stack-Up set</span></label>
+  </div>
+  <div class="grid grid3" style="margin-top:5px">
+    <button id="acc-setup" aria-pressed="false">Grab<small>drag parts</small></button>
+    <button id="acc-turn" title="Turns the part you are holding with Grab: the gyro tray swaps its blue and red caps (which of Controller 2's buttons each one presses), Controller 2 turns over, the spinner switches on or off, any other part turns a sixth of a circle. Greyed out while nothing is held.">Turn part<small>the part in hand</small></button>
+    <button id="acc-reset">Back in box<small>reset</small></button>
+  </div>
+  <div class="stats" id="accstat" style="margin-top:4px"></div>
+
+  <h2>Hands</h2>
+  <div class="radios" id="hands">
+    <label><input type="radio" name="hands" value="bare" checked><span>Bare</span></label>
+    <label><input type="radio" name="hands" value="clip"><span>Clip</span></label>
+    <label><input type="radio" name="hands" value="gyro"><span>Gyro</span></label>
+    <label><input type="radio" name="hands" value="block"><span>Block</span></label>
+  </div>
+
+  <h2>Speed and timings</h2>
+  <div class="row"><label for="speed">Speed</label>
+    <input type="range" id="speed" min="-2" max="2" value="0" step="0.05">
+    <output id="speedv">1.00&times;</output></div>
+  <div class="tim">
+    <label>lift / stop <input id="t-lift" type="number" step="0.1" min="0.1"> s</label>
+    <label>turn / stop <input id="t-turn" type="number" step="0.1" min="0.1"> s</label>
+    <label>arms <input id="t-arms" type="number" step="0.1" min="0.1"> s</label>
+    <label>head <input id="t-head" type="number" step="0.1" min="0.1"> s</label>
+    <label>pause <input id="t-pause" type="number" step="0.1" min="0"> s</label>
+    <label>settle <input id="t-settle" type="number" step="0.05" min="0"> s</label>
+  </div>
+  <div class="row" style="margin-top:8px"><label for="tilt">Head tilt</label>
+    <input type="range" id="tilt" min="-22.5" max="22.5" value="6.8" step="0.5">
+    <output id="tiltv">6.8&deg; down</output></div>
+
+  <div class="grid" style="margin-top:8px">
+    <button id="reset-pose" class="wide">Reset pose<small>top, centre, open, LED on</small></button>
+  </div>
+  <hr>
+  <label style="font-size:12px;color:var(--dim)"><input type="checkbox" id="spin"> auto-rotate the view</label>
+  <hr>
+  <div class="stats" id="stats">loading&hellip;</div>
+</div>
+
+<footer>
+  &ldquo;R.O.B. (Robotic Operating Buddy)&rdquo;
+  (<a href="https://skfb.ly/oWXI7" target="_blank" rel="noopener">https://skfb.ly/oWXI7</a>)
+  by Wrld_Bld is licensed under Creative Commons Attribution
+  (<a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">http://creativecommons.org/licenses/by/4.0/</a>).
+  Adapted: separated into its moving parts and rigged; see CREDITS.md.
+</footer>
+
+<div id="load">loading model&hellip;</div>
+<div id="err"><div><b>Could not start the viewer.</b><code id="errmsg"></code></div></div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from './vendor/three/jsm/controls/OrbitControls.js';
+import { GLTFLoader }    from './vendor/three/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from './vendor/three/jsm/environments/RoomEnvironment.js';
+import { createAccessories } from './rob-accessories.mjs?v=2.0.0';   // the gyros, blocks, trays ... set up by the user (24 Oct 2026)
+
+const MODEL = './rob.glb?v=2.0.0';   // the site's copy of the test bench's rob.glb
+
+// Defaults; the .glb carries the same numbers (and the pivots it was built
+// with) in ROB_Root's glTF extras, and those win when present.
+// Rebuild plan of 19 Oct 2026.
+let RIG = {
+  turn:  { stops_deg: [-120, -60, 0, 60, 120], rest_index: 2, left_is_positive: true },
+  lift:  { travel_m: 0.0685, stops: 6, rest: 'top' },
+  arms:  { open_deg: 9.8, sign: { ROB_ArmL: 1, ROB_ArmR: -1 } },
+  head:  { nose_down_sign: -1, rest_pitch_down_deg: 6.8, limits_down_deg: [-22.5, 22.5] },
+  led:   { mesh: 'ROB_Head_mesh', material: 'led', on_intensity: 2.0, off_while_moving: true,
+           offset_m: [0.0015, 0.0156, -0.0025] },
+  hands: { default: 'bare', sets: { bare: [], clip: ['ROB_HandL_clip', 'ROB_HandR_clip'],
+           gyro: ['ROB_HandL_gyro', 'ROB_HandR_gyro'], block: ['ROB_HandL_block', 'ROB_HandR_block'] } },
+  cord:  { upper: { node: 'ROB_Lift', offset_m: [-0.0017, 0.0103, 0.0107] },
+           lower: { node: 'ROB_Base', offset_m: [-0.0001, 0.003, 0.0354] },
+           coil_radius_m: 0.00398, tube_radius_m: 0.00084, pitch_m: 0.00217, max_turns: 60 },
+  timings: { lift_step_s: 0.9, turn_step_s: 1.4, arms_s: 1.4, head_s: 1.2, pause_s: 0.5, settle_s: 0.1 },
+};
+const T = Object.assign({}, RIG.timings);        // live, editable copies
+let speed = 1.0;
+
+const fail = m => {
+  document.getElementById('err').style.display = 'grid';
+  document.getElementById('errmsg').textContent = m;
+  document.getElementById('load').style.display = 'none';
+};
+window.addEventListener('error', e => fail(e.message));
+
+// ---------------------------------------------------------------- renderer
+const stage = document.getElementById('stage');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true }); }
+catch (e) { fail('WebGL is unavailable in this browser. ' + e.message); }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.NeutralToneMapping ?? THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1e22);
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.01, 50);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance = 0.18;
+controls.maxDistance = 2.2;
+controls.maxPolarAngle = Math.PI * 0.52;
+controls.autoRotateSpeed = 1.4;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.95;
+const key = new THREE.DirectionalLight(0xffffff, 2.9);
+key.position.set(-0.50, 0.90, -0.70);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.near = 0.1; key.shadow.camera.far = 3;
+Object.assign(key.shadow.camera, { left: -0.32, right: 0.32, top: 0.32, bottom: -0.32 });
+key.shadow.bias = -0.0008;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 1.05);
+fill.position.set(0.95, 0.30, -0.45);
+scene.add(fill);
+scene.add(new THREE.HemisphereLight(0xcdd6e0, 0x24272b, 0.85));
+const rim = new THREE.DirectionalLight(0xffffff, 0.5);
+rim.position.set(-0.2, 0.55, 0.95);
+scene.add(rim);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(1.1, 96), new THREE.ShadowMaterial({ opacity: 0.26 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ------------------------------------------------------------------- state
+const rad = d => d * Math.PI / 180;
+const node = {};                       // rig nodes by name
+let ledMat = null, ledLight = null, height = 0.242, triangles = 0;
+// The lift node keeps its rest translation (the body's height on the column
+// at the TOP stop, where the toy rests) and moves in its own local units: the
+// rig sits under ROB_Root, which is scaled from the artist's millimetres to
+// the toy's, so a real metre of travel is 1/scale node units.
+let liftRest = 0, unit = 1;
+
+// targets (what the toy has been told) and the animated values
+const S = { turn: 2, lift: 0, arms: 1, tilt: 6.8, led: true, hands: 'bare' };
+const cur = { turnDeg: 0, liftM: 0, arms: 1, tilt: 6.8 };
+const motions = { turn: null, lift: null, arms: null, head: null };   // active, per axis
+const queue = { turn: [], lift: [], arms: [], head: [] };             // waiting, per axis
+const cycle = { turn: false, lift: false, arms: false, head: false };
+const cycleDir = { turn: 1, lift: 1, arms: -1, head: 1 };
+const idleSince = { turn: 0, lift: 0, arms: 0, head: 0 };
+let homing = null;
+
+const stopDeg = i => RIG.turn.stops_deg[i];
+const clampLift = i => Math.max(0, Math.min(RIG.lift.stops - 1, Math.round(i)));
+const liftY = i => -RIG.lift.travel_m * unit * clampLift(i) / (RIG.lift.stops - 1);   // node units below the top stop
+
+function pushMotion(axis, get, set, to, dur) {
+  queue[axis].push({ get, set, to, dur });
+}
+function startNext(axis, now) {
+  const m = queue[axis].shift();
+  if (!m) return false;
+  const from = m.get();
+  if (Math.abs(m.to - from) < 1e-9) { m.set(m.to); return startNext(axis, now); }
+  motions[axis] = { ...m, from, t0: now, dur: Math.max(0.05, m.dur / speed) };
+  return true;
+}
+function anyMoving() { return Object.values(motions).some(m => m); }
+
+// axis accessors
+const ax = {
+  turn: { get: () => cur.turnDeg, set: v => { cur.turnDeg = v; } },
+  lift: { get: () => cur.liftM,   set: v => { cur.liftM = v; } },
+  arms: { get: () => cur.arms,    set: v => { cur.arms = v; } },
+  head: { get: () => cur.tilt,    set: v => { cur.tilt = v; } },
+};
+
+// ------------------------------------------------------------ the commands
+function moveTurn(toIndex) {
+  toIndex = Math.max(0, Math.min(RIG.turn.stops_deg.length - 1, toIndex));
+  const steps = Math.abs(toIndex - S.turn);
+  if (!steps) return;
+  S.turn = toIndex;
+  pushMotion('turn', ax.turn.get, ax.turn.set, stopDeg(toIndex), T.turn_step_s * steps);
+}
+function moveLift(toIndex) {
+  toIndex = clampLift(toIndex);
+  const steps = Math.abs(toIndex - S.lift);
+  if (!steps) return;
+  S.lift = toIndex;
+  pushMotion('lift', ax.lift.get, ax.lift.set, liftY(toIndex), T.lift_step_s * steps);
+}
+function moveArms(open) {
+  if (S.arms === open) return;
+  S.arms = open;
+  pushMotion('arms', ax.arms.get, ax.arms.set, open, T.arms_s);
+}
+function moveHead(tiltDown) {
+  const lim = RIG.head.limits_down_deg;
+  tiltDown = Math.max(lim[0], Math.min(lim[1], tiltDown));
+  const dur = T.head_s * Math.abs(tiltDown - S.tilt) / (lim[1] - lim[0]);
+  if (Math.abs(tiltDown - S.tilt) < 1e-6) return;
+  S.tilt = tiltDown;
+  pushMotion('head', ax.head.get, ax.head.set, tiltDown, Math.max(0.05, dur));
+  document.getElementById('tilt').value = tiltDown;
+  document.getElementById('tiltv').textContent = fmtTilt(tiltDown);
+}
+const fmtTilt = v => (Math.abs(v) < 0.05 ? 'level' : Math.abs(v).toFixed(1) + '° ' + (v > 0 ? 'down' : 'up'));
+
+const COMMANDS = {
+  UP:    () => moveLift(S.lift - 2),          // 10111011: two stops up
+  DOWN:  () => moveLift(S.lift + 2),          // 11111011: two stops down
+  UP1:   () => moveLift(S.lift - 1),          // 11111010
+  DOWN1: () => moveLift(S.lift + 1),          // 10101110
+  LEFT:  () => moveTurn(S.turn + (RIG.turn.left_is_positive ? 1 : -1)),   // 10111010
+  RIGHT: () => moveTurn(S.turn - (RIG.turn.left_is_positive ? 1 : -1)),   // 11101010
+  OPEN:  () => moveArms(1),                   // 11101110
+  CLOSE: () => moveArms(0),                   // 10111110
+  TEST:  () => setLed(true),                  // 11101011: LED on
+  RESET: () => home(),                        // 10101011: open, to the right end and the top, back to centre
+};
+function home() {
+  // the firmware runs all three motors at once: right to the end, up, open;
+  // then two stops left to the centre
+  stopCycles();
+  moveArms(1);
+  moveLift(0);
+  const rightEnd = RIG.turn.left_is_positive ? 0 : RIG.turn.stops_deg.length - 1;
+  moveTurn(rightEnd);
+  homing = { centre: RIG.turn.rest_index };
+}
+
+// --------------------------------------------------------------- the cycles
+function stepCycle(axis) {
+  if (axis === 'turn') {
+    const n = RIG.turn.stops_deg.length;
+    if (S.turn + cycleDir.turn < 0 || S.turn + cycleDir.turn >= n) cycleDir.turn *= -1;
+    moveTurn(S.turn + cycleDir.turn);
+  } else if (axis === 'lift') {
+    const n = RIG.lift.stops;
+    if (S.lift + cycleDir.lift < 0 || S.lift + cycleDir.lift >= n) cycleDir.lift *= -1;
+    moveLift(S.lift + cycleDir.lift);
+  } else if (axis === 'arms') {
+    moveArms(S.arms ? 0 : 1);
+  } else if (axis === 'head') {
+    const lim = RIG.head.limits_down_deg;
+    const target = cycleDir.head > 0 ? lim[1] : lim[0];
+    if (Math.abs(S.tilt - target) < 1e-6) { cycleDir.head *= -1; moveHead(cycleDir.head > 0 ? lim[1] : lim[0]); }
+    else moveHead(target);
+  }
+}
+/* 2 Nov 2026: when his head's cycle stops (Stop all, the Head or All four button turned
+   off), the head goes back to its resting tilt at its own speed, as his other moves. Only the head:
+   the arms, the body and the base stay where they are. */
+function headHome() {
+  queue.head.length = 0;
+  S.tilt = motions.head ? motions.head.to : cur.tilt;   // the queue may have held a move S.tilt already counted
+  moveHead(RIG.head.rest_pitch_down_deg);
+}
+function setCycle(axis, on) {
+  cycle[axis] = on;
+  document.getElementById('cyc-' + axis).setAttribute('aria-pressed', String(on));
+  document.getElementById('cyc-all').setAttribute('aria-pressed',
+    String(cycle.turn && cycle.lift && cycle.arms && cycle.head));
+}
+function stopCycles() { for (const a of Object.keys(cycle)) setCycle(a, false); }
+
+// ------------------------------------------------------------------- LED
+function setLed(on) {
+  S.led = on;
+  document.getElementById('led-sub').textContent = on ? 'on' : 'off';
+}
+function applyLed(lit) {
+  if (ledMat) ledMat.emissiveIntensity = lit ? RIG.led.on_intensity : 0.0;
+  if (ledLight) ledLight.visible = lit;
+  document.getElementById('led-dot').classList.toggle('lit', lit);
+}
+
+// ----------------------------------------------------------------- hands
+function setHands(name) {
+  if (!RIG.hands.sets[name]) return;
+  S.hands = name;
+  for (const [set, names] of Object.entries(RIG.hands.sets))
+    for (const n of names) if (node[n]) node[n].visible = (set === name);
+  const r = document.querySelector('#hands input[value="' + name + '"]');
+  if (r) r.checked = true;
+}
+
+// ------------------------------------------------------------------ cord
+let cord = null;
+const cordMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.55, metalness: 0.0 });
+// The cord's path is a quadratic Bezier from the plinth anchor to the shell
+// anchor; its middle is pushed sideways so the coil goes round the column,
+// never through it (the toy's cord hangs beside the column).  The number of
+// turns drops as the anchors close up so the tube never overlaps itself.
+const COIL_CLEAR = 0.052;
+class Coil extends THREE.Curve {
+  constructor(a, b, r, pitch, maxTurns, tube) {
+    super();
+    this.a = a; this.b = b; this.r = r;
+    const m = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+    const flat = new THREE.Vector3(m.x, 0, m.z);                 // Y is up in the scene
+    if (flat.length() < 1e-4) flat.set(a.x, 0, a.z);
+    if (flat.length() < COIL_CLEAR) { flat.normalize().multiplyScalar(COIL_CLEAR); m.set(flat.x, m.y, flat.z); }
+    this.c = m;
+    let L = 0, prev = this.axis(0);
+    for (let i = 1; i <= 64; i++) { const p = this.axis(i / 64); L += p.distanceTo(prev); prev = p; }
+    // the real cord's pitch sets the turns; capped, never tighter than the wire
+    this.turns = Math.max(4, Math.min(maxTurns, Math.floor(L / Math.max(pitch, tube * 2.2))));
+  }
+  axis(t) {
+    const s = 1 - t;
+    return new THREE.Vector3().addScaledVector(this.a, s * s).addScaledVector(this.c, 2 * s * t).addScaledVector(this.b, t * t);
+  }
+  getPoint(t, out = new THREE.Vector3()) {
+    const d = new THREE.Vector3().subVectors(this.c, this.a).multiplyScalar(2 * (1 - t))
+      .addScaledVector(new THREE.Vector3().subVectors(this.b, this.c), 2 * t).normalize();
+    const up = Math.abs(d.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    const u = new THREE.Vector3().crossVectors(d, up).normalize();
+    const v = new THREE.Vector3().crossVectors(d, u).normalize();
+    // straight leads of 4 % at both ends so the cord enters its anchors cleanly
+    const lead = 0.04;
+    const w = t < lead ? t / lead : (t > 1 - lead ? (1 - t) / lead : 1);
+    const rr = this.r * Math.sin(Math.min(1, w) * Math.PI / 2);
+    const ang = 2 * Math.PI * this.turns * t;
+    out.copy(this.axis(t)).addScaledVector(u, rr * Math.cos(ang)).addScaledVector(v, rr * Math.sin(ang));
+    return out;
+  }
+}
+function updateCord() {
+  const up = node[RIG.cord.upper.node], lo = node[RIG.cord.lower.node];
+  if (!up || !lo) return;
+  scene.updateMatrixWorld(true);
+  const a = lo.localToWorld(new THREE.Vector3(...RIG.cord.lower.offset_m));
+  const b = up.localToWorld(new THREE.Vector3(...RIG.cord.upper.offset_m));
+  const s = node.ROB_Root ? node.ROB_Root.scale.x : 1;
+  const coil = new Coil(a, b, RIG.cord.coil_radius_m * s, (RIG.cord.pitch_m || 0.00217) * s,
+                        RIG.cord.max_turns || RIG.cord.turns || 60, RIG.cord.tube_radius_m * s);
+  const geo = new THREE.TubeGeometry(coil, Math.round(16 * coil.turns) + 40, RIG.cord.tube_radius_m * s, 8, false);
+  if (!cord) { cord = new THREE.Mesh(geo, cordMat); cord.castShadow = true; scene.add(cord); }
+  else { cord.geometry.dispose(); cord.geometry = geo; }
+}
+
+// --------------------------------------------------------------- the model
+const t0 = performance.now();
+new GLTFLoader().load(MODEL, gltf => {
+  const root = gltf.scene;
+  root.traverse(o => {
+    if (o.isMesh) {
+      o.castShadow = o.receiveShadow = true;
+      const g = o.geometry;
+      triangles += (g.index ? g.index.count : g.attributes.position.count) / 3;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) if (m && m.name === 'led') ledMat = m;
+    }
+    if (/^ROB_/.test(o.name)) node[o.name] = o;
+  });
+  scene.add(root);
+  try {
+    const ex = node.ROB_Root && node.ROB_Root.userData && node.ROB_Root.userData.rig;
+    if (ex) RIG = Object.assign(RIG, typeof ex === 'string' ? JSON.parse(ex) : ex);
+  } catch (e) { /* the defaults above match the build */ }
+  Object.assign(T, RIG.timings);
+  if (node.ROB_Root) unit = 1 / (node.ROB_Root.scale.x || 1);
+  if (node.ROB_Lift) liftRest = node.ROB_Lift.position.y;   // the model loads at the top stop
+  S.lift = 0; cur.liftM = 0;
+  for (const k of ['lift', 'turn', 'arms', 'head', 'pause', 'settle'])
+    document.getElementById('t-' + k).value = T[{lift:'lift_step_s',turn:'turn_step_s',arms:'arms_s',head:'head_s',pause:'pause_s',settle:'settle_s'}[k]];
+
+  if (ledMat) {
+    ledMat.emissive = new THREE.Color(0xff2a1e);
+    ledLight = new THREE.PointLight(0xff4a30, 0.08, 0.09, 2);
+    const ledOff = (RIG.led_offset && RIG.led_offset.offset_m) || RIG.led.offset_m || [0.0015, 0.0156, -0.0025];
+    ledLight.position.set(...ledOff);
+    node.ROB_Head.add(ledLight);
+  }
+  const box = new THREE.Box3().setFromObject(root);
+  height = box.getSize(new THREE.Vector3()).y;
+  controls.target.set(0, height * 0.47, 0);
+  camera.position.set(height * 1.26, height * 0.95, -height * 2.45);
+  controls.update();
+
+  S.tilt = cur.tilt = RIG.head.rest_pitch_down_deg;
+  document.getElementById('tilt').value = S.tilt;
+  document.getElementById('tiltv').textContent = fmtTilt(S.tilt);
+  setHands(RIG.hands.default || 'bare');
+  applyPose();
+  updateCord();
+  applyUrl();
+  createAccessories({ THREE, GLTFLoader, scene, camera, controls, dom: renderer.domElement, node, RIG, log: accLog, url: './accessories.glb?v=2.0.0',
+    getPose: () => ({ armsTarget: S.arms, armsFrac: cur.arms, movingArms: !!motions.arms, movingTurn: !!motions.turn, movingLift: !!motions.lift, lift: S.lift, turn: S.turn }),
+    setHands: n => setHands(n), getHands: () => S.hands,
+  }).then(w => { world = w; window.robAcc = w; w.onChange(accPaint); w.applyUrl(location.search); accPaint(); })
+    .catch(e => accLog('accessories failed: ' + (e.message || e)));
+
+  document.getElementById('stats').innerHTML =
+    `triangles <b>${Math.round(triangles).toLocaleString()}</b><br>` +
+    `height <b>${(height * 1000).toFixed(0)} mm</b> &middot; rig nodes <b>${Object.keys(node).length}</b><br>` +
+    `arm slope <b>${RIG.arms && RIG.arms.slope_setting ? RIG.arms.slope_setting : 'source'}</b> &middot; ` +
+    `spine <b>${RIG.spine && RIG.spine.setting ? RIG.spine.setting : 'source'}</b> &middot; ` +
+    `lift <b id="liftro">stop 1 of ${RIG.lift.stops}, 0 mm</b><br>` +
+    `load <b>${((performance.now() - t0) / 1000).toFixed(2)} s</b>`;
+  const load = document.getElementById('load');
+  load.style.opacity = 0;
+  setTimeout(() => { load.style.display = 'none'; window.robReady = true; }, 400);
+}, undefined, e => fail('Failed to load ' + MODEL + ': serve this folder over http:// rather than ' +
+   'opening the file directly. (' + (e.message || e) + ')'));
+
+// ------------------------------------------------------------ apply pose
+function applyPose() {
+  if (node.ROB_Turntable) node.ROB_Turntable.rotation.y = rad(cur.turnDeg);
+  if (node.ROB_Lift) node.ROB_Lift.position.y = liftRest + Math.max(liftY(RIG.lift.stops - 1), Math.min(0, cur.liftM));
+  const open = rad(RIG.arms.open_deg) * (world ? world.clampArms(cur.arms) : cur.arms);   // the arms stop on a held block
+  if (node.ROB_ArmL) node.ROB_ArmL.rotation.y = open * (RIG.arms.sign.ROB_ArmL || 1);
+  if (node.ROB_ArmR) node.ROB_ArmR.rotation.y = open * (RIG.arms.sign.ROB_ArmR || -1);
+  if (node.ROB_Head) node.ROB_Head.rotation.x =
+    rad(cur.tilt - RIG.head.rest_pitch_down_deg) * (RIG.head.nose_down_sign || -1);
+  const lit = S.led && !(RIG.led.off_while_moving && anyMoving());
+  applyLed(lit);
+}
+const draw = () => { applyPose(); renderer.render(scene, camera); };
+
+// ------------------------------------------------------------- main loop
+let last = performance.now(), lastNow = performance.now() / 1000;
+renderer.setAnimationLoop(() => {
+  const now = performance.now() / 1000;
+  let moved = false;
+  for (const axis of Object.keys(motions)) {
+    let m = motions[axis];
+    if (!m) {
+      if (queue[axis].length) { startNext(axis, now); m = motions[axis]; }
+      else if (cycle[axis] && now - idleSince[axis] >= T.pause_s / speed) { stepCycle(axis); startNext(axis, now); m = motions[axis]; }
+    }
+    if (!m) continue;
+    const k = Math.min(1, (now - m.t0) / m.dur);          // the motor: linear, no easing
+    m.set(m.from + (m.to - m.from) * k);
+    moved = true;
+    if (k >= 1 && now - m.t0 >= m.dur + T.settle_s / speed) {   // the brake, then idle
+      motions[axis] = null;
+      idleSince[axis] = now;
+    }
+  }
+  if (homing && !anyMoving() && !queue.turn.length) {
+    const c = homing.centre; homing = null;
+    setTimeout(() => moveTurn(c), T.pause_s * 1000 / speed);
+  }
+  if (moved && (motions.lift || motions.turn)) updateCord();
+  if (moved || !window.robReady) { const ro = document.getElementById('liftro');
+    if (ro) ro.textContent = `stop ${S.lift + 1} of ${RIG.lift.stops}, ${(-cur.liftM / unit * 1000).toFixed(1)} mm down`; }
+  if (world) { world.update(now, now - lastNow); }
+  lastNow = now;
+  controls.update();
+  draw();
+});
+
+// ------------------------------------------------------------------ the UI
+for (const a of ['turn', 'lift', 'arms', 'head'])
+  document.getElementById('cyc-' + a).onclick = () => { setCycle(a, !cycle[a]); if (cycle[a]) idleSince[a] = -1e9; else if (a === 'head') headHome(); };
+document.getElementById('cyc-all').onclick = () => {
+  const on = !(cycle.turn && cycle.lift && cycle.arms && cycle.head), headWas = cycle.head;
+  for (const a of ['turn', 'lift', 'arms', 'head']) { setCycle(a, on); if (on) idleSince[a] = -1e9; }
+  if (!on && headWas) headHome();
+};
+for (const b of document.querySelectorAll('button[data-cmd]'))
+  b.onclick = () => COMMANDS[b.dataset.cmd]();
+document.getElementById('led-btn').onclick = () => setLed(!S.led);
+document.getElementById('stop-all').onclick = () => { const headWas = cycle.head; stopCycles(); homing = null; for (const a in queue) queue[a].length = 0; if (headWas) headHome(); };
+document.getElementById('reset-pose').onclick = () => window.robPose({ turn: RIG.turn.rest_index, lift: 0, arms: 1,
+  tilt: RIG.head.rest_pitch_down_deg, led: true, snap: true });
+document.querySelectorAll('#hands input').forEach(r => r.onchange = () => setHands(r.value));
+const sp = document.getElementById('speed');
+sp.oninput = () => { speed = Math.pow(2, +sp.value); document.getElementById('speedv').textContent = speed.toFixed(2) + '×'; };
+const timKeys = { 't-lift': 'lift_step_s', 't-turn': 'turn_step_s', 't-arms': 'arms_s', 't-head': 'head_s', 't-pause': 'pause_s', 't-settle': 'settle_s' };
+for (const [id, k] of Object.entries(timKeys))
+  document.getElementById(id).onchange = e => { const v = parseFloat(e.target.value); if (v >= 0) T[k] = v; };
+const tiltEl = document.getElementById('tilt');
+tiltEl.oninput = () => { document.getElementById('tiltv').textContent = fmtTilt(+tiltEl.value); };
+tiltEl.onchange = () => moveHead(+tiltEl.value);
+document.getElementById('spin').onchange = e => controls.autoRotate = e.target.checked;
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ------------------------------------------------------- the accessories
+let world = null;
+const accLog = m => { const el = document.getElementById('accstat'); if (el) el.dataset.last = m; console.log('[acc] ' + m); };
+function accPaint() {
+  const el = document.getElementById('accstat'); if (!el || !world) return;
+  const s = world.state();
+  document.getElementById('acc-setup').setAttribute('aria-pressed', String(s.setup));
+  const r = document.querySelector('#accset input[value="' + s.set + '"]'); if (r) r.checked = true;
+  if (window.robReframe && s.set !== accPaint.lastSet) { accPaint.lastSet = s.set; window.robReframe(); }
+  if (s.set === 'none') { el.innerHTML = ''; return; }
+  const lines = s.parts.map(p => `${world.label(p.id)}: <b>${p.where}</b>${p.spin > 0 ? ' spin ' + Math.round(p.spin * 100) + '%' : ''}`);
+  const pad = s.set === 'gyro' ? `controller 2: <b>${s.pad2 & 1 ? 'A ' : ''}${s.pad2 & 2 ? 'B' : ''}${s.pad2 ? '' : 'nothing pressed'}</b>${s.levers.padOk ? '' : ' (no pad in the tray)'}` : '';
+  const st = s.stacks ? 'trays: ' + Object.entries(s.stacks).map(([k, v]) => `${k}: <b>${v === null ? '-' : (v.length ? v.join(', ') : 'empty')}</b>`).join(' &middot; ') : '';
+  el.innerHTML = [s.setup ? (s.cursor ? `<b>hand cursor: ${s.cursor === 'parts' ? 'pick a part (arrows, OK)' : 'pick a place (arrows, OK; Back returns it)'}</b>` : '<b>grab: drag a part, or press an arrow for the hand cursor</b>') : (s.inBox ? `${s.inBox} part${s.inBox > 1 ? 's' : ''} still in the box` : 'all parts out of the box'), pad, st, (el.dataset.last || '')].filter(Boolean).concat(lines).join('<br>');
+}
+document.querySelectorAll('#accset input').forEach(r => r.onchange = () => { if (world) world.setSet(r.value); });
+document.getElementById('acc-setup').onclick = () => { if (world) world.setup(!world.inSetup); };
+document.getElementById('acc-reset').onclick = () => { if (world) world.reset(); };
+/* Turn (2 Nov 2026): the part in hand only. It used to fall back, with nothing in hand,
+   to swapping the gyro tray's caps, which looked like a colour swap for no reason; that is now its
+   own button (Swap tray caps, Gyromite set only), and Turn is greyed out while nothing is held. */
+const accHeld = () => { if (!world) return null; const c = world.cursor; if (c) return c.phase === 'targets' ? c.p.id : c.list[c.i].id; const d = world.state().parts.find(p => p.support === 'drag'); return d ? d.id : null; };
+document.getElementById('acc-turn').onclick = () => { if (!world) return; const c = world.cursor; if (c) { world.key({ key: 'ArrowUp' }); return; } const id = accHeld(); if (id) world.turn(id); };
+window.addEventListener('keydown', e => { if (world && !e.ctrlKey && !e.altKey && !e.metaKey && !(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) && world.key(e)) { e.preventDefault(); e.stopPropagation(); } }, true);
+window.robWorld = () => (world ? world.state() : null);
+
+// ---------------------------------------------- scripted driving, no mouse
+window.robScene = scene; window.robRig = node; window.robDraw = () => draw(); window.robCamera = camera;
+window.robCameraSet = (pos, target) => { camera.position.set(pos.x, pos.y, pos.z); controls.target.set(target.x, target.y, target.z); camera.lookAt(controls.target); camera.updateProjectionMatrix(); draw(); };
+/* robFit (1 Nov 2026: "centre the robot and the accessories together on screen instead of
+   leaving them off to the side"): the camera looks from az / el at the middle of everything that
+   is showing (R.O.B. and the visible accessories, the parts box included) and stands back just far
+   enough for all of it to fit, with a margin. rect = the free part of the window in CSS pixels
+   ({ x, y, w, h }, default the whole window): the picture is centred in it by moving the camera's
+   centre there (setViewOffset), so a panel over the window's edge does not cover the robot.
+   The fit is kept, and redone on a resize or a change of set; robView() leaves it. */
+let fitLast = null;
+// points on everything showing (up to about 300 per mesh): the fit uses the shapes themselves,
+// not the corners of a box round them (those reach far past the parts in a perspective view)
+const visiblePoints = () => {
+  scene.updateMatrixWorld(true);
+  const pts = [];
+  const shown = o => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+  const roots = [node.ROB_Root || scene.children.find(c => c.isGroup && c.name !== 'accessories'), scene.getObjectByName('accessories')];
+  for (const r of roots) if (r) r.traverse(m => {
+    if (!m.isMesh || !shown(m) || (m.material && m.material.transparent && m.material.opacity < 0.9)) return;
+    const pos = m.geometry.attributes.position; if (!pos) return;
+    const step = Math.max(1, Math.floor(pos.count / 300));
+    for (let i = 0; i < pos.count; i += step) pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld));
+  });
+  return pts;
+};
+window.robFit = (o = {}) => {
+  const { az = 22, el = 18, margin = 0.08 } = o;
+  const W = innerWidth, H = innerHeight;
+  // the window may have changed size without a resize event (a phone's first layout): match it first
+  const sz = renderer.getSize(new THREE.Vector2());
+  if (Math.abs(camera.aspect - W / H) > 1e-3 || sz.x !== W || sz.y !== H) { camera.aspect = W / H; renderer.setSize(W, H); }
+  const R = o.rect || { x: 0, y: 0, w: W, h: H };
+  const corners = visiblePoints(); if (!corners.length) return null;
+  const c = new THREE.Box3().setFromPoints(corners).getCenter(new THREE.Vector3());
+  const a = rad(az), e = rad(el);
+  const back = new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e));   // target to camera, as robView
+  const fwd = back.clone().negate(), right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize(), up = new THREE.Vector3().crossVectors(right, fwd);
+  const tv = Math.tan(rad(camera.fov / 2));
+  const sx = tv * (R.w / H) * (1 - margin), sy = tv * (R.h / H) * (1 - margin);
+  // fit, move the target to the middle of what the camera sees, and again until it settles;
+  // the distance is worked out last, for the final target
+  let t = c.clone(), D = 0;
+  const fitD = () => { let d = 0; for (const p of corners) { const q = p.clone().sub(t); const z = q.dot(fwd); d = Math.max(d, Math.abs(q.dot(right)) / sx - z, Math.abs(q.dot(up)) / sy - z); } return d; };
+  for (let pass = 0; pass < 12; pass++) {
+    D = fitD();
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const p of corners) { const q = p.clone().sub(t); const z = D + q.dot(fwd); const px = q.dot(right) / z, py = q.dot(up) / z; x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); }
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    if (Math.abs(mx) < sx * 0.003 && Math.abs(my) < sy * 0.003) break;
+    t.addScaledVector(right, mx * D).addScaledVector(up, my * D);
+  }
+  D = fitD();
+  controls.maxDistance = Math.max(controls.maxDistance, D * 1.25);   // the orbit limit (2.2 m) must not pull a narrow window's view back in
+  camera.position.copy(t).addScaledVector(back, D);
+  controls.target.copy(t);
+  camera.lookAt(t);
+  const dx = (R.x + R.w / 2) - W / 2, dy = (R.y + R.h / 2) - H / 2;
+  if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) camera.setViewOffset(W, H, -dx, -dy, W, H); else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+  fitLast = o;
+  draw();
+  return { az, el, dist: +(D / height).toFixed(3), target: t.toArray().map(v => +v.toFixed(4)), rect: R };
+};
+addEventListener('resize', () => { if (fitLast) window.robFit(typeof fitLast.again === 'function' ? fitLast.again() : fitLast); });
+window.robView = ({ az = 34, el = 14, dist = 2.6, height: hf = 0.47, fwd = 0 } = {}) => {
+  fitLast = null; camera.clearViewOffset();
+  // the target sits on the column axis at hf heights up, moved fwd heights toward the hands
+  const t = new THREE.Vector3(0, height * hf, -height * fwd);
+  const a = rad(az), e = rad(el);
+  camera.position.set(t.x + Math.sin(a) * Math.cos(e) * height * dist, t.y + Math.sin(e) * height * dist,
+                      t.z - Math.cos(a) * Math.cos(e) * height * dist);
+  controls.target.copy(t);
+  camera.lookAt(t);
+  camera.updateProjectionMatrix();
+  draw();
+  return { az, el, dist, fwd, target: t.toArray().map(v => +v.toFixed(4)) };
+};
+window.robPose = ({ turn, lift, arms, tilt, led, hands, snap } = {}) => {
+  if (turn !== undefined) moveTurn(turn);
+  if (lift !== undefined) moveLift(lift);
+  if (arms !== undefined) moveArms(arms ? 1 : 0);
+  if (tilt !== undefined) moveHead(tilt);
+  if (led !== undefined) setLed(!!led);
+  if (hands !== undefined) setHands(hands);
+  if (snap) {
+    for (const a in queue) { for (const m of queue[a]) m.set(m.to); queue[a].length = 0; motions[a] = null; }
+    cur.turnDeg = stopDeg(S.turn); cur.liftM = liftY(S.lift); cur.arms = S.arms; cur.tilt = S.tilt;
+    homing = null;
+  }
+  updateCord(); draw();
+  return window.robState();
+};
+window.robCommand = name => { if (COMMANDS[name]) COMMANDS[name](); return window.robState(); };
+window.robState = () => ({ turn: S.turn, lift: S.lift, arms: S.arms, tilt: S.tilt, led: S.led, hands: S.hands,
+  moving: anyMoving(), queued: Object.values(queue).some(q => q.length) || !!homing, turnDeg: +cur.turnDeg.toFixed(2), liftMm: +(cur.liftM / unit * 1000).toFixed(2),
+  armsFrac: +cur.arms.toFixed(3), tiltDown: +cur.tilt.toFixed(2) });
+
+// ?selftest=1: drive the lift through everything that can move it and record
+// where the upper body actually is, in world millimetres, so the result can
+// be read from the DOM (chrome --headless --dump-dom).
+function selfTest() {
+  const torso = node.ROB_Lift_mesh, hub = node.ROB_Turntable_mesh;
+  // world-space extremes of a (multi-material, so Group-of-Meshes) node's vertices inside a
+  // radius band about the column axis (the axis is the world origin)
+  const extreme = (o, rMin, rMax, yMax, wantMin) => { scene.updateMatrixWorld(true); let best = wantMin ? 1e9 : -1e9;
+    const v = new THREE.Vector3(); o.traverse(m => { if (!m.isMesh) return; const pos = m.geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); m.localToWorld(v); const r = Math.hypot(v.x, v.z);
+        if (r < rMin || r > rMax || v.y > yMax) continue; best = wantMin ? Math.min(best, v.y) : Math.max(best, v.y); } });
+    return +(best * 1000).toFixed(1); };
+  // the torso box's underside: within 40 mm of the axis (the caps hang further out, the column passes through)
+  const torsoBottom = () => torso ? extreme(torso, 0.0, 0.040, 9, true) : null;
+  const res = { stops: [], turntableTopUnderBodyMm: null, downSpam: null, upSpam: null, cycleRange: null, pass: false };
+  // the highest turntable surface 23..31 mm out from the axis and below 75 mm: the column's corners
+  // reach 22 mm and the hub's rounded corners fall short of 23, so this reads the disc (46 mm); the
+  // hub top itself is 62 mm (measured in Blender), 1.2 mm under the torso at the bottom stop
+  if (hub) res.turntableTopUnderBodyMm = extreme(hub, 0.023, 0.031, 0.075, false);
+  for (let i = 0; i < RIG.lift.stops; i++) { window.robPose({ lift: i, snap: true }); res.stops.push({ stop: i + 1, liftMm: window.robState().liftMm, torsoBottomMm: torsoBottom() }); }
+  window.robPose({ lift: 0, snap: true });
+  let deepest = -9, highest = 9, minMm = 0, maxMm = 0;
+  for (let k = 0; k < 12; k++) { COMMANDS.DOWN(); window.robPose({ snap: true }); deepest = Math.max(deepest, S.lift); minMm = Math.min(minMm, window.robState().liftMm); }
+  res.downSpam = { twelveDowns_endAtStop: deepest + 1, lowestLiftMm: minMm, torsoBottomMm: torsoBottom() };
+  for (let k = 0; k < 12; k++) { COMMANDS.UP(); window.robPose({ snap: true }); highest = Math.min(highest, S.lift); maxMm = Math.max(maxMm, window.robState().liftMm); }
+  res.upSpam = { twelveUps_endAtStop: highest + 1, highestLiftMm: maxMm };
+  let lo = 9, hi = -9;
+  for (let k = 0; k < 40; k++) { stepCycle('lift'); window.robPose({ snap: true }); lo = Math.min(lo, S.lift); hi = Math.max(hi, S.lift); minMm = Math.min(minMm, window.robState().liftMm); maxMm = Math.max(maxMm, window.robState().liftMm); }
+  res.cycleRange = { lowestStop: hi + 1, highestStop: lo + 1 };
+  // each lift button from the top, a middle and the bottom stop: the stop it ends at
+  res.buttons = {};
+  for (const start of [0, 2, RIG.lift.stops - 1]) {
+    const row = {};
+    for (const cmd of ['UP', 'UP1', 'DOWN', 'DOWN1']) {
+      window.robPose({ lift: start, snap: true }); COMMANDS[cmd](); window.robPose({ snap: true });
+      row[cmd] = 'stop ' + (S.lift + 1);
+    }
+    res.buttons['from stop ' + (start + 1)] = row;
+  }
+  window.robPose({ lift: 0, snap: true });
+  const b6 = res.stops[RIG.lift.stops - 1].torsoBottomMm, b1 = res.stops[0].torsoBottomMm;
+  const travel = RIG.lift.travel_m * 1000;
+  res.checks = {
+    twelveDownsStopAtBottom: deepest === RIG.lift.stops - 1,
+    twelveUpsStopAtTop: highest === 0,
+    cycleStaysWithin1to6: lo === 0 && hi === RIG.lift.stops - 1,
+    neverBelowBottomStop: minMm >= -travel - 0.05,
+    neverAboveTopStop: maxMm <= 0.05,
+    torsoClearsTurntableAtBottom: res.turntableTopUnderBodyMm === null || b6 > res.turntableTopUnderBodyMm,
+    spanIsTravel: Math.abs((b1 - b6) - travel) < 0.5,
+  };
+  res.pass = Object.values(res.checks).every(Boolean);
+  const pre = document.createElement('pre'); pre.id = 'selftest';
+  pre.textContent = 'LIFT SELF-TEST ' + (res.pass ? 'PASS' : 'FAIL') + '\n' + JSON.stringify(res, null, 1);
+  pre.style.cssText = 'position:fixed;left:12px;top:12px;z-index:9;background:rgba(0,0,0,.92);color:#9f9;' +
+    'font:15px/1.3 ui-monospace,Consolas,monospace;padding:12px 16px;max-height:94vh;overflow:hidden;white-space:pre-wrap;border-radius:8px';
+  document.body.appendChild(pre); document.title = 'selftest ' + (res.pass ? 'PASS' : 'FAIL');
+}
+
+// ?pose=turn:4,lift:5,arms:0,tilt:-22.5,led:1,hands:gyro&view=az:35,el:20,dist:2.4&ui=0
+function applyUrl() {
+  const q = new URLSearchParams(location.search);
+  const parse = s => Object.fromEntries((s || '').split(',').filter(Boolean).map(kv => {
+    const [k, v] = kv.split(':'); return [k, isNaN(+v) ? v : +v]; }));
+  if (q.get('ui') === '0') document.body.classList.add('noui');
+  if (q.get('selftest') === '1') { try { selfTest(); } catch (e) {
+    const pre = document.createElement('pre'); pre.id = 'selftest'; pre.textContent = 'LIFT SELF-TEST ERROR ' + (e.stack || e);
+    pre.style.cssText = 'position:fixed;left:12px;top:12px;z-index:9;background:#300;color:#fcc;padding:12px;font:14px monospace';
+    document.body.appendChild(pre); } }
+  if (q.get('pose')) window.robPose({ ...parse(q.get('pose')), snap: true });
+  if (q.get('view')) window.robView(parse(q.get('view')));
+  if (q.get('cycle')) for (const a of q.get('cycle').split(',')) if (cycle.hasOwnProperty(a)) { setCycle(a, true); idleSince[a] = -1e9; }
+}
+
+// ------------------------------------------------- the site's copy (2026-10-21)
+// Copied from the R.O.B. test bench page unchanged above this line except the model's ?v=.
+// ?embed=1: the NES play window's side view (no panel; the host drives robCommand / robPose).
+// ?ui=pill: R.O.B. PLAY TIME (21 Oct): R.O.B. fills the window and the page's controls sit in a
+//   control centre styled as the site's Control Bar (play/shared/control-bar.js: the pill, its
+//   buttons, its menus, its --cw-bar-* colours read from the site). The moves are buttons on the pill;
+//   Cycles, Hands, Speed (with the timings and the head tilt) and More (LED, Stop all, Reset pose,
+//   turning the view by itself, credits) open a menu above it. The same elements as the panel,
+//   moved, so they behave exactly as before. The arrow keys (and a controller, whose presses the site
+//   passes on into this page) walk the controls by position; Enter or OK presses; Back closes an open
+//   menu, then the window.
+{
+  const q = new URLSearchParams(location.search);
+  if (q.get('embed') === '1') { document.body.classList.add('noui'); window.robEmbed = true; }
+  /* ?clip=1 (22 Oct): the R.O.B. Play Time tile's clip. No controls, a black
+     background, and a floor that is black at its rim and barely grey under him, so his shadow
+     shows on black. The capture (tools/rob-clip.mjs) turns the view one full circle
+     with window.robClipFrame(azimuth degrees) and records the frames. */
+  if (q.get('clip') === '1') {
+    document.body.classList.add('noui');
+    scene.background = new THREE.Color(0x000000);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 512;
+    const g = cv.getContext('2d'), grad = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+    grad.addColorStop(0, '#2c2c2c'); grad.addColorStop(0.22, '#161616'); grad.addColorStop(0.5, '#000000'); grad.addColorStop(1, '#000000');
+    g.fillStyle = grad; g.fillRect(0, 0, 512, 512);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    ground.material = new THREE.MeshLambertMaterial({ map: tex, envMapIntensity: 0 });   // matt, no reflection at all: the rim stays black
+    ground.material.needsUpdate = true;
+    window.robClipFrame = (az) => { window.robView({ az, el: 12, dist: 2.05, height: 0.45 }); };
+  }
+  if (q.get('ui') === 'pill') {
+    document.body.classList.add('pill');
+    /* The site's colours (control-bar.js syncTokens): every --cw-bar-* the site's root resolves to. */
+    try {
+      const src = window.parent !== window ? window.parent.document.documentElement : null;
+      if (src) { const cs = window.parent.getComputedStyle(src);
+        for (const t of ['pill', 'menu', 'ink', 'btn-ink', 'dim', 'line', 'accent', 'accent-rgb', 'accent-pale', 'panel-from', 'panel-to', 'field']) {
+          const v = cs.getPropertyValue('--cw-bar-' + t).trim(); if (v) document.documentElement.style.setProperty('--cw-bar-' + t, v); } }
+    } catch (_) {}
+    const st = document.createElement('style');
+    st.textContent = `
+body.pill header, body.pill footer, body.pill #panel{display:none}
+body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+/* THE PANEL (22 Oct): a small block fixed to the window's bottom-right corner,
+   two buttons per row, in place of the long pill across the bottom. */
+.rp-bar{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:6;display:grid;grid-template-columns:1fr 1fr;gap:3px;
+  width:max-content;max-width:calc(100% - 24px);box-sizing:border-box;padding:6px;border-radius:14px;background:var(--cw-bar-pill,rgba(16,18,22,.72));border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 8px 24px -12px rgba(0,0,0,.7)}
+.rp-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;margin:0;white-space:nowrap;min-width:76px;background:transparent;border:0;border-radius:9px;cursor:pointer;
+  color:var(--cw-bar-btn-ink,#d7dce6);font:inherit;font-size:12px;font-weight:600;line-height:1;padding:9px 10px;-webkit-tap-highlight-color:transparent}
+.rp-btn:hover{background:rgba(255,255,255,.10)}
+.rp-btn:focus-visible,.rp-menu button:focus-visible,.rp-menu label:focus-visible,.rp-menu input:focus-visible{outline:3px solid var(--cw-bar-accent,#9be15d);outline-offset:1px;background:rgba(var(--cw-bar-accent-rgb,155,225,93),.16)}
+.rp-btn:active,.rp-btn[aria-expanded=true]{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.20);color:var(--cw-bar-accent-pale,#eaffd6)}
+.rp-btn svg{display:block}
+.rp-led{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3a2020;border:1px solid #6b2a2a}
+.rp-led.lit{background:#ff3b2f;box-shadow:0 0 6px #ff3b2f}
+.rp-menu{position:fixed;z-index:7;min-width:250px;max-width:min(420px,calc(100% - 20px));max-height:calc(100% - 130px);overflow:auto;box-sizing:border-box;
+  padding:6px;border-radius:14px;background:var(--cw-bar-menu,rgba(21,23,27,.96));border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 32px -12px rgba(0,0,0,.8);
+  color:var(--cw-bar-ink,#e6e8ec);font-size:14px}
+.rp-menu[hidden]{display:none}
+.rp-mh{padding:6px 10px 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cw-bar-dim,#9aa1ad)}
+.rp-menu button,.rp-menu .radios label{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;text-align:left;padding:9px 10px;margin:0;border:0;border-radius:8px;
+  background:transparent;color:inherit;font:inherit;font-size:14px;cursor:pointer;line-height:1.2;flex:none}
+.rp-menu button small{display:inline;margin:0 0 0 auto;font-size:11px;color:var(--cw-bar-dim,#9aa1ad)}
+.rp-menu button:hover,.rp-menu .radios label:hover{background:rgba(255,255,255,.09)}
+.rp-menu button[aria-pressed=true],.rp-menu .radios label:has(input:checked){color:var(--cw-bar-accent,#9be15d);background:transparent;border:0}
+.rp-menu .radios{display:block}
+.rp-menu .radios input{display:none}
+.rp-menu .dot{margin-left:6px}
+.rp-menu .row{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:0}
+.rp-menu .row label{flex:0 0 74px;color:var(--cw-bar-dim,#9aa1ad);font-size:13px}
+.rp-menu .row output{flex:0 0 56px;text-align:right;color:var(--cw-bar-dim,#9aa1ad);font-size:12px}
+.rp-menu input[type=range]{flex:1;min-width:0;accent-color:var(--cw-bar-accent,#9be15d)}
+.rp-menu .tim{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:4px 10px 8px;font-size:12px;color:var(--cw-bar-dim,#9aa1ad)}
+.rp-menu .tim label{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.rp-menu .tim input{width:56px;font:inherit;background:var(--cw-bar-field,#1d2026);color:var(--cw-bar-ink,#e6e8ec);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:3px 5px;text-align:right}
+.rp-menu .rp-check{display:flex;align-items:center;gap:8px;padding:9px 10px;font-size:14px;cursor:pointer}
+.rp-menu .rp-credit{padding:8px 10px;font-size:11px;line-height:1.5;color:var(--cw-bar-dim,#9aa1ad)}
+.rp-menu .rp-credit a{color:inherit}
+.rp-status{position:fixed;left:12px;top:10px;z-index:5;font-size:12px;color:var(--cw-bar-dim,#9aa1ad);background:var(--cw-bar-pill,rgba(16,18,22,.6));border:1px solid rgba(255,255,255,.10);border-radius:999px;padding:5px 10px;pointer-events:none}
+@media (max-width:620px){ .rp-btn{padding:9px 8px;min-width:68px} .rp-menu{left:10px;right:10px;max-width:none;max-height:calc(100% - 90px)} }
+/* 4 Nov 2026: the More menu is gone (its LED, Reset pose, turning the view and the credit are
+   buttons in the window's title bar), so Speed has the last row to itself. A menu is as tall as the
+   panel it opens from. The Hands menu shows each hand as a small 3D picture, the one he wears
+   marked. */
+.rp-bar{bottom:calc(max(12px,env(safe-area-inset-bottom)) + var(--rp-strip,0px))}
+.rp-bar .rp-btn[data-menu="speed"]{grid-column:span 2}
+.rp-menu.rp-fit:not([hidden]){display:flex;flex-direction:column;max-height:none}
+.rp-menu.rp-fit > *{flex:none}
+.rp-menu .radios.rp-hands{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:2px 4px 4px;flex:1 1 auto;min-height:0}
+.rp-menu .rp-hands label{position:relative;flex-direction:column;justify-content:center;gap:4px;padding:6px 4px;text-align:center;border:2px solid transparent;border-radius:10px;min-height:0}
+.rp-menu .rp-hands label img{display:block;width:100%;max-width:96px;aspect-ratio:1;flex:0 1 auto;min-height:0;object-fit:contain}
+.rp-menu .rp-hands label .rp-hpic{display:block;width:100%;max-width:96px;aspect-ratio:1;border-radius:8px;background:rgba(255,255,255,.05)}
+.rp-menu .rp-hands label:has(input:checked){border-color:var(--cw-bar-accent,#9be15d);background:rgba(var(--cw-bar-accent-rgb,155,225,93),.16);color:var(--cw-bar-accent-pale,#eaffd6)}
+.rp-menu .rp-hands label .rp-tick{position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;display:none;place-items:center;font-size:12px;line-height:1;font-weight:700;background:var(--cw-bar-accent,#9be15d);color:#0d1a05}
+.rp-menu .rp-hands label:has(input:checked) .rp-tick{display:grid}
+.rp-menu .rp-hands label span{font-weight:600}
+/* The credit, from the title bar's Information button. */
+.rp-info{position:fixed;z-index:8;top:10px;right:max(12px,env(safe-area-inset-right));box-sizing:border-box;width:min(380px,calc(100% - 24px));padding:12px 40px 12px 14px;border-radius:14px;
+  background:var(--cw-bar-menu,rgba(21,23,27,.96));border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 32px -12px rgba(0,0,0,.8);color:var(--cw-bar-ink,#e6e8ec);font-size:13px;line-height:1.5}
+.rp-info[hidden]{display:none}
+.rp-info a{color:inherit}
+.rp-info a:focus-visible,.rp-info button:focus-visible{outline:3px solid var(--cw-bar-accent,#9be15d);outline-offset:1px}
+.rp-info .rp-info-x{position:absolute;top:7px;right:7px;width:28px;height:28px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:17px;line-height:1;cursor:pointer}
+/* How a controller works here: shown while one is connected. */
+.rp-padstrip{position:fixed;left:0;right:0;bottom:0;z-index:6;box-sizing:border-box;padding:6px max(12px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  display:flex;flex-wrap:wrap;justify-content:center;gap:3px 14px;font-size:12px;line-height:1.35;color:var(--cw-bar-dim,#9aa1ad);background:var(--cw-bar-pill,rgba(16,18,22,.82));border-top:1px solid rgba(255,255,255,.10)}
+.rp-padstrip[hidden]{display:none}
+.rp-padstrip span{white-space:nowrap}
+.rp-padstrip b{display:inline-block;min-width:16px;padding:0 5px;margin-right:4px;border-radius:5px;border:1px solid rgba(255,255,255,.22);color:var(--cw-bar-ink,#e6e8ec);font-weight:600;text-align:center}
+@media (max-width:620px){ .rp-padstrip{font-size:11px;gap:2px 10px}
+  .rp-menu.rp-fit button small{display:none} .rp-menu.rp-fit > button{padding:6px 8px;font-size:13px} .rp-menu.rp-fit .rp-mh{padding:4px 8px 2px} }`;
+    document.head.appendChild(st);
+    const ic = d => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+    const UP = ic('<polyline points="6 15 12 9 18 15"/>'), DN = ic('<polyline points="6 9 12 15 18 9"/>'), LT = ic('<polyline points="15 6 9 12 15 18"/>'), RT = ic('<polyline points="9 6 15 12 9 18"/>');
+    const UP2 = ic('<polyline points="6 13 12 7 18 13"/><polyline points="6 19 12 13 18 19"/>'), DN2 = ic('<polyline points="6 5 12 11 18 5"/><polyline points="6 11 12 17 18 11"/>');
+    const CARET = ic('<polyline points="6 14 12 8 18 14"/>');
+    const bar = document.createElement('div'); bar.className = 'rp-bar'; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'R.O.B. controls');
+    const cmdBtn = (cmd, label, icon) => {
+      const orig = document.querySelector('#panel button[data-cmd="' + cmd + '"]');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'rp-btn'; b.dataset.cmd = cmd;
+      b.innerHTML = (icon || '') + '<span>' + label + '</span>';
+      const code = orig && orig.querySelector('small') ? orig.querySelector('small').textContent : '';
+      b.title = cmd === 'TEST' ? 'Test: turns the light on his head on and keeps it on, as the toy’s TEST code does. He does not move. In a game’s own Test mode the light blinks while he sees the screen.' : label + (code ? ' (' + code + ')' : '');
+      b.onclick = () => window.robCommand(cmd);
+      return b;
+    };
+    /* The rows (22 Oct): Up 2 | Up 1, Down 2 | Down 1, Left | Right, Open | Close, Test | Reset,
+       then the menus Cycles | Hands, Speed | More. */
+    bar.append(cmdBtn('UP', 'Up 2', UP2), cmdBtn('UP1', 'Up 1', UP), cmdBtn('DOWN', 'Down 2', DN2), cmdBtn('DOWN1', 'Down 1', DN),
+      cmdBtn('LEFT', 'Left', LT), cmdBtn('RIGHT', 'Right', RT), cmdBtn('OPEN', 'Open'), cmdBtn('CLOSE', 'Close'), cmdBtn('TEST', 'Test'), cmdBtn('RESET', 'Reset'));
+    /* The menus: the panel's own elements, moved in. */
+    const P = id => document.getElementById(id);
+    const menus = {};
+    let open = null;
+    const menuBtn = (key, label, build) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'rp-btn'; b.dataset.menu = key;
+      b.setAttribute('aria-haspopup', 'true'); b.setAttribute('aria-expanded', 'false');
+      b.innerHTML = '<span>' + label + '</span>' + CARET;
+      const m = document.createElement('div'); m.className = 'rp-menu'; m.hidden = true; m.setAttribute('aria-label', label);
+      build(m); document.body.appendChild(m);
+      menus[key] = { b, m };
+      b.onclick = () => toggle(key);
+      bar.appendChild(b);
+    };
+    const head = (m, t) => { const h = document.createElement('div'); h.className = 'rp-mh'; h.textContent = t; m.appendChild(h); };
+    menuBtn('cycles', 'Cycles', m => { head(m, 'Cycles (any together)');
+      for (const id of ['cyc-turn', 'cyc-lift', 'cyc-arms', 'cyc-head', 'cyc-all', 'stop-all']) m.appendChild(P(id)); });
+    /* The accessories (24 Oct): Grab (named Set up until 1 Nov) toggles the drag / hand-cursor mode; the Set menu picks the set, turns a part, resets. */
+    /* 2 Nov 2026: Grab, Turn part and Back in box live in the game's box above the panel
+       (below), and the Set menu is gone: that box asks for the set and offers Change set. */
+    const su = document.createElement('button'); su.type = 'button'; su.dataset.acc = 'setup'; su.textContent = 'Grab'; su.title = 'Grab the parts and place them by hand: drag a part, or use the arrows and OK';
+    su.onclick = () => { P('acc-setup').click(); su.setAttribute('aria-pressed', P('acc-setup').getAttribute('aria-pressed')); };
+    /* The Hands menu (4 Nov 2026): each hand as a small 3D picture made from the scene's own hand
+       model (handPics below), its name under it, the one he wears marked with a tick. */
+    menuBtn('hands', 'Hands', m => { head(m, 'Hands'); const h = P('hands'); h.classList.add('rp-hands');
+      for (const l of h.querySelectorAll('label')) { const pic = document.createElement('span'); pic.className = 'rp-hpic'; pic.setAttribute('aria-hidden', 'true');
+        const tick = document.createElement('span'); tick.className = 'rp-tick'; tick.setAttribute('aria-hidden', 'true'); tick.textContent = '✓';
+        l.prepend(pic); l.appendChild(tick); l.setAttribute('role', 'radio'); }
+      m.setAttribute('role', 'radiogroup'); m.appendChild(h); });
+    menuBtn('speed', 'Speed', m => { head(m, 'Speed'); m.appendChild(P('speed').closest('.row'));
+      head(m, 'Timings (seconds)'); m.appendChild(document.querySelector('#panel .tim'));
+      head(m, 'Head tilt'); m.appendChild(P('tilt').closest('.row')); });
+    for (const k in menus) menus[k].m.classList.add('rp-fit');
+    /* 4 Nov 2026: no More menu. LED, Reset pose, Turn the view by itself and the credit are the
+       window's title bar buttons (rob-shelf.js), which call window.robTop; the panel's own LED, Reset
+       pose and turning switch stay hidden in #panel and do the work, as before. */
+    const handsMark = () => { for (const l of P('hands').querySelectorAll('label')) { const i = l.querySelector('input'); l.setAttribute('aria-checked', String(!!(i && i.checked))); } };
+    P('hands').addEventListener('change', handsMark); setInterval(handsMark, 300); handsMark();
+    document.body.appendChild(bar);
+    const status = document.createElement('div'); status.className = 'rp-status'; status.setAttribute('aria-hidden', 'true'); document.body.appendChild(status);
+    setInterval(() => {
+      const s = window.robState ? window.robState() : null; if (!s) return;
+      const dot = document.getElementById('led-dot');
+      topPaint({ lit: !!s.led && !(RIG.led.off_while_moving && s.moving), led: !!s.led, spin: !!controls.autoRotate, info: !info.hidden });
+      const t ='Stop ' + (s.lift + 1) + ' of 6 \u00b7 ' + (['right end', 'right', 'centre', 'left', 'left end'][s.turn] || '') + ' \u00b7 arms ' + (s.arms ? 'open' : 'closed') + (s.moving ? ' \u00b7 moving' : '');
+      if (status.textContent !== t) status.textContent = t;
+    }, 150);
+    /* THE GAME (2 Nov 2026: "There is no real game in Play Time and there should be"):
+       above the controls, a list of the chosen set's parts and where each one goes (robAcc.goals(),
+       the set's own model in rob-accessories.mjs). A part put in its place, by Grab or by R.O.B.
+       himself, gets a tick and leaves the list; one moved out of its place comes back. An empty list
+       says All done, and the Back in box button reads Play again (4 Nov). With no set chosen, two buttons
+       pick one. */
+    const gst = document.createElement('style');
+    gst.textContent = `
+.rp-goals{position:fixed;right:max(12px,env(safe-area-inset-right));z-index:6;box-sizing:border-box;width:280px;max-width:calc(100% - 24px);overflow:auto;
+  padding:8px 10px;border-radius:14px;background:var(--cw-bar-pill,rgba(16,18,22,.72));border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 8px 24px -12px rgba(0,0,0,.7);color:var(--cw-bar-ink,#e6e8ec);font-size:13px;line-height:1.3}
+.rp-goals .rg-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 5px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cw-bar-dim,#9aa1ad)}
+.rp-goals .rg-h b{font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--cw-bar-ink,#e6e8ec)}
+.rp-goals ul{list-style:none;margin:0;padding:0}
+.rp-goals li{display:flex;gap:7px;align-items:flex-start;padding:4px 0;border-top:1px solid rgba(255,255,255,.07);overflow:hidden;max-height:60px;transition:opacity .35s ease .55s,max-height .3s ease .75s,padding .3s ease .75s}
+.rp-goals li:first-child{border-top:0}
+.rp-goals li .rg-tick{flex:0 0 16px;height:16px;border-radius:50%;border:1.5px solid var(--cw-bar-dim,#9aa1ad);box-sizing:border-box;margin-top:1px;display:grid;place-items:center;font-size:11px;line-height:1;color:transparent}
+.rp-goals li b{font-weight:600}
+.rp-goals li .rg-where{color:var(--cw-bar-dim,#9aa1ad)}
+.rp-goals li.done .rg-tick{background:var(--cw-bar-accent,#9be15d);border-color:var(--cw-bar-accent,#9be15d);color:#0d1a05}
+.rp-goals li.done{opacity:0;max-height:0;padding-top:0;padding-bottom:0}
+.rp-goals .rg-msg{margin:2px 0 8px}
+.rp-goals .rg-msg b{font-size:15px;color:var(--cw-bar-accent,#9be15d)}
+.rp-goals .rg-btns,.rp-goals .rg-tools{display:flex;gap:6px;flex-wrap:wrap}
+.rp-goals .rg-tools{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.10)}
+.rp-goals .rg-h{align-items:center}
+.rp-goals .rg-h .rg-title{flex:1 1 auto}
+.rp-goals .rg-h .rg-x{flex:none;width:28px;height:28px;padding:0;margin:-3px -3px 0 0;border-radius:50%;font-size:18px;font-weight:600;line-height:1;letter-spacing:0;text-transform:none}
+.rp-goals .rg-h .rg-x[hidden]{display:none}
+@media (max-width:620px){.rp-goals .rg-help li{padding:1px 0;font-size:12px;line-height:1.28}}
+.rp-goals{display:flex;flex-direction:column;overflow:hidden}
+.rp-goals > *{flex:none}
+.rp-goals > ul,.rp-goals > .rg-help{flex:0 1 auto;min-height:0;overflow:auto}
+.rp-goals .rg-tools[hidden],.rp-goals .rg-help[hidden],.rp-goals ul[hidden]{display:none}
+.rp-goals .rg-tools button{flex:1 1 auto;font-size:12.5px;padding:7px 9px}
+.rp-goals .rg-tools button small{display:none}
+.rp-goals button[aria-pressed=true]{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.22);border-color:var(--cw-bar-accent,#9be15d);color:var(--cw-bar-accent-pale,#eaffd6)}
+.rp-goals button:disabled{opacity:.38;cursor:default}
+.rp-goals .rg-help{margin:0 0 2px;padding:0 0 0 20px}
+.rp-goals .rg-help li{display:list-item;padding:2px 0;border:0;max-height:none;overflow:visible;transition:none}
+.rp-goals .rg-step{animation:rgIn .32s ease both}
+@keyframes rgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.rp-goals button{flex:1;font:inherit;font-size:13px;font-weight:600;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--cw-bar-btn-ink,#d7dce6);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.rp-goals button:hover{background:rgba(255,255,255,.14)}
+.rp-goals button:focus-visible{outline:3px solid var(--cw-bar-accent,#9be15d);outline-offset:1px}
+.rp-goals.rg-narrow .rg-btns button,.rp-goals.rg-narrow .rg-tools button{flex:1 1 100%}
+.rp-goals.rg-narrow .rg-tools{margin-top:auto}
+@media (prefers-reduced-motion:reduce){.rp-goals li{transition:none}.rp-goals .rg-step{animation:none}}
+@media (max-width:620px){.rp-goals{left:max(12px,env(safe-area-inset-left));width:auto;font-size:12.5px}.rp-goals li{padding:3px 0}}`;
+    document.head.appendChild(gst);
+    const goals = document.createElement('div'); goals.className = 'rp-goals'; goals.setAttribute('role', 'region'); goals.setAttribute('aria-label', 'Play Time game');
+    goals.innerHTML = '<div class="rg-h"><span class="rg-title"></span><b class="rg-count"></b></div><ol class="rg-help" hidden></ol><div class="rg-msg" hidden></div><ul aria-live="polite"></ul><div class="rg-btns"></div><div class="rg-tools" hidden></div>';
+    document.body.appendChild(goals);
+    const gTitle = goals.querySelector('.rg-title'), gCount = goals.querySelector('.rg-count'), gMsg = goals.querySelector('.rg-msg'), gList = goals.querySelector('ul'), gBtns = goals.querySelector('.rg-btns');
+    const gHelp = goals.querySelector('.rg-help'), gTools = goals.querySelector('.rg-tools');
+    const SET_NAMES = { gyro: 'Gyromite set', block: 'Stack-Up set' };
+    /* THE STEPS (2 Nov), in this order: 1. no set: only the set choice. 2. a set picked:
+       short instructions, with Grab, Turn part and Back in box. 3. Grab pressed: the parts list in
+       the instructions' place (it stays when Grab is pressed again to stop). Play again and Back in
+       box return to step 2, Change set to step 1. Each step fades in. */
+    const game = { set: null, rows: new Map(), allDone: false, doneTimer: null, showList: false };
+    const gBtn = (label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.onclick = fn; return b; };
+    const restart = () => { game.set = null; gRender(); };
+    const stepIn = () => { goals.classList.remove('rg-step'); void goals.offsetWidth; goals.classList.add('rg-step'); };
+    /* The tools, the page's own buttons moved in: Grab and Back in box (4 Nov 2026: Swap tray caps
+       is gone; a held gyro tray still swaps its caps when it is turned). Since 2 Nov: no Change set (the box's close X goes back to the set choice)
+       and no Turn part button (a button cannot be pressed while dragging): a held part turns with
+       the mouse wheel or the R key while dragging, a second finger's tap on a touch screen, or Up
+       and Down with the hand cursor; one line of the instructions says so. */
+    const boxB = P('acc-reset');
+    boxB.textContent = 'Back in box'; boxB.title = 'Put every part back in the box and start again';
+    /* 4 Nov 2026: one button. When the set is All done it reads Play again (the same thing: every
+       part back in the box, the steps again) and the focus then goes to Grab, as Play again's did. */
+    const boxLabel = done => { const t = done ? 'Play again' : 'Back in box'; if (boxB.textContent !== t) boxB.textContent = t;
+      boxB.title = done ? 'Put every part back in the box and play again' : 'Put every part back in the box and start again'; };
+    let againShown = false, boxClicking = false;   // read at the click: the reset itself may already have redrawn the box
+    boxB.addEventListener('click', () => { boxClicking = true; }, true);   // runs before the button's own reset
+    boxB.addEventListener('click', () => { boxClicking = false; const was = againShown; againShown = false; restart(); boxLabel(false); if (was) try { focusEl(su); } catch (_) {} });
+    gTools.append(su, boxB);
+    const closeB = document.createElement('button'); closeB.type = 'button'; closeB.className = 'rg-x'; closeB.textContent = '×';
+    closeB.setAttribute('aria-label', 'Close this set and go back to the set choice'); closeB.title = 'Back to the set choice';
+    closeB.onclick = () => { if (window.robAcc) window.robAcc.setSet('none'); };
+    goals.querySelector('.rg-h').appendChild(closeB);
+    const HELP = set => ['Press Grab.', 'Drag each part to where it belongs (keyboard or controller: the arrows and OK).',
+      'Turn a part as you drag it: mouse wheel, R key or a second finger tap; with the arrows, Up and Down.',
+      'The list shows what is left; a placed part drops off it.'];
+    setInterval(() => {   // Grab lit while it is on; Grab shows the list
+      const w = window.robAcc; if (!w) return;
+      const on = !!w.inSetup; if (su.getAttribute('aria-pressed') !== String(on)) su.setAttribute('aria-pressed', String(on));
+      if (on && !game.showList && game.set && game.set !== 'none') gRender();
+    }, 150);
+    /* A second finger's tap while one finger drags a part turns it (the drag itself ignores a second
+       pointer); this runs before the drag code and only while a drag is on. */
+    renderer.domElement.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch' || !world || !world.inSetup) return;
+      const d = world.state().parts.find(q => q.support === 'drag'); if (!d) return;
+      world.turn(d.id); e.preventDefault(); e.stopPropagation();
+    }, { capture: true });
+    function gPlace() {
+      /* Above the controls: its bottom 8 px over the panel's top; on a tall window no higher than
+         a third of the window, on a wide one up to the status line. */
+      /* A NARROW WINDOW (4 Nov 2026: a phone, a folded phone): the game's box sits in the bottom
+         left corner beside the panel, the same width and height, the two side by side at half the
+         width each; R.O.B. is framed above them. */
+      goals.classList.toggle('rg-narrow', narrow());
+      if (narrow()) {
+        const half = Math.floor((innerWidth - 24 - 8) / 2);
+        if (bar.style.width !== half + 'px') bar.style.width = half + 'px';
+        const nb = bar.getBoundingClientRect();
+        goals.style.left = 'max(12px,env(safe-area-inset-left))'; goals.style.width = half + 'px';
+        goals.style.bottom = (innerHeight - nb.bottom) + 'px'; goals.style.height = goals.style.maxHeight = Math.round(nb.height) + 'px';
+        return;
+      }
+      if (bar.style.width) bar.style.width = '';
+      goals.style.left = ''; goals.style.height = '';
+      const br = bar.getBoundingClientRect();
+      goals.style.bottom = (innerHeight - br.top + 8) + 'px';
+      const room = br.top - 8 - 44;
+      goals.style.maxHeight = Math.max(90, innerWidth < innerHeight ? Math.min(room, Math.round(innerHeight * 0.3) + 60) : room) + 'px';   // +60: two more lines of the list on a tall screen
+      if (innerWidth > 620) goals.style.width = Math.max(280, Math.round(br.width)) + 'px'; else goals.style.width = '';
+    }
+    function gStart(set) {
+      game.set = set; game.allDone = false; clearTimeout(game.doneTimer);
+      game.rows.clear(); gList.textContent = ''; gBtns.textContent = ''; gMsg.hidden = true;
+      game.showList = false; gCount.textContent = '';
+      try { if (window.robAcc && window.robAcc.inSetup) window.robAcc.setup(false); } catch (_) {}   // a step back starts with Grab off
+      gHelp.innerHTML = HELP(set).map(t => '<li>' + t + '</li>').join('');
+      closeB.hidden = set === 'none';
+      gTools.hidden = set === 'none';
+      gHelp.hidden = set === 'none'; gList.hidden = true;
+      stepIn();
+      if (set === 'none') {
+        gTitle.textContent = 'Play: pick a set';
+        gMsg.hidden = false; gMsg.textContent = 'Set R.O.B. up with all the parts of one of his games.';
+        gBtns.append(gBtn('Gyromite set', () => { if (window.robAcc) window.robAcc.setSet('gyro'); }), gBtn('Stack-Up set', () => { if (window.robAcc) window.robAcc.setSet('block'); }));
+      } else gTitle.textContent = SET_NAMES[set] + ': how to play';
+    }
+    function gRender() {
+      const w = window.robAcc; if (!w) return;
+      const set = w.set;
+      const fresh = set !== game.set;
+      if (fresh) gStart(set);
+      if (set === 'none') { if (fresh) { gPlace(); if (window.robReframe) window.robReframe(); } return; }
+      if (!game.showList && w.inSetup) { game.showList = true; gHelp.hidden = true; gList.hidden = false; gTitle.textContent = SET_NAMES[set] + ': put each part in place'; stepIn(); }
+      const list = w.goals();
+      for (const g of list) {
+        let row = game.rows.get(g.id);
+        if (!g.done) {
+          if (!row) { row = document.createElement('li'); row.innerHTML = '<span class="rg-tick" aria-hidden="true">✓</span><span><b></b> <span class="rg-where"></span></span>'; game.rows.set(g.id, row); }
+          row.classList.remove('done'); clearTimeout(row._gone); row._gone = null;
+          row.querySelector('b').textContent = g.name + ':'; row.querySelector('.rg-where').textContent = g.where;
+        } else if (row && !row.classList.contains('done')) {
+          row.classList.add('done');   // the tick shows, then the row fades and closes up (the CSS delays)
+          row.querySelector('.rg-tick').setAttribute('aria-label', 'placed');
+          row._gone = setTimeout(() => { row.remove(); game.rows.delete(g.id); }, 1150);
+        }
+      }
+      for (const g of list) { const row = game.rows.get(g.id); if (row) gList.appendChild(row); }   // in the set's order
+      const left = list.filter(g => !g.done).length;
+      gCount.textContent = left && game.showList ? left + ' of ' + list.length + ' left' : '';
+      const all = list.length > 0 && left === 0;
+      if (all && !game.allDone) {
+        game.allDone = true; clearTimeout(game.doneTimer);
+        game.doneTimer = setTimeout(() => {
+          if (!game.allDone) return;
+          gMsg.hidden = false; gMsg.innerHTML = '<b>All done!</b> Every part of the ' + SET_NAMES[set] + ' is in its place.';
+          gBtns.textContent = ''; boxLabel(true); againShown = true; gPlace();
+          const a = document.activeElement; if (!a || a === document.body) focusEl(boxB);
+        }, fresh ? 0 : 1150);
+      } else if (!all && game.allDone) { game.allDone = false; clearTimeout(game.doneTimer); gMsg.hidden = true; gBtns.textContent = ''; if (!boxClicking) { boxLabel(false); againShown = false; } }
+      gPlace();
+      if (fresh && window.robReframe) window.robReframe();
+    }
+    window.robGame = () => ({ set: game.set, rows: [...gList.children].map(li => ({ text: li.textContent.slice(1), done: li.classList.contains('done') })), allDone: game.allDone, msg: gMsg.hidden ? '' : gMsg.textContent, buttons: [...gBtns.children].map(b => b.textContent),
+      title: gTitle.textContent, showList: !gList.hidden, help: gHelp.hidden ? [] : [...gHelp.children].map(li => li.textContent), tools: gTools.hidden ? [] : [...gTools.children].filter(b => !b.hidden).map(b => ({ text: b.textContent, disabled: b.disabled, pressed: b.getAttribute('aria-pressed') })) });
+    { const hook = () => { if (!window.robAcc) return setTimeout(hook, 150); window.robAcc.onChange(gRender); gRender(); setInterval(gRender, 500); }; hook(); }
+    addEventListener('resize', gPlace);
+    document.querySelectorAll('.rp-menu .radios label').forEach(l => { l.tabIndex = 0;
+      l.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); l.click(); } }); });
+    /* A menu opens beside the panel, to its left, its bottom level with the panel's; on a narrow
+       window (a phone) it opens above the panel, the full width. */
+    function place(key) {
+      const { m } = menus[key];
+      const br = bar.getBoundingClientRect();
+      /* 4 Nov 2026: as tall as the panel, level with it. Beside it on a wide window; on a narrow one
+         it takes the game box's place, the same size, in the bottom left corner. */
+      m.style.height = Math.round(br.height) + 'px'; m.style.bottom = (innerHeight - br.bottom) + 'px';
+      if (!narrow()) { m.style.left = 'auto'; m.style.right = (innerWidth - br.left + 8) + 'px'; m.style.width = ''; m.style.minWidth = ''; }
+      else { m.style.left = 'max(12px,env(safe-area-inset-left))'; m.style.right = 'auto'; m.style.width = Math.round(br.width) + 'px'; m.style.minWidth = '0'; m.style.maxWidth = 'none'; }
+      goals.style.visibility = narrow() ? 'hidden' : '';   // the menu stands in the game box's place; the box shows again when it closes (goalsBack)
+    }
+    /* Walking by position: the open menu's controls, else the pill's. */
+    const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+    const items = () => [...(open ? menus[open].m : bar).querySelectorAll('button, input[type=range], input[type=number], input[type=checkbox], .radios label'), ...(open ? [] : goals.querySelectorAll('button'))].filter(el => vis(el) && !el.disabled);   // with no menu open, the game's buttons too (2 Nov)
+    function toggle(key, focusIn) {
+      const was = open;
+      if (open) { menus[open].m.hidden = true; menus[open].b.setAttribute('aria-expanded', 'false'); open = null; }
+      if (was === key) { focusEl(menus[key].b); return; }
+      open = key; menus[key].m.hidden = false; menus[key].b.setAttribute('aria-expanded', 'true'); place(key);
+      if (focusIn) { const f = items()[0]; if (f) focusEl(f); }
+    }
+    addEventListener('resize', () => { if (open) place(open); });
+    const goalsBack = () => { if (!open && goals.style.visibility) goals.style.visibility = ''; };
+    for (const ev of ['click', 'keydown', 'pointerdown']) addEventListener(ev, () => setTimeout(goalsBack, 0), true);
+    setInterval(goalsBack, 150);
+    addEventListener('pointerdown', e => { if (open && !menus[open].m.contains(e.target) && !menus[open].b.contains(e.target)) { menus[open].m.hidden = true; menus[open].b.setAttribute('aria-expanded', 'false'); open = null; } }, true);
+    const centre = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+    let lastFocus = null;
+    addEventListener('focusin', e => { if (e.target && e.target.closest && e.target.closest('.rp-bar, .rp-goals')) lastFocus = e.target; });
+    function move(dir) {
+      const all = items(), cur = document.activeElement;
+      if (!all.includes(cur)) { const f = (!open && lastFocus && all.includes(lastFocus) ? lastFocus : null) || all[0]; if (f) focusEl(f); return; }
+      const c = centre(cur); let best = null, bestD = 1e9;
+      for (const el of all) {
+        if (el === cur) continue;
+        const p = centre(el), dx = p.x - c.x, dy = p.y - c.y;
+        const along = dir === 'ArrowRight' ? dx : dir === 'ArrowLeft' ? -dx : dir === 'ArrowDown' ? dy : -dy;
+        const across = (dir === 'ArrowRight' || dir === 'ArrowLeft') ? Math.abs(dy) : Math.abs(dx);
+        if (along <= 2) continue;
+        const d = along + across * 2.5;
+        if (d < bestD) { bestD = d; best = el; }
+      }
+      if (best) { focusEl(best); best.scrollIntoView({ block: 'nearest' }); }
+      else if (open && (dir === 'ArrowDown' || dir === 'ArrowRight')) toggle(open);   // out of a menu: back to its button
+      else if (!open && dir === 'ArrowUp') topEnter(c.x);   // above everything: the title bar's buttons (4 Nov)
+    }
+    const leave = () => { try { if (window.parent && window.parent !== window && window.parent.cwRobPlayClose) window.parent.cwRobPlayClose(); } catch (_) {} };
+    addEventListener('keydown', e => {
+      const t = e.target, typing = t && t.tagName === 'INPUT' && t.type === 'number';
+      if (e.key === 'Escape' || e.key === 'GoBack' || e.key === 'BrowserBack' || (e.key === 'Backspace' && !typing)) { e.preventDefault(); if (!info.hidden) infoShow(false); else if (open) toggle(open); else leave(); return; }
+      if ((e.key === 'Enter' || e.key === ' ') && t && t.dataset && t.dataset.menu) { e.preventDefault(); toggle(t.dataset.menu, true); return; }
+      if (!/^Arrow/.test(e.key)) return;
+      if (t && t.type === 'range' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;   // the slider's own arrows
+      e.preventDefault(); move(e.key);
+    });
+
+    /* ---------------- 4 Nov 2026: the title bar, the credit, the hand pictures, the controller ---------------- */
+    function narrow() { return innerWidth <= 620; }   // a phone, a folded phone: the two boxes side by side
+    let padOn = false;                                 // the last input was a controller: focus shows its ring
+    const nativeFocus = HTMLElement.prototype.focus;
+    function focusEl(el) { if (!el) return; try { nativeFocus.call(el, padOn ? { focusVisible: true } : {}); } catch (_) { try { el.focus(); } catch (__) {} } }
+    for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, e => { if (e.isTrusted && padOn) { padOn = false; document.body.classList.remove('rp-pad'); } }, true);
+
+    /* THE TITLE BAR'S BUTTONS (rob-shelf.js draws them left of the window's x: Reset pose, LED,
+       Auto rotate, Information). They call these; topPaint tells them what is lit. */
+    const parentDoc = () => { try { return window.parent !== window ? window.parent.document : null; } catch (_) { return null; } };
+    const parentTools = () => { const d = parentDoc(); return d ? [...d.querySelectorAll('#rob-play-overlay .rob-tool, #rob-play-overlay .modal-close')].filter(b => b.getClientRects().length) : []; };
+    const toolFocused = () => { const d = parentDoc(); const a = d && d.activeElement; return a && parentTools().includes(a) ? a : null; };
+    function topEnter(x) {
+      const all = parentTools(); if (!all.length) return false;
+      let best = all[all.length - 1], bd = 1e9;
+      for (const b of all) { const r = b.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - (x == null ? innerWidth : x)); if (d < bd) { bd = d; best = b; } }
+      try { best.focus(); } catch (_) {}
+      return true;
+    }
+    function topStep(from, d) { const all = parentTools(), i = all.indexOf(from); const to = all[Math.max(0, Math.min(all.length - 1, i + d))]; if (to && to !== from) try { to.focus(); } catch (_) {} }
+    function backIn() { try { const f = window.parent.document.querySelector('#rob-play-overlay iframe'); if (f) f.focus(); } catch (_) {} window.focus();
+      const all = items(); focusEl((lastFocus && all.includes(lastFocus) ? lastFocus : null) || all[0]); }
+    let topLast = '';
+    function topPaint(st) { const k = JSON.stringify(st); if (k === topLast) return; topLast = k; try { if (window.parent.CwRob && window.parent.CwRob.topPaint) window.parent.CwRob.topPaint(st); } catch (_) {} }
+
+    /* THE CREDIT (Information): the model's licence line, as the page's footer has it, with its two
+       addresses as links. */
+    const info = document.createElement('div'); info.className = 'rp-info'; info.hidden = true;
+    info.setAttribute('role', 'dialog'); info.setAttribute('aria-label', 'Information');
+    info.innerHTML = '<div class="rp-info-t">' + document.querySelector('footer').innerHTML.trim() + '</div><button type="button" class="rp-info-x" aria-label="Close the information" title="Close">×</button>';
+    document.body.appendChild(info);
+    function infoShow(on, focusIn) {
+      const had = info.contains(document.activeElement);
+      info.hidden = !on;
+      if (on && focusIn) { window.focus(); focusEl(info.querySelector('a')); }
+      if (!on && had) { const t = parentTools().find(b => b.dataset.t === 'info'); if (t) try { t.focus(); } catch (_) {} }
+      topPaint(Object.assign(JSON.parse(topLast || '{}'), { info: on }));
+    }
+    info.querySelector('.rp-info-x').onclick = () => infoShow(false);
+    renderer.domElement.addEventListener('pointerdown', () => { if (!info.hidden) infoShow(false); }, true);
+    window.robTop = {
+      reset: () => P('reset-pose').click(),
+      led: () => P('led-btn').click(),
+      spin: () => { const s = P('spin'); s.checked = !s.checked; s.dispatchEvent(new Event('change')); },
+      info: focusIn => infoShow(info.hidden, focusIn),
+      infoOpen: () => !info.hidden,
+      infoClose: () => infoShow(false),
+      focusIn: backIn,
+    };
+
+    /* THE HAND PICTURES (Hands menu): each set's left hand on the end of his arm, rendered once
+       from the scene's own models into a small picture, all four framed alike. */
+    function handPics() {
+      if (!window.robReady || !node.ROB_ArmL) return setTimeout(handPics, 200);
+      try {
+        const S = 96, pr = renderer.getPixelRatio(), px = Math.round(S * pr), cv = renderer.domElement;
+        const sc = new THREE.Scene(); sc.background = new THREE.Color(0x2a2f36);
+        sc.environment = scene.environment; sc.environmentIntensity = scene.environmentIntensity;
+        sc.add(new THREE.HemisphereLight(0xcdd6e0, 0x24272b, 1.5));
+        const kl = new THREE.DirectionalLight(0xffffff, 3.2); kl.position.set(-0.5, 0.9, -0.7); sc.add(kl);
+        const fl = new THREE.DirectionalLight(0xffffff, 1.0); fl.position.set(0.9, 0.3, -0.45); sc.add(fl);
+        scene.updateMatrixWorld(true);
+        const box = new THREE.Box3();
+        for (const k of ['clip', 'gyro', 'block']) { const n = node['ROB_HandL_' + k]; if (n) box.expandByObject(n); }
+        if (box.isEmpty()) return;
+        const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3()).length();
+        const cam = new THREE.PerspectiveCamera(30, 1, size / 50, size * 20);
+        const a = rad(-38), e = rad(24);
+        cam.position.copy(c).add(new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e)).multiplyScalar(size * 1.75));
+        cam.lookAt(c);
+        const put = o => { const k = o.clone(true); k.matrixAutoUpdate = false; k.matrix.copy(o.matrixWorld); k.traverse(m => { m.visible = true; }); return k; };
+        const armOnly = put(node.ROB_ArmL_mesh || node.ROB_ArmL);
+        if (!node.ROB_ArmL_mesh) armOnly.traverse(m => { if (/^ROB_Hand/.test(m.name)) m.visible = false; });
+        const out = document.createElement('canvas'); out.width = out.height = px; const g2 = out.getContext('2d');
+        const vp = renderer.getViewport(new THREE.Vector4()), scs = renderer.getScissor(new THREE.Vector4()), sct = renderer.getScissorTest();
+        const pics = {};
+        for (const k of ['bare', 'clip', 'gyro', 'block']) {
+          const grp = new THREE.Group(); grp.add(armOnly); const hn = node['ROB_HandL_' + k]; if (hn) grp.add(put(hn)); sc.add(grp);
+          renderer.setViewport(0, 0, S, S); renderer.setScissor(0, 0, S, S); renderer.setScissorTest(true);
+          renderer.render(sc, cam);
+          g2.clearRect(0, 0, px, px); g2.drawImage(cv, 0, cv.height - px, px, px, 0, 0, px, px);
+          pics[k] = out.toDataURL('image/png');
+          sc.remove(grp);
+        }
+        renderer.setViewport(vp); renderer.setScissor(scs); renderer.setScissorTest(sct);
+        draw();
+        for (const l of P('hands').querySelectorAll('label')) {
+          const v = l.querySelector('input') && l.querySelector('input').value, ph = l.querySelector('.rp-hpic');
+          if (!pics[v] || !ph) continue;
+          const img = document.createElement('img'); img.className = 'rp-hpic'; img.alt = ''; img.src = pics[v]; img.setAttribute('aria-hidden', 'true'); ph.replaceWith(img);
+        }
+        window.robHandPics = Object.keys(pics);
+      } catch (err) { console.warn('[R.O.B.] hand pictures:', err); }
+    }
+    handPics();
+
+    /* THE CONTROLLER (4 Nov 2026). The site hands this window every pad's buttons each frame
+       (gamepad.js treats Play Time as a play window and calls window.gnwPlayPad.feed), so nothing else
+       on the site acts on them here:
+         D-pad or left stick  move between the buttons (with Grab on: the hand cursor, as the arrows)
+         A  press            B  back (the credit, then a menu, then the part in hand, then the window)
+         right stick  turn the view round him     X  zoom in     Y  zoom out     R3  frame him again
+         LB / RB  his Left / Right               LT / RT  his Down 1 / Up 1
+         Select  open or close his arms          Start  Grab on or off (a set picked)
+         Home, or Select + Start  close Play Time
+       From the top row of buttons, Up goes on into the title bar's buttons (Left / Right walk them,
+       Down comes back). While a controller is connected a strip along the bottom says all this. */
+    const strip = document.createElement('div'); strip.className = 'rp-padstrip'; strip.hidden = true; strip.setAttribute('role', 'note'); strip.setAttribute('aria-label', 'Controller');
+    strip.innerHTML = [['D-pad', 'choose'], ['A', 'press'], ['B', 'back'], ['Right stick', 'turn the view'], ['X', 'zoom in'], ['Y', 'zoom out'], ['LB / RB', 'turn him left / right'],
+      ['LT / RT', 'down / up'], ['Select', 'open / close his arms'], ['Start', 'Grab'], ['R3', 'frame him again']].map(([k, t]) => '<span><b>' + k + '</b>' + t + '</span>').join('');
+    document.body.appendChild(strip);
+    const padsNow = () => { try { const w = window.parent !== window ? window.parent : window; return [...(w.navigator.getGamepads ? w.navigator.getGamepads() : [])].filter(g => g && g.connected !== false); } catch (_) { return []; } };
+    function stripSync() {
+      const on = padsNow().length > 0;
+      if (strip.hidden === !on && (!on || document.documentElement.style.getPropertyValue('--rp-strip') === strip.offsetHeight + 'px')) return;
+      strip.hidden = !on;
+      document.documentElement.style.setProperty('--rp-strip', on ? strip.offsetHeight + 'px' : '0px');
+      gPlace(); if (open) place(open); if (window.robReady) frame();
+    }
+    setInterval(stripSync, 500); addEventListener('resize', () => setTimeout(stripSync, 0));
+    try { const w = window.parent !== window ? window.parent : window; w.addEventListener('gamepadconnected', () => setTimeout(stripSync, 0)); w.addEventListener('gamepaddisconnected', () => setTimeout(stripSync, 0)); } catch (_) {}
+    const PADS = { prev: new Set(), rep: new Map(), t: 0 };
+    const DIRK = { Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight' };
+    function padUse() { if (!padOn) { padOn = true; document.body.classList.add('rp-pad'); const a = document.activeElement; if (a && a !== document.body) focusEl(a); } }
+    function padKey(key) {
+      const a = document.activeElement, t = a && a !== document.documentElement ? a : document.body;
+      const ev = new KeyboardEvent('keydown', { key, code: key === ' ' ? 'Space' : key, bubbles: true, cancelable: true });
+      t.dispatchEvent(ev); return { ev, t };
+    }
+    function padPress(n, held) {
+      if (n === 'Home' || (n === 'Start' && held.has('Select')) || (n === 'Select' && held.has('Start'))) { leave(); return; }
+      const tool = toolFocused();
+      if (tool) {
+        if (n === 'Left' || n === 'Right') topStep(tool, n === 'Right' ? 1 : -1);
+        else if (n === 'Down') { if (!info.hidden && tool.dataset.t === 'info') { window.focus(); focusEl(info.querySelector('a')); } else backIn(); }
+        else if (n === 'A') tool.click();
+        else if (n === 'B') { if (!info.hidden) infoShow(false); else leave(); }
+        else if (!DIRK[n]) padAct(n);
+        return;
+      }
+      if (DIRK[n]) {
+        const a = document.activeElement;
+        if (a && a.type === 'range' && (n === 'Left' || n === 'Right') && !(world && world.cursor)) {
+          try { if (n === 'Right') a.stepUp(); else a.stepDown(); } catch (_) {}
+          a.dispatchEvent(new Event('input', { bubbles: true })); a.dispatchEvent(new Event('change', { bubbles: true })); return;
+        }
+        if (n === 'Up' && info.contains(a)) { topEnter(innerWidth); return; }
+        padKey(DIRK[n]); return;
+      }
+      if (n === 'A') {
+        const { ev, t } = padKey('Enter');
+        if (!ev.defaultPrevented && t !== document.body && typeof t.click === 'function' && !(t.tagName === 'INPUT' && (t.type === 'range' || t.type === 'number'))) t.click();
+        return;
+      }
+      if (n === 'B') { padKey('Escape'); return; }
+      padAct(n);
+    }
+    function padAct(n) {
+      if (n === 'LB') window.robCommand('LEFT');
+      else if (n === 'RB') window.robCommand('RIGHT');
+      else if (n === 'LT') window.robCommand('DOWN1');
+      else if (n === 'RT') window.robCommand('UP1');
+      else if (n === 'Select') window.robCommand(window.robState().arms ? 'CLOSE' : 'OPEN');
+      else if (n === 'Start') { if (window.robAcc && window.robAcc.set !== 'none') su.click(); }
+      else if (n === 'R3') frame();
+    }
+    /* The right stick turns the view round him and X / Y zoom, every frame, as far as the stick is
+       pushed; the same limits as the mouse. */
+    function padView(held, dt) {
+      let rx = 0, ry = 0;
+      try {
+        const G = window.parent.GnwPad;
+        for (const gp of padsNow()) {
+          let x = 0, y = 0;
+          const s = G && G.sticks ? G.sticks(gp) : null;
+          if (s) { y = +s.ry || 0; x = s.rxAxis >= 0 ? (+gp.axes[s.rxAxis] || 0) : 0; }
+          else if (gp.mapping === 'standard') { x = +gp.axes[2] || 0; y = +gp.axes[3] || 0; }
+          if (Math.abs(x) > Math.abs(rx)) rx = x; if (Math.abs(y) > Math.abs(ry)) ry = y;
+        }
+      } catch (_) {}
+      const dz = v => { const m = Math.abs(v); return m <= 0.18 ? 0 : Math.sign(v) * Math.pow((m - 0.18) / 0.82, 1.6); };
+      rx = dz(rx); ry = dz(ry);
+      const zin = held.has('X'), zout = held.has('Y');
+      if (!rx && !ry && zin === zout) return;
+      const sph = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+      sph.theta -= rx * 2.2 * dt;
+      sph.phi = Math.max(0.15, Math.min(controls.maxPolarAngle, sph.phi + ry * 1.6 * dt));
+      if (zin !== zout) sph.radius = Math.max(controls.minDistance, Math.min(controls.maxDistance, sph.radius * Math.pow(zin ? 0.45 : 2.2, dt)));
+      camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sph));
+      camera.lookAt(controls.target);
+      padUse();
+    }
+    window.gnwPlayPad = {
+      feed(players, ctx) {
+        const now = performance.now(), dt = PADS.t ? Math.min(0.05, (now - PADS.t) / 1000) : 0.016; PADS.t = now;
+        const held = new Set(); for (const h of ((ctx && ctx.uiPlayers) || players || [])) for (const n of (h || [])) held.add(n);
+        for (const n of held) {
+          if (!PADS.prev.has(n)) { padUse(); padPress(n, held); if (DIRK[n]) PADS.rep.set(n, now + 400); }
+          else if (DIRK[n] && PADS.rep.has(n) && now >= PADS.rep.get(n)) { PADS.rep.set(n, now + 110); padPress(n, held); }
+        }
+        for (const n of PADS.prev) if (!held.has(n)) PADS.rep.delete(n);
+        PADS.prev = held;
+        padView(held, dt);
+      },
+      release() { PADS.prev = new Set(); PADS.rep.clear(); PADS.t = 0; },
+    };
+
+    /* R.O.B. is the picture: in front of him, facing the player. On a tall window (a phone) he is
+       framed a little higher and to the left, so the panel in the bottom-right corner does not sit
+       on him. */
+    /* With the accessories showing (1 Nov) R.O.B. and his parts are framed together and
+       centred in the free part of the window: below the status line, and beside the panel on a
+       wide window or above it on a tall one (robFit). */
+    const freeRect = () => {
+      const W = innerWidth, H = innerHeight, br = bar.getBoundingClientRect(), top = 44;
+      if (narrow()) { const gt = goals.getBoundingClientRect(); return { x: 0, y: top, w: W, h: Math.max(120, Math.min(br.top, gt.height ? gt.top : br.top) - 8 - top) }; }   // the two boxes side by side at the bottom (4 Nov)
+      const gr = goals.getBoundingClientRect(), gLeft = gr.width ? Math.min(gr.left, br.left) : br.left;   // the game's list above the panel (2 Nov)
+      /* With a set, the room the box may grow to is kept free, so the picture does not
+         jump, or end up under the box, when the instructions give way to the longer list. */
+      const gMax = parseFloat(goals.style.maxHeight) || 0, withSet = !!(window.robAcc && window.robAcc.set !== 'none');
+      const gTop = withSet && gMax ? Math.min(gr.top || br.top, br.top - 8 - gMax) : (gr.height ? gr.top : br.top);
+      if (W < H) return { x: 0, y: top, w: W, h: Math.max(120, gTop - 8 - top) };
+      return { x: 0, y: top, w: Math.max(200, gLeft - 8), h: H - top - 8 };
+    };
+    const frame = () => { if (!window.robReady) return setTimeout(frame, 100);
+      const tall = innerWidth < innerHeight, withSet = !!(window.robAcc && window.robAcc.set !== 'none');
+      if (withSet) { window.robFit({ az: 22, el: 18, again: () => ({ az: 22, el: 18, rect: freeRect() }), rect: freeRect() }); return; }
+      /* On a tall window the game's set buttons sit above the panel (2 Nov): R.O.B. alone is fitted
+         into the room left above them, so they never cover his base. */
+      if (tall) { window.robFit({ az: 22, el: 12, again: () => ({ az: 22, el: 12, rect: freeRect() }), rect: freeRect() }); return; }
+      window.robView({ az: 22, el: 12, dist: tall ? 5.0 : 2.5, height: tall ? 0.22 : 0.42 });
+      if (tall) { camera.position.x -= height * 0.22; controls.target.x -= height * 0.22; camera.lookAt(controls.target); } };
+    window.robReframe = frame;
+    addEventListener('resize', () => { if (window.robReady) frame(); });
+    frame();
+    addEventListener('load', () => setTimeout(() => { const f = bar.querySelector('button'); if (f) f.focus({ focusVisible: false }); }, 0));
+  }
+}
+</script>
+</body>
+</html>

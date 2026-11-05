@@ -1,0 +1,562 @@
+THIRD-PARTY NOTICES
+===================
+
+This project builds on other people's work. Everything listed below stays under
+its own licence, which is reproduced or pointed to here. Where a licence asks
+for its notice and disclaimer to travel with the work, the text is reproduced
+in full rather than linked, because a public website is a redistribution.
+
+
+===========================================================================
+0. IN SHORT
+===========================================================================
+
+The points below are explained in the sections named.
+
+  (a) The 53 gnw_*.lay artwork layouts: section 2. Free public material from
+      a public forum post, with no licence to cite. The artists are credited
+      on the About page. A newly identified artist is added there directly.
+
+  (b) FFmpeg, built by libav.js: section 3. The licence text is included at
+      vendor/COPYING.LGPLv2.1 and is referenced from the About page.
+
+  (c) play/gameboy/ carries no cartridge firmware: build output and the web
+      shell only.
+
+  (d) Sections 8 to 20 each say what ships, its terms and how they are met.
+
+
+===========================================================================
+1. (Retired 2026-10-03)
+===========================================================================
+
+This section covered the earlier Game & Watch engine, gnw.js, whose CPU
+cores and speaker were ports of another emulator's sources. That file is no
+longer part of this distribution: the Game & Watch emulation is this
+project's own clean-room core (play/gnw/gwc-core.js) driven by the project's
+own host (play/gnw/gnw-host.js). The per-title tables the host still carries
+(input wiring, firmware identities) are data read from published tables, not
+code (tables are data). Section numbers below are
+kept so existing references to them stay valid.
+
+The game firmware and melody firmware are not part of this distribution
+either: they are Sharp mask-ROM dumps recovered from real silicon by hardware
+preservationists (above all Sean Riddle,
+https://seanriddle.com/gameandwatch.html) -- see NOTICE.
+
+
+===========================================================================
+2. The per-device Game & Watch layouts (gnw_*.lay)
+===========================================================================
+
+    These layouts are FREE PUBLIC MATERIAL, released in a public forum post,
+    with NO LICENCE TO FIND, and the artists are credited by name on this
+    site's About page. There is no licence document in existence to cite, the
+    material was published freely, and the obligation this project honours is
+    credit.
+
+    A newly identified artist who is not yet credited is added to the About
+    page (and to the counts below).
+
+    THEY ARE NOT ANY EMULATOR'S CODE, AND NO EMULATOR'S LICENCE COVERS THEM.
+    An earlier version of this file listed these layouts as an emulator
+    project's own files under its BSD-3-Clause licence. That was wrong on all
+    three counts: no such files exist in that project, they are not its work,
+    and BSD-3-Clause is not a licence their authors ever granted. The error is recorded here rather than quietly
+    deleted, because it mis-stated the rights position of named individuals.
+
+What they are : 53 per-device layout files, gnw_ball.lay through gnw_zelda.lay.
+                They are COMMUNITY EXTERNAL ARTWORK -- distributed as an
+                artwork collection, not part of any emulator's source tree
+                and not written by any emulator's developers. They describe each unit's
+                screen box, button hotspots, segment addresses and overlay
+                alpha values.
+Licence       : THERE IS NO LICENCE DOCUMENT TO CITE. Checked mechanically
+                across all 53 files: NONE of them carries a "license:" line of
+                any kind, unlike the BSD-3-Clause sources the retired engine
+                drew on. They are free public material, published openly on
+                the community artwork thread below, with no licence text in
+                existence to point at. This project therefore asserts no
+                licence over them on their authors' behalf; it credits their
+                authors, which is what the material's origin actually calls
+                for.
+
+Authorship, counted across all 53 files (not sampled), from the credit comment
+each one carries in place of a licence line:
+
+    Lee Robson (hydef)                                        48 files
+    DarthMarino, on Lee Robson's original case/unit layout     3 files
+        (gnw_cgrab, gnw_dkhockey, gnw_dkong3)
+    Lee Robson (hydef) + Henrik Algestam (scans)               1 file
+        + DarthMarino (background layout and clean-up)             (gnw_pinball)
+        + ICEknight (original scan alignment)
+    no credit line at all                                      1 file
+        (gnw_ball)
+
+Lee Robson (hydef) is therefore credited on 52 of the 53. The community artwork
+thread where this work was released and discussed:
+https://www.mameworld.info/ubbthreads/showflat.php?Number=382366
+
+How this project used them: the screen boxes, button hotspot percentages,
+segment addresses and overlay alpha values in the GAMES registry
+(play/gnw/gnw-host.js), and the
+geometry of the segment-artwork SVGs in the locally-built
+firmware/artwork.json.gz, were read from these layouts. Reading a file to
+understand a device's geometry is not the same act as redistributing it, and
+none of these .lay files, nor any of the PNG/JPG artwork bytes they reference,
+are distributed by this project.
+
+    Geometry read from these layouts, and artwork derived from them, ship on
+    this public site because the material is free and public, there is no
+    licence to find, and the artists are credited on the About page. You must
+    not pick a licence for somebody else's unlicensed work, and nothing here
+    asserts a licence over their work. This records this project's own use
+    of it.
+
+If you are Lee Robson, DarthMarino, Henrik Algestam or ICEknight and want this
+credited differently -- or not used at all -- the contact address in NOTICE
+reaches the maintainers and the request will be acted on.
+
+===========================================================================
+3. FFmpeg, built by libav.js  --  LGPL-2.1-or-later
+===========================================================================
+
+Role     : WebAssembly video decode/remux and re-encode for the Video page.
+Files    : vendor/libav-6.9.9.0-dolby.{mjs,wasm.mjs,wasm.wasm}
+           vendor/libav-6.9.9.0-mp4v.{mjs,wasm.mjs,wasm.wasm}
+Upstream : https://github.com/Yahweasel/libav.js (pinned at 6.9.9.0), which
+           compiles FFmpeg (https://ffmpeg.org/).
+Licence  : GNU Lesser General Public License, version 2.1 or later. THE FULL
+           LICENCE TEXT IS DISTRIBUTED WITH THIS PROJECT, at
+           vendor/COPYING.LGPLv2.1 -- beside the binaries it covers, and
+           byte-identical (verified by SHA-256 on 2026-09-23) to the copy kept
+           with the build capture at
+           WASM_Source/video-libav/COPYING.LGPLv2.1. It is also referenced
+           from the About page's Licences block.
+Source   : Corresponding source is FFmpeg 6.9.9.0 plus the libav.js build
+           scripts at the matching tag,
+           https://github.com/Yahweasel/libav.js
+
+    Where the licence text for a covered file exists, it is referenced. It
+    does exist: vendor/COPYING.LGPLv2.1, present in this distribution, covering
+    both the -dolby and the -mp4v builds, and cited from the About page. The
+    "mp4v" variant re-encodes to H.264. The corresponding-source pointer above
+    is the same whether that build is read as LGPL or GPL, and the notice
+    requirements (licence text carried with the binaries, source located,
+    notices preserved) are met either way.
+
+
+===========================================================================
+4. mediabunny  --  MPL-2.0
+===========================================================================
+
+Role     : Media container muxing/demuxing helper used by the Video page.
+Files    : vendor/mediabunny.mjs
+Licence  : Mozilla Public License 2.0, per the file's own header:
+           "Copyright (c) 2026-present, Vanilagy and contributors. This Source
+           Code Form is subject to the terms of the Mozilla Public License,
+           v. 2.0."
+Upstream : https://github.com/Vanilagy/mediabunny
+Note     : MPL-2.0 is file-level copyleft. The file is redistributed unmodified
+           and keeps its own header; the full licence text is at
+           https://mozilla.org/MPL/2.0/.
+
+
+===========================================================================
+5. @supabase/supabase-js  --  MIT
+===========================================================================
+
+Role     : Client library for the optional "vault" collection-tracker feature.
+Version  : 2.118.0
+Files    : vendor/supabase-js-2.118.0/supabase.js, BUNDLED (redistributed
+           unmodified) since 2 November 2026. It is dist/umd/supabase.js from
+           the npm package @supabase/supabase-js 2.118.0, checked against the
+           registry's published sha512 integrity. It bundles the package's own
+           Supabase parts (auth-js, functions-js, postgrest-js, realtime-js,
+           storage-js 2.118.0, all MIT, same authors).
+Licence  : MIT, "Copyright (c) 2020 Supabase". The full licence text ships
+           beside the file, at vendor/supabase-js-2.118.0/LICENSE.
+Source   : https://github.com/supabase/supabase-js
+
+
+===========================================================================
+6. Game details: libretro-database (CC BY-SA 4.0), No-Intro, OpenVGDB
+===========================================================================
+
+Role     : The built-in game details shown in a game's drawer
+           (metadata/*.json.gz, read by gamemeta.js).
+Derived  : from libretro-database at commit
+           bf825e3ec48d43557ad024da6a7b93e512043525 (2026-10-08): the per-system
+           .rdb files and the No-Intro DAT copies under metadat/. Changed: reduced
+           to the fields the drawer shows and re-keyed by the site's own cartridge
+           hash. Builder: WASM_Source/metadata/build.mjs.
+Licence  : Creative Commons Attribution-ShareAlike 4.0 International
+           (https://creativecommons.org/licenses/by-sa/4.0/). The metadata packs,
+           as a derivative, are offered under the same licence. The drawer
+           carries the attribution line.
+Also     : No-Intro (https://datomatic.no-intro.org/) for the canonical names;
+           no formal licence is published, credited by name. OpenVGDB v29.0
+           (https://github.com/OpenVGDB/OpenVGDB) for descriptions and release
+           dates; it declares no licence, credited by name (approved
+           2026-10-10; buildable without it: build.mjs --no-descriptions).
+Box art  : a tile with no cover of ours may show one from
+           thumbnails.libretro.com, loaded by the visitor's browser and never
+           copied into this repository. Those scans are the publishers' artwork
+           (see NOTICE).
+Sources  : WASM_Source/metadata/sources.json (URLs, versions, sha256).
+
+
+===========================================================================
+7. MP2 audio decoder (JSMpeg, after kjmp2)  --  MIT
+===========================================================================
+
+Role     : Decodes MPEG-1/2 Audio Layer II ("MP2") sound tracks in the Video
+           player, which no browser decodes (added 2026-10-10).
+Files    : vendor/mp2dec.mjs
+Derived  : from src/mp2.js of JSMpeg (https://github.com/phoboslab/jsmpeg,
+           master as fetched 2026-10-10), which states it is "based on kjmp2
+           by Martin J. Fiedler". Changed: wrapped as an ES module with its own
+           bit reader, MPEG-2 low-sample-rate frames accepted, output polarity
+           and level corrected to match FFmpeg, packet-level decode() added.
+Licence  : MIT, "Copyright (c) 2017 Dominic Szablewski". The full licence text
+           is reproduced in the file's own header, as the licence requires.
+
+
+===========================================================================
+8. Cheat codes: libretro-database cht/  --  CC BY-SA 4.0
+===========================================================================
+
+Role     : The codes offered in the player's Cheats menu, one small file per
+           game in the per-system cheats buckets. Codes this project wrote
+           itself are not covered by this section.
+Derived  : from the cht/ folder of libretro-database
+           (https://github.com/libretro/libretro-database), collected by its
+           contributors. Changed: codes are decoded into address and value
+           and re-keyed by the site's own cartridge hash; names lightly
+           edited (dashes, wording); codes this player cannot run yet are
+           left out. Each file states its credit, licence and changes in its
+           own "credit", "licence" and "changes" fields.
+Licence  : Creative Commons Attribution-ShareAlike 4.0 International,
+           https://creativecommons.org/licenses/by-sa/4.0/ . The reshaped
+           cheat files, as a derivative, are offered under the same licence.
+Credit   : the Cheats menu ends every list with "Cheat codes:
+           libretro-database (CC BY-SA 4.0), collected by its contributors.",
+           the licence name links to the licence, and the line says the codes
+           were reshaped (play/shared/control-bar.js, paintCheats).
+           Credit, licence link, note of changes and
+           same-licence offer are all in place.
+
+
+===========================================================================
+9. three.js r169  --  MIT
+===========================================================================
+
+Role     : 3D rendering for the R.O.B. viewer (play/rob/).
+Files    : play/rob/vendor/three/three.module.js and four add-ons under
+           play/rob/vendor/three/jsm/ (OrbitControls, RoomEnvironment,
+           GLTFLoader, BufferGeometryUtils).
+Upstream : https://github.com/mrdoob/three.js
+Licence  : MIT, "Copyright (c) 2010-2024 three.js authors". The full licence
+           text ships beside the files, at play/rob/vendor/three/LICENSE.
+
+
+===========================================================================
+10. StPageFlip (page-flip) v2  --  MIT
+===========================================================================
+
+Role     : The page-turn engine of the manual viewer.
+Files    : bundled inline at the top of manual_booklet.js.
+Upstream : https://github.com/Nodlik/StPageFlip
+Licence  : MIT, "Copyright (c) 2020 Nodlik". The copyright line and the full
+           permission notice are reproduced in the file's own header.
+
+
+===========================================================================
+11. Super Game Boy colour tables  --  Expat (MIT) licence
+===========================================================================
+
+Role     : The 32 built-in palettes of the Super Game Boy's SNES program and
+           its per-title palette table, used only for the "every game" colour
+           choice, plus the fade rule of its border swap.
+Files    : play/gameboy/web/sgb.js (the values marked CONVERGENCE).
+Derived  : the values as published in SameBoy, Core/sgb.c
+           (built_in_palettes, palette_assignments,
+           convert_rgb15_with_fade), https://github.com/LIJI32/SameBoy .
+           The numbers are the Super Game Boy program's own data; the notice
+           is given because they were copied from that source file.
+Licence  : Expat License, reproduced in full as it appears in SameBoy's
+           LICENSE file:
+
+    Copyright (c) 2015-2026 Lior Halphon
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Note     : sgb.js is copied byte for byte from the Game Boy source tree and
+           checked against it, so this notice lives here rather than in that
+           file's header.
+
+
+===========================================================================
+12. Game Boy Color boot colour tables (Tauwasser)
+===========================================================================
+
+Role     : The palettes a Game Boy Color gives an original Game Boy
+           cartridge (play/gameboy/cgb-palettes.js).
+Source   : "Analysis of CGB bootstrap ROM Color Tables" v1.0, by Tauwasser,
+           2010-10-06: ReadMe.txt, listUsedWNames.csv, listButtonCombos.csv,
+           listUnusedColors.csv.
+Terms    : as written in his ReadMe: "Feel free to distribute these files as
+           is. In case of any errors, please feel free to distribute
+           corrected files with a changelog and an updated version."
+How met  : cgb-palettes.js is a reshaped extract (the colour values, keyed
+           for lookup), generated by tools/build_cgb_palettes.mjs, and is
+           credited here. So that his work also travels exactly as he
+           released it, his four files are kept unchanged (same sha256) in
+           this project's files at
+           licenses/third-party/cgb-boot-tables-tauwasser/ . The generator
+           rebuilds the module from that copy (--src) and its --check passes
+           against it. (The site's web server does not serve .txt or .csv
+           files, so they travel with the project's files, not its pages.)
+
+
+===========================================================================
+13. NES cartridge tables: NES 2.0 database, NesCartDB, Nestopia UE database
+===========================================================================
+
+Role     : The header-correction table and the peripheral table the NES
+           player uses to set up a cartridge correctly
+           (play/nes/web/hdr_table.js, 8,733 rows; play/nes/web/input_table.js,
+           1,277 rows).
+Sources  : the rows were compiled from three game databases:
+             - NewRisingSun's NES 2.0 header database (2021-12-25);
+             - NesCartDB, by BootGod (2017-08-21);
+             - the Nestopia UE cartridge database, NstDatabase.xml
+               (2015-10-22).
+           They reached this project through one combined file,
+           MesenNesDB.txt, as shipped in the Mesen 2.2.1 release (sha256
+           200e19903f1b2eeda1f59a7f3bcdacf388d0f8d228f6f842373477ddc2f5a3e1),
+           whose own header names the three sources and their dates.
+Terms    : checked 2026-10-28.
+             - NES 2.0 header database: no licence stated by its author
+               that we could find (searched 28 Oct 2026).
+             - NesCartDB: no licence stated.
+             - NstDatabase.xml: carries no licence line of its own; it sits
+               in the Nestopia UE repository, which is GPL-2.0.
+             - MesenNesDB.txt: carries no licence line of its own; it sits in
+               the Mesen release, which is GPL-3.0.
+How met  : only facts are kept (checksum, mapper, sizes, region, mirroring,
+           expected controller), recompiled into this project's own format;
+           no text or code of either program is copied. Such tables are data,
+           and they are credited here to the people who compiled them.
+Note     : the two .js files are copied byte for byte from the NES source
+           tree and checked against it, so this notice lives here rather
+           than in their headers.
+
+
+===========================================================================
+14. VS System palettes (RP2C04 picture chips)
+===========================================================================
+
+Role     : The colour tables of the VS System arcade picture chips, inside
+           play/nes/build/nes.wasm.
+Source   : the palette PROM dumps of the four RP2C04 chips, made by the
+           arcade preservation community. They reached this project through
+           Mesen2's video-filter source (GPL-3.0), and they equal the
+           published PROM dumps of those chips.
+How met  : every entry is an exact 3-bit-per-gun level from a chip dump: a
+           fact about the hardware, not expression. Credited here to the
+           chip dumpers.
+
+
+===========================================================================
+15. NES palette (play/nes/web/render.js)
+===========================================================================
+
+Role     : The 64 colours the NES player shows.
+Source   : NOT FOUND. The file calls it a common emulator palette convention,
+           not a measurement. Its first version (2026-10-04) called it "the
+           widely-used FCEUX/Nestopia-family table". Checked 28 Oct 2026:
+           it does not match FCEUX's default palette, any of the 50 palette
+           files shipped with FCEUX and Nestopia UE, or the palette sources
+           of Mesen2 and puNES, and the NESdev wiki palette page does not
+           list it. No author could be identified, so no one can be credited.
+           If its author is found, they are added here directly.
+
+
+===========================================================================
+16. pdf.js and hls.js (both bundled)  --  Apache-2.0
+===========================================================================
+
+pdf.js 4.10.38 (Mozilla)
+Role     : Draws PDF manuals page by page in the manual viewer.
+Files    : vendor/pdfjs-4.10.38/pdf.min.mjs and
+           vendor/pdfjs-4.10.38/pdf.worker.min.mjs, BUNDLED (redistributed
+           unmodified) since 2 November 2026. Taken from the npm package
+           pdfjs-dist 4.10.38, legacy/build, checked against the registry's
+           published sha512 integrity. Loaded only when a PDF manual opens.
+Licence  : Apache License 2.0. The full licence text ships beside the files,
+           at vendor/pdfjs-4.10.38/LICENSE.
+Source   : https://github.com/mozilla/pdf.js
+
+hls.js 1.6.13 (video-dev)
+Role     : Plays transcoded media streams on the Media page.
+Files    : vendor/hls.js-1.6.13/hls.min.js, BUNDLED (redistributed
+           unmodified) since 2 November 2026. It is dist/hls.min.js from the
+           npm package hls.js 1.6.13, checked against the registry's sha512
+           integrity and the site's stored sha384 fingerprint. Loaded only
+           when a stream needs it.
+Licence  : Apache License 2.0. The full licence text ships beside the file,
+           at vendor/hls.js-1.6.13/LICENSE.
+Source   : https://github.com/video-dev/hls.js
+
+Both are part of this distribution. Their Apache-2.0 terms are met by the
+LICENSE file beside each and this notice; neither ships a NOTICE file.
+
+
+===========================================================================
+17. Game & Watch manual scans from gameandwatch.ch
+===========================================================================
+
+What     : scans of the Tricotronic-edition Game & Watch instruction leaflets,
+           the work of gameandwatch.ch
+           (https://www.gameandwatch.ch/en/faq-questions-answers/tricotronic-manuals.html).
+           The download script recorded them as "not for redistribution".
+Status   : NOT SHIPPED. Checked 28 Oct 2026 by file hash: none of the 138
+           downloaded scans is among the site's 963 image files or the 461
+           manual pages in the Game & Watch manual bucket. They left the site
+           on 24 Oct 2026, when every Game & Watch manual moved to the
+           booklet viewer, whose pages come from other scans. The old
+           lightbox code (MANUALS in index.html) still lists their keys but
+           finds no picture for them, so nothing of theirs is shown.
+Credit   : gameandwatch.ch, for scanning and publishing these leaflets.
+
+
+===========================================================================
+18. R.O.B. 3D model  --  CC BY 4.0
+===========================================================================
+
+Role     : The R.O.B. model in the viewer (play/rob/rob.glb).
+Source   : "R.O.B. (Robotic Operating Buddy)" (https://skfb.ly/oWXI7) by
+           Wrld_Bld, licensed under Creative Commons Attribution 4.0
+           (http://creativecommons.org/licenses/by/4.0/).
+Changes  : adapted; every change is listed in play/rob/CREDITS.md. The credit
+           is also shown on the R.O.B. page, its shelf and its panel.
+
+
+===========================================================================
+19. Review scores and descriptions: LaunchBox Games Database
+===========================================================================
+
+Role     : The "Review score" line in a game's drawer and the rating on a
+           game tile (metadata/*.json.gz field rs, read by gamemeta.js): the
+           mean of the database users' 1 to 5 star votes and the number of
+           votes, with a link to the game's page on the database's website;
+           and the "About the game" text of a game no other source describes.
+Source   : LaunchBox Games Database (https://gamesdb.launchbox-app.com/), by
+           Unbroken Software, from its public download Metadata.zip (fetched
+           2026-10-14; sha256 in WASM_Source/metadata/sources.json) and its
+           public platform listings, read one page a second, for the page
+           numbers the links need (WASM_Source/metadata/fetch-lb-links.mjs).
+Kept     : per game only the mean rating, the vote count and the page number,
+           and (since 2026-11-04) the game's description (Overview) where no
+           other source has one (field d with ds "lb"; WASM_Source/metadata/
+           lb-text.mjs and build.mjs). Names, alternate names and database ids
+           are used only to join a record to a game and are not shipped. No
+           pictures are copied.
+Terms    : checked 2026-10-14 and again 2026-10-28. The database publishes no
+           licence and no terms of use: its site links only to the publisher's
+           privacy policy (https://www.unbrokensoftware.com/privacy/), which
+           says nothing about reusing the data; the download carries no
+           licence file; /terms does not exist (404); robots.txt sets no
+           content signal and no disallow rule. There is no public API, so no
+           API terms apply. Nothing found forbids this use.
+How met  : the numbers are facts (a mean and a count), credited by name with a
+           link wherever they are shown (the drawer's notes line, "Review
+           scores from LaunchBox Games Database"), and each score links back
+           to its source page. A description from it carries the line "The
+           description is from the LaunchBox Games Database" with a link, and
+           the About credits name it. Neither is covered by the CC BY-SA 4.0
+           offer of the metadata packs (section 6). Shipping was approved on
+           2026-10-14 (scores) and 2026-11-04 (descriptions). Builds without them: build.mjs --no-launchbox (scores) and
+           --no-launchbox-text (descriptions).
+If its terms change: this use is looked at again if the database publishes terms that restrict it.
+
+
+===========================================================================
+20. Review scores: Wikidata  --  CC0 1.0
+===========================================================================
+
+Role     : The "Critics" line in a game's drawer: up to four published review
+           scores as printed (for example "Gen4 98%"), each with a link to its
+           Wikidata item (metadata/*.json.gz fields rc and rq).
+Source   : Wikidata (https://www.wikidata.org/), queried 2026-10-14 through
+           its public SPARQL service (https://query.wikidata.org/sparql;
+           queries in WASM_Source/metadata/fetch-sources.sh, answers' sha256 in
+           sources.json): review score (P444) with review score by (P447),
+           platform (P400) and number of reviews (P7887).
+Licence  : Creative Commons CC0 1.0 Universal: Wikidata's structured data in
+           the main, Property and Lexeme namespaces "is available under the
+           Creative Commons CC0 License"
+           (https://www.wikidata.org/wiki/Wikidata:Copyright). No conditions.
+How met  : nothing is required. Credited as a courtesy in the drawer's notes
+           line ("Wikidata (published reviews, CC0)") and by the per-item link.
+           The reviews themselves belong to the magazines that printed them;
+           only the score and the magazine's name are shown.
+
+
+===========================================================================
+21. Credits-roll fonts: Cinzel, Inter, Space Mono  --  OFL-1.1
+===========================================================================
+
+Role     : the three typefaces of the About page's credits roll, and nothing
+           else (the @font-face rules are named for the roll and only its
+           rules use them). Shipped as fonts/credits/cinzel-credits.woff2,
+           inter-credits.woff2 and spacemono-credits.woff2.
+Source   : github.com/google/fonts, ofl/cinzel/Cinzel[wght].ttf (Cinzel
+           2.000, Copyright 2020 The Cinzel Project Authors,
+           https://github.com/NDISCOVER/Cinzel; designer Natanael Gama),
+           ofl/inter/Inter[opsz,wght].ttf (Inter 4.001, Copyright 2016 The
+           Inter Project Authors, https://github.com/rsms/inter; designer
+           Rasmus Andersson) and ofl/spacemono/SpaceMono-Regular.ttf (Space
+           Mono 1.003, Copyright 2016 The Space Mono Project Authors,
+           https://github.com/googlefonts/spacemono; Colophon Foundry).
+           Fetched 2026-11-02; each source's sha256 is pinned in
+           WASM_Source/credits-fonts/build.py, which rebuilds the files.
+Changes  : cut to a Latin subset and to the weights the roll uses (Cinzel
+           500-900, Inter 300-600 at optical size 14, Space Mono Regular),
+           saved as woff2. Names, copyright and licence entries are kept.
+Licence  : SIL Open Font License 1.1. None of the three declares a Reserved
+           Font Name. Full texts: licenses/third-party/fonts-ofl/ (and beside
+           the fonts in fonts/credits/).
+How met  : the licence and copyright lines travel with the fonts; the fonts
+           are not sold on their own.
+
+
+===========================================================================
+SCOPE OF THIS FILE
+===========================================================================
+
+This file covers third-party SOFTWARE and code-derived material. It says
+nothing about third-party artwork, photographs, packaging, characters or
+trademarks -- see NOTICE for those, which are not licensed to this project at
+all and are not licensed onward by it.
+
+One set of web fonts is bundled, for the About page's credits roll only
+(section 21). All other text uses the viewer's own system fonts.

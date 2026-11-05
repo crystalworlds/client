@@ -1,0 +1,40 @@
+{
+  "_about": "Page addresses, their titles and descriptions (22 Oct 2026). Read by the site server (tools/localserver: the title and description in the first HTML of each address), by deeplinks.js (the title while browsing) and by tools/site-routes/build.mjs (sitemap.xml). Edit here, then run that build. No host is named here: each copy of the site uses its own address.",
+  "site": "Crystal Worlds",
+  "default": {
+    "title": "Crystal Worlds",
+    "description": "A fan-built video and game preservation project. Every Nintendo Game & Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system's hardware and emulation pages."
+  },
+  "routes": {
+    "/": { "sitemap": true, "priority": "1.0" },
+    "/home": { "priority": "0.9", "title": "Crystal Worlds", "description": "What CrystalWorlds.Media is: a video and game preservation project with its own emulators for Game & Watch, Game Boy, NES, Pokémon mini and Atari, and how each one compares." },
+    "/about": { "priority": "0.8", "title": "Crystal Worlds", "description": "About CrystalWorlds.Media: who builds it, how the emulators are made and tested, the licences, and how to get in touch." },
+    "/timeline": { "priority": "0.8", "title": "Crystal Worlds", "description": "Every handheld and console on CrystalWorlds.Media in the order it was released." },
+    "/features": { "priority": "0.8", "title": "Crystal Worlds", "description": "Everything CrystalWorlds.Media does: the consoles and accessories we rebuilt, the play window, controls, the library, films and shows, game servers and vault codes, and every screen it runs on." },
+    "/compatibility": { "priority": "0.9", "title": "Crystal Worlds", "description": "Every game on every system, with how it runs on our emulators: Plays, Boots or Nothing, and the reason when a game does not play." },
+    "/game-and-watch/hardware": { "title": "Crystal Worlds", "description": "The Nintendo Game & Watch hardware: the Sharp chips, screens, buttons and sound." },
+    "/game-and-watch/emulation": { "title": "Crystal Worlds", "description": "How our Game & Watch emulator is built and checked: the three Sharp cores and their acceptance tests." },
+    "/game-and-watch-colour/hardware": { "title": "Crystal Worlds", "description": "The Game & Watch colour units: the hardware inside the modern reissues." },
+    "/game-and-watch-colour/emulation": { "title": "Crystal Worlds", "description": "How our Game & Watch colour emulator is built: an ARM digital twin of the unit." },
+    "/gb/hardware": { "title": "Crystal Worlds", "description": "The Nintendo Game Boy hardware: the processor, picture, sound and cartridges." },
+    "/gb/emulation": { "title": "Crystal Worlds", "description": "How our Game Boy emulator is built and checked, and its score on the public test cartridges." },
+    "/gbc/hardware": { "title": "Crystal Worlds", "description": "The Nintendo Game Boy Color hardware: what it adds to the Game Boy." },
+    "/gbc/emulation": { "title": "Crystal Worlds", "description": "How our Game Boy Color emulator is built and checked." },
+    "/nes/hardware": { "title": "Crystal Worlds", "description": "The Nintendo Entertainment System hardware: the processor, picture, sound, controllers and cartridge boards." },
+    "/nes/emulation": { "title": "Crystal Worlds", "description": "How our NES emulator is built and checked, and its score on the public test cartridges." },
+    "/famicom/hardware": { "title": "Crystal Worlds", "description": "The Nintendo Famicom hardware: the Japanese console and what sets it apart from the NES." },
+    "/famicom/emulation": { "title": "Crystal Worlds", "description": "How our Famicom emulator is built and checked." },
+    "/fds/hardware": { "title": "Crystal Worlds", "description": "The Famicom Disk System hardware: the disk drive, its sound and its disks." },
+    "/fds/emulation": { "title": "Crystal Worlds", "description": "How our Famicom Disk System emulator is built and checked." },
+    "/pokemon-mini/hardware": { "title": "Crystal Worlds", "description": "The Pokémon mini hardware: the processor, screen, rumble and infrared." },
+    "/pokemon-mini/emulation": { "title": "Crystal Worlds", "description": "How our Pokémon mini emulator is built and checked." },
+    "/atari2600/hardware": { "title": "Crystal Worlds", "description": "The Atari 2600 hardware: the processor, the TIA picture and sound chip, controllers and cartridges." },
+    "/atari2600/emulation": { "title": "Crystal Worlds", "description": "How our Atari 2600 emulator is built and checked." },
+    "/atari5200/hardware": { "title": "Crystal Worlds", "description": "The Atari 5200 hardware: the processor, picture and sound chips, and the analogue controllers." },
+    "/atari5200/emulation": { "title": "Crystal Worlds", "description": "How our Atari 5200 emulator is built and checked." },
+    "/atari7800/hardware": { "title": "Crystal Worlds", "description": "The Atari 7800 hardware: the processor, the MARIA picture chip, sound and cartridges." },
+    "/atari7800/emulation": { "title": "Crystal Worlds", "description": "How our Atari 7800 emulator is built and checked." },
+    "/atarilynx/hardware": { "title": "Crystal Worlds", "description": "The Atari Lynx hardware: the processor, the graphics and sound chips, and the colour screen." },
+    "/atarilynx/emulation": { "title": "Crystal Worlds", "description": "How our Atari Lynx emulator is built and checked." }
+  }
+}

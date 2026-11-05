@@ -1,0 +1,401 @@
+/* nes-screen.css -- the NES television's screen aperture, declared ONCE for the
+   whole site.
+
+   WHY THIS IS A FILE AND NOT A BLOCK IN index.html
+   ---------------------------------------------------------------------------
+   Two documents put a moving picture on this television's glass and they are
+   not in the same tree:
+
+     index.html            the Media tile and the drawer stage
+     play/nes/index.html   the play page, behind its #bezel slot
+
+   The aperture is one measurement of one photograph, so it is one declaration.
+   The alternative was a copy in each, which is precisely the defect this site
+   fixed on 2026-09-30: the Game Boy aperture was written out three times, each
+   copy carrying a comment asking the reader to keep it in step with the other
+   two, and when the artwork was replaced with a photograph only the canvas copy
+   was re-measured. The other two kept the retired render's rectangle, which
+   starts further left and is wider, so the running screen overhung the new
+   aperture on the tiles while looking correct in the drawer. Comments do not
+   keep numbers in step. A single declaration does.
+
+   index.html does not consume these directly. Its own single-source variables
+   are --gb-scr-l/t/w/h/bg on .device-card, and its
+   .device-card[data-system="nes"] block sets those FROM the properties here --
+   a reference, not a second copy. That keeps one mechanism on the site side
+   while the numbers themselves live in one place both documents can reach.
+
+   WHAT WAS MEASURED, AND HOW
+   ---------------------------------------------------------------------------
+   Source photograph: nes.png, 903x733 RGBA, shipped as NesConsole.png in
+   images_nes_b64.json. A CRT television with a front-loading NES, two
+   controllers and a Zapper below it.
+
+   The screen is NOT cut out of the photograph. Its aperture is a translucent
+   GLARE LAYER -- plateau alpha 88/255, i.e. 34.5% opaque, over 130,158 pixels
+   -- carrying the reflections and wear the real tube has. That layer is the
+   point of the photograph, so the emulator surface is stacked UNDER it and
+   shows through: the glare falls on the game, which is what a real television
+   looks like. The Game Boy photographs do the same thing at alpha 79 (31%).
+   Consequence worth knowing before it is reported as a bug: at 34.5% glass the
+   picture is dimmed and slightly desaturated. That is the artwork's doing, not
+   the code's, and the remedy if one is ever wanted is a lighter alpha in the
+   PNG.
+
+   The rectangle was found twice, by two detectors, and both agree:
+
+     1. WASM_Source/nes-artwork/aperture.py -- the alpha plateau's bounding box
+        over the rows and columns carrying at least half the maximum plateau
+        count, each edge then walked out to its bow along the middle 80% of that
+        edge. An edge is a run of three matching pixels, not one: the
+        photograph's outline carries antialiased pixels that land on the plateau
+        by coincidence, and taking the first single match reports the aperture
+        2px large on every side.
+     2. The same measurement repeated in the browser from the decoded bitmap,
+        drawn to an OffscreenCanvas and read back through getImageData, so the
+        figure is checked against what the browser actually renders rather than
+        only against what Python reads.
+
+     plateau    423 x 316 at (229,71)     98.0% filled with the plateau
+     surface    429 x 323 at (226,67)     what --nes-scr-* below declares
+     television 587 x 414 at (147,23)     the body the play view crops to
+     glass tone #4f4f4f                   sampled from the photograph itself
+
+   THE SURFACE BOX IS NOT THE PLATEAU BOX, and the difference is the whole of a
+   defect reported on 2026-10-01: "the tile for the NES needs a little more
+   curve to cover the top and bottom of white bit on the tv. It is slightly off
+   by maybe 1px."
+
+   It was not the curve and it was not the bow. Between the flat alpha-88
+   plateau and the fully opaque bezel there is an ANTIALIASED FRINGE one to
+   three pixels wide, alpha 80..254 -- still see-through, and outside the
+   plateau box that both detectors were measuring. Along the centre lines:
+
+     top     y=68 alpha 206 ... y=71 alpha 88     plateau box started at 71
+     bottom  y=386 alpha 86 ... y=388 alpha 183   plateau box ended   at 386
+     left    x=227 alpha 132 ... x=229 alpha 86   plateau box started at 229
+     right   x=651 alpha 86 ... x=653 alpha 132   plateau box ended   at 651
+
+   A surface filled to the plateau box therefore left 1923 glass pixels
+   uncovered -- about 915 pixels' worth of whatever is behind showing through,
+   concentrated in a hairline across the top and bottom edges. On the Media
+   page in light mode that backing is white, which is the "white bit".
+
+   THE SURFACE BOX IS THE FIRST FULLY OPAQUE RING on each side: walk outward
+   from the plateau until a whole row (or column) across the box's span reads
+   alpha 255. That is 226,67 to 654,389 inclusive = 429 x 323, and a surface
+   filled to it covers every see-through pixel while overfilling by at most one
+   pixel into bezel that masks it. Measured after the change: 0 uncovered glass
+   pixels, 0 visible backing. Overfilling is free here for the reason the next
+   paragraph gives; underfilling was the fault.
+
+   THE RADIUS WAS NOT THE FAULT AND DID NOT CHANGE. On the surface box,
+   3.1% / 4.1% leaves zero glass uncovered at all four corners, and the largest
+   radius that still leaves zero is about 5.1% / 6.8% -- so there is headroom,
+   but spending it buys nothing. "More curve" was the symptom's description,
+   not its cause.
+
+   THE EDGES BOW, AND THAT IS WHY THE BOX IS THE OUTER ONE. The aperture is not
+   a rectangle: it bows outward by 5 rows at the centre of the top and bottom
+   edges and by 3 to 4 columns at the centre of the sides, because the tube is
+   curved. So there are two candidate rectangles and they disagree about which
+   is the screen:
+
+     median edges   421 x 313 at (230,72)   aspect 1.3450   0.9%  off 4:3
+     outer extreme  423 x 316 at (229,71)   aspect 1.3386   0.4%  off 4:3
+
+   The outer box is the television's nominal 4:3, and it is also the one to hand
+   an emulator surface -- for a reason about the photograph rather than about
+   geometry. Outside the aperture this image is FULLY opaque: measured alpha 255
+   at every pixel from 5px out, all the way round. So a surface that overfills
+   is masked by the bezel and costs nothing, while one that underfills leaves a
+   crescent of backing colour showing through the glare at the centre of each
+   edge. Overfilling is the safe direction.
+   ***BUT THE OUTER PLATEAU BOX IS NOT THE SMALLEST RECTANGLE THAT OVERFILLS
+   EVERYWHERE, and this file said for one day that it was.*** It underfills by
+   one to three pixels all round, into the glass's antialiased fringe -- see
+   THE SURFACE BOX below, which is what --nes-scr-* now carries.
+
+   THE CURVE. The tube's curvature reaches the picture in two ways and only one
+   of them is worth code.
+     * The aperture's curved BOUNDARY is already in the photograph's alpha
+       channel. An overfilled surface behind an opaque bezel is clipped by that
+       alpha, so the screen's outline follows the tube's bow exactly, with
+       nothing here to make it do so.
+     * The rounded CORNERS are a border-radius, measured from the artwork rather
+       than chosen: the aperture's edge settles into its straight run 13px in at
+       the worst corner (13, 7, 8, 7 px clockwise from top-left), which on a
+       423x316 box is 3.1% horizontally and 4.1% vertically. Hence
+       --nes-scr-radius below, in the elliptical form so the two axes stay
+       independent of the box's shape. Unchanged by the 2026-10-01 surface-box
+       correction above: re-scored on the 429x323 box it still leaves zero
+       glass uncovered at every corner.
+     * Geometric BARREL DISTORTION of the picture itself -- bowing the game's
+       own straight lines -- is deliberately not done. It is a per-pixel
+       displacement, so it needs a WebGL pass or an SVG filter on every frame,
+       and the whole effect it would buy is under two pixels of deflection on a
+       256x240 image sitting behind a 34.5%-opaque glare layer. The design
+       instruction covers this case exactly: "if the curve is not possible then
+       please skip the curve." The part that was cheap and clean is done; the
+       part that needed a shader pipeline is not.
+
+   IF THE PHOTOGRAPH IS EVER REPLACED, re-measure. Do not adjust these by eye.
+     python3 WASM_Source/nes-artwork/aperture.py nes.png
+   prints the whole block below, and WASM_Source/nes-artwork/verify.sh section 4
+   re-detects the rectangle on every run and FAILS if it no longer matches what
+   is written here -- so a swapped image cannot pass quietly.
+   ------------------------------------------------------------------------- */
+:root {
+  /* The aperture, as percentages OF THE PHOTOGRAPH. Percentages rather than
+     pixels because every surface that shows this artwork sizes it differently
+     -- tile, drawer stage, play view -- and a percentage of the image is the
+     one expression that is correct on all of them without being recomputed. */
+  /* 2026-10-22 (decided): the picture is now nes-tile.png, 630x756, the same
+     television at its own pixels with the console and accessories removed and the NES controller
+     below it, one column wide like a Game Boy tile. The glass is the same 429 x 323 (alpha checked
+     pixel for pixel), moved to (100,62); re-measured by aperture.py on the new file. The old
+     903x733 figures were 25.03% / 9.14% / 47.51% / 44.07%. */
+  --nes-scr-l: 15.87%;   /* 100 / 630 */
+  --nes-scr-t: 8.20%;    /*  62 / 756 */
+  --nes-scr-w: 68.10%;   /* 429 / 630 */
+  --nes-scr-h: 42.72%;   /* 323 / 756 */
+
+  /* The glass tone, shown for the moment before the first frame lands. Sampled
+     from the photograph's own screen, not invented: an unlit CRT is dark grey. */
+  --nes-scr-bg: #4f4f4f;
+
+  /* Elliptical corner radius, horizontal / vertical, as percentages of the
+     APERTURE box (not of the photograph) -- so it is applied to the surface
+     itself, whose box those percentages resolve against. */
+  --nes-scr-radius: 3.1% / 4.1%;
+
+  /* THE TELEVISION BODY, for the play view's crop. A separate measurement from
+     the aperture -- the silhouette above the row where the console and
+     controllers widen it -- so this is not a second copy of anything.
+     587 x 414 at (147,23), as percentages of the photograph. */
+  /* 2026-10-22: 582 x 414 at (24,18) of 630x756 (aperture.py's "television body"). */
+  --nes-tv-l: 3.81%;     /*  24 / 630 */
+  --nes-tv-t: 2.38%;     /*  18 / 756 */
+  --nes-tv-w: 92.38%;    /* 582 / 630 */
+  --nes-tv-h: 54.76%;    /* 414 / 756 */
+
+  /* The crop expressed as the scale a .nes-tv-crop window needs: the photograph
+     must be 903/587 of the window's width for the television to fill it. Held
+     as a unitless ratio because calc() cannot divide by a percentage, which is
+     the only reason this is not derived from --nes-tv-w at run time. */
+  --nes-tv-scale: 1.08247;   /* 630 / 582 (2026-10-22) */
+
+  /* The two aspect ratios, as `aspect-ratio` values. Published because both are
+     facts about this photograph, and a surface that needs one must not write it
+     down locally -- which is the whole discipline of this file.
+       --nes-art-aspect is the WHOLE photograph, and a tile needs it: a tile box
+     is not the artwork's shape, so the artwork has to be fitted into it, and
+     fitting needs the ratio declared rather than inferred from a loaded image
+     (a tile lays out before its image decodes).
+       --nes-tv-aspect is the TELEVISION, and the play view needs it to size the
+     crop window against a height budget rather than a width one. */
+  --nes-art-aspect: 630 / 756;   /* 2026-10-22: exactly 5 / 6, the tall single tile's box */
+  --nes-tv-aspect: 582 / 414;
+
+  /* The same two ratios as unitless NUMBERS. `aspect-ratio` accepts a `a / b`
+     value; calc() does not, and a layout that fits a box to a HEIGHT budget has
+     to multiply by the ratio. Declared here beside the ratios they duplicate in
+     value -- which is the one duplication this file allows, because they are
+     two spellings of one measurement rather than two measurements, and putting
+     the number anywhere else would separate it from the box it describes. */
+  --nes-art-aspect-num: 0.83333;   /* 630 / 756 */
+  --nes-tv-aspect-num: 1.40580;    /* 582 / 414 */
+}
+
+/* ---- THE CROP WINDOW ------------------------------------------------------
+   "When playing the game, just zoom in to the TV and show it only, cutting off
+   the lower part of the image where the console shows."
+
+   This is that crop, and it is deliberately a TRANSFORM ON THE CONTAINER rather
+   than a second set of aperture percentages. The contents keep the
+   photograph's own coordinate frame, so --nes-scr-* above apply unchanged
+   inside a cropped view and inside an uncropped one. A crop that re-expressed
+   the aperture relative to the television would be the second copy this whole
+   file exists to prevent.
+
+   How it works: the window is the television's own 587:414. The photograph
+   inside is widened to --nes-tv-scale of the window, which maps 587 artwork
+   pixels onto one window width, and then translated by the television's
+   top-left offset as a percentage OF ITSELF -- transform percentages resolve
+   against the transformed element, which is what makes the offset come out in
+   photograph fractions without any further arithmetic.
+   ------------------------------------------------------------------------- */
+.nes-tv-crop {
+  position: relative;
+  overflow: hidden;
+  /* From the variable, so a Famicom or Disk System television (below) crops to
+     its own body. 587 / 414 is the NES value of --nes-tv-aspect. */
+  aspect-ratio: var(--nes-tv-aspect, 587 / 414);
+}
+.nes-tv-crop > .nes-art-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% * var(--nes-tv-scale));
+  transform: translate(calc(-1 * var(--nes-tv-l)), calc(-1 * var(--nes-tv-t)));
+}
+
+/* ---- THE ARTWORK AND THE SURFACE BEHIND IT --------------------------------
+   Stacking order inside .nes-art-frame, bottom to top:
+
+     z1  .nes-screen   the live surface -- canvas or iframe
+     z2  .nes-art      the photograph, glare included
+
+   The photograph is the in-flow box, so it is what gives .nes-art-frame its
+   width and its 903:733 aspect ratio. That is on purpose: the artwork's own
+   proportions drive the geometry instead of a number written down somewhere
+   that can disagree with the file.
+   ------------------------------------------------------------------------- */
+.nes-art-frame { position: relative; line-height: 0; }
+.nes-art-frame > .nes-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-drag: none;
+  /* Positioned ONLY so it can carry a z-index; it is still in flow. */
+  position: relative;
+  z-index: 2;
+}
+.nes-art-frame > .nes-screen {
+  position: absolute;
+  left: var(--nes-scr-l);
+  top: var(--nes-scr-t);
+  width: var(--nes-scr-w);
+  height: var(--nes-scr-h);
+  z-index: 1;                       /* UNDER the photograph -- see above */
+  border: 0;
+  background: var(--nes-scr-bg);
+  border-radius: var(--nes-scr-radius);
+  /* The core's framebuffer is 256x240 with non-square pixels; the aperture is
+     4:3. Filling is therefore correct rather than a stretch -- 256x240 at the
+     hardware's 8:7 pixel aspect IS 4:3. */
+  object-fit: fill;
+  image-rendering: pixelated;
+  box-shadow: none;
+}
+
+/* ---- THE FAMICOM AND THE DISK SYSTEM (2026-10-03) ---------------------------
+   One emulator, three consoles (by decision): the NES above, and these two,
+   each with its own photograph. Every rule in this file reads the variables, so
+   a console is nothing more than a different set of them, scoped by
+   data-nes-console on whatever element holds the art: the Media card, the
+   drawer stage, or the play page's <body>.
+
+   Source photographs: famicom.png 948x523 and fds.png 893x591, shipped as
+   FamicomConsole.webp and FdsConsole.webp in images_famicom_b64.json
+   (WASM_Source/famicom-artwork). Both show THE SAME television, a different set
+   from the NES one, so the two blocks differ only by where it stands.
+
+   MEASURED by WASM_Source/famicom-artwork/aperture.py, on the PNG and again on
+   the archived WebP (identical: the WebP's alpha is lossless). Not by the NES
+   detector, which boxes the most common glass alpha: this glass carries a
+   large reflection, so that plateau covers 54,358 of the 75,480 see-through
+   pixels and its box is a 260x240 chord. Here the surface box is the bounding
+   box of the whole connected see-through region (glass plus fringe), checked by
+   the ring outside it reading alpha >= 254 all round:
+
+     surface    323 x 243 at (284,66) famicom, (238,62) fds    aspect 1.329
+     television 475 x 347 at (252,16) famicom, (206,12) fds
+     corners    10% / 13%: the largest radius leaving zero glass uncovered (this
+                tube's screen is far rounder than the NES set's 3.1% / 4.1%)
+     glass tone sampled from each photograph's flat glass
+
+   WASM_Source/famicom-artwork/verify.sh section 3 re-measures and FAILS if
+   these lines no longer match. Re-measure; never adjust by eye.
+   ------------------------------------------------------------------------- */
+[data-nes-console="famicom"] {
+  /* 2026-10-22: famicom-tile.png, 520x624 (5:6), measured by famicom-artwork/aperture.py. */
+  --nes-scr-l: 10.38%;   /* 54 / 520 */
+  --nes-scr-t: 11.86%;   /* 74 / 624 */
+  --nes-scr-w: 62.12%;   /* 323 / 520 */
+  --nes-scr-h: 38.94%;   /* 243 / 624 */
+  --nes-scr-bg: #4d5353;
+  --nes-scr-radius: 10% / 13%;
+  --nes-tv-l: 4.23%;   /* 22 / 520 */
+  --nes-tv-t: 3.85%;   /* 24 / 624 */
+  --nes-tv-w: 91.35%;   /* 475 / 520 */
+  --nes-tv-h: 55.61%;   /* 347 / 624 */
+  --nes-tv-scale: 1.09474;   /* 520 / 475 */
+  --nes-art-aspect: 520 / 624;
+  --nes-tv-aspect: 475 / 347;
+  --nes-art-aspect-num: 0.83333;
+  --nes-tv-aspect-num: 1.36888;
+}
+[data-nes-console="fds"] {
+  /* 2026-10-22: fds-tile.png, 520x624 (5:6), measured by famicom-artwork/aperture.py. */
+  --nes-scr-l: 10.38%;   /* 54 / 520 */
+  --nes-scr-t: 11.86%;   /* 74 / 624 */
+  --nes-scr-w: 62.12%;   /* 323 / 520 */
+  --nes-scr-h: 38.94%;   /* 243 / 624 */
+  --nes-scr-bg: #5d605d;
+  --nes-scr-radius: 10% / 13%;
+  --nes-tv-l: 4.23%;   /* 22 / 520 */
+  --nes-tv-t: 3.85%;   /* 24 / 624 */
+  --nes-tv-w: 91.35%;   /* 475 / 520 */
+  --nes-tv-h: 55.61%;   /* 347 / 624 */
+  --nes-tv-scale: 1.09474;   /* 520 / 475 */
+  --nes-art-aspect: 520 / 624;
+  --nes-tv-aspect: 475 / 347;
+  --nes-art-aspect-num: 0.83333;
+  --nes-tv-aspect-num: 1.36888;
+}
+
+/* ---- THE DRAWER SHOWS THE FULL PHOTOGRAPH (2026-10-22) ----
+   "The new picture on the TILE only": the drawer stage shows the old full photographs again
+   (television, console and accessories), archived beside the tile pictures as NesConsoleFull.png
+   (images_nes_b64.json) and FamicomConsoleFull.webp / FdsConsoleFull.webp (images_famicom_b64.json),
+   picked by index.html showNesDeviceStage. The tile and the play window keep the tile pictures and
+   the numbers above. These are the measured numbers of the full photographs, unchanged from before
+   the 22 Oct tile pictures (aperture.py: nes.png 429x323 at (226,67) of 903x733, famicom.png 323x243 at (284,66) of
+   948x523, fds.png 323x243 at (238,62) of 893x591); nes-artwork/verify.sh and
+   famicom-artwork/verify.sh re-measure them. Scoped to the drawer stage only. */
+#device-stage .stage-card[data-nes-console="nes"] {
+  --nes-scr-l: 25.03%;   /* 226 / 903 */
+  --nes-scr-t: 9.14%;    /*  67 / 733 */
+  --nes-scr-w: 47.51%;   /* 429 / 903 */
+  --nes-scr-h: 44.07%;   /* 323 / 733 */
+  --nes-tv-l: 16.28%;    /* 147 / 903 */
+  --nes-tv-t: 3.14%;     /*  23 / 733 */
+  --nes-tv-w: 64.99%;    /* 587 / 903 */
+  --nes-tv-h: 56.48%;    /* 414 / 733 */
+  --nes-tv-scale: 1.53833;   /* 903 / 587 */
+  --nes-art-aspect: 903 / 733;
+  --nes-tv-aspect: 587 / 414;
+  --nes-art-aspect-num: 1.23192;
+  --nes-tv-aspect-num: 1.41787;
+}
+#device-stage .stage-card[data-nes-console="famicom"] {
+  --nes-scr-l: 29.96%;   /* 284 / 948 */
+  --nes-scr-t: 12.62%;   /*  66 / 523 */
+  --nes-scr-w: 34.07%;   /* 323 / 948 */
+  --nes-scr-h: 46.46%;   /* 243 / 523 */
+  --nes-tv-l: 26.58%;    /* 252 / 948 */
+  --nes-tv-t: 3.06%;     /*  16 / 523 */
+  --nes-tv-w: 50.11%;    /* 475 / 948 */
+  --nes-tv-h: 66.35%;    /* 347 / 523 */
+  --nes-tv-scale: 1.99579;   /* 948 / 475 */
+  --nes-art-aspect: 948 / 523;
+  --nes-tv-aspect: 475 / 347;
+  --nes-art-aspect-num: 1.81262;
+  --nes-tv-aspect-num: 1.36888;
+}
+#device-stage .stage-card[data-nes-console="fds"] {
+  --nes-scr-l: 26.65%;   /* 238 / 893 */
+  --nes-scr-t: 10.49%;   /*  62 / 591 */
+  --nes-scr-w: 36.17%;   /* 323 / 893 */
+  --nes-scr-h: 41.12%;   /* 243 / 591 */
+  --nes-tv-l: 23.07%;    /* 206 / 893 */
+  --nes-tv-t: 2.03%;     /*  12 / 591 */
+  --nes-tv-w: 53.19%;    /* 475 / 893 */
+  --nes-tv-h: 58.71%;    /* 347 / 591 */
+  --nes-tv-scale: 1.88000;   /* 893 / 475 */
+  --nes-art-aspect: 893 / 591;
+  --nes-tv-aspect: 475 / 347;
+  --nes-art-aspect-num: 1.51100;
+  --nes-tv-aspect-num: 1.36888;
+}

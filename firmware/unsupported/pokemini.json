@@ -1,0 +1,10 @@
+{
+ "format": 1,
+ "list": "pokemini",
+ "label": "Pokémon mini",
+ "guards": [
+  "pokemon-mini"
+ ],
+ "count": 0,
+ "entries": {}
+}

@@ -1,0 +1,454 @@
+{
+ "columns": [
+  "plays",
+  "ingame",
+  "menus",
+  "boots",
+  "nothing",
+  "untested"
+ ],
+ "cards": {
+  "gb": {
+   "rungs": {
+    "plays": 2806,
+    "ingame": 0,
+    "menus": 4,
+    "boots": 7,
+    "nothing": 9
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     2009,
+     0,
+     3,
+     0,
+     0,
+     0
+    ],
+    "unl": [
+     240,
+     0,
+     0,
+     6,
+     9,
+     0
+    ],
+    "homebrew": [
+     384,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "proto": [
+     119,
+     0,
+     1,
+     1,
+     0,
+     0
+    ],
+    "demo": [
+     54,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "byShelf": {
+    "sgb": {
+     "label": "Super Game Boy",
+     "byCat": {
+      "commercial": [
+       204,
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "homebrew": [
+       4,
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "proto": [
+       1,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     }
+    }
+   }
+  },
+  "nes": {
+   "rungs": {
+    "plays": 4348,
+    "ingame": 0,
+    "menus": 1,
+    "boots": 72,
+    "nothing": 109
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     2105,
+     0,
+     0,
+     16,
+     6,
+     0
+    ],
+    "unl": [
+     916,
+     0,
+     1,
+     4,
+     55,
+     0
+    ],
+    "homebrew": [
+     864,
+     0,
+     0,
+     26,
+     47,
+     0
+    ],
+    "hack": [
+     5,
+     0,
+     0,
+     5,
+     0,
+     0
+    ],
+    "proto": [
+     153,
+     0,
+     0,
+     2,
+     1,
+     0
+    ],
+    "demo": [
+     305,
+     0,
+     0,
+     19,
+     0,
+     0
+    ]
+   }
+  },
+  "a2600": {
+   "rungs": {
+    "plays": 805,
+    "ingame": 0,
+    "menus": 0,
+    "boots": 3,
+    "nothing": 0
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     657,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "unl": [
+     11,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "proto": [
+     127,
+     0,
+     0,
+     3,
+     0,
+     0
+    ],
+    "demo": [
+     10,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "rival": {
+    "rivalnone": 3,
+    "rivalplays": 0,
+    "rivalrefuses": 0
+   }
+  },
+  "a5200": {
+   "rungs": {
+    "plays": 484,
+    "ingame": 0,
+    "menus": 0,
+    "boots": 10,
+    "nothing": 1
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     69,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "unl": [
+     3,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "homebrew": [
+     365,
+     0,
+     0,
+     8,
+     1,
+     0
+    ],
+    "hack": [
+     1,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "proto": [
+     31,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "demo": [
+     15,
+     0,
+     0,
+     2,
+     0,
+     0
+    ]
+   }
+  },
+  "a7800": {
+   "rungs": {
+    "plays": 314,
+    "ingame": 0,
+    "menus": 0,
+    "boots": 3,
+    "nothing": 0
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     60,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "homebrew": [
+     168,
+     0,
+     0,
+     3,
+     0,
+     0
+    ],
+    "proto": [
+     12,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "demo": [
+     74,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "rival": {
+    "rivalnone": 3,
+    "rivalplays": 0,
+    "rivalrefuses": 98
+   }
+  },
+  "alynx": {
+   "rungs": {
+    "plays": 812,
+    "ingame": 0,
+    "menus": 0,
+    "boots": 48,
+    "nothing": 0
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     76,
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    "unl": [
+     3,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "homebrew": [
+     562,
+     0,
+     0,
+     43,
+     0,
+     0
+    ],
+    "proto": [
+     84,
+     0,
+     0,
+     2,
+     0,
+     0
+    ],
+    "demo": [
+     87,
+     0,
+     0,
+     2,
+     0,
+     0
+    ]
+   }
+  },
+  "pm": {
+   "rungs": {
+    "plays": 17,
+    "ingame": 0,
+    "menus": 0,
+    "boots": 0,
+    "nothing": 0
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     17,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "gnw": {
+   "rungs": {
+    "plays": 61,
+    "ingame": 0,
+    "menus": 0,
+    "boots": 0,
+    "nothing": 0
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     61,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  "tft": {
+   "rungs": {
+    "plays": 0,
+    "ingame": 2,
+    "menus": 0,
+    "boots": 0,
+    "nothing": 0
+   },
+   "untested": 0,
+   "byCat": {
+    "commercial": [
+     0,
+     2,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ "chips": {
+  "nes": {
+   "mappers": 233,
+   "accessories": "Zapper, Arkanoid paddle, Power Pad, Family Trainer, Four Score, Famicom 4-player adapter, R.O.B. (Gyromite and Stack-Up), Bandai Hyper Shot (light gun), Konami Hyper Shot (run and jump buttons), Party Tap (six quiz buzzers), Pachinko controller (dial), Exciting Boxing punching bag, Jissen Mahjong controller, Oeka Kids drawing tablet, Barcode World reader, Pokkun Moguraa mat (whack-a-mole), Top Rider bike, Subor keyboard, Subor keyboard and mouse, Miracle Piano keyboard, Turbo File (save box), Battle Box (save box), Family BASIC keyboard, Famicom Data Recorder (tapes in and out), Famicom microphone (your own microphone), Datach barcode reader, Study Box tape deck"
+  },
+  "a7800": {
+   "accessories": "ProLine joystick, Paddles, Driving controller, Keypad, SaveKey (high scores), Mega7800 pad, XM expansion (with the High Score Cartridge)",
+   "boards": 12
+  },
+  "gb": {
+   "licensed": 13,
+   "unlicensed": 17,
+   "accessories": "Super Game Boy (borders, colours, up to four players), Game Boy Printer, Pocket Camera (your own camera), Pocket Sonar, Link cable to a second Game Boy (two players), Infrared between two linked Game Boy Color units, Barcode Boy card reader, Tilt sensor, Rumble"
+  },
+  "pm": {
+   "accessories": "Infrared link (two players on two Pokémon minis side by side), Rumble motor, Shake sensor (reed switch)"
+  },
+  "a2600": {
+   "types": 50,
+   "accessories": "Joystick, Paddles, Driving controller, Keypad (keyboard controller), SaveKey (high scores), Kid Vid voice module (narration from your own tapes), Supercharger (tape loading), the Atari 5200’s VCS Cartridge Adapter (a Console choice)"
+  },
+  "a5200": {
+   "boards": 8,
+   "accessories": "Analogue joystick with keypad, Trak-ball (your mouse)"
+  },
+  "alynx": {
+   "accessories": ""
+  }
+ }
+}

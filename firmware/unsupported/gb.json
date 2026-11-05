@@ -1,0 +1,89 @@
+{
+ "format": 1,
+ "list": "gb",
+ "label": "Game Boy",
+ "guards": [
+  "game-boy"
+ ],
+ "count": 13,
+ "entries": {
+  "16d411312e5ff0c14c561bc55c9858329d66b85e8961285b26d9bf6d23a56c3e": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its header fails the console's own start-up check, so a real console refuses this file too.",
+   "title": "Pocket Monsters Yellow (Hong Kong) (SGB Enhanced) (Pirate)"
+  },
+  "1cb5d1f9451739273795e0ab2fac1e1272e55a7b44215f1e8d6af9d14234a8f4": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "GameShark Online (USA) (Unl)"
+  },
+  "2297697e61cc97855f2f781b9ee7eed62fc79fafbc4ce9a4210499563d0b97d3": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "GameShark (USA) (Unl) [b]"
+  },
+  "2b39c71c9e98b6191fe579a72fb4851876ad3261a95d132226572a522b646697": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its header fails the console's own start-up check, so a real console refuses this file too.",
+   "title": "Rockman World (Japan) (En) (Beta)"
+  },
+  "4c1cb5c5d9ecb979a1a4bd7dca4e33bf2f50f9c11fb9932d11dfa1ec1bdf1df3": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Action Replay Xtreme - Special Edition for Pokemon Crystal (Europe) (Unl)"
+  },
+  "4f7bb70b7dd3c0f85592c12ce3771663524e270e3b8d4ae24affacbe49ef0700": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a program for a diagnostic interface that is not emulated (and this copy is a known bad dump).",
+   "title": "Aprilia - DiTech Interface (Unknown) (Unl) [b]"
+  },
+  "6d8ffb51bc3ba7712d88b1094c493fe3d6f14a937ca38abf09f9a5c422f87c16": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Xploder GB (Europe) (v1.2.3E) (GB Compatible) (Unl)"
+  },
+  "8223d9aaa8c1ec16d837e6159b377e24dbf177dc45e25205d838db619dbae286": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Game Genie (USA) (v2.1) (Unl)"
+  },
+  "988e4286ce159f095b585427bb5e84a2e77676bc85f9a2e34d6e0d8082e021f1": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Pro Action Replay (Europe) (Unl)"
+  },
+  "aeaac7c1834e1f4a6ca065dd709d9c3ee72df04b26d830e016ea86f7be5e245d": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Xploder GB (Germany) (v1.2.2G) (GB Compatible) (Unl)"
+  },
+  "c068cd85c469069cd796afb8b0840838652e7084ba2fbaddd6b77d93a20f903d": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Action Replay Online (Europe) (Unl)"
+  },
+  "c6c610cd766ae2534e258d7cfa0007389adb50c5650092cfb3cc58a1e72877fa": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is the loader for a copier add-on that is not emulated, and it waits for that add-on, as on a console without it.",
+   "title": "Doctor GB Card 16M Loader (World) (Unl)"
+  },
+  "e6b6444657e52cb2d162d5e7e0f1683f592905a28876ec90e9e8c73e204354d4": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its header fails the console's own start-up check, so a real console refuses this file too.",
+   "title": "Pokemon - Red Version (Hong Kong) (SGB Enhanced) (Pirate)"
+  }
+ }
+}

@@ -1,0 +1,39 @@
+{
+  "_comment": [
+    "Copy this file to carts.local.json and edit it. carts.local.json is",
+    "GITIGNORED and must stay that way: it names a directory on your machine",
+    "and the filenames of your cartridges, and cartridge firmware is strictly",
+    "local. Nothing here is ever committed, bundled, or fetched from anywhere.",
+    "",
+    "server.ps1 mounts 'dir' READ-ONLY at /carts/ and binds localhost only, so",
+    "it is reachable from this machine and nowhere else. The files stay where",
+    "they are; nothing is copied into the repository. GET and HEAD only -- any",
+    "write method is refused with 405.",
+    "",
+    "'slots' maps each slot on the Game Boy page (play/gameboy/) to a filename",
+    "inside that directory, so clicking a slot loads it with no file dialog. Any",
+    "slot you leave out simply falls back to the file picker, and so does every",
+    "slot if this file or the directory is absent. The page works perfectly well",
+    "with no cartridges at all -- it just asks each time.",
+    "",
+    "The slot names are the core's ladder rungs and come from the vendored",
+    "play/gameboy/web/shell.js. If a core update changes that list, the page's",
+    "slots change with it and this file needs no edit -- unmapped slots are",
+    "simply pickers."
+  ],
+
+  "dir": "C:\\path\\to\\your\\GameBoyFiles",
+
+  "bios": "",
+
+  "slots": {
+    "tetris": "",
+    "drmario": "",
+    "marioland": "",
+    "sml2": "",
+    "zelda": "",
+    "prehistorik": "",
+    "pinball": "",
+    "disneyland": ""
+  }
+}

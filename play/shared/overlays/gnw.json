@@ -1,0 +1,131 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "gnw",
+ "label": "Game & Watch",
+ "device": "art",
+ "artFrom": "gnwDef",
+ "theme": {
+  "press": "rgba(255,214,64,.7)",
+  "pressInk": "#1a1400"
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "left",
+    "dock": "bl",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "left",
+      "label": "LEFT",
+      "input": "gnw:left",
+      "shape": "circle",
+      "x": 0.4,
+      "y": 0.5,
+      "w": 0.58,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "right",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "right",
+      "label": "RIGHT",
+      "input": "gnw:right",
+      "shape": "circle",
+      "x": 0.6,
+      "y": 0.5,
+      "w": 0.58,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "modes",
+    "dock": "bc",
+    "row": {
+     "gap": 8
+    },
+    "controls": [
+     {
+      "id": "gameA",
+      "label": "GAME A",
+      "input": "gnw:gameA",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "gameB",
+      "label": "GAME B",
+      "input": "gnw:gameB",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "time",
+      "label": "TIME",
+      "input": "gnw:time",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "provenance": [
+  {
+   "what": "art buttons",
+   "source": "play/gnw/gnw-host.js GAMES[*].hotspots (percent of each Unit.png, measured with ImageMagick -trim on each pressed-state PNG and from the community .lay layouts), read back from the placed .play-hotspot boxes: every device kind, Game A / Game B / Time / Alarm included",
+   "licence": "settled 2026-09-23: free public material, artists credited on About (licenses/THIRD-PARTY-NOTICES section 2)"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

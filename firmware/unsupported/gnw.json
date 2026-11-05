@@ -1,0 +1,10 @@
+{
+ "format": 1,
+ "list": "gnw",
+ "label": "Game & Watch",
+ "guards": [
+  "gnw"
+ ],
+ "count": 0,
+ "entries": {}
+}

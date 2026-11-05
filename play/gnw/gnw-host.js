@@ -1,0 +1,8060 @@
+/*
+ * play/gnw/gnw-host.js — the Game & Watch host for crystalworlds.media.
+ * For crystalworlds.media — personal use only (the project's own licence,
+ * see LICENSE).
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THIS FILE IS, AND WHAT IT IS NOT
+ * ---------------------------------------------------------------------------
+ * This is the site's own code and nothing else:
+ *
+ *   - the GAMES registry: per-title geometry, input rows, clock RAM cells,
+ *     demo-entry flags and our own research notes on each title;
+ *   - GnwEmulator: the frame loop, input, the clock set and demo entry, the
+ *     tile / drawer / play-window lifecycle;
+ *   - the display renderer (GnwDisplay) and the speaker (GnwSpeaker,
+ *     GnwAudio), both written here;
+ *   - rewind, save slots, the Keys panel and the previews.
+ *
+ * IT CONTAINS NO CPU. Every title runs on the clean-room core in
+ * play/gnw/gwc-core.js (window.GWC_CORE), which must load BEFORE this file.
+ * GnwEmulator asks GWC_CORE.cpuFor() for its CPU; if the core is missing, or
+ * declines a title, construction throws and the title shows the error.
+ * There is no fallback engine, by design.
+ *
+ * The CPU surface this file drives is the core's 18-member site ABI (the
+ * core's ABI notes): ram, lcd, updateLcd(), pc, halt, r, step(),
+ * reset(), clkDiv, inB, inBA, inRows, inFixedRow, rMuxInvert, rOut,
+ * updateKLine(), _twCount, _cendCount.
+ *
+ * The per-device SCREEN AND BUTTON GEOMETRY -- the screen boxes, hotspot
+ * percentages, segment addresses and overlay alphas in the GAMES registry --
+ * was read from the 53 community gnw_*.lay artwork layouts: the work of Lee
+ * Robson (hydef), with DarthMarino, Henrik Algestam and ICEknight on a few.
+ * They carry no licence line and there is no licence document to cite.
+ * SETTLED 23 September 2026: free public material, the artists
+ * credited on the About page, geometry and derived artwork may ship. See
+ * licenses/THIRD-PARTY-NOTICES section 2. A newly identified artist is added
+ * to About directly rather than raised as a question.
+ *
+ * History: until 2026-10-03 the site ran an earlier engine, gnw.js, with its
+ * own CPU classes. It was retired from the repository by a decision
+ * of 2026-10-03; play/gnw/UPDATING.md says where the retired file is kept.
+ * ---------------------------------------------------------------------------
+ */
+(function () {
+'use strict';
+
+// ─── Games registry ─────────────────────────────────────────────────────────
+// Everything that differs between titles lives here — the CPU core, display,
+// audio, and emulator plumbing below are all game-agnostic. Programs are
+// zero-padded to 2048 bytes and embedded as base64 (no server-side program file
+// needed). clockRam offsets were found by tracing which RAM cells count up
+// while holding the Time input in a headless simulation (see doco/).
+// hotspot/screen percentages are of the device artwork's own canvas
+// (measured via ImageMagick -trim on each button's pressed-state PNG, and
+// from each game's community layout file for the screen-glass box).
+
+/* The Crystal Screen units (Super Mario Bros. YM-801, Climber DR-802,
+   Balloon Fight BF-803) are all the same see-through shell, so the parts of
+   their layout that describe the SHELL rather than the game are shared here
+   instead of being pasted into three entries that could then drift.
+
+   Percentages of the artwork canvas (3273x1398), read off the "Unit Only" view
+   of each unit's default.lay -- all three agree on every number below.
+   Only the LCD panel bounds differ per title, so `screen` stays in each
+   entry.
+
+   bg is NOT the same box as `screen`, unlike every opaque-screened title in
+   this file where the backing and the segments share one rect: the layout insets
+   the backing slightly inside the panel (930,265,1414x864 vs the segments'
+   ~885,239,1489x908) and that inset is visible, so they're kept apart. */
+const CRYSTAL_SHELL = {
+  bg:       { left: 28.415, top: 18.955, width: 43.202, height: 61.803 },  // 930,265,1414x864
+  gradient: { left: 27.376, top: 16.381, width: 45.432, height: 67.167 },  // 896,229,1487x939
+  // Alpha values are the layout's own, straight from the layout's <colour alpha>.
+  bgOverlayAlpha: 0.1,   // the backing, drawn AGAIN over the segments
+  gradientAlpha:  0.05,
+  gradient2Alpha: 0.1,
+};
+
+/* Same shell -> same buttons, so all three Crystal titles share these.
+
+   Derived the same way as every other title here (opaque bounding box of
+   each button's own pressed-state PNG), but with one wrinkle worth
+   recording: Balloon Fight's overlays are drawn with a much wider glow than
+   Climber's and Super Mario Bros.', so a naive trim reads its d-pad at
+   284x284 against their 156x156, and its Jump at 366 against their 201.
+   They are the same physical buttons -- every centre matches exactly (Up
+   463,788; Left 304,925; Jump 2826,996) and Time/Game trim identically on
+   all three. So these use the tight bounds that two of the three agree on,
+   rather than Balloon Fight's halo.
+
+   No Alarm hotspot: the Crystal layouts model no alarm button (Time and
+   Game are the only mode overlays), even though the shared program supports one
+   -- inputRows still carries the bit so the program sees the port it expects. */
+const CRYSTAL_HOTSPOTS = {
+  time:  { left: 7.791,  top: 27.182, width: 6.966, height: 16.309 },  // 255,380,228x228
+  gameA: { left: 13.657, top: 27.182, width: 6.966, height: 16.309 },  // 447,380,228x228
+  up:    { left: 11.763, top: 50.787, width: 4.766, height: 11.159 },  // 385,710,156x156
+  down:  { left: 11.763, top: 70.243, width: 4.766, height: 11.159 },  // 385,982,156x156
+  left:  { left: 6.905,  top: 60.586, width: 4.766, height: 11.159 },  // 226,847,156x156
+  right: { left: 16.652, top: 60.586, width: 4.766, height: 11.159 },  // 545,847,156x156
+  jump:  { left: 83.288, top: 64.092, width: 6.141, height: 14.378 },  // 2726,896,201x201
+};
+
+/* The three Micro Vs. System units (Boxing BX-301, Donkey Kong 3 AK-302,
+   Donkey Kong Hockey HK-303) are one shell with one input harness, so the
+   parts that describe the harness rather than the game live here.
+
+   Wiring is the shared Micro Vs. port table (TABLE-READ) -- player 2 and
+   player 1 mirrored across S1..S6 with the mode buttons together on S7.
+   These are the first titles here that scan past S4 and the first with two
+   players at all; reaching S7 needed the W register widened from 4 bits to
+   the hardware's 8 (a CPU fix in the retired engine). */
+const MICROVS_INPUT_ROWS = [
+  { p2fire: 4 },                             // S1: bit2 = P2 button
+  { fire: 1 },                               // S2: bit0 = P1 button
+  { p2down: 4, p2up: 8 },                    // S3
+  { down: 1, up: 2 },                        // S4
+  { p2right: 4, p2left: 8 },                 // S5
+  { right: 1, left: 2 },                     // S6
+  { time: 1, gameB: 2, gameA: 4, alarm: 8 }, // S7
+];
+
+/* Only the three mode buttons are clickable, and that's not an omission.
+
+   The community Micro Vs. artwork draws the console ALONE -- the two detachable
+   controllers appear only in the backdrop photograph, never on the unit --
+   and it ships pressed-state art for Game A, Game B and Time and nothing
+   else. So there is no button art to trim joystick hotspots out of (the way
+   every other title's hotspots here were measured), and nothing on the case
+   to click even if there were. Emulators play these from the keyboard for the
+   same reason. Both players' sticks and buttons come from the keyboard and
+   the on-screen control bar instead.
+
+   Trimmed from each unit's real pressed-state PNGs; identical on all three,
+   as you'd expect from one shell. Canvas 1474x807. */
+const MICROVS_HOTSPOTS = {
+  gameA: { left: 85.482, top: 24.040, width: 6.445, height: 11.896 },  // 1260,194,95x96
+  gameB: { left: 85.482, top: 32.962, width: 6.445, height: 11.896 },  // 1260,266,95x96
+  time:  { left: 85.482, top: 41.760, width: 6.445, height: 11.896 },  // 1260,337,95x96
+};
+// LAYOUT 21 — Micro Vs. System (Boxing BX-301 / DK 3 / DK Hockey). Played on TWO
+// external plug-in controllers, so the console itself has no directional/fire
+// buttons — the P1/P2 controls are CONSTRUCTED for the diagram (not derived), via
+// `keysHotspots` (diagram-only). Game A/B/Time pills centred between them.
+// dirCircles makes the arrow player's up/down/left/right render as arrow circles
+// (the p2* names fall through to letter circles since they aren't in _DIR_ARROW).
+// Coords are a self-contained landscape space (ar forced to 1).
+//
+// WHICH SIDE IS WHICH PLAYER IS DECIDED BY THE PROGRAM, NOT BY THE KEYBOARD.
+// MICROVS_INPUT_ROWS is the shared Micro Vs. port table (TABLE-READ): S2 bit0 is P1's
+// fire and S4/S6 are P1's stick — those are the names `fire`/`up`/`down`/
+// `left`/`right`, which KEY_TO_BUTTON binds to the ARROWS + Right Ctrl. The
+// `p2*` names on S1/S3/S5 are P2's, and they are what W/A/S/D + F drive.
+// This block used to claim the opposite ("P1 (left) = arrow cross"; then, two
+// lines later, "WASD (P1) on the LEFT" — contradicting itself in its own
+// header), and the labels below were placed to match the wrong half: P1 sat
+// over the W/A/S/D cluster. Measured consequence, not cosmetics — in Boxing's
+// Game A (one player vs the CPU) the live inputs are `left right up down fire`,
+// i.e. the ARROWS, so a solo visitor who read the panel and took "P1" got a
+// stick that did nothing. Labels now follow the wiring: the arrow cross +
+// Right Ctrl (right) is P1; W/A/S/D + F (left) is P2.
+const MICROVS_KEYS_HOTSPOTS = {
+  p2up:    { left: 13, top: 30, width: 10, height: 12 },  // P2 = WASD (left)
+  p2down:  { left: 13, top: 56, width: 10, height: 12 },
+  p2left:  { left: 2,  top: 43, width: 10, height: 12 },
+  p2right: { left: 24, top: 43, width: 10, height: 12 },
+  p2fire:  { left: 12, top: 78, width: 12, height: 14 },
+  gameA: { left: 44, top: 28, width: 12, height: 9 },     // pills (centre)
+  gameB: { left: 44, top: 46, width: 12, height: 9 },
+  time:  { left: 44, top: 64, width: 12, height: 9 },
+  up:    { left: 77, top: 30, width: 10, height: 12 },    // P1 = arrows (right)
+  down:  { left: 77, top: 56, width: 10, height: 12 },
+  left:  { left: 66, top: 43, width: 10, height: 12 },
+  right: { left: 88, top: 43, width: 10, height: 12 },
+  fire:  { left: 76, top: 78, width: 12, height: 14 },
+};
+const LAYOUT_21_KEYS = {
+  keysHotspots: MICROVS_KEYS_HOTSPOTS, dirCircles: true,
+  keysLabels: [ { text: 'P2', x: 13, y: 16 }, { text: 'P1', x: 77, y: 16 } ],
+  meta: { fire: { label: 'Fire', keys: ['R Ctrl'] } },   // P1 (arrows) fires with Right Ctrl
+};
+// Micro Vs. keyboard remap: the arrow-player (P1 — see MICROVS_KEYS_HOTSPOTS) fires
+// with Right Ctrl (ergonomic —
+// next to the arrows) instead of Space. `Control`→fire; Space no longer fires.
+const MICROVS_KEYMAP = { 'Control': ['fire'], ' ': [] };
+
+// LAYOUT 23 — Super Mario Bros. Special YM-901-S (Table Top). The real control
+// crop is tight + wide, so the derived buttons come out small. Reshape the DIAGRAM
+// only (keysHotspots) into a Balloon-Fight-style spread cross + big Jump + Game A/
+// Time pills so the buttons read large; the keyless `alarm` is simply omitted.
+const SMBSPECIAL_KEYS_HOTSPOTS = {
+  up:    { left: 18, top: 20, width: 12, height: 13 },   // arrow cross (left)
+  down:  { left: 18, top: 58, width: 12, height: 13 },
+  left:  { left: 5,  top: 39, width: 12, height: 13 },
+  right: { left: 31, top: 39, width: 12, height: 13 },
+  gameA: { left: 47, top: 28, width: 13, height: 10 },   // pills (centre column)
+  time:  { left: 47, top: 50, width: 13, height: 10 },
+  jump:  { left: 70, top: 34, width: 20, height: 24 },   // big Jump (right)
+};
+const LAYOUT_23_KEYS = { keysHotspots: SMBSPECIAL_KEYS_HOTSPOTS, dirCircles: true };
+
+/* Table Top cabinet controls, shared by Snoopy SM-73 and Popeye PG-74.
+
+   The Table Top shell is ONE chassis -- measured, not assumed: across the
+   Snoopy, Popeye and Donkey Kong Jr. cabinet art the joystick trims to the
+   same blob (~136,725 45x107, centre 159,778), the action button to the same
+   434,784 71x57, and the three mode pills to the same 333/391/451 at y=738,
+   all on the same 634x1011 canvas. Only the marquee and the colours differ
+   (Snoopy/Popeye are red where DK Jr is orange).
+
+   Donkey Kong Jr. keeps its own hotspots rather than sharing these: same
+   geometry, but its program reads a 4-way pad (btn1..btn4) where these two read
+   only left/right plus one action button -- see their inherited inputRows.
+
+   Measured the same way as GAMES.dkjrt's, and with the same caveat: this
+   bundle ships no pressed-state art for the cabinet (see noPressedArt), so
+   these come from colour-trimming the cabinet itself. The printed ◁ ▷ glyphs
+   sit at y=818 either side of the stick, which is what puts the pivot there;
+   the left/right boxes are a symmetric pair on that measured axis. There is
+   no up/down arrow on this panel and the program reads neither. */
+const TABLETOP_LR_HOTSPOTS = {
+  left:  { left: 9.464,  top: 78.932, width: 10.410, height: 3.956 },
+  right: { left: 30.284, top: 78.932, width: 10.410, height: 3.956 },
+  jump:  { left: 68.454, top: 77.547, width: 11.199, height: 5.638 },  // 434,784 71x57
+  gameA: { left: 52.524, top: 72.997, width: 5.363,  height: 1.780 },  // 333,738 34x18
+  gameB: { left: 61.672, top: 72.997, width: 5.521,  height: 1.780 },  // 391,738 35x18
+  time:  { left: 71.136, top: 72.997, width: 5.363,  height: 1.780 },  // 451,738 34x18
+};
+
+/* Mario's Cement Factory sits on the same shell with the same boxes -- its
+   controls trim to the same pixels as Snoopy's and Popeye's -- but its action
+   button is OPEN (it drops the cement bucket), not Hit/Punch. That's a
+   different BUTTON_DEFS entry and a different bit in its own inputRows, so
+   the geometry is reused while the name isn't. */
+const TABLETOP_CM_HOTSPOTS = {
+  left:  TABLETOP_LR_HOTSPOTS.left,
+  right: TABLETOP_LR_HOTSPOTS.right,
+  open:  TABLETOP_LR_HOTSPOTS.jump,   // same box on the case, different button
+  gameA: TABLETOP_LR_HOTSPOTS.gameA,
+  gameB: TABLETOP_LR_HOTSPOTS.gameB,
+  time:  TABLETOP_LR_HOTSPOTS.time,
+};
+
+/* LAYOUT 1 — two edge-mounted round buttons (Left / Right) plus a Game A /
+   Game B / Time operational ROW, on a single-screen Silver-series shell.
+   Shared by Vermin MT-03, Ball AC-01, Ball reissue RGW-001, Fire RC-04 and
+   Helmet CN-07 — one control definition instead of five near-identical inline
+   copies. Coordinates are Vermin's canonical trims (Helmet and Fire are
+   byte-identical; Ball's two L/R buttons were re-measured ~1% off, an
+   imperceptible click-region shift on the same artwork). % of each unit's
+   own canvas. inputRows stays per-device (the program wiring differs). */
+const LAYOUT_1 = {
+  left:  { left: 4.09,  top: 58.53, width: 18.05, height: 26.80 },
+  right: { left: 77.91, top: 58.53, width: 18.05, height: 26.80 },
+  gameA: { left: 45.80, top: 77.80, width: 12.21, height: 18.13 },
+  gameB: { left: 56.35, top: 77.80, width: 12.21, height: 18.13 },
+  time:  { left: 66.82, top: 77.80, width: 12.21, height: 18.13 },
+};
+
+/* LAYOUT 2 — FOUR round buttons: two on the left (up/down) and two on the
+   right (up/down), plus the Game A / Game B / Time row, single screen.
+   Shared by Flagman FL-02, Judge IP-05, Manhole MH-06 and Lion LN-08 (all
+   byte-identical here). Wired btn1 = left-up, btn2 = right-up, btn3 =
+   left-down, btn4 = right-down so the global KEY_TO_BUTTON map lands
+   Q(left-up) / E(right-up) / A(left-down) / D(right-down) by position. These
+   are DISCRETE circles, not see-saw rockers — the touching top/bottom pairs
+   would otherwise merge, so each member carries noRocker in KEYS_OVERRIDE.
+   inputRows stays per-device: each program binds these four positions to its own
+   K-bits, and those name→bit maps are preserved unchanged by this merge. */
+const LAYOUT_2 = {
+  btn1:  { left: 5.75,  top: 55.93, width: 14.73, height: 21.87 },  // left-up  → Q
+  btn2:  { left: 79.93, top: 55.93, width: 14.73, height: 21.87 },  // right-up → E
+  btn3:  { left: 5.75,  top: 73.67, width: 14.73, height: 21.87 },  // left-down  → A
+  btn4:  { left: 79.93, top: 73.67, width: 14.73, height: 21.87 },  // right-down → D
+  gameA: { left: 45.80, top: 77.80, width: 12.21, height: 18.13 },
+  gameB: { left: 56.35, top: 77.80, width: 12.21, height: 18.13 },
+  time:  { left: 66.82, top: 77.80, width: 12.21, height: 18.13 },
+};
+
+/* LAYOUT 3 — two edge-mounted round hammer buttons (Left / Right) plus a
+   Game A / Game B / Time operational COLUMN stacked up the right-hand edge
+   (unlike LAYOUT_1's row), on a single-screen Wide Screen shell. Shared by
+   Parachute PR-21, Octopus OC-22, Popeye PP-23, Chef FP-24 and Mario the
+   Juggler MB-108. The first four are byte-identical; Mario the Juggler's two
+   side buttons sit 1.33% lower (top 59.91 vs 58.58) with everything else
+   identical — an imperceptible click-region shift on the same mold, smaller
+   than Ball's accepted Layout-1 shift. inputRows stays per-device (the program
+   wiring differs: swapHammers, hammer-pin vs K-line, GameA/B bit order).
+   The 1982-85 "New Wide Screen" units (Fire FR-27, Turtle Bridge, Tropical
+   Fish) look similar but carry a materially different pill/button geometry
+   (shorter 10.92-tall pills; Tropical Fish's small low buttons) and are kept
+   on their own inline hotspots — see keylayout.md's deferred list. */
+const LAYOUT_3 = {
+  left:  { left: 4.02,  top: 58.58, width: 15.24, height: 25.21 },
+  right: { left: 80.54, top: 58.58, width: 15.24, height: 25.21 },
+  gameA: { left: 82.31, top: 6.27,  width: 9.00,  height: 14.88 },
+  gameB: { left: 82.31, top: 17.80, width: 9.00,  height: 14.88 },
+  time:  { left: 82.31, top: 28.94, width: 9.00,  height: 14.88 },
+};
+
+/* LAYOUT 4 — FOUR round buttons (two independent 2-way levers: left up/down,
+   right up/down) plus a Game A / Game B / Time operational COLUMN up the right
+   edge, single screen. Wired btn1 = left-up, btn2 = right-up, btn3 = left-down,
+   btn4 = right-down so the global KEY_TO_BUTTON map lands Q/E/A/D by position
+   (like LAYOUT_2). Rendered as DISCRETE circles via LAYOUT_4_KEYS (noRocker) —
+   the touching top/bottom pairs on Mickey Mouse/Egg would otherwise merge into
+   see-saw rockers. Shared by Fire Attack ID-29, Mickey Mouse MC-25 and Egg
+   EG-26, whose hotspots are byte-identical (same 2611x1579 case mold). Manhole
+   NH-103 (manholews) is the same control TYPE and shares the LAYOUT_4_KEYS
+   diagram treatment, but keeps its own inline hotspots — it is a physically
+   different NH-103 chassis (smaller, differently-placed buttons/pills), so
+   folding its geometry here would move its gameplay click regions. inputRows
+   stays per-device: each program binds these four positions to its own K-bits
+   (Fire Attack and Mickey Mouse even differ in Left up/down bit order), and
+   those name->bit maps are preserved unchanged by this merge. */
+const LAYOUT_4 = {
+  btn1:  { left: 4.62,  top: 58.23, width: 12.79, height: 17.86 },  // left-up  -> Q
+  btn2:  { left: 82.38, top: 58.23, width: 13.02, height: 17.86 },  // right-up -> E
+  btn3:  { left: 4.62,  top: 75.08, width: 12.79, height: 17.86 },  // left-down  -> A
+  btn4:  { left: 82.38, top: 75.08, width: 13.02, height: 17.86 },  // right-down -> D
+  gameA: { left: 82.11, top: 8.19,  width: 9.42,  height: 10.92 },
+  gameB: { left: 82.11, top: 19.65, width: 9.42,  height: 10.92 },
+  time:  { left: 82.11, top: 31.11, width: 9.42,  height: 10.92 },
+};
+
+/* LAYOUT 6 — FOUR discrete directional CIRCLE buttons laid out in a plus/CROSS
+   (up / down / left / right), NOT a moulded D-pad (that came later, DK-52) and
+   NOT two rockers — plus a Jump/action button opposite and the Game/Time
+   operational column. Rendered via LAYOUT_6_KEYS (dirCircles): the four
+   directions render as separate circles, each labelled with its ARROW by
+   direction (up=↑ down=↓ left=← right=→) — arrow keys, not Q/E/A/D. Shared by
+   the New Wide Screen SM511 pair Climber DR-106 and Balloon Fight BF-107, whose
+   hotspots are byte-identical. Super Mario Bros. YM-105 is the same control
+   TYPE but its own measured mold (different jump/pill geometry) so it keeps its
+   inline hotspots; Donkey Kong Jr. DJ-101 wires the cross as btn1-4 on a
+   different chassis and also keeps its own hotspots — both share only the
+   LAYOUT_6_KEYS diagram treatment. inputRows stays per-device. */
+const LAYOUT_6 = {
+  up:    { left: 7.01,  top: 57.50, width: 9.00,  height: 14.88 },
+  down:  { left: 7.01,  top: 72.89, width: 9.00,  height: 14.88 },
+  left:  { left: 2.14,  top: 65.23, width: 9.00,  height: 14.88 },
+  right: { left: 11.91, top: 65.23, width: 9.00,  height: 14.88 },
+  jump:  { left: 80.08, top: 58.39, width: 16.70, height: 27.61 },
+  alarm: { left: 82.31, top: 6.27,  width: 9.00,  height: 14.88 },
+  time:  { left: 82.31, top: 17.80, width: 9.00,  height: 14.88 },
+  gameA: { left: 82.31, top: 28.94, width: 9.00,  height: 14.88 },
+};
+
+const GAMES = {
+  vermin: {
+    title: 'Vermin', subtitle: 'MT-03 · 1980',
+    artPath: 'artwork/gnw_vermin/',
+    svgPath: 'artwork/gnw_vermin/gnw_vermin.svg',
+    clockRam: { hT: 64, hO: 65, mT: 66, mO: 67, sT: 68, sO: 69 },
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    hotspots: LAYOUT_1,
+    // inputRows[i] = the named buttons wired to hardware input row IN.i,
+    // each mapped to the K-bit it sets on that row. Vermin/Ball only define
+    // IN.0 (the reference driver's inp_fixed_last() makes it the sole, always-read row —
+    // no R-based row selection needed since there's nothing else to
+    // disambiguate it from). fixedRow says which row that is.
+    inputRows: [ { time: 1, gameB: 2, gameA: 4 } ],
+    fixedRow: 0,
+  },
+
+  ball: {
+    title: 'Ball', subtitle: 'AC-01 · 1980',
+    artPath: 'artwork/gnw_ball/',
+    svgPath: 'artwork/gnw_ball/gnw_ball.svg',
+    clockRam: { hT: 72, hO: 73, mT: 74, mO: 75, sT: 76, sO: 60 },
+    screen: { left: 27.91, top: 23.26, width: 44.00, height: 44.12 },
+    // Real hardware has two black "hiding line" masking strips printed into
+    // the LCD glass near the left/right edges of the screen (visible at all
+    // times, game running or not -- they hide the glass's internal wiring,
+    // not a game element). The default.lay never draws them in its
+    // photo-realistic views (Handheld_Game_Artwork/DarthMarino_Artwork) --
+    // only its flat schematic "Backdrop_Only" view composites Background2.png
+    // back in, since that view skips the real device photo entirely. Our
+    // Unit.png IS the real device photo, but its screen cutout is blank
+    // (confirmed by cropping it), so the lines never made it in from there
+    // either -- Background2.png has to be drawn as its own layer on top.
+    hideLines: true,
+    hotspots: LAYOUT_1,
+    inputRows: [ { time: 1, gameB: 2, gameA: 4 } ],
+    fixedRow: 0,
+  },
+
+  // 2010 Club Nintendo faithful reissue of Ball (AC-01): identical front, same
+  // game. The reissue's own firmware (it adds a hardware mute switch) was never
+  // dumped, so this runs the AC-01 program as a faithful stand-in -- the mute is
+  // covered by the site's own software mute. Art + LCD reused from ball.
+  ballreissue: {
+    title: 'Ball (reissue)', subtitle: 'RGW-001 · 2010',
+    artPath: 'artwork/gnw_ball/',
+    svgPath: 'artwork/gnw_ball/gnw_ball.svg',
+    clockRam: { hT: 72, hO: 73, mT: 74, mO: 75, sT: 76, sO: 60 },
+    screen: { left: 27.91, top: 23.26, width: 44.00, height: 44.12 },
+    hideLines: true,
+    hotspots: LAYOUT_1,
+    inputRows: [ { time: 1, gameB: 2, gameA: 4 } ],
+    fixedRow: 0,
+  },
+
+  flagman: {
+    title: 'Flagman', subtitle: 'FL-02 · 1980',
+    artPath: 'artwork/gnw_flagman/',
+    svgPath: 'artwork/gnw_flagman/gnw_flagman.svg',
+    clockRam: { hT: 68, hO: 69, mT: 70, mO: 71, sT: 72, sO: 73 },
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    // No hammers at all — every button reads through K. The 4 flag-position
+    // buttons (IN.1) and Game A/B/Time (IN.2) are genuinely separate hardware
+    // rows selected by R (the core's K-input gating, and the reference driver's
+    // piezo_input_w) — NOT a flat OR of one merged bitmask, despite each row
+    // reusing the same bit positions internally.
+    hotspots: LAYOUT_2,
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 } ],
+  },
+
+  fire: {
+    title: 'Fire', subtitle: 'RC-04 · 1980',
+    artPath: 'artwork/gnw_fires/',
+    svgPath: 'artwork/gnw_fires/gnw_fires.svg',
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59 },
+    // Same case mold as Vermin/Ball (2227x1500 canvas, identical button
+    // positions) — this is the correct Silver-series Fire (gnw_fires,
+    // driver dump "rc-04"). The previous program here was actually from
+    // gnw_fire ("Fire (Wide Screen)", dump "fr-27"), a different, later
+    // release with a different program/case — that mismatch was the root
+    // cause of Fire's "shows all segments, can't start game" bug.
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    hotspots: LAYOUT_1,
+    // gnw_fires_state calls inp_fixed_last() just like Vermin/Ball — a
+    // single, always-read input row, no R-based mux needed.
+    inputRows: [ { time: 1, gameB: 2, gameA: 4 } ],
+    fixedRow: 0,
+  },
+
+  judge: {
+    title: 'Judge', subtitle: 'IP-05 · 1980',
+    artPath: 'artwork/gnw_judge/',
+    svgPath: 'artwork/gnw_judge/gnw_judge.svg',
+    // RAM 2/3/6/7 are just a *display* buffer — traced live (instruction by
+    // instruction): the program periodically copies a 6-digit block from 18-23
+    // into 2-7 (18->2, 19->3, 20->4, 21->5, 22->6, 23->7) to refresh the
+    // clock digits, discarding whatever we'd poked into 2/3/6/7 on its next
+    // refresh. 18/19 (hour tens/ones) and 22/23 (minute tens/ones) are the
+    // real, persistent counters — poking *those* instead lets the program's own
+    // copy carry our value forward permanently, rather than fighting it.
+    // 20/21 (seconds, presumably) aren't part of the visible display.
+    clockRam: { hT: 18, hO: 19, mT: 22, mO: 23, sT: 100, sO: 101 },
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    // No hammers — P1/P2 each get a Hit and a Dodge button (a 2-player duel game),
+    // a genuinely separate hardware row (IN.1) from Game A/B/Time (IN.2),
+    // selected by R the same way as Flagman/Manhole/Lion. IN.1 bit
+    // assignments from the community layout: 1=P1 Hit(bit3), 2=P2 Hit(bit1),
+    // 3=P1 Dodge(bit2), 4=P2 Dodge(bit0).
+    hotspots: LAYOUT_2,
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, { btn1: 8, btn2: 2, btn3: 4, btn4: 1 } ],
+  },
+
+  manhole: {
+    title: 'Manhole', subtitle: 'MH-06 · 1981',
+    artPath: 'artwork/gnw_manhole/',
+    svgPath: 'artwork/gnw_manhole/gnw_manhole.svg',
+    // pmBit: same clockRam addresses (54-59) and same hour-tens spare-bit
+    // AM/PM convention as Popeye/Octopus/Parachute/Chef — see the pmBit
+    // comment in _syncClockToNow().
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    // No hammers — 4 directional buttons (up/down on each side), a genuinely
+    // separate hardware row (IN.1) from Game A/B/Time (IN.2), same scheme as
+    // Flagman/Judge/Lion.
+    hotspots: LAYOUT_2,
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, { btn1: 8, btn2: 2, btn3: 4, btn4: 1 } ],
+  },
+
+  helmet: {
+    title: 'Helmet', subtitle: 'CN-07 · 1981',
+    artPath: 'artwork/gnw_helmet/',
+    svgPath: 'artwork/gnw_helmet/gnw_helmet.svg',
+    // Same "only recognises GameA/GameB/Time from a fresh reset" program
+    // behaviour as Manhole/Judge/Lion/Flagman — confirmed directly: holding
+    // Game A across a normal frame-loop press (any phase, any duration up
+    // to a full second) never changed CPU RAM at all versus not pressing it
+    // at all, but holding it through the reset/reboot sequence does. Was
+    // previously missed because _resetWithButtonHeld()/_needsMinHold() gate
+    // on _hasQuadButtons() (a proxy that happens to match the other four
+    // titles but not Helmet, which has no btn1-4 direction pad). See
+    // needsResetForModeButtons in _needsMinHold()/_resetWithButtonHeld().
+    needsResetForModeButtons: true,
+    // Helmet ALSO needs hammersNeedQuickTap — it's the second title (with Chef)
+    // to combine hotspots.left/right with needsResetForModeButtons, so without
+    // this its Left/Right hit the mode-button 5s extended hold in _needsMinHold()/
+    // _delayedRelease() and stay logically held ~5s after release; the program never
+    // sees the movement button go back up, so left/right movement looks dead.
+    // (The hammersNeedQuickTap comment in _needsMinHold() assumed only Chef hit
+    // this combination — Helmet was missed.)
+    hammersNeedQuickTap: true,
+    // Reuses the lamp-test-dismiss auto-tap in startAttract() for a
+    // different reason: Helmet's boot screen is frozen (not animating)
+    // until a Time tap runs the debounce chain that re-arms the display's
+    // TW commit opcode (see the inputRows comment below) — same brief
+    // press-then-release mechanism as the lamp-test titles, so it reuses
+    // this flag rather than adding a near-identical second code path.
+    lampTestOnBoot: true,
+    // pmBit: same clockRam addresses (54-59) and same hour-tens spare-bit
+    // AM/PM convention as Popeye/Octopus/Parachute/Chef — see the pmBit
+    // comment in _syncClockToNow().
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    hotspots: LAYOUT_1,
+    // Time/GameB/GameA are also mirrored onto row 0: confirmed via the reference driver
+    // instruction-trace comparison that a KTA read of rows 0+1 (R=7) right
+    // after a mode-button press must see a changed value there to pass a
+    // debounce check that gates the display-refresh (TW) opcode ever firing
+    // again - without this mirror our emulation always reads 0 on rows 0/1
+    // (matching the reference driver, which marks them factory-test/unused DIP
+    // switches) and the debounce never detects a change, so the display
+    // freezes after the initial press. Real hardware evidently does see a
+    // transient signal there on any mode-button press; this reproduces that
+    // observed effect without a known root hardware cause.
+    inputRows: [ { time: 1, gameB: 2, gameA: 4 }, {}, { time: 1, gameB: 2, gameA: 4 } ],
+  },
+
+  lion: {
+    title: 'Lion', subtitle: 'LN-08 · 1981',
+    artPath: 'artwork/gnw_lion/',
+    svgPath: 'artwork/gnw_lion/gnw_lion.svg',
+    // pmBit: same clockRam addresses (54-59) and same hour-tens spare-bit
+    // AM/PM convention as Popeye/Octopus/Parachute/Chef — see the pmBit
+    // comment in _syncClockToNow().
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    screen: { left: 27.84, top: 23.27, width: 44.23, height: 44.13 },
+    // No hammers — 4 directional buttons, a genuinely separate hardware row
+    // (IN.1) from Game A/B/Time (IN.2), same scheme as Flagman/Judge/Manhole.
+    // The reference driver notes this game doesn't handle simultaneous button presses
+    // correctly on real hardware either (BTANB, not our bug).
+    hotspots: LAYOUT_2,
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, { btn1: 8, btn2: 2, btn3: 4, btn4: 1 } ],
+  },
+
+  pchute: {
+    title: 'Parachute', subtitle: 'PR-21 · 1981',
+    artPath: 'artwork/gnw_pchute/',
+    svgPath: 'artwork/gnw_pchute/gnw_pchute.svg',
+    // pmBit: verified via direct LCD-segment diffing — see the pmBit
+    // comment in _syncClockToNow(). Same Wide Screen clock program as Octopus/
+    // Popeye/Chef, same bit.
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    hotspots: LAYOUT_3,
+    // Same shape as Ball/Vermin's hammers, but R-gated (no fixedRow) like
+    // Manhole/Lion — Game A/B/Time live on inputRows[1], confirmed via
+    // headless simulation (holding Time visibly switches the LCD out of
+    // its attract/lamp-test pattern into a clock display).
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, {} ],
+    // The B/BA hammer pins drive the opposite on-screen side from every
+    // other hammer title (confirmed live: pressing the left hotspot moved
+    // the right-side action) — swapHammers crosses them in _readInputs()/
+    // _updateButtonArt() only, so hotspot positions and button art stay put.
+    swapHammers: true,
+    // Boots into a lamp-test screen like the quad-button titles, but has
+    // no btn1-4 so _hasQuadButtons() misses it — lampTestOnBoot tells
+    // startAttract() to tap Time to dismiss it (confirmed live: demo mode
+    // otherwise never leaves the lamp test).
+    lampTestOnBoot: true,
+  },
+
+  octopus: {
+    title: 'Octopus', subtitle: 'OC-22 · 1981',
+    artPath: 'artwork/gnw_octopus/',
+    svgPath: 'artwork/gnw_octopus/gnw_octopus.svg',
+    // pmBit: verified via direct LCD-segment diffing — see the pmBit
+    // comment in _syncClockToNow(). Same Wide Screen clock program as
+    // Parachute/Popeye/Chef, same bit.
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    hotspots: LAYOUT_3,
+    // Same shape as Ball/Vermin's hammers, but R-gated (no fixedRow) like
+    // Manhole/Lion — Game A/B/Time live on inputRows[1], confirmed via
+    // headless simulation (holding Time visibly switches the LCD out of
+    // its attract/lamp-test pattern into a clock display).
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, {} ],
+    // Same B/BA reversal as Parachute — see swapHammers there.
+    swapHammers: true,
+    // Same lamp-test-on-boot as Parachute — see lampTestOnBoot there.
+    lampTestOnBoot: true,
+  },
+
+  popeye: {
+    title: 'Popeye', subtitle: 'PP-23 · 1981',
+    artPath: 'artwork/gnw_popeye/',
+    svgPath: 'artwork/gnw_popeye/gnw_popeye.svg',
+    // pmBit: the hour-tens RAM cell only ever needs bit 0 for its own digit
+    // (0 or 1) — this program repurposes bit 3 of that same nibble as the AM/PM
+    // flag rather than spending a whole extra cell on it. Confirmed by
+    // direct LCD-segment diffing: forcing this bit on/off with the clock
+    // display showing (not lamp-test/attract) toggles exactly one segment
+    // pair (5.1.1 off / 5.2.1 on) and nothing else — see the pmBit comment
+    // in _syncClockToNow() for how it's applied. Same bit on Parachute/
+    // Octopus/Chef (same underlying Wide Screen clock program).
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    hotspots: LAYOUT_3,
+    // Same shape as Ball/Vermin's hammers, but R-gated (no fixedRow) like
+    // Manhole/Lion — Game A/B/Time live on inputRows[1], confirmed via
+    // headless simulation (holding Time visibly switches the LCD out of
+    // its attract/lamp-test pattern into a clock display).
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4 }, {} ],
+    // Same B/BA reversal as Parachute — see swapHammers there.
+    swapHammers: true,
+    // Same lamp-test-on-boot as Parachute — see lampTestOnBoot there.
+    lampTestOnBoot: true,
+    // Game A's own program never manages to commit its "active game" RAM cell
+    // (0x30 <- 4) under our emulation: its mode-select dispatch is much
+    // longer than Game B/Time's, and an unrelated write elsewhere in the
+    // same dispatch collides with the RAM cell its own button-debounce
+    // relies on, so the debounce never confirms and the commit never runs —
+    // verified directly against a live reference instruction trace, reproducible
+    // at every button-press timing tried, not a one-off. Game B and Time
+    // reliably commit via the exact same mechanism, so this is unique to
+    // Game A's specific dispatch path. commitAssist performs the same RAM
+    // write the program's own commit instruction would have made, held for as
+    // long as Game A is the selected mode (see _frame()) — yieldsTo lets
+    // Game B/Time's own working commit take back over if the player
+    // switches modes.
+    commitAssist: { holdButton: 'gameA', ramAddr: 0x30, value: 4, yieldsTo: ['gameB', 'time'] },
+  },
+
+  chef: {
+    title: 'Chef', subtitle: 'FP-24 · 1981',
+    artPath: 'artwork/gnw_chef/',
+    svgPath: 'artwork/gnw_chef/gnw_chef.svg',
+    // pmBit: same convention as Parachute/Octopus/Popeye, different
+    // addresses (36-41 here vs their 54-59) — confirmed correct on its
+    // own; a garbled/corrupted-looking display at PM hours turned out to
+    // be a separate bug (Time held too long — see timeIsFastForward
+    // below), not this bit.
+    clockRam: { hT: 36, hO: 37, mT: 38, mO: 39, sT: 40, sO: 41, pmBit: 8 },
+    // Same "only recognises GameA/GameB/Time from a fresh reset" behaviour
+    // as Helmet/Manhole/Judge/Lion/Flagman — no btn1-4, so _hasQuadButtons()
+    // misses it. See needsResetForModeButtons in _needsMinHold()/
+    // _resetWithButtonHeld().
+    needsResetForModeButtons: true,
+    // See the timeIsFastForward comment in _needsMinHold(): a real user's
+    // Time click must NOT get the same 5s extended hold GameA/GameB need,
+    // or Chef's program treats it as a clock-set gesture and corrupts the
+    // displayed digits.
+    timeIsFastForward: true,
+    // See the hammersNeedQuickTap comment in _needsMinHold(): the catch
+    // mechanic needs a real, brief hammer tap.
+    hammersNeedQuickTap: true,
+    // See the modeButtonsRegisterQuickly comment in _needsMinHold(): now
+    // that rMuxInvert (below) fixes real GameA/GameB registration, the old
+    // 5s extended hold does more harm than good — it left Chef's own
+    // "wait for the mode button to be released" gameplay-start check stuck
+    // re-polling a stale hold for up to 5 real seconds.
+    modeButtonsRegisterQuickly: true,
+    // The retired engine's SM5A readInputRows() comment explained what this does
+    // and why it's Chef-only rather than a universal SM5A fix — the real
+    // root cause of Game A/Time getting permanently stuck on the boot lamp
+    // tableau (never reaching gameplay, not just a slow-to-settle sweepFix
+    // gap).
+    rMuxInvert: true,
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    hotspots: LAYOUT_3,
+    // Chef has no dedicated hammer pins — left/right and Game A/B/Time are
+    // all K-line bits, confirmed against the reference driver
+    // (the reference driver, gnw_chef_state): IN.0 (row 0) is entirely unused,
+    // IN.1 (row 1) has Right(0x04)/Left(0x08), IN.2 (row 2) has
+    // Time(0x01)/GameB(0x02)/GameA(0x04)/Alarm(0x08). The previous config
+    // here had left/right and the mode buttons each shifted one row off
+    // from real hardware, which was consistent enough to look plausible
+    // in isolated headless testing but left every button reading from the
+    // wrong row against the actual program.
+    inputRows: [ {}, { right: 4, left: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+    // Same lamp-test-on-boot as Parachute — see lampTestOnBoot there. Chef
+    // has no fixedRow and no btn1-4, so it hits the same startAttract() gap.
+    lampTestOnBoot: true,
+    // No attractKick here (deliberately, after trying and removing one —
+    // see git history): captured reference screenshots (video:snapshot)
+    // of gnw_chef at boot, after 20s of pure idle with zero input, and
+    // after holding Game A. Boot and 20s-idle are pixel-identical — the
+    // "busy" all-4-chefs-plus-cat-plus-mouse tableau with the clock
+    // ticking in the corner IS Chef's genuine, correct idle appearance on
+    // real hardware, not a stuck lamp test. Holding Game A instead shows
+    // a clean single/few-sprite walking animation with a live score —
+    // matching our own emulator's behaviour exactly once the input-row and
+    // SVG-rendering bugs were fixed. So Chef's plain Time-tap boot state
+    // (once its clock is actually ticking) already matches the other
+    // titles' demo intent; forcing it into Game A via a kick was actively
+    // wrong, not a workaround for a missing feature.
+    // Popeye/Fire's Game A commit-collision bug showed up here too, at first
+    // masquerading as a much deeper problem: holding Game A used to send our
+    // CPU's execution genuinely diverging from real hardware a couple of
+    // frames in, eventually wandering into a CEND (sleep) real hardware's
+    // program never calls at all while Game A is held. A whole mechanism
+    // (`sweepFix`, since removed — see git history around 2026-07-09/10 for
+    // the full investigation) force-corrected the RAM state every frame to
+    // paper over this, at the cost of a multi-second real settle time (it
+    // had to skip the normal fast reset boot-loop entirely to avoid
+    // retriggering the divergence). Root cause turned out to be simpler and
+    // upstream of all that: `readInputRows()`'s R-to-input-mux formula (in
+    // the retired engine's SM5A class) was wrong specifically for Chef, feeding a garbled
+    // debounce read that sent the program down the diverging path in the first
+    // place — see `rMuxInvert` below. With that fixed, Chef boots through
+    // the same fast, un-skipped reset every other title uses, no ongoing
+    // RAM correction needed.
+  },
+
+  mmouse: {
+    title: 'Mickey Mouse', subtitle: 'MC-25 · 1981',
+    artPath: 'artwork/gnw_mmouse/',
+    svgPath: 'artwork/gnw_mmouse/gnw_mmouse.svg',
+    // Same clockRam addresses as Chef (36-41) — confirmed independently two
+    // ways: (1) the program's own natural boot-time default write (traced via a
+    // raw cpu.step() loop with no external sync) writes ram[36]=1,ram[37]=2
+    // at cycle ~192-193, matching the default "12" hour shown on real boot;
+    // (2) after _syncClockToNow(), ram[36..41] read back exactly the real
+    // wall-clock h/m/s digits. pmBit here is 2, not Popeye/Chef's 8 — this
+    // program packs the hour-tens digit itself into just bit0 (always 0 or 1,
+    // since 12-hour tens digit is only ever "0" or "1") and repurposes bit1
+    // as AM/PM, not bit3. An earlier exhaustive single-bit-toggle scan
+    // (every RAM cell x every bit, filtered for an "isolated 1-3 segment"
+    // LCD change) missed this because the real AM/PM indicator spells out
+    // "AM"/"PM" as text, lighting more than 3 segments at once — outside
+    // that filter. Found instead by directly poking a reference emulator's RAM to
+    // 11:59:57 and 12:59:57 and watching the natural noon/1PM rollover:
+    // ram[36] (hT) went 1->3 exactly at the 11:59:59->12:00:00 boundary
+    // (0001->0011: tens-digit bit0 unchanged, new bit1 appears) and 3->2 at
+    // 12:59:59->1:00:00 (0011->0010: tens digit correctly drops to 0, PM
+    // bit1 persists) — confirms bit1=2 is a stable, dedicated AM/PM flag.
+    clockRam: { hT: 36, hO: 37, mT: 38, mO: 39, sT: 40, sO: 41, pmBit: 2 },
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    // No hammers. Instead of Chef/Popeye's simple left/right, real Mickey
+    // Mouse has two independent 2-way levers (Left stick, Right stick),
+    // each pressed up or down — 4 total directional inputs, all on IN.1 (a
+    // K-row, not dedicated hammer pins), confirmed against the reference
+    // driver (gnw_mmouse_state): IN.1 bit0=Right/Down,
+    // bit1=Right/Up, bit2=Left/Down, bit3=Left/Up. This maps naturally onto
+    // the existing generic btn1-4 mechanism (Vermin/Ball/Judge/Manhole/
+    // Lion's 4-corner-button titles) rather than needing a new control
+    // shape: btn1/btn3 are the physical top/bottom buttons on the left
+    // lever, btn2/btn4 the top/bottom buttons on the right lever — visually
+    // confirmed against the artwork (two stacked red buttons per side, each
+    // with an up/down arrow indicator, same 2x2 corner layout as Vermin's
+    // quad pad). Because btn1-4 are present, _hasQuadButtons() already
+    // covers the extended-hold logic and startAttract()'s auto Time-tap-
+    // dismiss — no needsResetForModeButtons or lampTestOnBoot flags needed,
+    // same as Judge/Manhole/Lion/Flagman.
+    hotspots: LAYOUT_4,
+    // inputRows array index is NOT the same as the port's "IN.n" suffix —
+    // that was the bug here originally (movement at index 1, mode buttons
+    // at index 2, mirroring the driver source's IN.1/IN.2 comments
+    // literally). The K-row mux's bit-to-port wiring is chosen by each
+    // program's own software, not implied by the reference driver's port-naming convention;
+    // Judge (a working, already-shipped title with the same K-line-for-
+    // everything shape) puts mode buttons at index 1 and movement at index
+    // 2, and empirically that's what this program needs too — verified by
+    // direct LCD-array diffing: with movement-first (the original, wrong
+    // order) a Time tap left the display almost entirely unchanged from the
+    // boot lamp-test pattern; swapped to mode-buttons-first, the exact same
+    // tap correctly clears it to a clean single-Mickey scene, matching real
+    // a reference emulator's Time-tap screenshot.
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4, alarm: 8 }, { btn4: 1, btn2: 2, btn3: 4, btn1: 8 } ],
+  },
+
+  egg: {
+    title: 'Egg', subtitle: 'EG-26 · 1981',
+    artPath: 'artwork/gnw_egg/',
+    svgPath: 'artwork/gnw_egg/gnw_egg.svg',
+    // Licence-free reskin of Mickey Mouse sharing the exact same program (the reference driver
+    // lists gnw_egg's "mc-25" as merge="mc-25" against gnw_mmouse — bit-
+    // identical CPU data, only the SVG/artwork differ) — see mmouse's
+    // clockRam/hotspots/inputRows comments, all identical here for the
+    // same reasons, including pmBit:2 (same program, same AM/PM mechanism).
+    clockRam: { hT: 36, hO: 37, mT: 38, mO: 39, sT: 40, sO: 41, pmBit: 2 },
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    hotspots: LAYOUT_4,
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4, alarm: 8 }, { btn4: 1, btn2: 2, btn3: 4, btn1: 8 } ],
+  },
+
+  fireatk: {
+    title: 'Fire Attack', subtitle: 'ID-29 · 1982',
+    artPath: 'artwork/gnw_fireatk/',
+    svgPath: 'artwork/gnw_fireatk/gnw_fireatk.svg',
+    // Only SM510 title so far — see the SM510 class comment for the CPU
+    // itself. cpuType selects it in the GnwEmulator constructor; lcdCBits:2
+    // tells GnwDisplay this SVG's title numbering uses a 4-value column
+    // range (0-3) rather than the 2-value row range every SM5A title uses.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Fire Attack's own boot-init routine doesn't write its default "12:00"
+    // into the persistent hour/minute/second counters until ~cycle 416
+    // (confirmed via direct RAM-write tracing against a raw cpu.step()
+    // loop) — later than the standard 300-cycle sync window every other
+    // title completes within. Syncing at 300 landed before that write, so
+    // the boot-default immediately clobbered the real time just written;
+    // 450 comfortably clears it. See the bootSyncCycles comment in
+    // _syncClockToNow().
+    bootSyncCycles: 450,
+    // Found by direct write-tracing (not guessed from Chef/Mickey's
+    // addresses, which don't carry over — different program, different CPU
+    // family entirely): after bumping bootSyncCycles clear of the boot-init
+    // stomp, ram[20/21/22/23/24/25] read back the exact real wall-clock
+    // h/m/s digits, confirmed to the second. pmBit:8 here IS a working
+    // convention for this program (unlike Mickey Mouse/Egg, which don't have
+    // one) — a single-bit toggle scan found bit3 of hT flips exactly 2
+    // segments (lcd[2]/lcd[3], same bit position in each — one LCD cell
+    // spanning both AM/PM-label columns), consistent with the same
+    // spare-bit repurposing Popeye/Chef use.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Same case mold as Mickey Mouse/Egg (identical Unit.png dimensions,
+    // 2611x1579, and identical screen/button pixel bounds when measured the
+    // same way) — screen and hotspot percentages below are carried over
+    // unchanged rather than re-measured from scratch.
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    // Labeled "HIT" rather than arrows on the real unit, but mechanically
+    // identical to Mickey Mouse's two 2-way levers: IN.0/S1 bit0=Right/Down,
+    // bit1=Right/Up, bit2=Left/Up, bit3=Left/Down (confirmed against the
+    // reference driver, gnw_fireatk_state — note the
+    // Left/Up-Down bit order is swapped from Mickey Mouse's IN.1, this program's
+    // own choice, not a copy-paste of that one). IN.1/S2 (Time/GameB/GameA/
+    // Alarm) matches every other Wide Screen title's K-row layout exactly.
+    hotspots: LAYOUT_4,
+    inputRows: [ { btn4: 1, btn2: 2, btn1: 4, btn3: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  firews: {
+    title: 'Fire', subtitle: 'FR-27 · 1981',
+    artPath: 'artwork/gnw_firews/',
+    svgPath: 'artwork/gnw_firews/gnw_fire.svg',
+    // Wide Screen remake of the Silver "fire" title already in this
+    // registry (different key needed since that one's taken) — a larger,
+    // wider redraw of the same burning-building game, released Dec 1981.
+    // Same clockRam addresses as Popeye/Octopus/Parachute/Chef (54-59),
+    // confirmed both via the program's own natural boot-time default write
+    // (ram[54]=1, ram[55]=2 at cycle ~221-222, matching "12" default) and
+    // via real-time sync readback. pmBit is 8, the same bit3-of-hT
+    // convention Popeye/Chef use — an earlier attempt to verify this found
+    // "zero segment change" and left it unset, but that test was against a
+    // static single-bit toggle (filtered for an "isolated 1-3 segment"
+    // change), which misses a real AM/PM indicator that spells "AM"/"PM"
+    // as text across more segments than that. Confirmed instead by poking
+    // a reference emulator's RAM to 11:59:57 and 12:59:57 and watching the natural
+    // rollover: ram[54] went 1->9 exactly at 11:59:59->12:00:00 (new bit3
+    // appears, tens-digit bit0 unchanged) and 9->8 at 12:59:59->1:00:00
+    // (tens digit correctly drops, bit3/PM persists) — same verification
+    // method that found Mickey Mouse/Egg's (different) pmBit:2.
+    clockRam: { hT: 54, hO: 55, mT: 56, mO: 57, sT: 58, sO: 59, pmBit: 8 },
+    // Same case mold as Mickey Mouse/Egg/Fire Attack (identical Unit.png
+    // dimensions and screen pixel bounds when measured the same way).
+    screen: { left: 25.01, top: 23.31, width: 49.90, height: 53.64 },
+    // Missing on first ship: without this, startAttract()'s own guard
+    // (`fixedRow === undefined && !_hasQuadButtons() && !lampTestOnBoot`)
+    // returns immediately since this title has neither fixedRow nor
+    // btn1-4 — the auto-demo timer never even gets scheduled, so nothing
+    // ever dismisses the boot lamp-test pattern on its own. Same flag
+    // every other hammer-based Wide Screen title (Popeye/Chef/Octopus/
+    // Parachute) already has; just missed adding it here.
+    lampTestOnBoot: true,
+    // Simple dedicated Left/Right hammer pins (BA=Right, B=Left per the
+    // reference driver, gnw_fire_state — matches
+    // GnwEmulator's un-swapped default, so no swapHammers flag needed,
+    // unlike Popeye/Parachute) — same shape as Chef/Popeye/Octopus, not
+    // Mickey Mouse's K-line quad buttons. Hotspot percentages measured
+    // directly from this title's own artwork (same alpha/red-channel scan
+    // method as Mickey Mouse), not copied from Chef's, since the visible
+    // button size/position differs slightly on this casing.
+    hotspots: LAYOUT_3,   // folded in:New Wide Screen mold, imperceptibly different — treat as Layout 3
+    // Mode buttons (Time/GameB/GameA/Alarm) at inputRows array index 1, NOT
+    // matching the driver source's "IN.2" comment literally — see the
+    // Mickey Mouse inputRows comment for why the array index isn't the
+    // same thing as the port's IN.n suffix. Verified empirically here too:
+    // mode-buttons-at-index-2 (naively matching "IN.2") left a Time tap
+    // with zero effect on the LCD at all; index-1 correctly clears the
+    // boot lamp-test pattern into a clean demo scene. Same convention as
+    // Popeye/Octopus/Parachute/Chef, which are all hammer-pin titles from
+    // the same clock-program generation.
+    inputRows: [ {}, { time: 1, gameB: 2, gameA: 4, alarm: 8 }, {} ],
+    // Same exact bug Popeye's Game A has (same clock-program family, same
+    // address, same value): a reference emulator's own screenshot at this point (Time
+    // dismiss, then Game A held) shows a clean single-scene view, but under
+    // our emulation the display stayed stuck at the boot lamp-test pattern
+    // no matter how the buttons were sequenced (tried holding Game A alone,
+    // tapping a hammer during the hold, after release, needsResetForMode-
+    // Buttons — none of it budged). Traced RAM writes during the Game A
+    // hold and found ram[0x30] toggling repeatedly without settling;
+    // brute-force testing candidate (address, value) pairs against known
+    // "active game" RAM cells found forcing ram[0x30]=4 while Game A is
+    // held reproduces the exact clean scene real hardware shows — same
+    // debounce-collision class of bug as Popeye, same fix.
+    commitAssist: { holdButton: 'gameA', ramAddr: 0x30, value: 4, yieldsTo: ['gameB', 'time'] },
+  },
+
+  tbridge: {
+    title: 'Turtle Bridge', subtitle: 'TL-28 · 1982',
+    artPath: 'artwork/gnw_tbridge/',
+    svgPath: 'artwork/gnw_tbridge/gnw_tbridge.svg',
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Same clock-program family as Fire Attack (identical addresses 20-25),
+    // confirmed via write-tracing: the program's own boot-init default ("12:00")
+    // writes ram[20]=1, ram[21]=2 at cycle ~418-419, and after bumping
+    // bootSyncCycles clear of that, ram[20..25] read back the exact real
+    // wall-clock digits and stay stable. pmBit:8 confirmed via a real
+    // AM/PM-style poke test (11:15 PM -> hT=9, matching bit3).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Same boot-init-writes-late issue as Fire Attack (also SM510, also this
+    // clockRam family) — the "12:00" default write lands at cycle ~419,
+    // after the standard 300-cycle sync window, so syncing at 300 gets
+    // immediately clobbered. 450 clears it with the same margin Fire Attack
+    // uses.
+    bootSyncCycles: 450,
+    screen: { left: 25.47, top: 25.33, width: 48.83, height: 50.35 },
+    hotspots: LAYOUT_3,   // folded in:New Wide Screen mold, imperceptibly different — treat as Layout 3
+    // Array index DOES match the driver source's literal IN.0(movement)/
+    // IN.1(mode) order here — verified empirically (LCD-diff before/after a
+    // Time tap, not assumed from the port comments — see the Mickey Mouse
+    // inputRows comment for why that distinction matters): this ordering
+    // drops the boot lamp-test's lcdSum by ~3x on Time dismiss, the swapped
+    // ordering barely changes it at all.
+    inputRows: [ { right: 1, left: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+    // No fixedRow, no btn1-4, so needs both flags every other no-quad-button
+    // hammer title (Chef/Popeye/Octopus/Parachute/Fire-FR27) needs: the
+    // reset-vector-trick for mode buttons to register at all, and the
+    // Time-tap auto-dismiss for startAttract()'s guard to actually schedule.
+    needsResetForModeButtons: true,
+    // Same combination that made Chef's Left/Right get the mode-button
+    // extended hold by accident (see the hammersNeedQuickTap comment in
+    // _needsMinHold()): no fixedRow + real hotspots.left/right means
+    // _needsMinHold('left'/'right') returns true here too (confirmed
+    // directly), which would leave a released hammer logically "held" for
+    // up to 5 real seconds — the same "movement queues until the next
+    // round" symptom Chef had. Excluded proactively rather than waiting for
+    // a live repro, since the mechanism is identical.
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+  },
+
+  stennis: {
+    title: 'Snoopy Tennis', subtitle: 'SP-30 · 1982',
+    artPath: 'artwork/gnw_stennis/',
+    svgPath: 'artwork/gnw_stennis/gnw_stennis.svg',
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Same clock-program family as Fire Attack/Turtle Bridge (identical
+    // addresses 20-25) — confirmed the same way: boot-init default write at
+    // cycle ~415-416, ram[20..25] hold the exact real wall-clock digits
+    // after bootSyncCycles clears that, pmBit:8 confirmed via an 11:15 PM
+    // poke (hT=9).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Same boot-init-writes-late issue as Fire Attack/Turtle Bridge — the
+    // "12:00" default write lands at cycle ~416, after the standard
+    // 300-cycle sync window.
+    bootSyncCycles: 450,
+    screen: { left: 25.47, top: 25.33, width: 48.83, height: 50.35 },
+    // Snoopy Tennis's own shape: a single Hit button (where Left normally
+    // sits) plus a stacked Up/Down pair (where Right normally sits), not a
+    // second hammer or a 4-way quad pad — see the new `hit`/`up`/`down`
+    // BUTTON_DEFS entries and the play-updown-controls markup in
+    // index.html, added specifically for this title.
+    hotspots: {
+      hit:   { left: 4.89,  top: 60.13, width: 13.40, height: 21.52 },
+      up:    { left: 82.95, top: 54.27, width: 10.72, height: 13.30 },
+      down:  { left: 82.95, top: 70.57, width: 10.72, height: 16.46 },
+      gameA: { left: 82.11, top: 8.19,  width: 9.42,  height: 10.92 },
+      gameB: { left: 82.11, top: 19.65, width: 9.42,  height: 10.92 },
+      time:  { left: 82.11, top: 31.11, width: 9.42,  height: 10.92 },
+    },
+    // Array index matches the driver source's literal IN.0(movement)/
+    // IN.1(mode) order here too — verified the same empirical way as Turtle
+    // Bridge (LCD-diff before/after a Time tap): this ordering drops the
+    // boot lamp-test's lcdSum by ~10x on dismiss, the swapped ordering
+    // barely changes it.
+    inputRows: [ { down: 1, up: 2, hit: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+    // Same reasoning as Turtle Bridge — no fixedRow, no btn1-4.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+  },
+
+  manholews: {
+    title: 'Manhole', subtitle: 'NH-103 · 1983',
+    artPath: 'artwork/gnw_manholews/',
+    svgPath: 'artwork/gnw_manholews/gnw_manholews.svg',
+    // Reference driver comment (the reference driver's gnw_manhole_state, distinct
+    // from the already-shipped Gold-series Manhole (MH-06, key 'manhole'
+    // here) which is a genuinely different, SM5A title): "there's also a
+    // Gold Series version (MH-06). The two games are using different MCU
+    // types so this version seems to be a complete rewrite." Confirmed via
+    // the driver source directly: gnw_manholeg (MH-06) calls sm5a_common(),
+    // gnw_manhole (NH-103, this title) calls sm510_common() -- not a port,
+    // a different chip and a different program entirely.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Found by RAM-tracing while holding Time (real cell-by-cell increment
+    // rate, not guessed from any other title's offsets -- this program shares no
+    // clockRam family with Fire Attack/Turtle Bridge/Snoopy Tennis):
+    // ram[15] increments every real second and rolls 9->0 every 10s (sO);
+    // ram[14] increments every 10s and rolls at 60s (sT); ram[13] increments
+    // every 60s (mO); ram[12] every 10 minutes (mT); ram[10]/[11] held at
+    // 1/2 throughout (the "12" of the program's own 12:00:00 boot default,
+    // matching hT/hO). pmBit:8 confirmed via a real noon rollover, not a
+    // blind bit-scan: forced RAM to 11:59:55, stepped 6 real seconds past
+    // the 12:00:00 crossing, and hT went from 1 to 9 (0b1001 = the same
+    // tens-digit bit0 plus a newly-set bit3) -- the same bit3/8 AM/PM
+    // convention as Popeye/Chef/Fire-FR27/Fire-Attack/Turtle-Bridge/
+    // Snoopy-Tennis.
+    clockRam: { hT: 10, hO: 11, mT: 12, mO: 13, sT: 14, sO: 15, pmBit: 8 },
+    // Same boot-init-writes-late pattern as every other SM510 title here --
+    // the "12:00" default write lands at cycle ~329 (traced via a raw
+    // cpu.step() loop with no external sync), just past the standard
+    // 300-cycle sync window syncClockToNow() waits for by default. 450
+    // clears it with the same margin Fire Attack/Turtle Bridge/Snoopy
+    // Tennis all use.
+    bootSyncCycles: 450,
+    // Screen glass cutout found via the same alpha-channel scan used for
+    // every other title's Unit.png -- confirmed against 8 independent
+    // scanlines (4 horizontal, 4 vertical) all agreeing on the exact same
+    // pixel boundary before converting to percentages.
+    screen: { left: 25.47, top: 24.89, width: 49.06, height: 51.36 },
+    // Real physical shape: two independent 2-way levers (same as Mickey
+    // Mouse/Egg -- confirmed identical IN.0 bit layout in the driver
+    // source: bit0=Right/Down, bit1=Right/Up, bit2=Left/Up, bit3=Left/Down),
+    // not hammers or a single quad pad. Maps onto the same generic btn1-4
+    // mechanism: btn1/btn3 = left lever's up/down positions, btn2/btn4 =
+    // right lever's up/down positions -- matching Mickey Mouse's own
+    // btn1=Left-Up/btn3=Left-Down/btn2=Right-Up/btn4=Right-Down convention
+    // so the two titles read the same way. Because btn1-4 are present,
+    // _hasQuadButtons() already covers the extended-hold/attract-dismiss
+    // logic (confirmed against Fire Attack, an SM510 title using the exact
+    // same btn1-4 mechanism with zero extra flags) -- no
+    // needsResetForModeButtons/lampTestOnBoot/hammersNeedQuickTap needed.
+    // modeButtonsRegisterQuickly, however, IS needed here (unlike Fire
+    // Attack): confirmed live and via a reference PC/RAM trace (gnw_manhole,
+    // reference emulator) that a genuine GameA tap makes the program's own "has the mode
+    // button actually gone back up yet" gameplay-start check pass almost
+    // immediately -- but our own extended min-hold (_needsMinHold(),
+    // triggered by _hasQuadButtons() same as Chef) keeps GameA logically
+    // held for a further 5 real seconds after release, so that program check
+    // kept re-polling a stale hold instead, spinning through a narrow buzzer/
+    // delay loop the whole time (visible as GameA taking several real
+    // seconds to "start" versus the reference driver's instant response) -- same root cause
+    // and same fix as Chef's own modeButtonsRegisterQuickly comment above.
+    modeButtonsRegisterQuickly: true,
+    // See noResetOnModeButtons in _resetWithButtonHeld(): NH-103's program does
+    // NOT need the reset-vector trick at all (confirmed via a reference emulator -- a
+    // genuine K-line change with no reset works fine) -- _hasQuadButtons()
+    // blanket-applying that reset here could leave the CPU stuck CEND-halted
+    // for the rest of a session once an EXCI bl-overflow fix in the retired engine
+    // changed exactly when the reset's raw boot-cycle burst lands.
+    noResetOnModeButtons: true,
+    // Hotspot percentages measured directly from Unit.png (2611x1579):
+    // button rings found via a coordinate-grid overlay after plain color-
+    // fuzz/-trim detection proved unreliable against the brushed-metal
+    // chassis texture (see the two-tone left/right button columns and the
+    // three stacked ovals in the artwork).
+    hotspots: {
+      btn1:  { left: 7.66,  top: 57.63, width: 8.04, height: 15.20 },
+      btn3:  { left: 7.66,  top: 76.63, width: 8.04, height: 15.20 },
+      btn2:  { left: 84.07, top: 57.63, width: 7.85, height: 14.88 },
+      btn4:  { left: 84.07, top: 76.63, width: 7.85, height: 14.88 },
+      gameA: { left: 84.07, top: 9.18,  width: 5.94, height: 7.28 },
+      gameB: { left: 84.07, top: 21.22, width: 5.94, height: 7.28 },
+      time:  { left: 84.07, top: 33.25, width: 5.94, height: 7.28 },
+    },
+    // Row order verified empirically, not assumed from the driver's IN.0/
+    // IN.1 comments (see the Mickey Mouse inputRows comment for why that
+    // distinction matters here too): held row1 bit0 for a sustained period
+    // from a fresh boot and watched the LCD go from a lamp-test-like "many
+    // segments on" pattern (34ff 48ff 38ff ...) to a sparse, clearly-
+    // dismissed one (3000 4c00 3800 ...) -- row0 bit0 held the same way
+    // left the display almost completely unchanged. Confirms row1 = IN.1
+    // (mode buttons) here, matching the driver's own array order directly
+    // for this title (not swapped, unlike some others in this project).
+    inputRows: [ { btn4: 1, btn2: 2, btn1: 4, btn3: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  mariocm: {
+    title: "Mario's Cement Factory", subtitle: 'ML-102 · 1983',
+    artPath: 'artwork/gnw_mariocm/',
+    svgPath: 'artwork/gnw_mariocm/gnw_mariocm.svg',
+    // Reference driver comment (the reference driver, gnw_mariocm_state): "This is
+    // the new wide screen version, there's also a tabletop version" (CM-72,
+    // a genuinely different SM511 chip -- not implemented here, see
+    // gnw_mariotj/Mario The Juggler's own note on why SM511 is a separate,
+    // bigger undertaking).
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, held Time from a fresh boot):
+    // ram[25] increments every real second and rolls 9->0 every 10s (sO);
+    // ram[24] increments every 10s and rolls at 60s (sT); ram[22]/[23] are
+    // minutes (static during this trace); ram[20]/[21] hold the program's own
+    // "12:00" boot default until synced (hT/hO). Same clockRam family/
+    // addresses as Fire Attack/Turtle Bridge/Snoopy Tennis/Manhole(NH-103) --
+    // confirmed fresh here, not assumed. pmBit:8 confirmed via a real noon
+    // rollover (poked 11:59:57, stepped past 12:00:00 -- hT went from 1 to 9,
+    // the same bit3/8 AM/PM convention as the rest of this family).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init's own "12:00" default write lands at cycle ~402 (traced via
+    // a raw cpu.step() loop, no external sync) -- past the standard 300-cycle
+    // window, needs the same 450 override as the rest of this program family.
+    bootSyncCycles: 450,
+    // Same screen-glass box as every other New Wide Screen title measured so
+    // far (Manhole NH-103) -- same case mold, confirmed via the same alpha-
+    // channel scan on Unit.png, not assumed to match.
+    screen: { left: 25.47, top: 24.89, width: 49.06, height: 51.36 },
+    // Left/Right move Mario between conveyor belts; Open (its own dedicated
+    // button, physically separate from Left/Right -- see Unit.png, it sits
+    // where a hammer-style title's *other* hammer would be) drops the
+    // cement bucket. No existing BUTTON_DEFS shape fit (not a second hammer,
+    // not a mode button), so a new 'open' entry was added to BUTTON_DEFS/
+    // index.html's markup, following the exact same pattern Snoopy Tennis's
+    // hit/up/down used for its own new shape. Bound to Space on the keyboard
+    // (KEY_TO_BUTTON) since every other letter/arrow key was already taken.
+    // Bit layout taken from the reference driver directly (IN.0:
+    // bit0=Open/BUTTON1, bit1=Right, bit2=Left) -- Time's row/bit (row1
+    // bit0) confirmed empirically (dismisses the boot lamp-test, matching
+    // every other title in this family), Open/Left/Right cross-checked live.
+    hotspots: {
+      left:  { left: 3.83,  top: 66.18, width: 6.51,  height: 11.08 },
+      right: { left: 12.06, top: 66.18, width: 6.51,  height: 11.08 },
+      open:  { left: 82.73, top: 63.65, width: 10.34, height: 16.78 },
+      gameA: { left: 83.11, top: 9.50,  width: 6.51,  height: 5.38 },
+      gameB: { left: 83.11, top: 22.48, width: 6.51,  height: 5.38 },
+      time:  { left: 83.11, top: 33.57, width: 6.51,  height: 5.38 },
+    },
+    // No fixedRow and real hotspots.left/right -- _needsMinHold('left'/
+    // 'right') would return true without this (same shape as Chef pre-fix),
+    // added proactively rather than waiting for a bug report, same as Turtle
+    // Bridge's own hammersNeedQuickTap comment explains.
+    hammersNeedQuickTap: true,
+    // No fixedRow and no quad buttons (btn1-4) -- startAttract()'s guard
+    // (`fixedRow === undefined && !_hasQuadButtons() && !lampTestOnBoot`)
+    // would skip this title entirely without this flag, leaving the boot
+    // lamp-test/attract tableau stuck forever with no auto Time-tap to
+    // dismiss it. Same class of bug as Fire/FR-27's own missing
+    // lampTestOnBoot (forgotten there once already) -- confirmed live here:
+    // the lamp-test screen never advanced past ~900 frames without it.
+    lampTestOnBoot: true,
+    inputRows: [ { open: 1, right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  tfish: {
+    title: 'Tropical Fish', subtitle: 'TF-104 · 1985',
+    artPath: 'artwork/gnw_tfish/',
+    svgPath: 'artwork/gnw_tfish/gnw_tfish.svg',
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Same clockRam family/addresses as Fire Attack/Turtle Bridge/Snoopy
+    // Tennis/Manhole(NH-103)/Mario's Cement Factory -- confirmed fresh via
+    // the same held-Time RAM trace, not assumed to carry over. pmBit:8
+    // confirmed via the same real noon-rollover poke (11:59:57 -> hT 1->9).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init's own "12:00" default write (and the lamp-test's own segment
+    // writes) don't settle until cycle ~588 here -- later than Mario's Cement
+    // Factory's own ~402, needs a wider 650-cycle sync window.
+    bootSyncCycles: 650,
+    // Same screen-glass box as every other New Wide Screen title measured so
+    // far -- same case mold, confirmed via the same alpha-channel scan.
+    screen: { left: 25.47, top: 24.89, width: 49.06, height: 51.36 },
+    // Two independent round buttons (Left bottom-left, Right bottom-right --
+    // not a hammer pair sharing one housing like Mario's Cement Factory).
+    // Row/bit layout: Time's row1 bit0 confirmed empirically (dismisses the
+    // boot lamp-test). GameA/GameB are swapped here versus every other title
+    // in this family (bit1=GameA/bit2=GameB, not bit2=GameA/bit1=GameB) --
+    // taken from the reference driver directly and cross-checked live,
+    // per this project's standing rule not to assume a convention carries
+    // over between programs (see Mickey Mouse/Fire-FR27's own inputRows history).
+    hotspots: LAYOUT_3,   // folded in:smaller New Wide Screen buttons but the shared regions still cover them — treat as Layout 3
+    // No fixedRow and real hotspots.left/right -- same proactive fix as
+    // Mario's Cement Factory/Turtle Bridge, see their own comments.
+    hammersNeedQuickTap: true,
+    // No fixedRow and no quad buttons -- same missing-auto-dismiss bug as
+    // Mario's Cement Factory (see its own comment above) and Fire/FR-27
+    // before it -- needed on every hammer-shaped title with no fixedRow.
+    lampTestOnBoot: true,
+    inputRows: [ { left: 1, right: 2 }, { time: 1, gameA: 2, gameB: 4, alarm: 8 } ],
+  },
+
+  dkjr: {
+    title: 'Donkey Kong Jr.', subtitle: 'DJ-101 · 1982',
+    artPath: 'artwork/gnw_dkjr/',
+    svgPath: 'artwork/gnw_dkjr/gnw_dkjr.svg',
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Same clockRam family/addresses as the rest of this program family
+    // (Fire Attack/Turtle Bridge/Snoopy Tennis/Manhole NH-103/Mario's
+    // Cement Factory/Tropical Fish) -- confirmed fresh via a reference
+    // ground-truth RAM trace (gnw_dkjr, reference emulator), not assumed. pmBit:8
+    // confirmed via the same real noon-rollover poke (11:59:57 -> hT 1->9).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 450,
+    screen: { left: 25.47, top: 24.89, width: 49.06, height: 51.36 },
+    // A genuine single 4-way D-pad cluster (one physical plus-shaped unit,
+    // not two independent 2-way levers like Manhole/Mickey Mouse's own
+    // btn1-4 usage) plus a dedicated Jump button opposite it. Reuses the
+    // same btn1-4 mechanism regardless -- at the input-bit level a 4-way
+    // pad and two independent levers are identical (4 independent digital
+    // directions on one K-row), and hotspot position is fully data-driven,
+    // so no new BUTTON_DEFS shape was needed for the pad itself (only for
+    // Jump -- see BUTTON_DEFS.jump). Row/bit layout taken from the real
+    // reference driver directly (IN.1: bit0=Right,bit1=Up,bit2=Left,
+    // bit3=Down) and cross-checked live; Jump is IN.0 bit3 (its own row,
+    // only one bit used), Time/GameB/GameA/Alarm on IN.2 (row2) -- this
+    // title has three real K-rows, the first shipped title in this project
+    // with more than two.
+    hotspots: {
+      jump: { left: 82.73, top: 64.28, width: 10.34, height: 16.78 },
+      btn1: { left: 13.79, top: 68.40, width: 5.75,  height: 6.97 },
+      btn2: { left: 8.62,  top: 61.43, width: 5.75,  height: 6.65 },
+      btn3: { left: 3.64,  top: 68.40, width: 5.75,  height: 6.97 },
+      btn4: { left: 8.62,  top: 76.31, width: 5.75,  height: 6.97 },
+      gameA: { left: 83.11, top: 9.50,  width: 6.51, height: 5.38 },
+      gameB: { left: 83.11, top: 22.48, width: 6.51, height: 5.38 },
+      time:  { left: 83.11, top: 33.57, width: 6.51, height: 5.38 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- no needsResetForModeButtons/
+    // lampTestOnBoot/hammersNeedQuickTap needed (same as Fire Attack/
+    // Manhole NH-103). modeButtonsRegisterQuickly applied proactively from
+    // the start this time (not discovered via a bug report) -- this exact
+    // _hasQuadButtons()-driven 5s-extended-hold class of bug has now hit
+    // two unrelated titles (Chef, Manhole NH-103), see the cross-cutting
+    // mechanisms note above.
+    modeButtonsRegisterQuickly: true,
+    // noResetOnModeButtons: same fix as Manhole NH-103, same symptom --
+    // confirmed live (a real GameA press left the game-area segments stuck
+    // on the dense boot tableau indefinitely, clock digits ticking normally
+    // the whole time since those are a direct RAM poke independent of the
+    // program's own ongoing execution) and confirmed via the same bypass test
+    // (a plain K-line GameA press with no cpu.reset() reaches real,
+    // progressing gameplay). See _resetWithButtonHeld()'s own comment.
+    noResetOnModeButtons: true,
+    inputRows: [ { jump: 8 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  smbn: {
+    title: 'Super Mario Bros.', subtitle: 'YM-105 · 1988',
+    artPath: 'artwork/gnw_smbn/',
+    svgPath: 'artwork/gnw_smbn/gnw_smbn.svg',
+    // First SM511 title in this project -- a genuinely different chip
+    // family member from SM510 (sibling, not subclass -- the retired engine's SM511
+    // class comment had the full real-hardware differences).
+    // Boot-sequence PC trace cross-checked against a reference emulator
+    // (gnw_smb, Crystal Screen -- same program+melody memory as this New
+    // Wide Screen release, confirmed via identical CRCs in the reference
+    // driver): 1000 consecutive instructions compared on a shared
+    // anchor point, 0 mismatches, both interpreters converging on the
+    // same idle loop.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Empirically confirmed via a held-Time headless run (12+ continuous
+    // hours simulated, sampling full RAM every 20 simulated minutes):
+    // ram[38]/[39] (sT/sO) roll 0-5/0-9 every 10s/1s, ram[36]/[37] (mT/mO)
+    // roll over cleanly at the 10-minute mark, and ram[34]/[35] (hT/hO)
+    // show a genuine 12-hour rollover (12->1, not 12->13) confirming a
+    // real 12-hour display. pmBit:2 confirmed the same way this project's
+    // other pmBit titles were -- at the observed noon/midnight boundary,
+    // hT's raw stored value jumped by exactly 2 (1->3, i.e. the base "1"
+    // digit unchanged, a separate bit toggling) while hO simultaneously
+    // read the same digit sequence as every non-PM hour transition.
+    clockRam: { hT: 34, hO: 35, mT: 36, mO: 37, sT: 38, sO: 39, pmBit: 2 },
+    // Melody memory region, 0x100 bytes -- a genuinely
+    // separate program the SM511 core reads through its own melody engine
+    // (the core's melody generator), not part of the main program memory at all.
+    bootSyncCycles: 450,
+    screen: { left: 25.45, top: 24.64, width: 48.71, height: 52.15 },
+    // Reference driver (gnw_smb_state, gnw_smb
+    // INPUT_PORTS): S-port row select is a direct, unambiguous bit->IN.n
+    // mapping on this chip (read_inputs() iterates `if (BIT(m_inp_mux,i))
+    // ret |= m_inputs[i]->read()` -- no R-based complement/invert trick
+    // like SM5A's own row-select wiring), so inRows[i] = IN.i is
+    // source-confirmed, not an empirical guess the way most other
+    // titles' row ordering has needed to be. IN.0: Time/Game/Alarm: bit0=
+    // Time, bit1=Game (this title has only one Game mode, not GameA/
+    // GameB), bit2=Alarm. IN.1: D-pad, bit0=Up, bit1=Right, bit2=Down,
+    // bit3=Left -- a genuine 4-way D-pad like Donkey Kong Jr.'s, but
+    // exposed here via dedicated up/down/left/right hotspots (matching
+    // the real artwork's 4 separate button cutouts) rather than reused
+    // btn1-4 corner buttons, since the real unit has 4 distinctly-shaped
+    // individual buttons, not one 2x2 corner cluster. IN.2: bit0=Jump,
+    // only bit used.
+    hotspots: {
+      up:    { left: 7.06,  top: 57.88, width: 8.62,  height: 14.33 },
+      down:  { left: 7.06,  top: 73.45, width: 8.62,  height: 14.33 },
+      left:  { left: 2.58,  top: 65.52, width: 8.62,  height: 14.33 },
+      right: { left: 11.77, top: 65.52, width: 8.62,  height: 14.33 },
+      jump:  { left: 81.28, top: 60.36, width: 14.47, height: 24.07 },
+      alarm: { left: 82.77, top: 6.40,  width: 8.62,  height: 14.33 },
+      time:  { left: 82.77, top: 17.86, width: 8.62,  height: 14.33 },
+      gameA: { left: 82.77, top: 29.32, width: 8.62,  height: 14.33 },
+    },
+    // No fixedRow and no btn1-4 (this title's D-pad uses dedicated up/
+    // down/left/right hotspots instead, see the inputRows comment above),
+    // so it needs the same no-quad-button hammer-title flags every prior
+    // title in that shape has needed until proven otherwise by real
+    // testing -- applied proactively rather than waiting for a repro,
+    // same reasoning as Turtle Bridge/Mario's Cement Factory/Tropical
+    // Fish's own comments.
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+    inputRows: [ { time: 1, gameA: 2, alarm: 4 }, { up: 1, right: 2, down: 4, left: 8 }, { jump: 1 } ],
+  },
+
+  climbern: {
+    title: 'Climber', subtitle: 'DR-106 · 1988',
+    artPath: 'artwork/gnw_climbern/',
+    svgPath: 'artwork/gnw_climbern/gnw_climbern.svg',
+    // Second SM511 title -- same input-port shape as Super Mario Bros
+    // (Time/Game/Alarm on IN.0, a 4-way D-pad on IN.1, Jump alone on
+    // IN.2), confirmed identical in the reference driver. Boot-
+    // sequence PC trace cross-checked against a reference emulator (gnw_
+    // climber, Crystal Screen -- same program+melody memory as this New
+    // Wide Screen release, confirmed via identical CRCs): 1000
+    // consecutive instructions compared on a shared anchor point, 0
+    // mismatches.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Empirically confirmed the same way as Super Mario Bros -- a
+    // continuous, isolated held-Time headless run (12+ hours
+    // simulated). Same relative layout as Super Mario Bros, offset by
+    // one RAM address (this program's own general-RAM usage before the
+    // clock cells differs by 1 cell): sT/sO roll 0-5/0-9 every 10s/1s,
+    // mT/mO roll over cleanly at the 10-minute mark, hT/hO show a
+    // genuine 12-hour rollover (12->1) with the same pmBit:2 encoding
+    // (a +2 jump in hT's raw stored value at the observed noon/
+    // midnight boundary).
+    clockRam: { hT: 35, hO: 36, mT: 37, mO: 38, sT: 39, sO: 40, pmBit: 2 },
+    // Melody memory region, 0x100 bytes.
+    bootSyncCycles: 450,
+    screen: { left: 24.78, top: 23.18, width: 50.33, height: 53.58 },
+    // Same S-port-direct-bit->IN.n wiring as Super Mario Bros (source-
+    // confirmed, not empirical) -- IN.0: bit0=Time, bit1=Game, bit2=
+    // Alarm. IN.1: bit0=Up, bit1=Right, bit2=Down, bit3=Left. IN.2:
+    // bit0=Jump.
+    hotspots: LAYOUT_6,
+    // No fixedRow and no btn1-4 (dedicated up/down/left/right hotspots
+    // instead, same shape as Super Mario Bros) -- same proactive flags
+    // as every no-quad-button hammer-shaped title until proven
+    // otherwise by real testing.
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+    inputRows: [ { time: 1, gameA: 2, alarm: 4 }, { up: 1, right: 2, down: 4, left: 8 }, { jump: 1 } ],
+  },
+
+  bfightn: {
+    title: 'Balloon Fight', subtitle: 'BF-107 · 1988',
+    artPath: 'artwork/gnw_bfightn/',
+    svgPath: 'artwork/gnw_bfightn/gnw_bfightn.svg',
+    // Third SM511 title -- reference driver notes this PCB design is
+    // shared with Climber's, and it shows: identical input-port shape
+    // (Time/Game/Alarm on IN.0, D-pad on IN.1, a single action button --
+    // 'Eject' here, reusing the jump hotspot shape -- on IN.2) and
+    // identical button hotspot pixel positions in the real artwork.
+    // Boot-sequence PC trace cross-checked against a reference emulator
+    // (gnw_bfight, Crystal Screen -- same program+melody memory as this
+    // New Wide Screen release, confirmed via identical CRCs): 1000
+    // consecutive instructions compared on a shared anchor point, 0
+    // mismatches.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Hour/minute cells and pmBit ARE identical to Climber's, consistent
+    // with the shared-PCB-design note above -- but the seconds are NOT, and
+    // this entry claimed they were for a long time (sT:39, sO:40, copied
+    // straight off Climber). Balloon Fight keeps its seconds BELOW the
+    // hour/minute block, at 33/34; 39 and 40 are dead cells that never
+    // changed once across 1300 simulated seconds of held-Time. Re-traced
+    // against the real program, and cross-checked by reading the whole clock
+    // back across a minute rollover: with 39/40 the seconds sit frozen at
+    // 00 forever, with 33/34 they tick correctly.
+    //
+    // The bug was near-invisible, which is why it lasted: the display only
+    // shows H:MM, so the wrong cells cost nothing visually -- but
+    // _pokeClockRam() was writing the real seconds into the dead cells and
+    // leaving the live counter at whatever boot left it, so a freshly
+    // synced clock could roll its first minute up to 59s late.
+    //
+    // The lesson is the assumption, not the addresses: hT/hO/mT/mO really
+    // are Climber's, so the block LOOKED like a contiguous ascending run
+    // and the seconds were taken on faith rather than traced.
+    clockRam: { hT: 35, hO: 36, mT: 37, mO: 38, sT: 33, sO: 34, pmBit: 2 },
+    // Melody memory region, 0x100 bytes.
+    bootSyncCycles: 450,
+    screen: { left: 25.39, top: 21.91, width: 49.18, height: 56.68 },
+    // Same S-port-direct-bit->IN.n wiring as Super Mario Bros/Climber
+    // (source-confirmed) -- IN.0: bit0=Time, bit1=Game, bit2=Alarm.
+    // IN.1: bit0=Up, bit1=Right, bit2=Down, bit3=Left. IN.2: bit0=Eject.
+    hotspots: LAYOUT_6,
+    // Real device's own label for this button -- it ejects air from the
+    // balloon-pack to fly, not a jump -- unlike DKJr/Super Mario Bros./
+    // Climber, which reuse the same internal `jump` hotspot/button
+    // plumbing for a real jump button. See the jumpLabel handling in
+    // _applyGameArtwork().
+    jumpLabel: 'Eject',
+    // No fixedRow and no btn1-4 -- same proactive flags as every no-
+    // quad-button hammer-shaped title until proven otherwise by real
+    // testing.
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+    inputRows: [ { time: 1, gameA: 2, alarm: 4 }, { up: 1, right: 2, down: 4, left: 8 }, { jump: 1 } ],
+  },
+
+  /* ---- Crystal Screen trio (1986) --------------------------------------
+     Super Mario Bros. YM-801, Climber DR-802, Balloon Fight BF-803 -- the
+     see-through units. Each is the SAME silicon and the SAME program as its
+     1988 New Wide Screen re-release above: bf-803.program is byte-identical
+     to what bfightn already runs (sha256 38bfbb54...), dr-802 to climbern's,
+     ym-801 to smbn's -- verified against the archived dumps, and the reference driver
+     itself models the New Wide Screen machines as clones of these. So none
+     of these three carries a program of its own; see the shared-program
+     block below the GAMES literal, which copies it across rather than
+     pasting a second (driftable) copy of the same 4KB blob.
+
+     What IS new here is the display. Every other title in this project
+     paints its segments onto an OPAQUE Background.png. A Crystal Screen is
+     transparent: the layout draws the backing, then the segments, then
+     the SAME backing again at 10% ON TOP of them, then the case, then two
+     glass-reflection gradients. That's what `crystal` below drives -- see
+     _applyPanelLayers().
+
+     Geometry is read straight off each unit's community default.lay "Unit Only"
+     view (canvas 3273x1398), converted to percentages. All three share one
+     Crystal shell, so bg/gradient are identical across them and only the
+     LCD panel bounds differ slightly. */
+
+  /* Each of these declares ONLY what its case changes. Everything internal
+     -- cpuType, the program and melody, clockRam, lcdCBits, bootSyncCycles,
+     inputRows, the boot/input behaviour flags, and Balloon Fight's 'Eject'
+     button label -- is inherited from its New Wide Screen twin by
+     GAMES_HW_TWINS below, because it IS the same machine. Don't re-declare
+     any of that here: a hand-copied duplicate is only a chance to drift.
+
+     Port wiring is worth one note since it's inherited rather than visible:
+     each Crystal unit's own default.lay independently confirms the twin's
+     masks -- IN.0 bit0=Time, bit1=Game; IN.1 bit0=Up, bit1=Right, bit2=Down,
+     bit3=Left; IN.2 bit0=Jump/Eject. */
+
+  smb: {
+    title: 'Super Mario Bros.', subtitle: 'YM-801 · 1986',
+    artPath: 'artwork/gnw_smb/',
+    svgPath: 'artwork/gnw_smb/gnw_smb.svg',
+    noPressedArt: true,   // this bundle has no Animation/ folder: every pressed-art request 404'd
+    // default.lay: screen multiply bounds (891,247,1503x924).
+    screen: { left: 27.223, top: 17.668, width: 45.921, height: 66.094 },
+    panel: CRYSTAL_SHELL,
+    hotspots: CRYSTAL_HOTSPOTS,
+  },
+
+  /* ---- Table Top: Super Mario Bros. Special YM-901-S (1987) -------------
+     A cosmetic Table Top-form clone of the New Wide Screen Super Mario Bros
+     (smbn): byte-identical program+melody memory (sha256 d4a1eb9d... /
+     05a26b5f..., the same blob smb/smbn already run), the same SM511 silicon,
+     and the same LCD segment SVG -- it REUSES smbn's gnw_smbn.svg rather than
+     carrying one of its own. Only the shell differs: a gold flip-lid Table Top
+     cabinet given away as a 1987 competition prize (~10,000 made), the rarest
+     of the three SMB Game & Watch variants. Everything internal (cpuType,
+     clockRam, lcdCBits, bootSyncCycles, inputRows, the boot/input flags, the
+     4-way D-pad + Jump wiring) is inherited from smbn via GAMES_HW_TWINS
+     below -- this entry declares only what the case changes.
+
+     Geometry MEASURED off the device photo (artwork/gnw_smbspecial/Unit.png,
+     2223x3940 px): the `screen` rect is the black LCD aperture; the hotspots
+     are the D-pad arms, the GAME/TIME/ALARM buttons and JUMP. All are a
+     first-pass measurement -- expected to be visually fine-tuned. */
+  smbspecial: {
+    title: 'Super Mario Bros. Special', subtitle: 'YM-901-S · 1987',
+    artPath: 'artwork/gnw_smbspecial/',
+    svgPath: 'artwork/gnw_smbn/gnw_smbn.svg',   // reuse smbn's LCD segment art
+    // Play-modal Unit.png is the TIGHTER "screen + control panel" crop
+    // (from the unit's scan, 2223x2161) with its white backdrop and
+    // black LCD aperture knocked out to transparent. The tile + drawer show
+    // the FULL flip-lid device instead (a static hero, not this live view) --
+    // see other-super-mario-bros-special in STATIC_PREVIEW_IDS / its img key
+    // in index.html.
+    unitAspect: '2223 / 2161',
+    // The Animation/ PNGs in this bundle were COPIED from smbn, whose shell is
+    // a LANDSCAPE New Wide Screen -- pasting them onto this PORTRAIT tabletop
+    // crop showed a foreign, wrong-orientation overlay. So we ship no pressed-
+    // art (noPressedArt hides the img overlays) and instead glow the hotspot
+    // itself on press (pressHighlight -> .play-hotspot.pressed CSS), the clean
+    // feedback used where a cabinet has no usable pressed-state frames.
+    noPressedArt: true,
+    pressHighlight: true,
+    // Black LCD aperture measured on the zoomed crop: px 721,742 842x549 of
+    // 2223x2161 (verified with a red-overlay screenshot).
+    screen: { left: 32.43, top: 34.34, width: 37.88, height: 25.40 },
+    // PREVIEW-ART OVERRIDE (non-interactive tile + drawer stage only). The Play
+    // modal keeps the fields above (the ZOOMED screen+panel crop). The catalogue
+    // tile and the drawer's big device reveal instead show the FULL gold flip-lid
+    // cabinet, still LIVE -- a taller portrait Unit.png (artwork/gnw_smbspecial_full/,
+    // 2223x3940) whose white backdrop is knocked out and whose black LCD aperture
+    // is punched to alpha, with the smbn segments composited into the cabinet's own
+    // (smaller, lower) LCD rect. Only _mountPreviewInto (this file) + tileEmuLayersHTML/
+    // showDeviceStage (index.html) consult game.preview; every other title has no
+    // .preview so is completely unaffected. LCD rect measured on the full cabinet
+    // via connected-components: px 708,2351 869x571 of 2223x3940 (same ~1.52 LCD
+    // aspect as the zoomed crop, so the wide smbn segments fill it identically).
+    preview: {
+      artPath: 'artwork/gnw_smbspecial_full/',
+      svgPath: 'artwork/gnw_smbn/gnw_smbn.svg',
+      unitAspect: '2223 / 3940',
+      screen: { left: 31.85, top: 59.67, width: 39.09, height: 14.49 },
+    },
+    // Buttons measured on the same zoomed crop (d-pad arms / GAME / TIME /
+    // ALARM / JUMP). First-pass -- expected to be visually fine-tuned.
+    hotspots: {
+      up:    { left: 30.00, top: 70.10, width: 4.27, height: 4.40 },
+      down:  { left: 30.00, top: 78.16, width: 4.27, height: 4.40 },
+      left:  { left: 25.73, top: 73.48, width: 4.27, height: 4.40 },
+      right: { left: 34.28, top: 73.48, width: 4.27, height: 4.40 },
+      jump:  { left: 67.43, top: 71.72, width: 7.38, height: 7.87 },
+      alarm: { left: 56.14, top: 67.42, width: 2.70, height: 2.78 },
+      time:  { left: 48.49, top: 67.05, width: 4.95, height: 3.33 },
+      gameA: { left: 41.25, top: 66.96, width: 4.95, height: 3.24 },
+    },
+  },
+
+  climber: {
+    title: 'Climber', subtitle: 'DR-802 · 1986',
+    artPath: 'artwork/gnw_climber/',
+    svgPath: 'artwork/gnw_climber/gnw_climber.svg',
+    noPressedArt: true,   // this bundle has no Animation/ folder: every pressed-art request 404'd
+    // default.lay: screen multiply bounds (891,239,1492x918).
+    screen: { left: 27.223, top: 17.096, width: 45.585, height: 65.665 },
+    panel: CRYSTAL_SHELL,
+    hotspots: CRYSTAL_HOTSPOTS,
+  },
+
+  bfight: {
+    title: 'Balloon Fight', subtitle: 'BF-803 · 1986',
+    artPath: 'artwork/gnw_bfight/',
+    svgPath: 'artwork/gnw_bfight/gnw_bfight.svg',
+    noPressedArt: true,   // this bundle has no Animation/ folder: every pressed-art request 404'd
+    // default.lay: screen multiply bounds (885,239,1489x908).
+    screen: { left: 27.038, top: 17.096, width: 45.494, height: 64.950 },
+    panel: CRYSTAL_SHELL,
+    hotspots: CRYSTAL_HOTSPOTS,
+  },
+
+
+  /* ---- Micro Vs. System (1984) ------------------------------------------
+     Boxing BX-301, Donkey Kong 3 AK-302, Donkey Kong Hockey HK-303 -- the
+     two-player units, each with a pair of detachable controllers.
+
+     All three are SM511 (reference: sm511_common), the core already here. The new
+     thing is the INPUT SHAPE: these are the first titles on the site that
+     scan more than four S lines, and the first with two players. The reference driver's own
+     microvs_shared port block is the authority for the wiring below --
+     player 2 and player 1 mirrored across S1..S6, mode buttons together on
+     S7:
+
+       S1 bit2 = P2 fire      S2 bit0 = P1 fire
+       S3 bit2 = P2 down      S3 bit3 = P2 up
+       S4 bit0 = P1 down      S4 bit1 = P1 up
+       S5 bit2 = P2 right     S5 bit3 = P2 left
+       S6 bit0 = P1 right     S6 bit1 = P1 left
+       S7 bit0 = Time, bit1 = Game B, bit2 = Game A, bit3 = Alarm
+
+     Reaching S7 at all needed a real CPU fix -- the W register was masked to
+     4 bits here, where the hardware's is 8 (a fix in the retired engine).
+     With the 4-bit W these programs never saw Time and their clocks never
+     started.
+
+     clockRam was traced against the real programs (held Time, measured which
+     cells count and at what ratio -- 1x/10x/60x/600x), then verified by
+     reading the whole clock back across an hour rollover, and pmBit by
+     poking 11:59:50 and watching the hour-tens nibble across 12:00. All
+     three agree, which is what you'd expect from one PCB family: seconds
+     and minutes sit BELOW the hour cells at 20..25, and the AM/PM flag is
+     bit 3 (8), not the 2 every SM511 handheld here uses.
+
+     Controllers: the joysticks are not clickable. The community artwork draws the
+     console alone (Unit.png) with the two controllers only in the backdrop
+     photo, and ships pressed-state art for Game A/Game B/Time and nothing
+     else -- so there is no button art to derive joystick hotspots from, and
+     nothing on the case to click. Emulators play these from the keyboard too.
+     Hence hotspots for the three mode buttons only; both players' sticks
+     and buttons come from the keyboard and the on-screen control bar. */
+
+  boxing: {
+    title: 'Boxing', subtitle: 'BX-301 · 1984',
+    artPath: 'artwork/gnw_boxing/',
+    svgPath: 'artwork/gnw_boxing/gnw_boxing.svg',
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Traced and verified against the real program -- see the series comment
+    // above for the method. Identical across all three Micro Vs. titles.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 450,
+    lampTestOnBoot: true,
+    microVs: true,
+    // The real unit's own name for the action button on each controller.
+    fireLabel: 'Punch',
+    // default.lay "Unit Only": screen multiply bounds.
+    screen: { left: 19.742, top: 22.553, width: 60.787, height: 31.103 },
+    // Boxing is the only Micro Vs. whose layout actually uses the panel
+    // overlay: the layout draws its backing again at 10% over the segments and two
+    // reflection gradients at 15%. Donkey Kong 3 and Hockey set those same
+    // layers to alpha 0.0, i.e. off, so they declare no gradients at all.
+    panel: {
+      bg: { left: 18.860, top: 21.314, width: 62.280, height: 35.316 },
+      gradient: { left: 19.607, top: 22.181, width: 60.855, height: 32.094 },
+      gradientFiles: ['Gradient1.png', 'Gradient2.png'],
+      bgOverlayAlpha: 0.1,
+      gradientAlpha: 0.15,
+      gradient2Alpha: 0.15,
+    },
+    hotspots: MICROVS_HOTSPOTS,
+    inputRows: MICROVS_INPUT_ROWS,
+    keyMap: MICROVS_KEYMAP,
+  },
+
+  dkong3: {
+    title: 'Donkey Kong 3', subtitle: 'AK-302 · 1984',
+    artPath: 'artwork/gnw_dkong3/',
+    svgPath: 'artwork/gnw_dkong3/gnw_dkong3.svg',
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Traced and verified against the real program -- see the series comment
+    // above for the method. Identical across all three Micro Vs. titles.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 450,
+    lampTestOnBoot: true,
+    microVs: true,
+    // The real unit's own name for the action button on each controller.
+    fireLabel: 'Spray',
+    // default.lay "Unit Only": screen multiply bounds.
+    screen: { left: 18.860, top: 23.544, width: 62.144, height: 30.855 },
+    // No overlay/gradients: this unit's own default.lay sets both to
+    // alpha 0.0. Only the backing box differs from the segment box.
+    panel: {
+      bg: { left: 19.742, top: 22.553, width: 60.787, height: 31.103 },
+    },
+    hotspots: MICROVS_HOTSPOTS,
+    inputRows: MICROVS_INPUT_ROWS,
+    keyMap: MICROVS_KEYMAP,
+  },
+
+  dkhockey: {
+    title: 'Donkey Kong Hockey', subtitle: 'HK-303 · 1984',
+    artPath: 'artwork/gnw_dkhockey/',
+    svgPath: 'artwork/gnw_dkhockey/gnw_dkhockey.svg',
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Traced and verified against the real program -- see the series comment
+    // above for the method. Identical across all three Micro Vs. titles.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 450,
+    lampTestOnBoot: true,
+    microVs: true,
+    // The real unit's own name for the action button on each controller.
+    fireLabel: 'Shoot',
+    // default.lay "Unit Only": screen multiply bounds.
+    screen: { left: 18.114, top: 20.446, width: 63.229, height: 34.820 },
+    // No overlay/gradients -- alpha 0.0 in its own default.lay, same as
+    // Donkey Kong 3.
+    panel: {
+      bg: { left: 19.810, top: 22.800, width: 60.380, height: 30.855 },
+    },
+    hotspots: MICROVS_HOTSPOTS,
+    inputRows: MICROVS_INPUT_ROWS,
+    keyMap: MICROVS_KEYMAP,
+  },
+
+  mariotj: {
+    title: 'Mario The Juggler', subtitle: 'MB-108 · 1991',
+    artPath: 'artwork/gnw_mariotj/',
+    svgPath: 'artwork/gnw_mariotj/gnw_mariotj.svg',
+    // Fourth SM511 title, and the last New Wide Screen unit (1991) --
+    // program/melody CRCs confirmed against the reference driver
+    // (gnw_mariotj) before use: mb-108.program (4096B,
+    // f7118bb4), mb-108.melody (256B, d8cc1f74 -- the dump list itself flags this
+    // one BAD_DUMP/decap-needed, so treat any audio glitches here as a
+    // possibly-bad source dump, not necessarily an emulator bug).
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Found via a headless held-Time trace (same methodology as every
+    // other title): a clean, fully sequential 6-cell block, unlike most
+    // other titles' scattered addresses. No pmBit -- tried forcing bits
+    // 2/4/8 of hT while the clock was actively displaying and diffed
+    // cpu.lcd against the unforced baseline (the same method used to
+    // confirm pmBit elsewhere); zero segment difference on any bit, so
+    // this program doesn't appear to implement an AM/PM indicator at all.
+    clockRam: { hT: 24, hO: 25, mT: 26, mO: 27, sT: 28, sO: 29 },
+    // Melody memory region, 0x100 bytes.
+    // Boot-init's own default clock write settles by cycle ~350 here --
+    // comfortably inside the standard 450 every other New Wide Screen
+    // SM511 title already uses, so kept the same rather than a new value.
+    bootSyncCycles: 450,
+    screen: { left: 23.82, top: 21.34, width: 51.97, height: 56.87 },
+    // Real input ports (source-confirmed, gnw_mariotj INPUT_PORTS_START):
+    // IN.0 bit0=Right, bit3=Left (a 16-way joystick in the reference driver's abstraction,
+    // but only Left/Right are wired -- no Up/Down at all, unlike DKJr/SMB/
+    // Climber/Balloon Fight's D-pad shape). IN.1: bit0=Time, bit1=GameB,
+    // bit2=GameA, bit3=Alarm (IPT_SERVICE2 -- a factory-test input with no
+    // matching physical button anywhere in the real artwork's layout, so
+    // deliberately not given a hotspot below, unlike every other mode
+    // button here).
+    // Folds onto LAYOUT_3: its own trim had L/R at top 59.91 (1.33% lower)
+    // and right at 80.55 (0.01% over); shared LAYOUT_3 uses 58.58/80.54, an
+    // imperceptible click-region shift on the same mold (smaller than Ball's
+    // accepted Layout-1 shift). Game A/B/Time pills were already byte-identical.
+    hotspots: LAYOUT_3,
+    // No fixedRow and real hotspots.left/right -- same proactive fix as
+    // every prior hammer/lever-shaped title with this shape, until proven
+    // otherwise by real testing.
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+    inputRows: [ { right: 1, left: 8 }, { time: 1, gameB: 2, gameA: 4 } ],
+  },
+
+  ssparky: {
+    title: 'Spitball Sparky', subtitle: 'BU-201 · 1984',
+    artPath: 'artwork/gnw_ssparky/',
+    // Known upfront (real Unit.png is 997x2094) so _applyGameArtwork can set
+    // .play-device's aspect-ratio synchronously instead of waiting for the
+    // image to load -- see _applyUnitAspectRatio's own comment for why: this
+    // ratio is far enough from the CSS default (2227/1500) that the old
+    // load-triggered correction alone visibly snapped the whole device box
+    // a beat after the modal opened ("the CSS resizes the device a little",
+    // reported live on this title and Crab Grab/both Multi Screen titles).
+    unitAspect: '997 / 2094',
+    svgPath: 'artwork/gnw_ssparky/gnw_ssparky.svg',
+    // Dump (gnw_ssparky): bu-201.program, 4096B,
+    // ae0d28e7 -- confirmed against the real driver source before use, same
+    // as every other title here. Super Color's own chip, same CPU family
+    // (plain SM510, no melody memory) as Manhole/Helmet/Lion/Fire Attack/
+    // Cement Factory -- the "Super Color" branding is a denser/tinted LCD
+    // glass, not a different silicon part.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, natural run with no forced RAM
+    // writes -- direct multi-cell pokes proved unreliable for this program, see
+    // below): a clean sequential 6-cell block, boot defaults to 12:00:00 as
+    // usual, and a genuine ~60-minute run confirmed a correct 12-hour
+    // rollover (hT/hO went 1,2 -> 0,1 i.e. "12" -> "01") at exactly the
+    // 3600s mark with mT/mO/sT/sO all rolling over in lockstep at the same
+    // instant. No pmBit: hT never showed anything but 0 or 1 across the
+    // entire natural run; a direct-bit-forcing cross-check (the method that
+    // worked for other titles) was inconclusive here since forcing several
+    // clock cells at once corrupts this program's own hidden carry state (a
+    // forced 11:59:59 rolled to garbage like hT=9 instead of a clean 12:00),
+    // so this is judged from the natural run's own evidence only.
+    clockRam: { hT: 10, hO: 11, mT: 12, mO: 13, sT: 14, sO: 15 },
+    // Boot-init's own default clock write lands by cycle ~425 here (traced
+    // via a raw cpu.step() loop from a fresh boot) -- close enough to the
+    // standard 450 that it's worth the extra headroom other tight-margin
+    // titles already needed (see Donkey Kong Jr.'s own 650 override), so
+    // bumped to 500 rather than leaving only ~25 cycles of slack.
+    bootSyncCycles: 500,
+    // Screen-glass box taken directly from the community artwork's own
+    // "Unit Only" view (default.lay): Background element bounds (188,444,
+    // 622,1023) against the Unit element's own bounds (0,0,997,2094) --
+    // same derivation Ball/every other title's screen rect uses (Background
+    // bounds as a fraction of the full device photo), not guessed.
+    screen: { left: 18.86, top: 21.20, width: 62.39, height: 48.85 },
+    // Real input ports (source-confirmed, gnw_ssparky INPUT_PORTS_START):
+    // IN.0: bit0=Left, bit1=Right, bit2=Shooter(BUTTON1) -- a single
+    // two-way rocker switch (Left/Right) plus one dedicated round action
+    // button, same shape as Cement Factory's Left/Right+Open. IN.1:
+    // bit0=Time, bit1=GameB, bit2=GameA, bit3=Alarm -- unlike Mario The
+    // Juggler's Alarm bit, this one DOES have a real physical pinhole
+    // button in the artwork (confirmed visually on Unit.png, same small
+    // dot styling as ACL), so it gets a real hotspot here, matching the
+    // bfightn/smbn/climbern precedent rather than Mario The Juggler's.
+    // No hotspot given for ACL/reset, same as every other title -- it's
+    // keyboard-only (key 4), never a clickable hotspot, since it's a
+    // destructive action.
+    // Hotspot boxes hand-measured off the real Unit.png (997x2094) via a
+    // pixel grid overlay (ImageMagick), not guessed -- this artwork set
+    // has no layout <group> of button elements/inputtags to read positions
+    // from directly (no Animation frames either -- gnw_ssparky/Animation/*
+    // was synthesized here from Unit.png crops, brightened ~400% (modulate)
+    // in place to read as flush/pressed against the silver bezel, since no
+    // real second "pressed" photo exists for this title -- a real photo-
+    // sourced title would have these already. A subtler darken was tried
+    // first and looked right in isolation, but was invisible once actually
+    // composited over the real button (this plastic is already near-black,
+    // so a ~40%-darker near-black patch reads as no change at all); a
+    // 50%-negate-blend was tried next and technically failed twice more --
+    // ImageMagick's plain `-negate` inverts alpha as well as RGB (an opaque
+    // source pixel became fully transparent, so the "fix" was invisible for
+    // an unrelated reason), and once THAT was fixed, blending any
+    // already-near-neutral colour with its own negation collapses to a flat
+    // (v+(255-v))/2 = 127.5 regardless of v -- true for every pixel at
+    // once, so it erased all the button's own shading and looked like a
+    // flat grey rectangle instead of a lit dome. A brightness lift keeps
+    // each pixel's relative shading intact, so the button still reads as
+    // round/domed, just lit up. Crop boxes for each overlay are the
+    // button's own coloured surface only, found via pixel-brightness
+    // scanlines (ImageMagick txt: output) rather than the hotspot's own
+    // (deliberately generous, easy-to-tap) box -- an early pass reused the
+    // hotspot's own padded bounds for the crop too, which visibly lit up
+    // the surrounding chrome/silver bezel along with the button itself.
+    // Sizing went through one more round after that: still too big (traced
+    // against the user's own annotated screenshot -- its scale/offset
+    // relative to Unit.png was itself derived from the shooter's real
+    // center-to-center distance to the switch, a robust reference since
+    // both are precisely known on both sides), and the round Shooter cap
+    // was lighting up as a square (the crop's own bounding box) instead of
+    // a circle -- fixed with an actual circular alpha mask (ImageMagick
+    // -compose CopyOpacity against a drawn circle), not just a tighter
+    // square crop, so a round button now visibly reads as round when lit,
+    // matching the switch/pills staying plain rectangles since neither the
+    // community artwork nor the user's own annotation suggested those needed
+    // rounding. One more fix after that: the Game A/B/Time pill highlights
+    // sat visibly above the real pills (the first pixel-scan's y sample
+    // landed in an unrelated dark seam above the pills, not the pills
+    // themselves) -- re-scanned a clean vertical column straight through a
+    // pill's own center (avoiding that seam) and moved the crop down to
+    // the pill's real top edge. Two more rounds after THAT, both against
+    // the user's own annotated screenshots again: the pills were still too
+    // far left (a whole pill-width off on Time, landing over Game B) and
+    // square-cornered against a genuinely oval/stadium-shaped button --
+    // fixed with a real x/y re-measurement (a 20px fine grid overlaid
+    // directly on the pill row) plus a roundrectangle alpha mask (radius =
+    // half the box height, same CopyOpacity technique as the Shooter's
+    // circle) so a pill now visibly reads as a pill, not a square. Then
+    // still slightly too high and too big on a final pass -- a 4x-zoomed
+    // crop with a 5px-real grid pinned the pill's true outer edge more
+    // precisely than the earlier 20px grid could, confirming the box
+    // needed to shift down further and shrink again; landed on the pill's
+    // real center with a box sized between its outer ring and inner face
+    // rather than the full outer bounds. One more 2px-down nudge on the
+    // pills after that (a precise correction the user gave directly, not
+    // re-derived), plus the same fix for Crab Grab's own Up/Down rocker,
+    // whose highlight width was still spilling past the red lever into
+    // the surrounding chrome on both sides -- narrowed from 131 to 95
+    // (per the user's own annotated screenshot, scaled against the
+    // rocker's own already-known real height as the reference rather
+    // than a cross-button distance) and nudged down 2px, matching the
+    // pills. Note BUTTON_DEFS.alarm
+    // reuses gameA's same 'Animation/Grey-Flat-1.png' filename (existing
+    // convention, not new here) -- pressing Alarm shows Game A's synthesized
+    // highlight instead of its own, a minor cosmetic quirk shared with any
+    // other title that has both a real gameA and a real alarm hotspot.
+    hotspots: {
+      left:  { left: 9.03,  top: 75.45, width: 15.25, height: 9.55 },
+      right: { left: 24.27, top: 75.45, width: 15.35, height: 9.55 },
+      open:  { left: 70.71, top: 75.93, width: 18.56, height: 8.60 },
+      gameA: { left: 39.72, top: 90.73, width: 11.94, height: 4.78 },
+      gameB: { left: 52.26, top: 90.73, width: 11.94, height: 4.78 },
+      time:  { left: 65.20, top: 90.73, width: 11.94, height: 4.78 },
+      alarm: { left: 81.04, top: 92.07, width: 4.41,  height: 2.10 },
+    },
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+    inputRows: [ { open: 4, right: 2, left: 1 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  cgrab: {
+    title: 'Crab Grab', subtitle: 'UD-202 · 1984',
+    artPath: 'artwork/gnw_cgrab/',
+    // See ssparky's own unitAspect comment -- same case mold, same 997x2094
+    // real Unit.png.
+    unitAspect: '997 / 2094',
+    svgPath: 'artwork/gnw_cgrab/gnw_cgrab.svg',
+    // Dump (gnw_cgrab): ud-202.program, 4096B,
+    // 65e97963 -- confirmed against the real driver source before use.
+    // Same Super Colour SM510 chip family as Spitball Sparky, no melody memory.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, natural run, same method as
+    // Spitball Sparky): a different clean sequential 6-cell block than
+    // Sparky's (20-25 here vs 10-15 there) -- same chip family and case
+    // mold, but each program places its own clock cells wherever its own code
+    // wants, not assumed to match. A genuine ~62-minute run confirmed a
+    // correct 12-hour rollover (hT/hO went 1,2 -> 0,1) at exactly the 3600s
+    // mark with mT/mO/sT/sO all rolling over in lockstep. No pmBit: hT
+    // never showed anything but 0 or 1 across the entire run.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25 },
+    // Boot-init's own default clock write lands by cycle 399 here (traced
+    // via a raw cpu.step() loop from a fresh boot) -- comfortable margin
+    // under 450, kept at 500 anyway for extra headroom (harmless either way).
+    bootSyncCycles: 500,
+    // Screen-glass box from the community artwork's own "Unit Only" view
+    // (default.lay): Background bounds (224,444,550,1023) against the Unit
+    // element's own bounds (0,0,997,2094) -- same derivation as every other
+    // title's screen rect.
+    screen: { left: 22.47, top: 21.20, width: 55.16, height: 48.85 },
+    // Real input ports (source-confirmed, gnw_cgrab INPUT_PORTS_START):
+    // IN.0: bit0=Right, bit1=Up, bit2=Left, bit3=Down -- a genuine 4-way
+    // d-pad, but physically built as TWO separate 2-way rockers (Left/Right
+    // bottom-left, Up/Down top-right), confirmed visually on Unit.png --
+    // not a single cross-shaped pad. IN.1: bit0=Time, bit1=GameB, bit2=GameA,
+    // bit3=Alarm -- same real physical Alarm pinhole as Spitball Sparky
+    // (confirmed visually, identical case mold), gets a real hotspot.
+    // No hotspot for ACL/reset, same as every other title.
+    // Hotspot boxes hand-measured off the real Unit.png (997x2094) via a
+    // pixel grid overlay (ImageMagick) -- this artwork set (unlike Spitball
+    // Sparky's) has no Animation/ press-state frames either, so those were
+    // synthesized the same way -- see Spitball Sparky's own comment for why
+    // it's a ~400% brightness lift and not a darken or negate-blend.
+    hotspots: {
+      left:  { left: 9.03,  top: 75.45, width: 15.25, height: 9.55 },
+      right: { left: 24.27, top: 75.45, width: 15.35, height: 9.55 },
+      up:    { left: 70.71, top: 73.78, width: 18.05, height: 6.54 },
+      down:  { left: 70.71, top: 80.32, width: 18.05, height: 6.59 },
+      gameA: { left: 39.72, top: 90.73, width: 11.94, height: 4.78 },
+      gameB: { left: 52.26, top: 90.73, width: 11.94, height: 4.78 },
+      time:  { left: 65.20, top: 90.73, width: 11.94, height: 4.78 },
+      alarm: { left: 81.04, top: 92.07, width: 4.41,  height: 2.10 },
+    },
+    hammersNeedQuickTap: true,
+    lampTestOnBoot: true,
+    inputRows: [ { right: 1, up: 2, left: 4, down: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  dkong: {
+    title: 'Donkey Kong', subtitle: 'DK-52 · 1982',
+    artPath: 'artwork/gnw_dkong/',
+    // See ssparky's own unitAspect comment for why this is set upfront
+    // (real Unit.png is 1767x2199).
+    unitAspect: '1767 / 2199',
+    // Multi Screen title: the real DK-52 is a single SM510 chip driving two
+    // physically separate LCD panels (sm510_dualv in the reference driver),
+    // not a different chip -- confirmed against the real driver source
+    // (the reference driver) before writing a single line of new dual-screen
+    // plumbing. The CPU's lcd[] array is one shared flat array; svgPath
+    // (top) and svgPath2 (bottom) each just reference their own screen's
+    // real (A,B,C) segment addresses out of that same array, with no
+    // overlap, so no CPU-level change was needed -- only a second
+    // GnwDisplay/mount path (see GnwEmulator.mount()/_frame()) and a second
+    // screen box (screen2) in the Play modal markup.
+    svgPath: 'artwork/gnw_dkong/gnw_dkong_top.svg',
+    svgPath2: 'artwork/gnw_dkong/gnw_dkong_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_dkong): dk-52, 4096B,
+    // 5180cbf8 -- confirmed against the real driver source (Node zlib.crc32)
+    // before use. Plain SM510, no melody memory.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, natural run at the real
+    // 16384 instr/sec rate -- 32768Hz crystal / clkDiv 2). Unlike every
+    // other title so far, this program's clock-tick routine only runs once
+    // Time mode has actually been selected at least once (a plain natural
+    // run with no button ever pressed leaves the whole clock block frozen
+    // at zero indefinitely) -- traced by tapping the real Time K-line bit
+    // once after boot, then letting it run free. sO/sT (64/65) confirmed
+    // via a 0.1s-resolution probe: ram[64] increments cleanly every real
+    // second, rolling into ram[65] at 9->0 exactly as expected. mO/mT
+    // (66/67) and hO/hT (68/69) confirmed the same way at 1-minute
+    // resolution over 15 real minutes: ram[66] counts a clean +1/minute,
+    // rolling into ram[67] at 9->0; ram[67]/69/68 hold the program's own
+    // default "12:00:00" boot value (hO:2, hT:1) exactly as every other
+    // title's boot-init writes. This program also carries a second, apparently
+    // unused duplicate clock block at 80-85 (identical mO/mT/hO/hT
+    // behaviour, but with no working seconds counter of its own) -- likely
+    // feeds a second on-screen digit group this build doesn't need;
+    // 64-69 is the one that behaves like a genuine live RTC and is used
+    // here. pmBit:2, NOT the more common bit3/8 convention (Fire Attack/
+    // Turtle Bridge/Snoopy Tennis's family) -- shipped with pmBit:8 first
+    // (unverified assumption) and it silently always showed AM regardless
+    // of real time, reported live ("says 8:52 AM but its PM"). Re-derived
+    // two ways: (1) forcing hT's own bit1 (value 2) produces a clean
+    // 2-segment swap, ram[101] bit2 off / ram[101] bit3 on -- two adjacent
+    // sub-segments of the same small AM/PM glyph, not a digit-shape
+    // artifact (ram 101 is nowhere near hT's own address 69); (2) a real
+    // natural 11:59->12:00 noon rollover (Time tapped, then run free, no
+    // forced pokes) independently produced hT=3 (bit0 for the "1" tens-
+    // digit + bit1 for PM) with zero intervention -- the same convention
+    // already used for Mickey Mouse/Egg elsewhere in this project. Live-
+    // verified afterward: a real afternoon browser time now shows PM
+    // correctly instead of a permanent AM.
+    clockRam: { hT: 69, hO: 68, mT: 67, mO: 66, sT: 65, sO: 64, pmBit: 2 },
+    bootSyncCycles: 450,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top bounds (486,310,794,512) and Screen-Bottom
+    // bounds (486,1353,794,512), both against the DK-52 element's own
+    // bounds (0,0,1767,2199) -- same derivation as every other title's
+    // screen rect, just twice (top/bottom share the same left/width, only
+    // top differs).
+    screen: { left: 27.51, top: 14.10, width: 44.94, height: 23.28 },
+    screen2: { left: 27.51, top: 61.53, width: 44.94, height: 23.28 },
+    // Real input ports (source-confirmed, gnw_dkong INPUT_PORTS_START):
+    // IN.0 bit3=Jump (its own row, only one bit used); IN.1 bit0=Right,
+    // bit1=Up, bit2=Left, bit3=Down -- a genuine single 4-way D-pad (one
+    // physical plus-shaped rocker, confirmed visually on Unit.png, same
+    // btn1-4 mechanism as Donkey Kong Jr.'s own pad -- see dkjr's comment
+    // for why no new BUTTON_DEFS shape was needed); IN.2 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm -- Alarm/ACL are both non-
+    // clickable LED indicators on the real unit (confirmed via a zoomed
+    // grid crop of Unit.png, same as dkjr's own Alarm), so no hotspot for
+    // either, same as dkjr.
+    // Hotspot boxes hand-measured off the real Unit.png (1767x2199) via
+    // pixel-level black-region detection (ImageMagick txt: dump + a Node
+    // row/column threshold scan, not just a visual grid read) -- the D-pad
+    // is one solid black cross with no gap between arms and center hub, so
+    // each arm's box is the outer two-thirds of that arm (hub excluded),
+    // matching the same logical-quadrant convention as dkjr's own pad.
+    hotspots: {
+      jump: { left: 83.36, top: 81.81, width: 6.96, height: 5.59 },
+      btn1: { left: 15.51, top: 82.67, width: 4.30, height: 4.09 },
+      btn2: { left: 10.41, top: 79.22, width: 5.09, height: 3.46 },
+      btn3: { left: 6.11,  top: 82.67, width: 4.30, height: 4.09 },
+      btn4: { left: 10.41, top: 86.77, width: 5.09, height: 3.46 },
+      gameA: { left: 83.59, top: 56.66, width: 4.53, height: 2.18 },
+      gameB: { left: 83.59, top: 61.76, width: 4.53, height: 2.36 },
+      time:  { left: 83.59, top: 67.08, width: 4.53, height: 2.32 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as dkjr, applied
+    // proactively from the start.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { jump: 8 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  dkong2: {
+    title: 'Donkey Kong II', subtitle: 'JR-55 · 1983',
+    artPath: 'artwork/gnw_dkong2/',
+    // See ssparky's own unitAspect comment for why this is set upfront
+    // (real Unit.png is 1767x2199, same as DK-52's).
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, same architecture as Donkey Kong (DK-52): a
+    // plain SM510 (`Sharp SM510 label JR-55 53YC`) driving two physically
+    // separate LCD panels via `sm510_dualv` in the real driver source --
+    // confirmed against the reference driver, before assuming anything carried
+    // over from DK-52. See GAMES.dkong's own comment for why no CPU-level
+    // change is needed for a second screen.
+    svgPath: 'artwork/gnw_dkong2/gnw_dkong2_top.svg',
+    svgPath2: 'artwork/gnw_dkong2/gnw_dkong2_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_dkong2): jr-55_560, 4096B,
+    // 46aed0ae -- confirmed against the real driver source before use.
+    // Plain SM510, no melody memory.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, same held-Time-then-run-free
+    // method as DK-52 -- this program's clock tick routine has the same
+    // quirk, frozen at zero until Time mode has been entered at least
+    // once). Different address family than DK-52's (10-15 there, 65-70
+    // here) and a different internal ordering (mO/mT/hO/hT/sO/sT
+    // ascending here, vs DK-52's sO/sT/mO/mT/hO/hT) -- neither assumed,
+    // both independently confirmed: sO (69) via a 0.1s-resolution probe
+    // (clean +1/real-second, rolling into sT at 9->0), mO/mT/hO/hT via a
+    // 65-real-minute natural run (mO counts a clean +1/minute rolling
+    // into mT at 9->0; hO/hT held the program's own default "12:00" boot
+    // value, then rolled 12->1 cleanly at the 60-minute mark). This program
+    // also carries the same apparently-unused duplicate mO/mT/hO/hT block
+    // (81-84) DK-52 has at 80-85, with no working seconds counter of its
+    // own -- not used here for the same reason. pmBit:2 (not the more
+    // common bit3/8 family) confirmed the same way DK-52's correction
+    // was found: a real natural 11:59:59->12:00:00 rollover produced
+    // hT=3 (bit0 for the "1" tens-digit + bit1 for PM), not 9 -- verified
+    // from the start this time rather than shipping an assumed bit3/8
+    // guess (see DK-52's own clockRam comment for why that assumption
+    // was wrong there).
+    clockRam: { hT: 68, hO: 67, mT: 66, mO: 65, sT: 70, sO: 69, pmBit: 2 },
+    bootSyncCycles: 450,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (492,304,793,513) and
+    // Screen-Bottom "multiply" bounds (489,1354,787,507), both against the
+    // Unit element's own bounds (0,0,1767,2199) -- same derivation as
+    // DK-52's own screen boxes, independently re-measured (not copied --
+    // this case mold's screen bounds differ from DK-52's by a few px).
+    screen: { left: 27.84, top: 13.82, width: 44.88, height: 23.33 },
+    screen2: { left: 27.68, top: 61.57, width: 44.54, height: 23.06 },
+    // Real input ports (source-confirmed, gnw_dkong2 INPUT_PORTS_START):
+    // identical shape to DK-52's -- IN.0 bit3=Jump; IN.1 bit0=Right,
+    // bit1=Up, bit2=Left, bit3=Down (genuine single 4-way D-pad, same
+    // btn1-4 mechanism); IN.2 bit0=Time, bit1=GameB, bit2=GameA,
+    // bit3=Alarm (Alarm/ACL both non-clickable LED indicators, confirmed
+    // visually on this Unit.png too, no hotspot for either).
+    // Hotspot boxes hand-measured off this title's own real Unit.png
+    // (1767x2199, same canvas size as DK-52 but a different case mold/
+    // photo) via the same pixel-level black-region threshold scan --
+    // the D-pad's own measured pixel bounds came back numerically
+    // identical to DK-52's (108-350 x, 242-484 y, same arm widths),
+    // consistent with the two titles sharing the same physical
+    // controller-assembly mold; Game A/B/Time/Jump were re-measured
+    // independently and differ slightly in y-position from DK-52's own.
+    hotspots: {
+      jump: { left: 83.36, top: 81.81, width: 6.96, height: 5.59 },
+      btn1: { left: 15.51, top: 82.67, width: 4.30, height: 4.09 },
+      btn2: { left: 10.41, top: 79.22, width: 5.09, height: 3.46 },
+      btn3: { left: 6.11,  top: 82.67, width: 4.30, height: 4.09 },
+      btn4: { left: 10.41, top: 86.77, width: 5.09, height: 3.46 },
+      gameA: { left: 83.59, top: 56.66, width: 4.53, height: 2.18 },
+      gameB: { left: 83.59, top: 61.94, width: 4.53, height: 2.18 },
+      time:  { left: 83.59, top: 67.21, width: 4.53, height: 2.18 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as DK-52.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { jump: 8 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  ghouse: {
+    title: 'Green House', subtitle: 'GH-54 · 1982',
+    artPath: 'artwork/gnw_ghouse/',
+    // See ssparky's own unitAspect comment for why this is set upfront
+    // (real Unit.png is 1767x2199, same canvas size as both Donkey Kong
+    // titles, though this is a genuinely different case mold -- see the
+    // hotspots comment below for why nothing else was assumed to carry
+    // over).
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, same architecture as Donkey Kong (DK-52)/Donkey
+    // Kong II (JR-55): a plain SM510 (`Sharp SM510 label GH-54 52ZD`)
+    // driving two physically separate LCD panels via `sm510_dualv` in the
+    // real driver source -- confirmed against the reference driver, before
+    // assuming anything carried over. See GAMES.dkong's own comment for
+    // why no CPU-level change is needed for a second screen.
+    svgPath: 'artwork/gnw_ghouse/gnw_ghouse_top.svg',
+    svgPath2: 'artwork/gnw_ghouse/gnw_ghouse_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_ghouse): gh-54, 4096B,
+    // 4df12b4d -- confirmed against the real driver source before use.
+    // Plain SM510, no melody memory.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, same held-Time-then-run-free
+    // method as both Donkey Kong titles). Unlike either of them, this
+    // program's clockRam is the same clean sequential 20-25 block used by
+    // Donkey Kong Jr./Fire Attack/Turtle Bridge/Snoopy Tennis/Manhole
+    // NH-103/Mario's Cement Factory/Tropical Fish/Super Mario Bros./
+    // Climber/Balloon Fight/Mario The Juggler -- confirmed fresh (mO at
+    // 23 counts a clean +1/minute rolling into mT at 22 every 10; hT/hO
+    // at 20/21 held the program's own default "12:00" boot value, then rolled
+    // 12->1 cleanly at the 60-minute mark; sO at 25 confirmed via a
+    // 0.1s-resolution probe, clean +1/real-second rolling into sT at 24),
+    // not assumed to match just because the address family is a familiar
+    // one. pmBit:8 (the hT bit3 convention, not DK-52/DKII's own bit1)
+    // confirmed the same way DK-52's original wrong guess was corrected:
+    // a real natural 11:59:59->12:00:00 rollover produced hT=9 (bit0 for
+    // the "1" tens-digit + bit3 for PM), matching the majority convention
+    // this specific 20-25 address family already uses elsewhere in this
+    // project -- verified, not assumed, even though it happened to match.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 450,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (467,298,839,546) and
+    // Screen-Bottom "multiply" bounds (467,1340,833,553), both against the
+    // Unit element's own bounds (0,0,1767,2199) -- independently
+    // re-measured from this title's own default.lay, not copied from
+    // either Donkey Kong title (close but not identical).
+    screen: { left: 26.43, top: 13.55, width: 47.48, height: 24.83 },
+    screen2: { left: 26.43, top: 60.94, width: 47.14, height: 25.15 },
+    // Real input ports (source-confirmed, gnw_ghouse INPUT_PORTS_START):
+    // identical shape to both Donkey Kong titles -- IN.0 bit3=Spray (the
+    // real device's own action-button label, functionally the same
+    // dedicated action button as Jump); IN.1 bit0=Right, bit1=Up,
+    // bit2=Left, bit3=Down (genuine single 4-way D-pad, same btn1-4
+    // mechanism); IN.2 bit0=Time, bit1=GameB, bit2=GameA, bit3=Alarm
+    // (Alarm/ACL both non-clickable LED indicators, confirmed visually on
+    // this Unit.png too, no hotspot for either).
+    // Hotspot boxes hand-measured off this title's own real Unit.png
+    // (1767x2199, same canvas size as both Donkey Kong titles but a
+    // genuinely different case mold/photo -- teal D-pad and Spray button,
+    // not black plastic) via the same pixel-level threshold-scan
+    // technique, adapted for a teal-on-white colour scheme instead of
+    // black-on-white (the D-pad's own measured pixel bounds came back
+    // close to but not identical to DK-52/DKII's -- confirming this is a
+    // related but distinct mold, not assumed to be a shared part this
+    // time). Game A/B/Time landed at pixel-identical positions to both
+    // Donkey Kong titles' own (same crop, same measured bounds) -- that
+    // part of the control cluster does appear to be a shared assembly.
+    hotspots: {
+      jump: { left: 83.64, top: 81.90, width: 6.68, height: 5.32 },
+      btn1: { left: 15.22, top: 82.95, width: 4.25, height: 3.36 },
+      btn2: { left: 10.87, top: 79.58, width: 4.36, height: 3.36 },
+      btn3: { left: 6.57,  top: 82.95, width: 4.30, height: 3.36 },
+      btn4: { left: 10.87, top: 86.31, width: 4.36, height: 3.50 },
+      gameA: { left: 83.59, top: 56.66, width: 4.53, height: 2.18 },
+      gameB: { left: 83.59, top: 61.94, width: 4.53, height: 2.18 },
+      time:  { left: 83.59, top: 67.21, width: 4.53, height: 2.18 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as both Donkey Kong
+    // titles.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { jump: 8 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  bombsweep: {
+    title: 'Bomb Sweeper', subtitle: 'BD-62 · 1987',
+    // The D-pad's synthesized pressed crops (Animation/1-4-Flat.png, 76x75) get
+    // stretched full-screen by the full-frame overlay -- glow the d-pad hotspots
+    // instead. Game A/B/Time keep their real full-frame pressed art.
+    highlightButtons: ['btn1', 'btn2', 'btn3', 'btn4'],
+    artPath: 'artwork/gnw_bsweep/',
+    // Real Unit.png is 1767x2199, same canvas size as every other Multi
+    // Screen title so far (DK-52/DK-II/Green House) despite this being a
+    // genuinely different case mold (photo/artwork differ) -- see
+    // ssparky's own unitAspect comment for why this is set upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD like DK-52/DK-II/Green House -- but a
+    // genuinely different chip this time: reference driver
+    // (reference driver, gnw_bsweep_state) configures `sm512_dualv`, not
+    // `sm510_dualv`. Confirmed via the real driver C++ class hierarchy
+    // before writing a single line of new CPU code that SM512 is a true
+    // subclass of SM511 (not a sibling chip that merely resembles it) --
+    // see the SM512 class's own header comment above for the full
+    // reasoning. First title in this project to use it.
+    svgPath: 'artwork/gnw_bsweep/gnw_bsweep_top.svg',
+    svgPath2: 'artwork/gnw_bsweep/gnw_bsweep_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_bsweep): bd-62.program, 4096B,
+    // f3ac66ea; bd-62.melody, 256B, addc0368 (BAD_DUMP/decap-needed per
+    // the dump list itself, same caveat as every other melody dump in this
+    // project) -- both confirmed via sha1sum against the real driver's
+    // own CRC/SHA1 comments before use.
+    cpuType: 'sm512',
+    lcdCBits: 2,
+    // Empirically traced (headless SM512 sim via the project's Node/vm
+    // harness technique). One real gotcha found here: SM511/SM512 default
+    // clkDiv is 4 (8192Hz), not SM510's fixed 2 (16384Hz) -- a wrong
+    // hardcoded HZ assumption in the trace script itself initially made a
+    // genuine 1-per-minute counter look like it ticked every 30 "seconds"
+    // instead of every 60; recomputing HZ from the real cpu.clkDiv (same
+    // as _frame()'s own "refresh cpuHz every frame" comment already
+    // warns) fixed the trace. Clean sequential 6-cell block at 16-21
+    // (hT,hO,mT,mO,sT,sO), confirmed via a real natural run: sO (21)
+    // ticks +1/real-second rolling into sT (20) at 9->0; mO (19) ticks
+    // +1/real-minute rolling into mT (18) at 9->0; hO/hT held the program's
+    // own "12:00" boot default then rolled 12->1 cleanly at the 60-minute
+    // mark. This program also carries two further duplicate hT/hO/mT/mO
+    // blocks (64-67 and a partial one near 68-70) that mirror 16-19
+    // within about one real second of a direct poke to 16-19 (confirmed
+    // live in the trace harness) -- almost certainly feeding the second
+    // physical screen's own digit-decode pass, same shape as DK-52's own
+    // "apparently unused duplicate clock block" but here shown to
+    // actually resync from the primary block rather than being truly
+    // unused, so poking only the one block (16-21) is sufficient exactly
+    // like every other clockRam entry in this file. pmBit:2 (the Mickey
+    // Mouse/DK-52/DK-II convention, not the more common bit3/8 family) --
+    // confirmed both directions via real natural 11:59:59->12:00:00
+    // rollovers (hT 1->3 crossing into PM, and 3->1 crossing back into AM
+    // twelve hours later), not assumed from either convention.
+    clockRam: { hT: 16, hO: 17, mT: 18, mO: 19, sT: 20, sO: 21, pmBit: 2 },
+    // This program's boot-init RAM writes land later than the usual 300-cycle
+    // default (confirmed complete by cycle 700 via a 100-cycle-resolution
+    // trace, nothing earlier) -- same class of gap as Fire Attack's own
+    // bootSyncCycles bump, a comfortable margin above the observed
+    // completion point rather than the bare minimum.
+    bootSyncCycles: 750,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (432,270,893,613) and
+    // Screen-Bottom "multiply" bounds (430,1328,893,587), both against the
+    // Unit element's own bounds (0,0,1767,2199) -- same derivation as
+    // every other Multi Screen title's screen box.
+    screen: { left: 24.45, top: 12.28, width: 50.54, height: 27.88 },
+    screen2: { left: 24.34, top: 60.39, width: 50.54, height: 26.69 },
+    // Real input ports (source-confirmed, gnw_bsweep INPUT_PORTS_START):
+    // IN.0 bit0=Left, bit1=Up, bit2=Right, bit3=Down (a genuine single
+    // 4-way D-pad, same btn1-4 mechanism as DK-52/DK-II/Green House --
+    // this title has no separate action button at all, matching its own
+    // premise of tracing a route through a minefield); IN.1 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm (Alarm is a non-clickable LED
+    // indicator next to Game A, confirmed visually on Unit.png same as
+    // the other three Multi Screen titles, so no hotspot for it either).
+    // Hotspot boxes hand-measured off this title's own Unit.png (a
+    // genuinely different case mold/photo than any prior Multi Screen
+    // title -- the D-pad sits bottom-left here, not centered) via
+    // ImageMagick color-isolation + -trim on the D-pad's own red pixels
+    // (this title's community artwork bundle has no button-element group and
+    // no per-button Animation art for the pad at all, same gap as
+    // Spitball Sparky/Crab Grab -- only Game A/B/Time have real pressed-
+    // state art, isolated the same -trim way). D-pad cross bbox measured
+    // at (116,1751)-(345,1976)px of the 1767x2199 canvas, split into
+    // thirds per arm (hub excluded) -- the exact same outer-third
+    // convention as DK-52/DK-II's own D-pad hotspots. btn1-4's own
+    // pressed-state art (Animation/1-4-Flat.png, required by BUTTON_DEFS
+    // but absent from the community artwork bundle) was synthesized the
+    // same way as Spitball Sparky/Crab Grab -- cropped straight from
+    // Unit.png at each arm's own hotspot box, brightness-lifted in place.
+    // This D-pad's red plastic is already bright (~85% value on the pure
+    // color) so the usual 400% modulate clipped straight to white, and
+    // even Green House's already-reduced 200% (itself a fix for a bright
+    // teal button) still washed out to near-white here -- checked
+    // visually at 150/200/250% before picking 150%, the highest value
+    // that still reads as "the same red, lit up" rather than pale pink.
+    hotspots: {
+      btn1: { left: 6.57,  top: 83.04, width: 4.32, height: 3.41 },
+      btn2: { left: 10.89, top: 79.63, width: 4.32, height: 3.41 },
+      btn3: { left: 15.21, top: 83.04, width: 4.32, height: 3.41 },
+      btn4: { left: 10.89, top: 86.45, width: 4.32, height: 3.41 },
+      gameA: { left: 81.44, top: 54.07, width: 8.77, height: 7.41 },
+      gameB: { left: 81.44, top: 59.25, width: 8.77, height: 7.41 },
+      time:  { left: 81.44, top: 64.48, width: 8.77, height: 7.41 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as DK-52/DK-II/Green
+    // House. None of those three needed noResetOnModeButtons (only
+    // Donkey Kong Jr. did, for its own specific CEND-halt bug) so it's
+    // deliberately not set here either -- add it only if live testing
+    // shows the same stuck-after-GameA symptom.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  gcliff: {
+    title: 'Gold Cliff', subtitle: 'MV-64 · 1988',
+    // Same synthesized d-pad crops as Bomb Sweeper -- glow the d-pad hotspots;
+    // Game/Continue/Time/Jump keep their real full-frame pressed art.
+    highlightButtons: ['btn1', 'btn2', 'btn3', 'btn4'],
+    artPath: 'artwork/gnw_gcliff/',
+    // Real Unit.png is 1767x2199, same canvas as every other late Multi
+    // Screen title -- see ssparky's own unitAspect comment for why this
+    // is set upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD. Reference driver (reference driver,
+    // gnw_gcliff_state) confirms `sm512_dualv`, same SM512 chip Bomb
+    // Sweeper needed a new CPU class for -- no new engine work required
+    // here, just the standard per-title bring-up.
+    svgPath: 'artwork/gnw_gcliff/gnw_gcliff_top.svg',
+    svgPath2: 'artwork/gnw_gcliff/gnw_gcliff_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_gcliff): mv-64.program, 4096B,
+    // 2448a3bf; mv-64.melody, 256B, cb938709 (BAD_DUMP/decap-needed, same
+    // caveat as every melody dump in this project) -- both confirmed via
+    // sha1sum against the real driver's own CRC/SHA1 comments before use.
+    cpuType: 'sm512',
+    lcdCBits: 2,
+    // Empirically traced (headless SM512 sim, same Node/vm harness as
+    // Bomb Sweeper, clkDiv read live rather than hardcoded this time).
+    // Same clean sequential clockRam block (16-21) and same pmBit:2 as
+    // Bomb Sweeper -- confirmed fresh via a real natural run/rollover,
+    // not assumed from the shared button-cluster mold. Duplicate mirror
+    // cells exist at 66/48-49/64-65/68-69 (same shape as every other
+    // title's redundant second digit-decode pass), left unpoked since
+    // they resync from 16-21 on their own within a tick.
+    clockRam: { hT: 16, hO: 17, mT: 18, mO: 19, sT: 20, sO: 21, pmBit: 2 },
+    // Boot-init RAM writes complete by cycle 700 (100-cycle-resolution
+    // trace, nothing later) -- same as Bomb Sweeper, same comfortable
+    // margin above the observed completion point.
+    bootSyncCycles: 750,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (463,290,841,567) and
+    // Screen-Bottom "multiply" bounds (471,1342,820,550), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 26.20, top: 13.19, width: 47.60, height: 25.78 },
+    screen2: { left: 26.66, top: 61.03, width: 46.41, height: 25.01 },
+    // Real input ports (source-confirmed, gnw_gcliff INPUT_PORTS_START):
+    // IN.0 bit0=Left, bit1=Up, bit2=Right, bit3=Down (genuine 4-way D-pad,
+    // same btn1-4 mechanism/mold as Bomb Sweeper -- confirmed, not
+    // assumed: color-isolating the D-pad's own red pixels landed on the
+    // exact same (116,1751)-(345,1976)px bounding box as Bomb Sweeper's,
+    // confirming the shared physical controller-assembly mold rather than
+    // just a similar-looking one); IN.1 bit0=Jump (its own row, only one
+    // bit used, same shape as Donkey Kong/DK-II/DKJr's own dedicated
+    // jump button -- this one has real pressed-state art, Animation/
+    // Jump-Flat.png, unlike Bomb Sweeper's D-pad); IN.2 bit0=Time,
+    // bit1=Continue(START2), bit2=Game(START1), bit3=Alarm -- printed on
+    // the real case as "GAME"/"CONTINUE" rather than "GAME A"/"GAME B",
+    // but the same bit shape as every other title's gameA/gameB, so no
+    // new BUTTON_DEFS needed, just relabeled hotspot semantics. Alarm has
+    // no matching physical hotspot (LED indicator only, confirmed
+    // visually next to GAME, same as Bomb Sweeper's Alarm).
+    // Hotspot boxes: D-pad reused Bomb Sweeper's exact measured values
+    // (confirmed identical bounding box, see above); Game/Continue/Time
+    // hand-measured off this title's own Grey-Flat-1/2/3.png via -trim
+    // and landed pixel-identical to Bomb Sweeper's too (same shared round-
+    // button cluster assembly); Jump measured the same way off this
+    // title's own real Jump-Flat.png (this case mold's Jump button sits
+    // where Bomb Sweeper has no equivalent third button). btn1-4's own
+    // pressed-state art (Animation/1-4-Flat.png) is absent from this
+    // title's community artwork bundle too (only Game/Continue/Time/Jump have
+    // real Animation frames) -- synthesized the exact same way as Bomb
+    // Sweeper (same D-pad crop coordinates, same 150% brightness lift,
+    // since it's confirmed to be the same red plastic/mold), not
+    // reworked from scratch.
+    hotspots: {
+      btn1: { left: 6.57,  top: 83.04, width: 4.32, height: 3.41 },
+      btn2: { left: 10.89, top: 79.63, width: 4.32, height: 3.41 },
+      btn3: { left: 15.21, top: 83.04, width: 4.32, height: 3.41 },
+      btn4: { left: 10.89, top: 86.45, width: 4.32, height: 3.41 },
+      jump: { left: 80.19, top: 79.08, width: 13.30, height: 11.19 },
+      gameA: { left: 81.44, top: 54.07, width: 8.77, height: 7.41 },
+      gameB: { left: 81.44, top: 59.25, width: 8.77, height: 7.41 },
+      time:  { left: 81.44, top: 64.48, width: 8.77, height: 7.41 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as Bomb Sweeper/DK-52/
+    // DK-II/Green House.
+    //
+    // noResetOnModeButtons: live testing DID show the symptom, so this is no
+    // longer the proactive flag the old comment here declined to ship.
+    // _hasQuadButtons() is a proxy for "has a D-pad", which has nothing to do
+    // with whether a program needs the reset-vector trick -- exactly the accident
+    // already documented for Manhole NH-103. Gold Cliff has a D-pad, so it was
+    // swept into _resetWithButtonHeld(), and that reset is a genuine power-on:
+    // cpu.reset() + _syncClockToNow(). On GAME (from the clock) that is
+    // invisible, because a new game starts from a power-on state anyway. On
+    // CONTINUE it destroys the very thing the key exists to preserve --
+    // Nintendo's own MV-64 manual, booklets/multiscreen-gold-cliff.json p6:
+    // "CONTINUE MODE: You can continue the previous game if you press the
+    // CONTINUE key ... When you release the key, you can start the previous
+    // game." Measured on a virtual-clock harness, mid-Game-A, 20s of D-pad
+    // input after the press: with the reset 0 LCD changes, CPU halted at
+    // pc 0x413 (the boot clock loop) on a static 20-segment frame; with it
+    // skipped, 63 changes -- the same activity as the live Game A session it
+    // resumed (60-61). GAME and TIME are unaffected either way, measured from
+    // the attract state over the same 20s window: GAME 65 changes both ways,
+    // TIME 40 vs 39 at 93% halt both ways.
+    //
+    // This is safe here for the reason NH-103's is: SM511/SM512's own halt
+    // path already wakes on the K line (step() checks `this.gamma ||
+    // this.wakeupLine`, and _readInputs() latches wakeupLine through
+    // updateKLine() on every real button-state change), so this family never
+    // needed the reset-vector trick the SM5A titles (Judge/Manhole/Lion/
+    // Flagman/Helmet/Chef) it was written for do.
+    noResetOnModeButtons: true,
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { jump: 1 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  zelda: {
+    title: 'Zelda', subtitle: 'ZL-65 · 1989',
+    // ALL of Zelda's pressed crops (d-pad + Game/Continue/Time/Attack) are small
+    // and stretch full-screen -- glow every button hotspot instead.
+    highlightButtons: ['btn1', 'btn2', 'btn3', 'btn4', 'jump', 'gameA', 'gameB', 'time'],
+    artPath: 'artwork/gnw_zelda/',
+    // Real Unit.png (ZL-65.png in the source artwork bundle, renamed to
+    // the usual Unit.png here for consistency) is 1767x2199, same canvas
+    // as every other late Multi Screen title.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD, reference driver (reference driver,
+    // gnw_zelda_state) confirms `sm512_dualv` -- same SM512 chip as Bomb
+    // Sweeper/Gold Cliff, no new engine work needed. This is the last of
+    // the four D-pad Multi Screen titles.
+    svgPath: 'artwork/gnw_zelda/gnw_zelda_top.svg',
+    svgPath2: 'artwork/gnw_zelda/gnw_zelda_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_zelda): zl-65.program, 4096B,
+    // b96aa64e; zl-65.melody, 256B, 3a281b0f (BAD_DUMP/decap-needed, same
+    // caveat as every melody dump in this project) -- both confirmed via
+    // sha1sum against the real driver's own CRC/SHA1 comments before use.
+    cpuType: 'sm512',
+    lcdCBits: 2,
+    // Empirically traced (headless SM512 sim, same Node/vm harness as
+    // Bomb Sweeper/Gold Cliff). Same clean sequential 6-cell block as
+    // those two, but a genuinely DIFFERENT internal ordering this time --
+    // not assumed from the shared button-cluster mold: 16=mO/17=mT/18=hO/
+    // 19=hT/20=sO/21=sT (ascending mO/mT/hO/hT/sO/sT), vs Bomb Sweeper/
+    // Gold Cliff's hT/hO/mT/mO/sT/sO. Same class of internal-ordering
+    // divergence already seen between DK-52 and DK-II despite their own
+    // shared mold, so re-verified fresh rather than copied. `pmBit:2`
+    // confirmed via a real natural 11:59:59->12:00:00 rollover (hT
+    // 1->3), same convention as Bomb Sweeper/Gold Cliff. Duplicate mirror
+    // cells exist at 64/65 (mO/mT copies) -- left unpoked, same as the
+    // other two titles' own redundant mirrors.
+    clockRam: { hT: 19, hO: 18, mT: 17, mO: 16, sT: 21, sO: 20, pmBit: 2 },
+    // Boot-init RAM writes complete by cycle 700 (100-cycle-resolution
+    // trace, nothing later) -- same as Bomb Sweeper/Gold Cliff.
+    bootSyncCycles: 750,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (462,286,843,591) and
+    // Screen-Bottom "multiply" bounds (457,1332,853,575), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 26.15, top: 13.01, width: 47.71, height: 26.87 },
+    screen2: { left: 25.86, top: 60.57, width: 48.27, height: 26.15 },
+    // Real input ports (source-confirmed, gnw_zelda INPUT_PORTS_START):
+    // IN.0 bit0=Left, bit1=Up, bit2=Right, bit3=Down (genuine 4-way
+    // D-pad -- confirmed, not assumed, via the same red-pixel colour
+    // isolation used for Bomb Sweeper/Gold Cliff, landing on the exact
+    // same (116,1751)-(345,1976)px bounding box -- third title confirmed
+    // sharing this physical controller-assembly mold); IN.1 bit0=Attack
+    // (its own row, only one bit used -- reused the existing `jump`
+    // BUTTON_DEFS/hotspot shape rather than adding a new one, same as
+    // Gold Cliff reusing gameA/gameB for "Game"/"Continue" -- printed
+    // label differs, bit shape and mechanism don't); IN.2 bit0=Time,
+    // bit1=Continue(START2), bit2=Game(START1), bit3=Alarm, same shape
+    // as Gold Cliff. Alarm has no matching physical hotspot (LED
+    // indicator only, confirmed visually).
+    // This title's community artwork bundle (unlike Bomb Sweeper/Gold Cliff)
+    // has NO Animation/ folder at all -- not even Game/Continue/Time
+    // press art existed, let alone the D-pad's. Every hotspot here was
+    // hand-measured off Unit.png via ImageMagick colour/darkness
+    // isolation (red pixels for the D-pad, near-black pixels within a
+    // text-free sub-crop for the round buttons -- had to iterate the
+    // crop window per button since neighbouring ALARM/ACL labels
+    // contaminated a naive isolation), and every pressed-state image
+    // was synthesized: D-pad quadrants reused Bomb Sweeper's exact
+    // 150%-modulate treatment (confirmed same red plastic); Game/
+    // Continue/Time/Attack are black plastic on this case (unlike Bomb
+    // Sweeper/Gold Cliff's silver-cluster mold), so got the original
+    // Spitball-Sparky-style 400% lift instead -- black has far more
+    // headroom before clipping than the D-pad's already-bright red.
+    hotspots: {
+      btn1: { left: 6.57,  top: 83.04, width: 4.32, height: 3.41 },
+      btn2: { left: 10.89, top: 79.63, width: 4.32, height: 3.41 },
+      btn3: { left: 15.21, top: 83.04, width: 4.32, height: 3.41 },
+      btn4: { left: 10.89, top: 86.45, width: 4.32, height: 3.41 },
+      jump: { left: 83.36, top: 81.81, width: 7.02, height: 5.50 },
+      gameA: { left: 83.59, top: 56.66, width: 9.11, height: 3.14 },
+      gameB: { left: 83.59, top: 61.85, width: 9.23, height: 3.18 },
+      time:  { left: 82.85, top: 66.67, width: 9.96, height: 3.32 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as Bomb Sweeper/Gold
+    // Cliff. Not shipping noResetOnModeButtons proactively, same
+    // reasoning as those two.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { jump: 1 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  opanic: {
+    title: 'Oil Panic', subtitle: 'OP-51 · 1982',
+    artPath: 'artwork/gnw_opanic/',
+    // Real Unit.png is 1767x2199, same canvas as every other Multi
+    // Screen title -- see ssparky's own unitAspect comment for why this
+    // is set upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD -- same `sm510_dualv` architecture as
+    // DK-52/DK-II/Green House, confirmed fresh via the real driver
+    // source. First *hammer-shaped* Multi Screen title though: real
+    // input ports (gnw_opanic INPUT_PORTS_START) read Left/Right through
+    // plain IN.0 K-line bits (PORT_16WAY lever, bit0=Right/bit3=Left),
+    // not a D-pad and not the BA/B analog hammer pins Vermin/Ball/
+    // Popeye-family titles use -- so this is the Popeye/Octopus/
+    // Parachute/Fire(WS) hammer shape (hotspots.left/right, no fixedRow,
+    // no btn1-4), just wired to a second physical screen.
+    svgPath: 'artwork/gnw_opanic/gnw_opanic_top.svg',
+    svgPath2: 'artwork/gnw_opanic/gnw_opanic_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_opanic): op-51, 4096B,
+    // 31c288c9 -- confirmed via sha1sum against the real driver's own
+    // CRC/SHA1 comment before use. Plain SM510, no melody memory (single
+    // ROM_REGION in the driver, same as DK-52/DK-II/Green House).
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, same Node/vm harness as
+    // every other title). Clean sequential 6-cell block at 20-25
+    // (hT,hO,mT,mO,sT,sO) -- a different address family than the SM512
+    // titles' 16-21, confirmed fresh via a real natural run rather than
+    // assumed from the shared "clean sequential block" pattern. `pmBit:8`
+    // (the Popeye/Parachute/Octopus/Chef/Fire-family bit3/8 convention,
+    // NOT the bit1/2 family the SM512 Multi Screen titles all use) --
+    // confirmed via a real natural 11:59:59->12:00:00 rollover (hT
+    // 1->9), not assumed from either convention.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // This program's boot-init RAM writes run in bursts through roughly
+    // cycle 1200 (100-cycle-resolution trace) -- notably later than the
+    // D-pad Multi Screen titles' ~700, and the idle/attract loop itself
+    // has some inherent periodic RAM churn afterward that never fully
+    // goes quiet, so 1200 was taken as "last real burst" rather than
+    // "last RAM write of any kind." A comfortable margin above that.
+    bootSyncCycles: 1300,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (468,290,842,567) and
+    // Screen-Bottom "multiply" bounds (462,1368,839,537), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 26.48, top: 13.19, width: 47.65, height: 25.78 },
+    screen2: { left: 26.15, top: 62.21, width: 47.48, height: 24.42 },
+    // Real input ports (source-confirmed, gnw_opanic INPUT_PORTS_START):
+    // IN.0 bit0=Right, bit3=Left (hammer/lever, own row); IN.1 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm, same shape as every other
+    // title's mode-button row. Alarm has no matching physical hotspot
+    // (LED indicator only, confirmed visually on Unit.png).
+    // Hotspot boxes: this title's community artwork bundle (unlike the SM512
+    // titles) has real pressed-state photos for every button -- Left-Flat/
+    // Right-Flat/Grey-Flat-1/2/3 all exist -- so hotspots were measured
+    // directly via ImageMagick -trim on each, the same original technique
+    // Vermin/Ball/Popeye used, no synthesis needed.
+    hotspots: {
+      left:  { left: 6.00,  top: 78.72, width: 14.21, height: 11.96 },
+      right: { left: 79.63, top: 78.72, width: 14.21, height: 11.96 },
+      gameA: { left: 81.38, top: 54.21, width: 9.06,  height: 7.28 },
+      gameB: { left: 81.38, top: 59.62, width: 9.06,  height: 7.28 },
+      time:  { left: 81.38, top: 64.71, width: 9.06,  height: 7.28 },
+    },
+    // No fixedRow and no btn1-4 -- same proactive flags as every other
+    // hammer-shaped title with this shape (Popeye/Octopus/Parachute/
+    // Fire-WS): needsResetForModeButtons for GameA/GameB/Time to
+    // register at all, lampTestOnBoot so startAttract() dismisses the
+    // boot lamp-test screen on its own. Not shipping hammersNeedQuickTap
+    // proactively -- per the cross-cutting note in this file, none of this
+    // shape's existing titles (Popeye/Octopus/Parachute/Fire-WS) actually
+    // hit that bug in practice, only Chef/Turtle Bridge did; add it if
+    // live testing shows a stuck-catch symptom.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    inputRows: [ { right: 1, left: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  mickdon: {
+    title: 'Mickey & Donald', subtitle: 'DM-53 · 1982',
+    artPath: 'artwork/gnw_mickdon/',
+    // Real Unit.png is 1767x2199, same canvas as every other Multi
+    // Screen title -- see ssparky's own unitAspect comment for why this
+    // is set upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD, same `sm510_dualv` architecture as
+    // DK-52/DK-II/Green House/Oil Panic, confirmed fresh via the real
+    // driver source. Plain SM510, no melody memory (single ROM_REGION,
+    // same as those four). The driver also sets a custom
+    // `write_r().set(piezo_r2_w)` R-pin hook not seen on the other
+    // titles -- didn't need any host-side change for it (the speaker
+    // reads the R-pin level the core reports), no
+    // audible issue found live.
+    svgPath: 'artwork/gnw_mickdon/gnw_mickdon_top.svg',
+    svgPath2: 'artwork/gnw_mickdon/gnw_mickdon_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_mickdon): dm-53_565, 4096B,
+    // e21fc0f5 -- confirmed via sha1sum against the real driver's own
+    // CRC/SHA1 comment before use.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, same Node/vm harness as
+    // every other title). Clean sequential 6-cell block, but ordered
+    // sT/sO/hT/hO/mT/mO (71-76) this time -- seconds first, then hours,
+    // then minutes -- a genuinely different internal ordering than any
+    // prior title (all of which put hours first), confirmed via a real
+    // natural run rather than assumed. `pmBit:2`, matching the original
+    // Mickey Mouse (MC-25)'s own clockRam convention -- both are
+    // Mickey-themed titles on otherwise unrelated hardware generations
+    // (MC-25 is a single-screen title from a different program family
+    // entirely), so this is coincidence rather than a shared firmware
+    // base; still verified fresh via a real 11:59:59->12:00:00 rollover
+    // (hT 1->3), not assumed from the name alone.
+    clockRam: { hT: 73, hO: 74, mT: 75, mO: 76, sT: 71, sO: 72, pmBit: 2 },
+    // Boot-init RAM writes complete by cycle 600 (100-cycle-resolution
+    // trace, nothing later) -- a comfortable margin above that.
+    bootSyncCycles: 700,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (474,307,804,537) and
+    // Screen-Bottom "multiply" bounds (483,1334,804,518), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 26.83, top: 13.96, width: 45.50, height: 24.42 },
+    screen2: { left: 27.34, top: 60.66, width: 45.50, height: 23.56 },
+    // Real input ports (source-confirmed, gnw_mickdon INPUT_PORTS_START):
+    // IN.0 bit0=Right, bit1=Up, bit2=Left, bit3=Down; IN.1 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm. Confirmed the array-index-vs-
+    // IN.n-suffix question empirically (per the Mickey Mouse MC-25
+    // lesson that this is never safe to assume) rather than copying
+    // MC-25's own swapped order blind: a Time tap on inputRows[1] (the
+    // natural IN.0/IN.1 order) correctly started the clock ticking in
+    // the headless trace, so no swap needed here.
+    // No dedicated jump/action button (unlike DK-52/DK-II/Gold Cliff/
+    // Zelda) -- just four directions and the three mode buttons. But
+    // this isn't a D-pad either: confirmed visually on Unit.png that the
+    // real case has two visually distinct physical switches, not one
+    // cross-shaped pad -- a tall vertical rocker under "MICKEY MOUSE"
+    // (Up/Down only) and a wide horizontal rocker under "DONALD DUCK"
+    // (Left/Right only), matching the real game's two-character premise
+    // (Mickey climbs a ladder, Donald runs along a dock). Confirmed via
+    // ImageMagick red-pixel isolation on each switch independently (two
+    // separate crops, not one D-pad-shaped region) -- the two switches
+    // aren't even vertically aligned with each other. This is the same
+    // "two independent 2-way levers" shape as the original Mickey Mouse
+    // MC-25 (btn1/btn3 = one lever's two positions, btn2/btn4 = the
+    // other's), reusing the existing btn1-4 mechanism with no new
+    // BUTTON_DEFS shape needed -- confirmed the mechanism doesn't care
+    // whether the two "levers" share an axis (MC-25's own two vertical
+    // levers) or are perpendicular to each other (this title's vertical+
+    // horizontal pair), since hotspot position is fully data-driven.
+    // btn1-4's own pressed-state art (Animation/1-4-Flat.png) doesn't
+    // exist in this title's community artwork bundle (only Game/Continue/Time
+    // have real Grey-Flat photos) -- synthesized the same way as the
+    // Multi Screen D-pad titles, cropping each half of each switch
+    // straight from Unit.png and applying the same 150% brightness lift
+    // (this switch color, #BF0103, is similarly saturated to the D-pad
+    // titles' red, so the same value read well without a fresh visual
+    // check needed at a different percentage).
+    hotspots: {
+      btn1: { left: 86.42, top: 82.67, width: 6.28, height: 4.05 },
+      btn2: { left: 10.58, top: 79.22, width: 5.04, height: 5.05 },
+      btn3: { left: 80.14, top: 82.67, width: 6.28, height: 4.05 },
+      btn4: { left: 10.58, top: 84.27, width: 5.04, height: 5.05 },
+      gameA: { left: 81.38, top: 54.21, width: 9.06, height: 7.28 },
+      gameB: { left: 81.38, top: 59.62, width: 9.06, height: 7.28 },
+      time:  { left: 81.38, top: 64.71, width: 9.06, height: 7.28 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- no needsResetForModeButtons
+    // or lampTestOnBoot needed, same as every other quad-button title.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  pinball: {
+    title: 'Pinball', subtitle: 'PB-59 · 1983',
+    artPath: 'artwork/gnw_pinball/',
+    // Real Unit.png (PB-59.png in the source artwork bundle) is
+    // 1767x2199, same canvas as every other Multi Screen title.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD -- but the first one on SM511, not
+    // SM510 or SM512: reference driver (reference driver,
+    // gnw_pinball_state) confirms `sm511_dualv`, confirmed fresh via the
+    // driver source before assuming anything carried over from DK-52's
+    // own `sm510_dualv`. No new dual-screen plumbing needed (that's
+    // CPU-agnostic, added for DK-52), but this title's own real-time
+    // requirements exposed a genuine SM511 CPU-core bug -- see clockRam
+    // below (the bug and its fix were in the retired engine's SM511).
+    svgPath: 'artwork/gnw_pinball/gnw_pinball_top.svg',
+    svgPath2: 'artwork/gnw_pinball/gnw_pinball_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_pinball): pb-59.program,
+    // 4096B, d29dab34; pb-59.melody, 256B, 5c9ccb55 (BAD_DUMP/decap-
+    // needed, same caveat as every melody dump in this project) -- both
+    // confirmed via sha1sum against the real driver's own CRC/SHA1
+    // comments before use.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // **Found and fixed a genuine SM511 CPU-core bug while tracing this
+    // title's clock.** This program genuinely changes clkDiv at runtime
+    // (CLKHI/CLKLO, confirmed live: clkDiv alternates 4<->2 during the
+    // normal sleep/wake cycle) -- the first title in this project found
+    // doing that. The retired engine's SM511.step() gamma-tick detection used to check
+    // `div === 0` after `div += clkDiv`, a batching optimization over
+    // the reference's per-crystal-tick `m_div=(m_div+1)&0x7fff` (a
+    // divider timer, a genuinely separate hardware timer
+    // decoupled from instruction execution). That's numerically
+    // equivalent on a fixed clkDiv, but once clkDiv actually changes
+    // mid-run, div's phase can drift far enough that a later wraparound
+    // lands a few ticks PAST zero (confirmed via direct instrumentation:
+    // 32764->4, 32766->2) instead of exactly on it, silently skipping
+    // the gamma pulse forever -- confirmed live as a permanent CEND-halt
+    // after exactly four normal ~1s wake cycles. Fixed by detecting the
+    // wraparound itself (new value < old value) instead of requiring
+    // exact equality with zero (the full write-up was in the retired
+    // engine's SM511.step()). This was invisible on every prior SM511 title
+    // (smbn/climbern/bfightn/mariotj) because none of them exercise
+    // CLKHI/CLKLO to actually change clkDiv at runtime.
+    // Once fixed: clean sequential 6-cell clockRam block at 20-25
+    // (hT,hO,mT,mO,sT,sO), same address family as Bomb Sweeper's own
+    // (a different chip/title entirely -- coincidence, reconfirmed
+    // fresh, not assumed). `pmBit:8`, the Popeye/Chef/Oil-Panic-family
+    // convention -- confirmed via a real 11:59:59->12:00:00 rollover.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init RAM writes (and this program's own idle-animation churn)
+    // settle by ~cycle 1400 (100-cycle-resolution trace) -- a
+    // comfortable margin above that, same class of gap as Oil Panic's
+    // own later-than-usual boot burst.
+    bootSyncCycles: 1400,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (450,288,868,593) and
+    // Screen-Bottom "multiply" bounds (440,1332,884,598), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 25.47, top: 13.10, width: 49.12, height: 26.97 },
+    screen2: { left: 24.90, top: 60.57, width: 50.03, height: 27.19 },
+    // Real input ports (source-confirmed, gnw_pinball INPUT_PORTS_START):
+    // IN.0 bit1=Right, bit2=Left (a hammer/lever pair like Popeye/
+    // Octopus/Parachute/Oil Panic, but a DIFFERENT bit assignment than
+    // Oil Panic's own bit0/bit3 -- verified fresh via the real port
+    // list, not assumed to carry over just because both are hammer-
+    // shaped Multi Screen titles); IN.1 bit0=Time, bit1=GameB, bit2=
+    // GameA, bit3=Alarm, standard shape. Alarm has no matching physical
+    // hotspot (LED indicator only, confirmed visually).
+    // This title's community artwork bundle has no Animation/ folder at all
+    // (same gap as Zelda) -- every hotspot was hand-measured off
+    // Unit.png (grid-overlay + targeted colour/darkness isolation, since
+    // the flipper buttons are near-black on a near-black case and
+    // needed a value-difference check rather than a hue check), and
+    // every pressed-state image was synthesized: the two flipper
+    // buttons are dark plastic (~10% base brightness) so got the
+    // original Spitball-Sparky-style 400% lift; Game A/B/Time are a
+    // genuinely brighter mid-grey (#808080, ~50% brightness) on this
+    // case, so 400% clipped them to a flat white disc with the texture
+    // gone -- caught by viewing the synthesized crop before shipping
+    // (same lesson as Green House's teal D-pad) and dropped to 160%,
+    // which stays a readable lit grey.
+    hotspots: {
+      left:  { left: 8.21,  top: 80.72, width: 9.90, height: 7.73 },
+      right: { left: 82.06, top: 80.72, width: 9.34, height: 7.50 },
+      gameA: { left: 82.97, top: 56.21, width: 5.83, height: 3.14 },
+      gameB: { left: 81.44, top: 61.16, width: 7.36, height: 3.14 },
+      time:  { left: 81.49, top: 66.62, width: 7.30, height: 3.18 },
+    },
+    // No fixedRow and no btn1-4 -- same proactive flags as every other
+    // hammer-shaped title with this shape (Oil Panic/Popeye/Octopus/
+    // Parachute/Fire-WS): needsResetForModeButtons for GameA/GameB/Time
+    // to register at all, lampTestOnBoot so startAttract() dismisses the
+    // boot lamp-test screen on its own. **Live testing DID show the
+    // stuck-catch symptom this comment used to say only Chef hit** -- a
+    // real Left/Right flipper tap stayed logically held for several real
+    // seconds before the program's own catch-detection would register the
+    // next press, exactly Chef's own hammersNeedQuickTap writeup. Added
+    // here for the same reason.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  bjack: {
+    title: 'Black Jack', subtitle: 'BJ-60 · 1985',
+    artPath: 'artwork/gnw_bjack/',
+    // Real Unit.png is 1767x2199, same canvas as every other Multi
+    // Screen title -- see ssparky's own unitAspect comment for why this
+    // is set upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD, SM512 (same chip as Bomb Sweeper/
+    // Gold Cliff/Zelda) -- confirmed fresh via the real driver source
+    // (reference driver, gnw_bjack_state confirms `sm512_dualv`). No
+    // new engine work needed.
+    svgPath: 'artwork/gnw_bjack/gnw_bjack_top.svg',
+    svgPath2: 'artwork/gnw_bjack/gnw_bjack_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_bjack): bj-60.program,
+    // 4096B, 8e74f633; bj-60.melody, 256B, 2619224e (BAD_DUMP/decap-
+    // needed, same caveat as every melody dump in this project) -- both
+    // confirmed via sha1sum against the real driver's own CRC/SHA1
+    // comments before use.
+    cpuType: 'sm512',
+    lcdCBits: 2,
+    // Empirically traced (headless SM512 sim, same Node/vm harness as
+    // every other title -- built on the SM511/SM512-shared step() fixed
+    // for Pinball's own gamma-tick bug, though this program never actually
+    // changes clkDiv at runtime so wouldn't have hit that specific bug
+    // either way). Clean sequential 6-cell block, but at completely
+    // different (low) addresses than every prior title and in REVERSED
+    // order: 0=sO,1=sT,2=mO,3=mT,4=hO,5=hT -- seconds first ascending,
+    // hours last, confirmed via a real natural run (sO/sT tick cleanly,
+    // mT rolls over at the 10-minute mark, hO/hT carry correctly at the
+    // 60-minute mark). A separate, completely static (2,1)-shaped pair
+    // at ram[8]/[9] looked like a plausible boot-default "12" at first
+    // glance but never changed across a 15-simulated-hour run -- a red
+    // herring, not the real clock, same lesson as DK-52's own "second,
+    // apparently unused duplicate clock block". **No pmBit found**: the
+    // real natural 11:59:59->12:00:00 rollover left hT unchanged (still
+    // exactly 1, no extra bit appeared) -- checked directly rather than
+    // assumed, matching Mario The Juggler's own "no pmBit" precedent
+    // (some programs' clock families genuinely don't carry an AM/PM flag).
+    clockRam: { hT: 5, hO: 4, mT: 3, mO: 2, sT: 1, sO: 0 },
+    // Boot-init RAM writes settle by ~cycle 1400 (100-cycle-resolution
+    // trace) with some low-level idle-animation churn continuing after
+    // (same class of gap as Oil Panic/Pinball's own later-than-usual
+    // boot burst) -- a comfortable margin above that.
+    bootSyncCycles: 1500,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (466,285,838,576) and
+    // Screen-Bottom "multiply" bounds (473,1352,827,555), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 26.37, top: 12.96, width: 47.42, height: 26.19 },
+    screen2: { left: 26.77, top: 61.48, width: 46.80, height: 25.24 },
+    // Real input ports (source-confirmed, gnw_bjack INPUT_PORTS_START):
+    // a genuine 4-corner button cluster, not a D-pad or hammer pair --
+    // IN.0 bit0=Double Down, bit1=Bet x10/Hit, bit2=Bet x1/Stand, bit3=
+    // Enter (JOYSTICKLEFT_UP/DOWN + JOYSTICKRIGHT_DOWN/UP in the reference driver's own
+    // port naming, but functionally four independent corner buttons on
+    // this case, not two levers). IN.1 bit0=Time, bit1=GameB, bit2=
+    // GameA, bit3=Alarm, standard shape -- this title has no ACL Alarm
+    // hotspot label difference either, same as every prior title.
+    // This is the first Multi Screen title whose community artwork bundle
+    // has the button element bounds AND real per-button pressed-state
+    // art for BOTH the corner buttons (1-4-Flat.png) and the round
+    // mode buttons (Grey-Flat-1/2/3) -- no hand-measurement/synthesis
+    // needed anywhere, just plain -trim on each real photo, the
+    // original Vermin/Ball technique. The corner buttons landed as a
+    // clean 2x2 grid (top-left/top-right/bottom-left/bottom-right),
+    // confirmed via the .lay file's own inputtag/inputmask attributes
+    // on each button element rather than inferred from position alone.
+    hotspots: {
+      btn1: { left: 6.96,  top: 76.17, width: 13.07, height: 11.05 },
+      btn2: { left: 6.96,  top: 85.54, width: 13.07, height: 11.05 },
+      btn3: { left: 80.31, top: 85.54, width: 13.07, height: 11.05 },
+      btn4: { left: 80.31, top: 76.17, width: 13.07, height: 11.05 },
+      gameA: { left: 81.44, top: 54.07, width: 8.77, height: 7.41 },
+      gameB: { left: 81.44, top: 59.25, width: 8.77, height: 7.41 },
+      time:  { left: 81.44, top: 64.48, width: 8.77, height: 7.41 },
+    },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- no needsResetForModeButtons
+    // or lampTestOnBoot needed, same as every other quad-button title.
+    modeButtonsRegisterQuickly: true,
+    // The four corner buttons don't follow the btn1-4 = Q/E/A/D-by-position
+    // convention (btn1=top-left, btn2=bottom-left, btn3=bottom-right, btn4=top-
+    // right), so remap the letter keys to a spatial grid: Q/E on top, A/D on the
+    // bottom (E/D on the right). Keeps the keyboard and the Controls diagram in
+    // agreement. (Arrows keep their default btn1-4 mapping as hidden alternates.)
+    keyMap: {
+      q: ['btn1'], Q: ['btn1'],   // top-left    = Double Down
+      a: ['btn2'], A: ['btn2'],   // bottom-left  = Bet ×10 / Hit
+      d: ['btn3'], D: ['btn3'],   // bottom-right = Bet ×1 / Stand
+      e: ['btn4'], E: ['btn4'],   // top-right    = Enter
+    },
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  squish: {
+    title: 'Squish', subtitle: 'MG-61 · 1986',
+    artPath: 'artwork/gnw_squish/',
+    // Real Unit.png is 1767x2199, same canvas as every other Multi Screen
+    // title -- see ssparky's own unitAspect comment for why this is set
+    // upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD, plain SM510 (real driver confirms
+    // `sm510_dualv`, gnw_squish_state) -- no new engine work needed.
+    svgPath: 'artwork/gnw_squish/gnw_squish_top.svg',
+    svgPath2: 'artwork/gnw_squish/gnw_squish_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_squish): mg-61, 4096B,
+    // 79cd509c -- confirmed via sha1sum against the real driver's own
+    // CRC/SHA1 comment before use.
+    cpuType: 'sm510',
+    // Missing here caused a real shipped bug caught live: with lcdCBits
+    // left unset (defaults to 1 in GnwDisplay), any title whose SVG
+    // titles use column values beyond 0/1 aliases -- (0<<1)|2 and (1<<1)|0
+    // both land on lcd[2] -- silently corrupting whichever segments happen
+    // to collide. This title's own SVG titles do use columns up to 3 (same
+    // as every other Multi Screen title), so it needs the same lcdCBits:2
+    // every other title in this family sets.
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, same Node/vm harness as every
+    // other title). Clean sequential 6-cell block at 20-25 (hT/hO/mT/mO/
+    // sT/sO), same address family as Oil Panic/Gold Cliff despite being a
+    // different chip/title entirely (coincidence, reconfirmed fresh via a
+    // real natural run through a full hour rollover: hT/hO cleanly rolled
+    // 12->1 at the 1-hour mark). `pmBit:8` confirmed via a real 12-hour
+    // rollover (hT read 1|8=9 exactly at the noon boundary, then 0|8=8 one
+    // hour later for "1 PM" -- the Popeye/Chef/Oil-Panic-family convention).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Only RAM writes observed in a 3000-cycle boot trace are the hT/hO
+    // boot-default "12" at cycles 1483/1485 -- mT/mO/sT/sO never get
+    // written at all (already zero post-reset, which happens to already be
+    // the correct boot default). Comfortable margin above 1485.
+    bootSyncCycles: 1600,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (461,295,838,561) and
+    // Screen-Bottom "multiply" bounds (468,1342,838,562), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 26.09, top: 13.42, width: 47.43, height: 25.51 },
+    screen2: { left: 26.49, top: 61.03, width: 47.43, height: 25.56 },
+    // Real input ports (source-confirmed, gnw_squish INPUT_PORTS_START):
+    // IN.0 bit0=Down, bit1=Right, bit2=Up, bit3=Left -- a genuine 4-way,
+    // but built as two SEPARATE physical rockers (a vertical Up/Down rocker
+    // on the left side of the case, a horizontal Left/Right rocker on the
+    // right side -- confirmed via Unit.png's own printed labels), same
+    // "not really a D-pad despite the reference driver's generic JOYSTICK_* port naming"
+    // lesson as Mickey & Donald. Reused the existing btn1-4 mechanism
+    // (bit-order mapping: btn1=Down, btn2=Right, btn3=Up, btn4=Left) rather
+    // than inventing new hotspot names, same as every other quad-direction
+    // title. IN.1 bit0=Time, bit1=GameA, bit2=GameB, bit3=Alarm.
+    // **This title's community artwork bundle's own `Animation/1-4-Flat.png`
+    // files turned out to be a mislabeled leftover from Black Jack's own
+    // bundle** (confirmed via byte-identical MD5 hashes against gnw_bjack's
+    // shipped Animation/1-4-Flat.png, and visually showing Black Jack's own
+    // "Bet x10"/"Enter" button art, not this title's rocker switches) --
+    // a genuine upstream community artwork-packaging error, not something to
+    // trust blindly just because it shipped inside this title's own zip.
+    // Hand-measured both rockers' pixel bounds via red-pixel isolation
+    // instead (each rocker split into its own two halves: up/down halves of
+    // the vertical rocker, left/right halves of the horizontal one) and
+    // synthesized press art from those crops at 160% brightness (this red
+    // plastic reads ~47% mean brightness, matching the Gold Cliff/Bomb
+    // Sweeper D-pad family's own calibration, not Spitball Sparky's black-
+    // plastic 400%). Grey-Flat-1/2/3 (Game B/Game A/Time) are genuine,
+    // correct, unique-hash art for this title -- only the numbered D-pad
+    // crops were contaminated; their measured position (81.44,54.07/
+    // 59.25/64.48, 8.77x7.41) happens to pixel-match Black Jack's own mode-
+    // button cluster too, but that's the same shared-mold coincidence
+    // documented extensively elsewhere in this file, not more contamination
+    // (confirmed via distinct MD5 hashes on the Grey-Flat crops themselves).
+    hotspots: {
+      btn1: { left: 10.64, top: 84.27, width: 4.98, height: 5.00 }, // Down
+      btn2: { left: 86.42, top: 82.72, width: 6.23, height: 4.00 }, // Right
+      btn3: { left: 10.64, top: 79.26, width: 4.98, height: 5.00 }, // Up
+      btn4: { left: 80.19, top: 82.72, width: 6.23, height: 4.00 }, // Left
+      gameB: { left: 81.44, top: 54.07, width: 8.77, height: 7.41 },
+      gameA: { left: 81.44, top: 59.25, width: 8.77, height: 7.41 },
+      time:  { left: 81.44, top: 64.48, width: 8.77, height: 7.41 },
+    },
+    // The synthesized rocker crops above ship as Down/Right/Up/Left-Flat.png
+    // (alpha bounds match these hotspots exactly), not as 1-4-Flat.png.
+    pressedArt: { btn1: 'Animation/Down-Flat.png', btn2: 'Animation/Right-Flat.png',
+                  btn3: 'Animation/Up-Flat.png',   btn4: 'Animation/Left-Flat.png' },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic -- same as every other quad-
+    // direction Multi Screen title.
+    modeButtonsRegisterQuickly: true,
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameA: 2, gameB: 4, alarm: 8 } ],
+  },
+
+  sbuster: {
+    title: 'Safe Buster', subtitle: 'JB-63 · 1988',
+    artPath: 'artwork/gnw_sbuster/',
+    // Real Unit.png is 1767x2199, same canvas as every other Multi Screen
+    // title -- see ssparky's own unitAspect comment for why this is set
+    // upfront.
+    unitAspect: '1767 / 2199',
+    // Multi Screen title, dual LCD, SM511 (real driver confirms
+    // `sm511_dualv`, gnw_sbuster_state) -- same chip as Pinball, no new
+    // engine work needed. This program never changes clkDiv at runtime (unlike
+    // Pinball's own CLKHI/CLKLO usage), so it wouldn't have hit the
+    // SM511/SM512 gamma-tick wraparound bug either way -- checked directly
+    // rather than assumed safe.
+    svgPath: 'artwork/gnw_sbuster/gnw_sbuster_top.svg',
+    svgPath2: 'artwork/gnw_sbuster/gnw_sbuster_bottom.svg',
+    dualScreen: true,
+    // Dump (gnw_sbuster): jb-63.program, 4096B,
+    // 231d358d; jb-63.melody, 256B, 28cb2914 (BAD_DUMP/decap-needed, same
+    // caveat as every melody dump in this project) -- both confirmed via
+    // sha1sum against the real driver's own CRC/SHA1 comments before use.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Empirically traced (headless SM511 sim, same Node/vm harness as
+    // every other title). Clean sequential 6-cell block at 16-21 (hT/hO/
+    // mT/mO/sT/sO), same address family as Gold Cliff/Bomb Sweeper despite
+    // being a different chip generation and title entirely (coincidence,
+    // reconfirmed fresh via a real natural run through a full hour
+    // rollover). `pmBit:2` confirmed via a real 12-hour rollover (hT read
+    // 1|2=3 exactly at the noon boundary, then 0|2=2 one hour later for
+    // "1 PM" -- the Mickey Mouse/Egg/Donkey Kong DK-52 convention, not the
+    // Popeye/Oil-Panic-family bit3/8 used by this project's other SM511
+    // title, Pinball -- confirmed fresh, not assumed to carry over just
+    // because both are SM511).
+    clockRam: { hT: 16, hO: 17, mT: 18, mO: 19, sT: 20, sO: 21, pmBit: 2 },
+    // Boot-init RAM writes (hT/hO's own "12" default) complete by cycle
+    // 329 in a 3000-cycle trace -- earliest-settling boot burst of any
+    // title in this project so far. Comfortable margin above that.
+    bootSyncCycles: 500,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Top "multiply" bounds (423,285,925,601) and
+    // Screen-Bottom "multiply" bounds (419,1323,925,611), both against the
+    // Unit element's own bounds (0,0,1767,2199).
+    screen: { left: 23.94, top: 12.96, width: 52.35, height: 27.33 },
+    screen2: { left: 23.71, top: 60.16, width: 52.35, height: 27.79 },
+    // Real input ports (source-confirmed, gnw_sbuster INPUT_PORTS_START):
+    // IN.0 bit0=Left, bit1=Right (PORT_16WAY, the same hammer/lever shape
+    // as Oil Panic/Pinball, not a D-pad); IN.1 bit0=Time, bit1=GameB,
+    // bit2=GameA, bit3=Alarm, standard shape. This is the first hammer-
+    // shaped Multi Screen title whose community artwork bundle has real,
+    // correctly-sized (1767x2199, matching Unit.png) pressed-state art for
+    // BOTH the Left/Right levers and Game A/B/Time -- no hand-measurement
+    // or synthesis needed anywhere, just plain -trim on each real crop
+    // (and, learning from Pinball's own shipped bug, verified up front that
+    // every crop here is already full-canvas-sized, not a tight button-only
+    // crop, before trusting it).
+    hotspots: {
+      left:  { left: 6.00,  top: 78.72, width: 14.20, height: 11.96 },
+      right: { left: 79.63, top: 78.72, width: 14.20, height: 11.96 },
+      gameB: { left: 81.38, top: 54.21, width: 9.05,  height: 7.28 },
+      gameA: { left: 81.38, top: 59.62, width: 9.05,  height: 7.28 },
+      time:  { left: 81.38, top: 64.71, width: 9.05,  height: 7.28 },
+    },
+    // No fixedRow and no btn1-4 -- same proactive flags as every other
+    // hammer-shaped title with this shape: needsResetForModeButtons for
+    // GameA/GameB/Time to register at all, lampTestOnBoot so
+    // startAttract() dismisses the boot lamp-test screen on its own.
+    // **Shipping hammersNeedQuickTap proactively this time** -- Pinball
+    // shipped without it (following Oil Panic's precedent) and a live user
+    // report caught a real stuck-catch symptom (a flipper tap staying
+    // logically held for several real seconds) that had to be fixed after
+    // the fact; this title has the exact same shape (hotspots.left/right,
+    // no fixedRow, needsResetForModeButtons), so applying the lesson up
+    // front rather than waiting for the same bug report twice.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { left: 1, right: 2 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  dkjrp: {
+    title: 'Donkey Kong Jr.', subtitle: 'CJ-93 · 1983',
+    artPath: 'artwork/gnw_dkjrp/',
+    // Real Unit.png is 2548x3625 -- a completely different canvas size
+    // than every Multi Screen/Wide Screen title so far (those are all
+    // 1767x2199) -- first Panorama-series title in this project, a
+    // genuinely new case shape: a tall standing cabinet with an angled
+    // mirror creating a "panorama" depth illusion over a single LCD,
+    // confirmed via the real Unit.png photo (periscope-style screen
+    // housing above a control panel), not a dual-screen clamshell.
+    unitAspect: '2548 / 3625',
+    svgPath: 'artwork/gnw_dkjrp/gnw_dkjrp.svg',
+    // Real driver source: "inverted lcd screen with custom segments" --
+    // confirmed live too (segments trace as #fffffe in the raw SVG, not
+    // the usual dark fill). See _applyGameArtwork()'s own lcdInverted
+    // comment for why this needs a real code path, not just an asset
+    // swap: the default mix-blend-mode:multiply rendering hides white
+    // segments against a dark backdrop entirely. Background.png is
+    // shipped as solid black here (not the real hardware's own colourful
+    // multiply-tinted texture, which this project's simpler flat-backdrop
+    // rendering model can't replicate) so the segments read clearly.
+    lcdInverted: true,
+    // Dump (gnw_dkjrp): cj-93.program, 4096B,
+    // CRC a2cd5a91, SHA1 confirmed via sha1sum match. cj-93.melody's own
+    // SHA1 in this local archive doesn't match the driver source's own
+    // comment (which is itself already flagged BAD_DUMP/decap-needed, the
+    // same caveat as every melody dump in this project) -- shipped anyway
+    // since the program memory (the actual game logic) matches exactly and
+    // only the melody differs, consistent with how every other BAD_DUMP
+    // melody in this project has been handled.
+    cpuType: 'sm511',
+    // SVG title columns go up to 3 (confirmed by scanning the raw file
+    // before shipping, not discovered the hard way like Squish's own
+    // shipped bug) -- needs lcdCBits:2, the same as every other Multi
+    // Screen/Panorama title so far.
+    lcdCBits: 2,
+    // Empirically traced (headless SM511 sim, same Node/vm harness as
+    // every other title). Clean sequential 6-cell block at 20-25 (hT/hO/
+    // mT/mO/sT/sO) -- same address family as many prior titles despite
+    // being a genuinely different case/chip generation, reconfirmed fresh
+    // via a real natural run through a full hour rollover (12->1 exactly
+    // at the 1-hour mark) and a full 12-hour rollover for pmBit (hT read
+    // 1|8=9 exactly at the noon boundary, then 0|8=8 one hour later for
+    // "1 PM" -- the Popeye/Chef/Oil-Panic/Pinball-family convention).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init RAM writes (hT/hO's own "12" default) complete by cycle
+    // 401 in a 3000-cycle trace. Comfortable margin above that.
+    bootSyncCycles: 500,
+    // Screen-glass box from the community artwork's own "Unit Only" view
+    // (default.lay): the plain (non-blend) Screen bounds (632,1106,1301,
+    // 666), against the Unit element's own bounds (0,0,2548,3625).
+    // Panorama's own compositing chain layers a Reflection (multiply) and
+    // a second "add"-blend screen copy plus Background/Gradient overlays
+    // on top of this same box for the mirror-depth illusion -- unlike
+    // Multi Screen's own "always pick the multiply-blend screen" rule,
+    // there's no multiply-blend screen entry here at all, so the plain
+    // first <screen> entry is what actually marks the real LCD glass
+    // position; the other layers are cosmetic effects at nearly the same
+    // box, not alternate screen positions.
+    screen: { left: 24.80, top: 30.51, width: 51.06, height: 18.37 },
+    // Real input ports (source-confirmed, gnw_dkjrp INPUT_PORTS_START): a
+    // genuine THREE-row input matrix (IN.0/IN.1/IN.2), not the usual two
+    // -- IN.0 bit3=Jump (its own row, only one bit used, same shape as
+    // Donkey Kong/DK-II/DKJr's other own dedicated jump buttons); IN.1
+    // bit0=Right/bit1=Up/bit2=Left/bit3=Down, a genuine 4-way D-pad (this
+    // case's own "CONTROLLER" cross, confirmed via the real Unit.png
+    // photo, not two separate rockers); IN.2 bit0=Time/bit1=GameB/bit2=
+    // GameA/bit3=Alarm, standard shape. D-pad reused the existing btn1-4
+    // mechanism (bit-order mapping: btn1=Right/btn2=Up/btn3=Left/btn4=
+    // Down) rather than inventing new hotspot names. No Animation art
+    // exists for the D-pad in the community bundle (only Jump/Game A/B/Time
+    // have real pressed-state frames) -- hand-measured via red-pixel
+    // isolation (this case's own plastic is bright red throughout, same
+    // isolation technique as Bomb Sweeper/Gold Cliff's own D-pads) and
+    // split into outer-third-per-arm quadrant hotspots, the same
+    // convention those titles established.
+    hotspots: {
+      btn1: { left: 27.94, top: 65.63, width: 5.65,  height: 11.83 }, // Right
+      btn2: { left: 16.64, top: 65.63, width: 16.95, height: 3.94 },  // Up
+      btn3: { left: 16.64, top: 65.63, width: 5.65,  height: 11.83 }, // Left
+      btn4: { left: 16.64, top: 73.52, width: 16.95, height: 3.94 },  // Down
+      jump: { left: 63.81, top: 63.83, width: 20.88, height: 14.68 },
+      gameA: { left: 52.08, top: 83.06, width: 9.77, height: 6.87 },
+      gameB: { left: 61.62, top: 83.06, width: 9.77, height: 6.87 },
+      time:  { left: 71.15, top: 83.06, width: 9.77, height: 6.87 },
+    },
+    // The bundle ships no D-pad press art (no 1-4-Flat.png): no overlay for those.
+    pressedArt: { btn1: null, btn2: null, btn3: null, btn4: null },
+    // Because btn1-4 are present, _hasQuadButtons() already covers the
+    // extended-hold/attract-dismiss logic, same as every other quad-
+    // direction title. Not shipping modeButtonsRegisterQuickly proactively
+    // -- that flag exists for a specific SM5A R-mux bug (see Chef's own
+    // history), not confirmed relevant to SM511 titles; add only if live
+    // testing shows GameA/GameB feels slow to start.
+    inputRows: [ { jump: 8 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  /* ---- Table Top: Donkey Kong Jr. CJ-71 (1983) --------------------------
+     The upright cabinet. Runs dkjrp's program, and everything internal is
+     inherited from it via GAMES_HW_TWINS -- but this pairing is a WEAKER
+     claim than the Crystal ones, and the difference matters:
+
+       Crystal/New Wide Screen: both dumps exist. Verified byte-identical by
+         sha256 against the archived dumps. A fact.
+       Table Top/Panorama:      CJ-71 WAS NEVER DUMPED. There is no second
+         program to compare, so "same program" cannot be checked by anyone. It is
+         the dump list's own stated assumption -- its game list literally reads
+         `CJ-93  p  SM511  Donkey Kong Jr. (assume same [program] & LCD as
+         tabletop version)`, and marks CJ-71 `*` (undumped) with the chip
+         itself only a guess (`SM511?`).
+
+     It is a well-founded assumption -- re-shelling one board is exactly what
+     Nintendo did for Crystal -> New Wide Screen, and the community artwork author
+     acted on it too: the Table Top cabinets ship INSIDE gnw_dkjrp's own
+     layout, built around the same LCD (views "Nintendo Table Top - ..." and
+     "Coleco Table Top - ..."). But it is believed, not measured, and the
+     site says so rather than implying a CJ-71 dump was read -- see
+     sharedFirmware.verified in index.html.
+
+     svgPath deliberately points at gnw_dkjrp's SVG rather than a copy: the
+     shared LCD is the whole premise, so the two should be physically unable
+     to disagree about it.
+
+     lcdInverted is re-declared, not inherited -- HW_TWIN_CASE_SPECIFIC
+     blocks it on purpose (it describes the panel, and Crystal vs NWS is
+     exactly where twins differ). Here the LCD genuinely is the same one, so
+     it's set explicitly. */
+  dkjrt: {
+    title: 'Donkey Kong Jr.', subtitle: 'CJ-71 · 1983',
+    artPath: 'artwork/gnw_dkjrt/',
+    // Unit.png here is the artwork bundle's own Unit-OnlyN.png ("N" =
+    // Nintendo Table Top; there's a "C" = Coleco-branded variant too),
+    // renamed on copy so artPath works like every other title.
+    unitAspect: '634 / 1011',
+    // The shared LCD -- see the block comment above.
+    svgPath: 'artwork/gnw_dkjrp/gnw_dkjrp.svg',
+    lcdInverted: true,
+    // This cabinet's art has NO window cut for the LCD -- the screen rect is
+    // 100% opaque black (the inside of the mirror hood), and the layout
+    // paints the unit first with the screen on top. See the .unit-behind CSS.
+    unitBehindScreen: true,
+    // The bundle draws button art only for the Panorama shell it lives in
+    // (2548x3625), so this cabinet has none. Hotspots still work; pressing
+    // just doesn't light anything up. See the loop in _applyGameArtwork.
+    noPressedArt: true,
+    // default.lay "Nintendo Table Top - Unit Only": screen 176,235,285x156
+    // in a 634x1011 canvas.
+    screen: { left: 27.760, top: 23.244, width: 44.953, height: 15.430 },
+    // The "Zoom" view (default.lay): a 1920x1080 close-up of just the screen
+    // hood + marquee -- Zoom-N.png (the Nintendo variant), screen 690,468,
+    // 550x292. Makes the tiny LCD big enough to actually play (via keyboard).
+    // Rect matches the layout's screen exactly (= the reflective LCD glass in the
+    // artwork) so the emulation lines up with the drawn screen -- the zoom is
+    // made large by the height-bound device sizing, NOT by inflating this rect.
+    zoom: { unit: 'Zoom-N.png', aspect: '1920 / 1080', screen: { left: 35.938, top: 43.333, width: 28.646, height: 27.037 } },
+    /* No pressed-state art exists for this cabinet -- the bundle's
+       Grey-Flat/Jump-Flat overlays are drawn for the PANORAMA's 2548x3625
+       canvas, not this one -- so these can't be trimmed the way every other
+       title's hotspots were. They're measured off the cabinet art instead,
+       which is weaker but still measurement rather than eyeballing:
+
+         jump/gameA/gameB/time: found by colour. The JUMP button is the only
+           other large orange blob besides the joystick (433,784 71x56), and
+           the three mode buttons are the only three identical grey pills on
+           the panel, evenly spaced at one height (332/390/449, y=738, 34x18).
+
+         the D-pad: the real control is a single JOYSTICK, which has no
+           per-direction graphic to find. But the panel PRINTS its axis, and
+           those glyphs are measurable: the left arrow centres on x=96 and
+           the right on x=228, both at y=818 -- symmetric about x=162, which
+           is therefore the pivot -- and the down arrow at (159,855). No up
+           arrow is visible because the stick is drawn upright and covers it.
+           So the four zones below are a symmetric cross built on that
+           measured pivot and axis; only their extent is chosen. Up is real
+           (the shared program reads it -- see inputRows), it just isn't printed.
+
+       btn1..btn4 are Right/Up/Left/Down, matching the names dkjrp's
+       inherited inputRows already uses. */
+    hotspots: {
+      btn1: { left: 30.757, top: 78.932, width: 10.410, height: 3.956 }, // Right (arrow measured at x=228)
+      btn2: { left: 20.347, top: 74.975, width: 10.410, height: 3.956 }, // Up (under the stick, no glyph)
+      btn3: { left: 9.937,  top: 78.932, width: 10.410, height: 3.956 }, // Left (arrow measured at x=96)
+      btn4: { left: 20.347, top: 82.888, width: 10.410, height: 3.956 }, // Down (arrow measured at 159,855)
+      jump:  { left: 68.297, top: 77.547, width: 11.199, height: 5.539 }, // 433,784 71x56
+      gameA: { left: 52.366, top: 72.997, width: 5.363,  height: 1.780 }, // 332,738 34x18
+      gameB: { left: 61.514, top: 72.997, width: 5.521,  height: 1.780 }, // 390,738 35x18
+      time:  { left: 70.820, top: 72.997, width: 5.521,  height: 1.780 }, // 449,738 35x18
+    },
+  },
+
+  mmousep: {
+    title: 'Mickey Mouse', subtitle: 'DC-95 · 1984',
+    artPath: 'artwork/gnw_mmousep/',
+    // Real Unit.png is 2548x3625, same Panorama-series canvas as Donkey
+    // Kong Jr. (CJ-93) -- see that title's own unitAspect comment.
+    unitAspect: '2548 / 3625',
+    svgPath: 'artwork/gnw_mmousep/gnw_mmousep.svg',
+    // Real driver source: "inverted lcd screen with custom segments" --
+    // see Donkey Kong Jr. Panorama's own lcdInverted comment for the full
+    // writeup (a real rendering bug, not just an asset choice).
+    lcdInverted: true,
+    // Dump (gnw_mmousep): dc-95.program,
+    // 4096B, dc-95.melody, 256B (BAD_DUMP/decap-needed, same caveat as
+    // every melody dump in this project) -- both confirmed via sha1sum
+    // against the real driver's own CRC/SHA1 comments before use.
+    cpuType: 'sm511',
+    // SVG title columns go up to 3 (checked proactively before shipping).
+    lcdCBits: 2,
+    // Empirically traced (headless SM511 sim). Same clean sequential
+    // clockRam family as Donkey Kong Jr. Panorama (20-25, hT/hO/mT/mO/
+    // sT/sO), reconfirmed fresh via a real natural run -- not assumed
+    // just because both are Panorama titles. `pmBit:8` confirmed the same
+    // way (a real 12-hour rollover).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init RAM writes (hT/hO's own "12" default) complete by cycle
+    // 396 in a 3000-cycle trace. Comfortable margin above that.
+    bootSyncCycles: 500,
+    // Screen-glass box from the community artwork's own "Unit Only" view
+    // (default.lay), the plain (non-blend) Screen bounds -- same
+    // reasoning as Donkey Kong Jr. Panorama's own screen comment for why
+    // the plain entry (not a multiply-blend one, which doesn't exist
+    // here) is the real LCD glass position.
+    screen: { left: 23.67, top: 29.35, width: 53.38, height: 20.72 },
+    // Real input ports (source-confirmed, gnw_mmousep INPUT_PORTS_START):
+    // IN.0 bit1=Right, bit2=Left -- a hammer/lever pair, not a D-pad
+    // (confirmed via the real Unit.png photo: a single horizontal rocker
+    // labeled "CONTROLLER", not a cross). IN.1 bit0=Time/bit1=GameB/
+    // bit2=GameA/bit3=Alarm, standard shape. Real Left-Flat/Right-Flat/
+    // Grey-Flat-1/2/3 press art all exist in the community bundle (no
+    // synthesis needed) -- measured via plain -trim.
+    hotspots: {
+      left:  { left: 15.35, top: 63.83, width: 20.88, height: 14.68 },
+      right: { left: 63.81, top: 63.83, width: 20.88, height: 14.68 },
+      gameA: { left: 52.08, top: 83.06, width: 9.77, height: 6.87 },
+      gameB: { left: 61.62, top: 83.06, width: 9.77, height: 6.87 },
+      time:  { left: 71.15, top: 83.06, width: 9.77, height: 6.87 },
+    },
+    // No fixedRow and real hotspots.left/right -- shipping
+    // hammersNeedQuickTap proactively (learned from Pinball's own shipped
+    // bug: this exact shape -- no fixedRow, needsResetForModeButtons --
+    // reliably needs it, confirmed again for Safe Buster).
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  dkcirc: {
+    title: 'Donkey Kong Circus', subtitle: 'MK-96 · 1984',
+    artPath: 'artwork/gnw_dkcirc/',
+    unitAspect: '2548 / 3625',
+    svgPath: 'artwork/gnw_dkcirc/gnw_dkcirc.svg',
+    // Same inverted LCD as Mickey Mouse Panorama -- see Donkey Kong Jr.
+    // Panorama's own lcdInverted comment for the full writeup.
+    lcdInverted: true,
+    // Reference driver (gnw_dkcirc ROM_START) declares mk-96's own
+    // program/melody with the EXACT SAME CRC/SHA1 as dc-95 (Mickey Mouse
+    // Panorama) -- not an assumption, the driver's own comment says "DC-95
+    // and MK-96 are the same game, it's assumed [only] that the latter was
+    // for regions where Nintendo wasn't able to license from Disney," and
+    // the ROM_START entries themselves are byte-identical, confirmed via
+    // matching hashes -- the programB64/melodyB64 below are a byte-for-byte
+    // copy of mmousep's own, not independently dumped. The screen SVG and
+    // every art asset ARE genuinely this title's own, though (a real,
+    // different physical case/LCD -- "same [program] as DC-95, LCD is
+    // different" per the driver's own summary table) -- confirmed via a
+    // real dedicated artwork bundle with its own distinct SVG hash.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Same program as Mickey Mouse Panorama (DC-95) -- see this title's own
+    // comment above -- so the same clockRam/pmBit apply unchanged, not
+    // re-traced separately since it's confirmed the identical program.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 500,
+    // Screen-glass box from this title's own "Unit Only" view (default.lay)
+    // -- genuinely different from Mickey Mouse Panorama's own box (a real,
+    // different LCD glass, per the driver's own note), measured fresh
+    // rather than copied.
+    screen: { left: 23.35, top: 29.77, width: 53.34, height: 20.03 },
+    // Same button-cluster mold as Mickey Mouse Panorama (confirmed: every
+    // hotspot's own pixel-measured position from this title's own
+    // Animation art landed identical to mmousep's), same hammer shape
+    // (Left/Right only, no D-pad).
+    hotspots: {
+      left:  { left: 15.35, top: 63.83, width: 20.88, height: 14.68 },
+      right: { left: 63.81, top: 63.83, width: 20.88, height: 14.68 },
+      gameA: { left: 52.08, top: 83.06, width: 9.77, height: 6.87 },
+      gameB: { left: 61.62, top: 83.06, width: 9.77, height: 6.87 },
+      time:  { left: 71.15, top: 83.06, width: 9.77, height: 6.87 },
+    },
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  mbaway: {
+    title: "Mario's Bombs Away", subtitle: 'TB-94 · 1983',
+    artPath: 'artwork/gnw_mbaway/',
+    unitAspect: '2548 / 3625',
+    svgPath: 'artwork/gnw_mbaway/gnw_mbaway.svg',
+    // Real driver source: "inverted lcd screen with custom segments" --
+    // see Donkey Kong Jr. Panorama's own lcdInverted comment for the full
+    // writeup.
+    lcdInverted: true,
+    // Dump (gnw_mbaway): tb-94.program, 4096B,
+    // tb-94.melody, 256B (BAD_DUMP/decap-needed, same caveat as every
+    // melody dump in this project) -- both confirmed via sha1sum against
+    // the real driver's own CRC/SHA1 comments before use.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Empirically traced. Same clean sequential clockRam family as every
+    // other Panorama title this session (20-25, hT/hO/mT/mO/sT/sO,
+    // pmBit:8), reconfirmed fresh via a real natural run + 12-hour
+    // rollover rather than assumed just because they share a case family.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init RAM writes complete by cycle 427 in a 3000-cycle trace.
+    bootSyncCycles: 500,
+    screen: { left: 24.80, top: 30.51, width: 51.06, height: 18.37 },
+    // Real input ports (source-confirmed, gnw_mbaway INPUT_PORTS_START):
+    // a genuinely unusual shape -- IN.0 bit0=a single button toggling
+    // between throwing a bomb Up or Down (confirmed via the real Unit.png
+    // photo: one round button printed "UP/DOWN", not two), bit1=Right,
+    // bit2=Left on the SAME row (a horizontal rocker printed
+    // "CONTROLLER", left of the Up/Down button). IN.1 bit0=Time/bit1=
+    // GameB/bit2=GameA/bit3=Alarm, standard shape. Reused the existing
+    // "jump" internal key for the Up/Down button (same single-action-
+    // button shape as every other title's own dedicated action button,
+    // internal name doesn't need to match the printed label, same
+    // convention Gold Cliff's own "Jump"-for-"GAME" established). Real
+    // press art exists for Up/Down (UpDown-Flat.png) but NOT for Left/
+    // Right -- hand-measured via red-pixel isolation (this case's own
+    // plastic is bright red throughout, same technique as the D-pad
+    // titles) and synthesized at 160% brightness (measured ~56% base,
+    // same calibration class as Squish's own D-pad).
+    hotspots: {
+      left:  { left: 16.88, top: 69.46, width: 8.48,  height: 3.83 },
+      right: { left: 25.35, top: 69.46, width: 8.48,  height: 3.83 },
+      jump:  { left: 63.81, top: 63.83, width: 20.88, height: 14.68 },
+      gameA: { left: 52.08, top: 83.06, width: 9.77,  height: 6.87 },
+      gameB: { left: 61.62, top: 83.06, width: 9.77,  height: 6.87 },
+      time:  { left: 71.15, top: 83.06, width: 9.77,  height: 6.87 },
+    },
+    pressedArt: { jump: 'Animation/UpDown-Flat.png' },   // this bundle's name for the jump button's press art
+    // No fixedRow and real hotspots.left/right -- shipping
+    // hammersNeedQuickTap proactively, same reasoning as this session's
+    // other hammer-shaped Panorama titles.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { jump: 1, right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  lboat: {
+    title: 'Life Boat', subtitle: 'TC-58 · 1983',
+    artPath: 'artwork/gnw_lboat/',
+    // Real Unit.png is 2068x1146 -- a genuinely different, wider canvas than
+    // every prior Multi Screen title (all 1767x2199, tall clamshells) since
+    // this is the first WIDE (left/right, sm510_dualh) Multi Screen title
+    // ever built here -- see WIDE_MULTISCREEN_IDS' own comment in
+    // index.html. See ssparky's own unitAspect comment for why this is set
+    // upfront rather than left to the 'load'-handler correction alone.
+    unitAspect: '2068 / 1146',
+    // Plain SM510 (confirmed via the real driver source's own
+    // `sm510_dualh(config, ...)` call -- 'dualh' for horizontal, vs every
+    // prior Multi Screen title's `sm510_dualv`), driving two side-by-side
+    // LCD panels off the same shared cpu.lcd[] array. No melody memory (single
+    // maincpu ROM_REGION in the driver, same as Oil Panic/DK-52/DK-II/
+    // Green House).
+    svgPath: 'artwork/gnw_lboat/gnw_lboat_left.svg',
+    svgPath2: 'artwork/gnw_lboat/gnw_lboat_right.svg',
+    dualScreen: true,
+    // game.bgFile/bgFile2: this title's community artwork bundle names its
+    // two background images 'Background-Left.png'/'Background-Right.png'
+    // (matching its genuinely left/right screen layout), not the
+    // '-Top.png'/'-Bottom.png' every prior (vertically stacked) Multi
+    // Screen title used -- see _applyGameArtwork()'s own comment for the
+    // new override mechanism this title needed.
+    bgFile: 'Background-Left.png',
+    bgFile2: 'Background-Right.png',
+    // Dump (gnw_lboat): tc-58, 4096B,
+    // 1f88f6a2 -- confirmed via sha1sum against the real driver's own
+    // CRC/SHA1 comment before use.
+    cpuType: 'sm510',
+    // Both screens' SVG segment titles use column (C) values up to 3 (left
+    // screen: A in {0,1}, B in 0-8, C in 0-3; right screen continues B in
+    // 9-15) -- confirmed via a fresh grep of both SVGs' own <title> tags,
+    // not assumed from the shared Multi Screen convention. Required or
+    // GnwDisplay's default cBits:1 silently aliases segments together (see
+    // Squish's own shipped bug for what that looks like).
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, Node/vm harness). Clean
+    // sequential 6-cell block at 10-15 (hT,hO,mT,mO,sT,sO) -- a new address
+    // family, lower than every prior Multi Screen title's own 16-21/20-25
+    // blocks, confirmed fresh via a real natural multi-hour run (traced sO
+    // ticking every second with a clean carry into sT every 10s, mO/mT the
+    // same at 60s/10min, and a real 12:00->01:00 hour rollover at the
+    // 60-minute mark with hT/hO both changing in the same step). **No
+    // pmBit** -- checked both ways per the cross-cutting note: forcing each
+    // of bits 1/2/4/8 onto the hour-tens cell (addr10) produced zero cpu.lcd
+    // change for all four, and the real natural 12->1 rollover only ever
+    // touched the two BCD digit cells cleanly (hT 1->0, hO 2->1), no stray
+    // bit anywhere -- matching the "No pmBit" precedent Mario The
+    // Juggler/Black Jack already established, not a gap left unchecked.
+    clockRam: { hT: 10, hO: 11, mT: 12, mO: 13, sT: 14, sO: 15 },
+    // This program's boot-init RAM writes settle by roughly cycle 800
+    // (100-cycle-resolution trace, last real burst at 700-800, nothing
+    // after) -- a comfortable margin above that.
+    bootSyncCycles: 900,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Left "multiply" bounds (221,211,608,411) and
+    // Screen-Right "multiply" bounds (1230,198,611,425), both against the
+    // Unit element's own bounds (0,0,2068,1146).
+    screen: { left: 10.69, top: 18.41, width: 29.40, height: 35.86 },
+    screen2: { left: 59.48, top: 17.28, width: 29.55, height: 37.09 },
+    // Real input ports (source-confirmed, gnw_lboat INPUT_PORTS_START):
+    // IN.0 bit0=Left, bit1=Right (hammer/lever, own row, PORT_16WAY) --
+    // same hammer shape as Oil Panic/Pinball/Safe Buster, just wired to a
+    // WIDE pair of screens instead of stacked ones. IN.1 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm, the usual mode-button row. Alarm
+    // has no matching physical hotspot -- confirmed visually on Unit.png,
+    // it's a small LED indicator next to ACL (reset), not a push-button,
+    // same precedent as Oil Panic's own Alarm.
+    // Hotspot boxes: Left/Right have real full-canvas pressed-state art
+    // (Animation/Left-Flat.png/Right-Flat.png) -- measured directly via
+    // ImageMagick -trim, the original Vermin/Ball/Popeye technique, no
+    // synthesis needed. Game A/B/Time have NO press art in this title's
+    // community bundle (unlike Oil Panic) -- hand-measured the real button
+    // rims via ImageMagick connected-components colour isolation instead,
+    // and synthesized their own Grey-Flat-1/2/3.png pressed-state art
+    // (250% brightness lift + a rounded-rectangle alpha mask matching the
+    // real oblong pill-button shape, this title's own case has narrow
+    // vertical pill buttons here rather than the round discs most other
+    // titles use).
+    hotspots: {
+      left:  { left: 9.19,  top: 68.32, width: 10.49, height: 18.94 },
+      right: { left: 76.11, top: 68.32, width: 10.49, height: 18.94 },
+      gameA: { left: 59.04, top: 65.80, width: 3.10,  height: 8.03 },
+      gameB: { left: 64.02, top: 65.80, width: 3.10,  height: 8.03 },
+      time:  { left: 68.76, top: 65.80, width: 3.10,  height: 8.03 },
+    },
+    // No fixedRow and no btn1-4 -- same proactive flags as every other
+    // hammer-shaped Multi Screen title (Oil Panic/Pinball/Safe Buster):
+    // needsResetForModeButtons for GameA/GameB/Time to register at all,
+    // lampTestOnBoot so startAttract() dismisses the boot lamp-test screen
+    // on its own. **hammersNeedQuickTap added after a real user report**:
+    // shipped without it initially (most of this shape's titles don't need
+    // it), but a real Left/Right press only ever registered once per round
+    // -- the same stuck-extended-hold symptom Chef/Turtle Bridge/Pinball
+    // all hit, where the hammer stays logically "held" long past the real
+    // release, so the program's own next-press edge-check never sees a fresh
+    // 0->1 transition until something else (a reset) clears it.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { left: 1, right: 2 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  mario: {
+    title: 'Mario Bros.', subtitle: 'MW-56 · 1983',
+    artPath: 'artwork/gnw_mario/',
+    // Real Unit.png is 2068x1146, same WIDE canvas as Life Boat -- see
+    // that title's own unitAspect comment for why this is set upfront.
+    unitAspect: '2068 / 1146',
+    // Plain SM510 (`sm510_dualh`, confirmed fresh via the real driver
+    // source), no melody memory -- same architecture as Life Boat.
+    svgPath: 'artwork/gnw_mario/gnw_mario_left.svg',
+    svgPath2: 'artwork/gnw_mario/gnw_mario_right.svg',
+    dualScreen: true,
+    // See Life Boat's own bgFile/bgFile2 comment -- this title's real
+    // backgrounds are also named Background-Left.png/-Right.png, not
+    // -Top.png/-Bottom.png.
+    bgFile: 'Background-Left.png',
+    bgFile2: 'Background-Right.png',
+    // Dump (gnw_mario): mw-56, 4096B,
+    // 385e59da -- confirmed via sha1sum against the real driver's own
+    // CRC/SHA1 comment before use.
+    cpuType: 'sm510',
+    // Both screens' SVG segment titles use column (C) values up to 3 --
+    // confirmed via a fresh grep of both SVGs' own <title> tags, same as
+    // every other Multi Screen title.
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim, Node/vm harness). Same
+    // clean sequential 6-cell block (20-25, hT/hO/mT/mO/sT/sO) as Life
+    // Boat, confirmed fresh via a real natural multi-hour run (sO
+    // ticking every second with a clean carry into sT every 10s, mO/mT
+    // the same at 60s/10min, and a real 12:00->01:00 hour rollover at
+    // the 60-minute mark). **No pmBit** -- checked both ways per the
+    // cross-cutting note: forcing each of bits 1/2/4/8 onto the hour-
+    // tens cell produced zero cpu.lcd change, and the real 12->1
+    // rollover only ever touched the two BCD digit cells cleanly.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25 },
+    // This program's boot-init RAM writes settle by roughly cycle 900-1000
+    // (100-cycle-resolution trace; addresses that DO keep changing past
+    // that point are a periodic attract-mode animation loop that never
+    // fully quiets, same class of churn Oil Panic's own boot trace hit,
+    // not further one-time boot-init writes) -- a comfortable margin
+    // above the observed one-time-write completion point.
+    bootSyncCycles: 1000,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Left "multiply" bounds (231,224,601,387) and
+    // Screen-Right "multiply" bounds (1240,221,596,392), both against the
+    // Unit element's own bounds (0,0,2068,1146).
+    screen: { left: 11.17, top: 19.55, width: 29.06, height: 33.77 },
+    screen2: { left: 59.96, top: 19.28, width: 28.82, height: 34.21 },
+    // Real input ports (source-confirmed, gnw_mario INPUT_PORTS_START):
+    // IN.0 bit0=JOYSTICKRIGHT_DOWN, bit1=JOYSTICKRIGHT_UP,
+    // bit2=JOYSTICKLEFT_UP, bit3=JOYSTICKLEFT_DOWN -- NOT a hammer/lever
+    // and NOT a single 4-way D-pad cluster either: confirmed via Unit.png
+    // this is two independent vertical Up/Down rockers, one per player
+    // (LUIGI under the left screen = the JOYSTICKLEFT bits, MARIO under
+    // the right screen = JOYSTICKRIGHT), the same "two same-axis levers"
+    // shape Mickey & Donald's own DM-53 established -- reused the
+    // existing btn1-4 mechanism (bit-order mapping: btn1=Mario-Down,
+    // btn2=Mario-Up, btn3=Luigi-Up, btn4=Luigi-Down). IN.1 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm, the usual mode-button row.
+    // Alarm has no matching physical hotspot -- a small LED indicator
+    // next to ACL, confirmed visually on Unit.png, same precedent as
+    // every other WIDE Multi Screen title.
+    // Hotspot boxes: this title's community artwork bundle has NO Animation/
+    // press-state art at all (not even Game A/B/Time) and no
+    // inputtag/inputmask elements in its own default.lay -- every single
+    // hotspot was hand-measured off Unit.png (the two rockers via red-
+    // pixel connected-components isolation, split top/bottom half at
+    // the rocker's own midpoint; Game A/B/Time via the same dark-pixel
+    // isolation Life Boat used) and confirmed pixel-identical to Life
+    // Boat's own Game A/B/Time rim positions (x=1221/1324/1422, y=754,
+    // 64x92) -- the shared WIDE-title control-cluster mold, reused
+    // directly rather than re-measured from scratch. Every pressed-state
+    // image was synthesized: the rockers at 150% brightness (bright
+    // saturated red plastic, same value Bomb Sweeper/Gold Cliff/Zelda's
+    // own red D-pads needed since 400% clips this brightness range to
+    // white), Game A/B/Time at Life Boat's own 250% + rounded-rectangle
+    // mask.
+    hotspots: {
+      btn1: { left: 80.76, top: 78.01, width: 3.53, height: 7.42 },
+      btn2: { left: 80.76, top: 70.60, width: 3.53, height: 7.42 },
+      btn3: { left: 10.54, top: 70.60, width: 3.53, height: 7.51 },
+      btn4: { left: 10.54, top: 78.01, width: 3.53, height: 7.42 },
+      gameA: { left: 59.04, top: 65.80, width: 3.10, height: 8.03 },
+      gameB: { left: 64.02, top: 65.80, width: 3.10, height: 8.03 },
+      time:  { left: 68.76, top: 65.80, width: 3.10, height: 8.03 },
+    },
+    // No fixedRow -- but btn1-4 IS present (a genuine two-rocker cluster,
+    // reusing the D-pad mechanism), so _hasQuadButtons() already applies
+    // the reset-vector trick to GameA/GameB/Time without needing
+    // needsResetForModeButtons set explicitly (same as DK-52/DK-II/Green
+    // House). lampTestOnBoot still needed proactively so startAttract()
+    // dismisses the boot lamp-test screen on its own -- confirmed via the
+    // same live-test result Cement Factory/Fire-FR27 both needed this
+    // for.
+    lampTestOnBoot: true,
+    inputRows: [ { btn1: 1, btn2: 2, btn3: 4, btn4: 8 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  rshower: {
+    title: 'Rain Shower', subtitle: 'LP-57 · 1983',
+    artPath: 'artwork/gnw_rshower/',
+    // Real Unit.png is 2068x1146, same WIDE canvas as Life Boat/Mario
+    // Bros -- see Life Boat's own unitAspect comment.
+    unitAspect: '2068 / 1146',
+    // Plain SM510 (`sm510_dualh`, confirmed fresh), no melody memory -- same
+    // architecture as Life Boat/Mario Bros.
+    svgPath: 'artwork/gnw_rshower/gnw_rshower_left.svg',
+    svgPath2: 'artwork/gnw_rshower/gnw_rshower_right.svg',
+    dualScreen: true,
+    bgFile: 'Background-Left.png',
+    bgFile2: 'Background-Right.png',
+    // Dump (gnw_rshower): lp-57, 4096B,
+    // 51a2c5c4 -- confirmed via sha1sum against the real driver's own
+    // CRC/SHA1 comment before use.
+    cpuType: 'sm510',
+    lcdCBits: 2,
+    // Empirically traced (headless SM510 sim). Same clean sequential
+    // 6-cell block (20-25) and same "no pmBit" result as Life Boat/Mario
+    // Bros, both re-confirmed fresh via this title's own real natural
+    // multi-hour run and bit-forcing test rather than assumed from the
+    // shared WIDE-title family.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25 },
+    // Same boot-init timing shape as Mario Bros (settles ~1000-1100,
+    // periodic attract-loop churn afterward that never fully quiets).
+    bootSyncCycles: 1100,
+    // Screen-glass boxes from the community artwork's own "Unit Only" view
+    // (default.lay): Screen-Left "multiply" bounds (225,201,619,423) and
+    // Screen-Right "multiply" bounds (1224,194,625,423), both against the
+    // Unit element's own bounds (0,0,2068,1146).
+    screen: { left: 10.88, top: 17.54, width: 29.93, height: 36.91 },
+    screen2: { left: 59.19, top: 16.93, width: 30.22, height: 36.91 },
+    // Real input ports (source-confirmed, gnw_rshower INPUT_PORTS_START) --
+    // this title's shape is genuinely unique among every Multi Screen
+    // title so far: THREE real K-line rows, not two. IN.0 bit1=Time,
+    // bit2=BUTTON1 (the real driver source's own comment names it "L/R" --
+    // confirmed via Unit.png this is a single round action button labeled
+    // "L/R"/"MOVE", toggling which side of the split screen the umbrella-
+    // catcher is on). IN.1 bit1=GameB, bit2=GameA, bit3=Alarm (Alarm has
+    // no matching physical hotspot, same precedent as Life Boat/Mario
+    // Bros). IN.2 is a genuine single 4-way D-pad (bit0=Right, bit1=Up,
+    // bit2=Left, bit3=Down, confirmed via Unit.png's own "CONTROLLER"
+    // cross), reusing the existing btn1-4 mechanism. The single action
+    // button reuses the existing internal `jump` key (same convention as
+    // DK Jr Panorama/Cement Factory/Gold Cliff's own dedicated action
+    // button) with a custom jumpLabel since it isn't really a jump.
+    // Verified the inputRows array-index-vs-IN.n mapping empirically
+    // (the Time tap immediately drove real clock ticking when placed at
+    // array index 0, matching IN.0's own bit1) rather than assumed from
+    // the driver source comments alone, per the project's own standing
+    // "don't assume, verify" lesson.
+    // Hotspot boxes: this title's community artwork bundle has real full-
+    // canvas pressed-state art ONLY for the Move button (Animation/
+    // Move-Flat.png, measured via plain -trim, no synthesis needed) --
+    // the D-pad and Game A/B/Time have none. D-pad hand-measured via red-
+    // pixel connected-components isolation on the full cross, split into
+    // thirds per arm (hub excluded) -- the exact same convention Bomb
+    // Sweeper/Gold Cliff/Zelda's own D-pads used. Game A/B/Time confirmed
+    // pixel-identical to Life Boat/Mario Bros' own shared rim positions
+    // (x=1221/1324/1422, y=754, 64x92), reused directly. Synthesized
+    // press art: D-pad at 150% brightness (bright saturated red, same as
+    // Mario Bros' own rockers), Game A/B/Time at Life Boat's own 250% +
+    // rounded-rectangle mask.
+    hotspots: {
+      btn1: { left: 13.69, top: 75.48, width: 3.10, height: 5.32 },
+      btn2: { left: 10.54, top: 70.16, width: 3.10, height: 5.32 },
+      btn3: { left: 7.45,  top: 75.48, width: 3.10, height: 5.32 },
+      btn4: { left: 10.54, top: 80.72, width: 3.10, height: 5.32 },
+      jump: { left: 76.55, top: 69.02, width: 9.96, height: 17.89 },
+      gameA: { left: 59.04, top: 65.80, width: 3.10, height: 8.03 },
+      gameB: { left: 64.02, top: 65.80, width: 3.10, height: 8.03 },
+      time:  { left: 68.76, top: 65.80, width: 3.10, height: 8.03 },
+    },
+    pressedArt: { jump: 'Animation/Move-Flat.png' },     // this bundle's name for the jump button's press art
+    // jumpLabel: the real case prints "L/R"/"MOVE", not "Jump" -- same
+    // per-game label override Balloon Fight's own "Eject" button uses on
+    // the identical shared jump/hotspot plumbing.
+    jumpLabel: 'Move',
+    // btn1-4 present -- _hasQuadButtons() already applies the reset-
+    // vector trick to GameA/GameB/Time without needing
+    // needsResetForModeButtons set explicitly, same as every other
+    // D-pad-shaped Multi Screen title. lampTestOnBoot still needed
+    // proactively so startAttract() dismisses the boot lamp-test screen
+    // on its own.
+    lampTestOnBoot: true,
+    inputRows: [ { time: 2, jump: 4 }, { gameB: 2, gameA: 4, alarm: 8 }, { btn1: 1, btn2: 2, btn3: 4, btn4: 8 } ],
+  },
+
+  snoopyp: {
+    title: 'Snoopy', subtitle: 'SM-91 · 1983',
+    artPath: 'artwork/gnw_snoopyp/',
+    // Real Unit.png is 2548x3625, the same Panorama-series canvas as
+    // DK Jr./Mickey Mouse/DK Circus/Bombs Away -- see dkjrp's own
+    // unitAspect comment.
+    unitAspect: '2548 / 3625',
+    svgPath: 'artwork/gnw_snoopyp/gnw_snoopyp.svg',
+    // Real driver source: "inverted lcd screen with custom segments",
+    // confirmed live too (raw SVG fill is #ffffff, not the usual dark
+    // fill) -- same family as every other Panorama title so far. See
+    // dkjrp's own lcdInverted comment for the full mechanism.
+    lcdInverted: true,
+    // Dump (gnw_snoopyp): sm-91.program,
+    // 4096B, 893bd7e3; sm-91.melody, 256B, 09360aaf (BAD_DUMP/decap-
+    // needed per the dump list, same caveat as every other melody dump in
+    // this project) -- both confirmed via sha1sum against the real
+    // driver's own CRC/SHA1 comments before use. Artwork bundle supplied
+    // directly by the user (not present in this project's own
+    // artwork mirror) -- confirmed it's the real community bundle by
+    // matching its default.lay's own screen bounds/canvas size against
+    // every other already-shipped Panorama title's own conventions.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Empirically traced (headless SM511 sim, Node/vm harness). Same
+    // clean sequential 6-cell block (20-25) as every other Panorama
+    // title, confirmed fresh via a real natural run: a clean 12->1 hour
+    // rollover at the 59-minute mark (the tap-then-run harness's own
+    // ~1min-per-cycle offset, same as every other title), and a full
+    // 12-hour rollover at the ~708-minute mark showing hT jump from 1 to
+    // 9 (1|8, the pmBit:8 convention) exactly at the noon boundary, then
+    // to 8 (0|8) one hour later for "1 PM" -- same convention dkjrp's own
+    // comment documents, reconfirmed fresh rather than assumed.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    // Boot-init RAM writes settle by roughly cycle 1100-1200
+    // (100-cycle-resolution trace; addresses that keep changing past that
+    // point are periodic attract-loop churn, same class as every other
+    // WIDE/Panorama title's own boot trace) -- a comfortable margin above
+    // the observed completion point.
+    bootSyncCycles: 1300,
+    // Screen-glass box from the community artwork's own "Unit Only" view
+    // (default.lay): the plain (non-blend) Screen bounds (632,1106,1301,
+    // 666) against the Unit element's own bounds (0,0,2548,3625) --
+    // pixel-identical to dkjrp's own screen box, confirming this shared
+    // case mold's screen position, not assumed.
+    screen: { left: 24.80, top: 30.51, width: 51.06, height: 18.37 },
+    // Real input ports (source-confirmed, gnw_snoopyp INPUT_PORTS_START):
+    // IN.0 bit0=BUTTON1 ("Hit"), bit1=Right, bit2=Left -- hammer-shaped
+    // (hotspots.left/right) plus a single dedicated action button, same
+    // shape as Mario's Bombs Away's own Up/Down toggle position (bit0)
+    // but here it's a real Hit action, not a toggle -- reused the
+    // existing `jump` hotspot/BUTTON_DEFS plumbing with a custom
+    // jumpLabel, same per-title-label pattern Balloon Fight's "Eject"/
+    // Rain Shower's "Move" established. IN.1 bit0=Time, bit1=GameB,
+    // bit2=GameA, bit3=Alarm, the usual mode-button row (Alarm has no
+    // matching physical hotspot, an LED indicator only).
+    // NOTE: this title's own default.lay references "IN.2" for its
+    // Grey-Flat-1/2/3 elements and inputmask 0x08 for Jump-Flat -- a
+    // stale numbering from an older reference driver revision the artwork
+    // bundle predates (confirmed real: the CURRENT reference
+    // driver only ever defines IN.0/IN.1 for this title, no IN.2
+    // at all). Per this project's own "don't trust .lay bit/row numbers,
+    // verify against the driver source" standing lesson, only the .lay's
+    // spatial bounds were used; the actual bit mapping came from the
+    // driver source's real INPUT_PORTS_START block. The Grey-Flat-1/2/3
+    // mask VALUES (0x04/0x02/0x01) still line up correctly with the
+    // current driver's own IN.1 bits (GameA/GameB/Time respectively), so
+    // no gameA/gameB swap was needed despite the row-number mismatch.
+    // Hotspot boxes: Game A/B/Time and the Hit button have real full-
+    // canvas pressed-state art (measured via plain -trim) -- Left/Right
+    // do not (no Left-Flat/Right-Flat in the bundle), so the single
+    // rocker's own red-pixel bbox was hand-measured via connected-
+    // components isolation and split into left/right halves at the
+    // midpoint, synthesized at 150% brightness (bright saturated red,
+    // same value the other bright-red D-pads/rockers in this project
+    // needed).
+    hotspots: {
+      left:  { left: 15.66, top: 68.99, width: 9.62,  height: 4.94 },
+      right: { left: 25.31, top: 68.99, width: 9.62,  height: 4.94 },
+      jump:  { left: 63.81, top: 63.83, width: 20.88, height: 14.68 },
+      gameA: { left: 52.08, top: 83.06, width: 9.77,  height: 6.87 },
+      gameB: { left: 61.62, top: 83.06, width: 9.77,  height: 6.87 },
+      time:  { left: 71.16, top: 83.06, width: 9.77,  height: 6.87 },
+    },
+    // jumpLabel: the real case prints "HIT", not "Jump".
+    jumpLabel: 'Hit',
+    // Hammer-shaped (no fixedRow, no btn1-4) -- needsResetForModeButtons
+    // for GameA/GameB/Time to register at all, lampTestOnBoot so
+    // startAttract() dismisses the boot lamp-test screen on its own,
+    // hammersNeedQuickTap shipped proactively -- same three flags every
+    // other hammer-shaped Panorama title (Mickey Mouse/DK Circus/Bombs
+    // Away) already needed.
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { jump: 1, right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  /* Table Top Snoopy SM-73 (1983). Runs snoopyp's program; same believed-not-
+     verified basis as GAMES.dkjrt -- SM-73 was never dumped, and the dump list
+     annotates SM-91 "assume same [program] & LCD as tabletop version" while marking
+     SM-73 undumped with the chip a guess. See dkjrt's comment for the full
+     reasoning and the site-side wording that keeps the distinction visible. */
+  snoopyt: {
+    title: 'Snoopy', subtitle: 'SM-73 · 1983',
+    artPath: 'artwork/gnw_snoopyt/',
+    // Unit.png is the bundle's own Unit-Only.png (its "Table Top - Unit Only"
+    // view), renamed on copy.
+    unitAspect: '634 / 1011',
+    svgPath: 'artwork/gnw_snoopyp/gnw_snoopyp.svg',   // the shared LCD -- the whole premise
+    lcdInverted: true,
+    unitBehindScreen: true,
+    noPressedArt: true,
+    // default.lay "Table Top - Unit Only": screen 179,234,285x152 of 634x1011.
+    screen: { left: 28.233, top: 23.145, width: 44.953, height: 15.035 },
+    // "Zoom" view: 1920x1080 close-up, Zoom.png. Rect matches the layout's screen
+    // exactly (= the LCD glass in the artwork) so the emulation lines up; the
+    // zoom is made large by the height-bound device sizing, not this rect.
+    zoom: { unit: 'Zoom.png', aspect: '1920 / 1080', screen: { left: 36.146, top: 42.963, width: 28.646, height: 26.667 } },
+    hotspots: TABLETOP_LR_HOTSPOTS,
+  },
+
+  /* Table Top Popeye PG-74 (1983). Same story as snoopyt above: runs
+     popeyep's program, PG-74 itself never dumped. */
+  popeyet: {
+    title: 'Popeye', subtitle: 'PG-74 · 1983',
+    artPath: 'artwork/gnw_popeyet/',
+    unitAspect: '634 / 1011',
+    svgPath: 'artwork/gnw_popeyep/gnw_popeyep.svg',
+    lcdInverted: true,
+    unitBehindScreen: true,
+    noPressedArt: true,
+    // default.lay "Table Top - Unit Only": screen 179,234,285x152 of 634x1011.
+    screen: { left: 28.233, top: 23.145, width: 44.953, height: 15.035 },
+    // "Zoom" view: 1920x1080 close-up, Zoom.png. Rect matches the layout's screen
+    // exactly (= the LCD glass in the artwork) so the emulation lines up; the
+    // zoom is made large by the height-bound device sizing, not this rect.
+    zoom: { unit: 'Zoom.png', aspect: '1920 / 1080', screen: { left: 36.146, top: 42.963, width: 28.646, height: 26.667 } },
+    hotspots: TABLETOP_LR_HOTSPOTS,
+  },
+
+
+  /* ---- Table Top: Mario's Cement Factory CM-72 (1983) -------------------
+     The odd one out of the four Table Tops, and the only one that needs no
+     assumption: CM-72 has its OWN dump. Nintendo never made a Panorama
+     Cement Factory -- they adapted the game for the New Wide Screen ML-102
+     instead, which is a genuinely different program. So unlike dkjrt/snoopyt/
+     popeyet, this entry borrows nothing and carries its own program, melody and
+     traced clockRam, and its Hardware/Emulation tabs claim nothing that
+     wasn't measured from this exact program.
+
+     Verified against the reference driver before use: cm-72.program CRC
+     b2ae4596, cm-72.melody CRC db4f0fc1 -- both match. The dump list flags the melody
+     BAD_DUMP ("decap needed for verification"), so treat any audio oddity as
+     a possibly-bad source dump rather than an emulator bug.
+
+     The cabinet is the same Table Top shell as the other three -- measured,
+     not assumed: joystick trims to c(159,778), action button to 434,784
+     71x57 and the mode pills to 333/391/451 at y=738, identical to Snoopy's
+     and Popeye's on the same 634x1011 canvas. Only the marquee and colour
+     differ. Hence unitBehindScreen/noPressedArt for the same reasons -- see
+     GAMES.dkjrt. */
+  mariocmt: {
+    title: "Mario's Cement Factory", subtitle: 'CM-72 · 1983',
+    artPath: 'artwork/gnw_mariocmt/',
+    unitAspect: '634 / 1011',
+    // Its own LCD, not borrowed: this title has no Panorama counterpart.
+    svgPath: 'artwork/gnw_mariocmt/gnw_mariocmt.svg',
+    // 298 segments traced #ffffff -- a light-marking (inverted) panel, same
+    // as the other Table Tops. Checked in the SVG, not inferred from series.
+    lcdInverted: true,
+    unitBehindScreen: true,
+    noPressedArt: true,
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Traced against this program: held Time (its own S2 bit0), measured which
+    // cells count and at what ratio (1x/10x/60x/600x -> ram 25/24/23/22),
+    // cross-checked by reading the clock back after 72 simulated minutes
+    // from its 12:00 boot (read 01:13:47), and pmBit by poking 11:59:50 and
+    // watching the hour-tens nibble flip 0x1 -> 0x9 across 12:00.
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 500,
+    lampTestOnBoot: true,
+    // default.lay "Unit Only": screen 176,235,285x156 of 634x1011.
+    screen: { left: 27.760, top: 23.244, width: 44.953, height: 15.430 },
+    // "Zoom" view: 1920x1080 close-up, Zoom.png (its own zoom.png). Rect
+    // matches the layout's screen exactly (= the LCD glass in the artwork) so the
+    // emulation lines up; the zoom is made large by the height-bound device
+    // sizing, not this rect.
+    zoom: { unit: 'Zoom.png', aspect: '1920 / 1080', screen: { left: 36.667, top: 44.352, width: 26.458, height: 24.352 } },
+    hotspots: TABLETOP_CM_HOTSPOTS,
+    // the gnw_mariocmt port table (TABLE-READ): IN.0 bit0 = Open (drops the
+    // bucket), bit1 = Right, bit2 = Left; IN.1 = the mode buttons.
+    inputRows: [ { open: 1, right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+  popeyep: {
+    title: 'Popeye', subtitle: 'PG-92 · 1983',
+    artPath: 'artwork/gnw_popeyep/',
+    unitAspect: '2548 / 3625',
+    svgPath: 'artwork/gnw_popeyep/gnw_popeyep.svg',
+    // Same inverted-LCD family as Snoopy/dkjrp -- confirmed live (raw SVG
+    // fill is #ffffff).
+    lcdInverted: true,
+    // Dump (gnw_popeyep): pg-92.program,
+    // 4096B, f9a2f181; pg-92.melody, 256B, ce2a0e03 (BAD_DUMP/decap-
+    // needed per the dump list) -- both confirmed via sha1sum before use.
+    // Artwork bundle supplied directly by the user, same source/session
+    // as Snoopy's own. Driver source's own comment confirms this title's
+    // controller board is literally the same PCB design as Snoopy's own
+    // Panorama controller -- confirmed independently too: this title's
+    // own rocker/Jump/Grey-Flat hotspot pixel positions came out
+    // identical to Snoopy's.
+    cpuType: 'sm511',
+    lcdCBits: 2,
+    // Empirically traced fresh (not assumed from Snoopy despite the
+    // shared controller board) -- same clean sequential 6-cell block
+    // (20-25), same pmBit:8 convention, confirmed via the same real
+    // natural-rollover method (12->1 hour transition, then hT jumping to
+    // 9 (1|8) at the ~714-minute noon boundary).
+    clockRam: { hT: 20, hO: 21, mT: 22, mO: 23, sT: 24, sO: 25, pmBit: 8 },
+    bootSyncCycles: 1300,
+    // Screen-glass box from THIS title's own default.lay "Unit Only" view
+    // -- plain Screen bounds (624,1120,1301,652), against Unit's own
+    // bounds (0,0,2548,3625). Close to but not pixel-identical to
+    // Snoopy's own (632,1106,1301,666) -- re-measured fresh from this
+    // title's own .lay rather than reused blindly, small real-photo
+    // alignment differences between titles sharing a case mold are
+    // already a known pattern in this project (e.g. DK Circus vs Mickey
+    // Mouse Panorama).
+    screen: { left: 24.49, top: 30.90, width: 51.06, height: 17.99 },
+    // Real input ports (source-confirmed, gnw_popeyep INPUT_PORTS_START):
+    // IN.0 bit0=BUTTON1 ("Punch"), bit1=Right, bit2=Left -- same hammer +
+    // dedicated action-button shape as Snoopy's own. IN.1 bit0=Time,
+    // bit1=GameB, bit2=GameA, bit3=Alarm. Same stale-IN.2-numbering gap
+    // in this title's own default.lay as Snoopy's (see that title's own
+    // comment for the full explanation) -- driver source used for the
+    // real bit mapping, .lay used only for spatial bounds.
+    // Hotspot boxes: Game A/B/Time and the Punch button have real full-
+    // canvas pressed-state art; Left/Right don't (same gap as Snoopy),
+    // and this title's own rocker measured at the exact same pixel
+    // position as Snoopy's (confirmed independently, not copied blindly)
+    // -- the shared controller-board mold the driver source's own
+    // comment describes. Synthesized the same way (150% brightness).
+    hotspots: {
+      left:  { left: 15.66, top: 68.99, width: 9.62,  height: 4.94 },
+      right: { left: 25.31, top: 68.99, width: 9.62,  height: 4.94 },
+      jump:  { left: 63.81, top: 63.83, width: 20.88, height: 14.68 },
+      gameA: { left: 52.08, top: 83.06, width: 9.77,  height: 6.87 },
+      gameB: { left: 61.62, top: 83.06, width: 9.77,  height: 6.87 },
+      time:  { left: 71.16, top: 83.06, width: 9.77,  height: 6.87 },
+    },
+    // jumpLabel: the real case prints "PUNCH", not "Jump".
+    jumpLabel: 'Punch',
+    needsResetForModeButtons: true,
+    lampTestOnBoot: true,
+    hammersNeedQuickTap: true,
+    inputRows: [ { jump: 1, right: 2, left: 4 }, { time: 1, gameB: 2, gameA: 4, alarm: 8 } ],
+  },
+
+};
+
+/* HARDWARE TWINS -- pairs of entries that are the same machine in a
+   different case, so the second inherits everything internal from the first
+   and overrides only what the case changes.
+
+   Nintendo shipped the 1986 Crystal Screen units and their 1988 New Wide
+   Screen re-releases with identical program and melody memories -- byte-for-byte,
+   not merely equivalent (sha256 of the archived dumps: bf-803.program ==
+   bfightn's 38bfbb54..., dr-802 == climbern's, ym-801 == smbn's). The reference driver
+   itself expresses this by making the New Wide Screen machines clones of the
+   Crystal ones, which is why one firmware archive there ships both units' SVGs.
+   Same chip, same program, same RAM map, same port wiring, same boot behaviour.
+
+   Inherit-by-default rather than a list of things to copy, and that
+   direction is deliberate -- it's the safe way round for this failure mode.
+   The first cut of this copied only programB64/melodyB64 and left each Crystal
+   entry to re-declare the rest by hand; three flags were duly missed
+   (lampTestOnBoot, hammersNeedQuickTap, and Balloon Fight's jumpLabel), and
+   the missing lampTestOnBoot is not subtle -- it gates startAttract()'s
+   auto Time-tap, so all three units sat at their boot lamp test until the
+   user pressed Time themselves. Nothing could have caught that but a person
+   noticing. Defaulting to "same machine => same field" means the only way
+   to get it wrong now is to actively list a field as case-specific below.
+
+   The borrower's own declarations always win, so an entry overrides simply
+   by declaring the field itself. */
+const HW_TWIN_CASE_SPECIFIC = new Set([
+  // Identity and artwork -- what the case IS.
+  'title', 'subtitle', 'artPath', 'svgPath', 'svgPath2', 'unitAspect',
+  // Geometry -- where things sit on THIS case.
+  'screen', 'screen2', 'hotspots', 'crystal',
+  // Panel/artwork traits. lcdInverted especially must never cross: it
+  // describes the physical display, and a Crystal panel is exactly the
+  // case where twins genuinely differ.
+  'lcdInverted', 'hideLines', 'bgFile', 'bgFile2', 'pressedArt',
+]);
+/* borrower -> the entry it takes its internals from.
+   smb/climber/bfight: Crystal Screen units, VERIFIED byte-identical to their
+     New Wide Screen twins by sha256 against the archived dumps.
+   dkjrt/snoopyt/popeyet: the Table Top cabinets -- BELIEVED identical to
+     their Panorama counterparts, not verified. CJ-71, SM-73 and PG-74 were
+     none of them ever dumped, so there is nothing to compare against. The reference driver's
+     own list marks all three undumped (with the chip itself a guess,
+     "SM511?") and annotates each Panorama entry "assume same [program] & LCD as
+     tabletop version". Same mechanism as the Crystal pairs, weaker claim --
+     see GAMES.dkjrt's own comment, and sharedFirmware.verified in
+     index.html, which is what makes the site say which kind of claim it is
+     rather than presenting both as fact. */
+const GAMES_HW_TWINS = {
+  smb: 'smbn', climber: 'climbern', bfight: 'bfightn',      // verified by hash
+  smbspecial: 'smbn',                                       // verified by hash (same program as smbn)
+  dkjrt: 'dkjrp', snoopyt: 'snoopyp', popeyet: 'popeyep',   // believed, unverifiable
+};
+for (const [borrower, owner] of Object.entries(GAMES_HW_TWINS)) {
+  const a = GAMES[borrower], b = GAMES[owner];
+  for (const [field, value] of Object.entries(b)) {
+    if (HW_TWIN_CASE_SPECIFIC.has(field)) continue;
+    if (Object.prototype.hasOwnProperty.call(a, field)) continue; // its own wins
+    a[field] = value;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// firmware archive (external). To keep this file lean, every title's mask memory (and
+// melody memory, where present) lives in firmware/output/gnw_games.json rather than inline
+// base64 here. It's fetched once on startup; _programsReady resolves after GAMES has
+// been populated with each title's programB64 / melodyB64. Every emulator boot and
+// preview path awaits _programsReady before constructing a GnwEmulator (which is the
+// only thing that decodes game.programB64 / game.melodyB64). Titles that share a program
+// via GAMES_HW_TWINS already have their own entry in the JSON (extracted after
+// the inheritance loop above), so no re-inheritance is needed here.
+const _GNW_PROGRAMS_URL = (function () {
+  try {
+    const s = document.currentScript && document.currentScript.src;
+    if (s) return new URL('../../firmware/output/gnw_games.json', s).href;
+  } catch (e) {}
+  return 'firmware/output/gnw_games.json';
+})();
+function _gnwApplyPrograms(files) {
+  for (const k in files) {
+    if (!GAMES[k]) continue;
+    /* `rom` is the key a gnw_games.json built before 24 Oct 2026 used; read it too. */
+    const program = files[k].program || files[k].rom;
+    if (program)         GAMES[k].programB64 = program;
+    if (files[k].melody) GAMES[k].melodyB64 = files[k].melody;
+  }
+  /* The Media grid offers a unit only when its files are here (index.html
+     gnwAvailable, 2026-10-14): tell it they arrived. */
+  setTimeout(() => { try { if (typeof notifyMediaGameContent === 'function') notifyMediaGameContent(); } catch (e) {} }, 0);
+}
+/* For index.html (2026-10-14): does this key have its files loaded (its own,
+   or the unit whose program it shares), and give it a content pack's files now. */
+window.gnwHasFiles = function (k) {
+  if (!k) return false;
+  if (GAMES[k] && GAMES[k].programB64) return true;
+  const owner = GAMES_HW_TWINS[k];
+  return !!(owner && GAMES[owner] && GAMES[owner].programB64);
+};
+window.gnwApplyFiles = function (files) { if (files) _gnwApplyPrograms(files); };
+/* Device files from the player's own game servers (cws.js gnwPrograms, 2026-10-12).
+   cws.js loads after this file and connects after the page boots, so this
+   waits for it. A server can also become usable a little later (its PIN is
+   entered), so it keeps listening for the library to change for up to two
+   minutes while any server is known. It resolves true once the files are
+   applied, or null when there is nothing to wait for. */
+function _gnwFromServers() {
+  return new Promise(res => {
+    let tries = 0;
+    const cwsReady = () => (window.CWS && window.CWS.ready)
+      ? Promise.resolve(window.CWS.ready)
+      : new Promise(r => setTimeout(r, 250)).then(() => (++tries < 40 ? cwsReady() : null));
+    cwsReady().then(() => {
+      if (!window.CWS || typeof window.CWS.gnwPrograms !== 'function') { res(null); return; }
+      let done = false;
+      const finish = v => { if (done) return; done = true; removeEventListener('cws:library-changed', attempt); res(v); };
+      const attempt = () => Promise.resolve(window.CWS.gnwPrograms()).then(r => {
+        if (r && !done) {
+        _gnwApplyPrograms(r); finish(true);
+        const ban = document.getElementById('gnw-content-banner'); if (ban) ban.remove();   // the files are here now
+        if (window.cwSources) window.cwSources.found();   // and the "nothing connected" message goes (notify.js, 28 Oct)
+      }
+        return r;
+      }, () => null);
+      addEventListener('cws:library-changed', attempt);
+      attempt().then(r => {
+        if (r) return;
+        const anyServer = (window.CWS.servers() || []).length > 0;
+        setTimeout(() => finish(null), anyServer ? 120000 : 0);
+      });
+    }, () => res(null));
+  });
+}
+let _programsFailed = false;   // see _programsReadyNow
+let _programsReady = fetch(_GNW_PROGRAMS_URL)
+  .then(r => { if (!r.ok) throw new Error('gnw_games.json HTTP ' + r.status); return r.json(); })
+  /* An EMPTY file (2026-10-14) is what a build writes once Game & Watch is
+     served by the game server: "no built-ins", so it falls through to the
+     content pack and the servers exactly as a missing file does. */
+  .then(files => { if (!files || !Object.keys(files).length) throw new Error('no built-in Game & Watch files'); _gnwApplyPrograms(files); })
+  .catch(err => {
+    // No pre-built archive installed — fall back to a user-loaded content pack
+    // (Settings → Content → open a .zip), which content_pack.js keeps in IndexedDB.
+    return (window.__GNW_PACK ? window.__GNW_PACK.ready : Promise.resolve()).then(() => {
+      const files = window.__GNW_PACK && window.__GNW_PACK.programs();
+      if (files) { _gnwApplyPrograms(files); return; }
+      /* Then the player's own game servers (2026-10-12): cws.js downloads each
+         device's zip from gnw\games, unpacks it and matches every file by its
+         hash, giving the same {key: {program, melody}} shape. */
+      return _gnwFromServers().then(srv => {
+        if (srv) return;
+        /* Nothing yet: the NORMAL state before a game server connects
+           (2026-10-14). Wait quietly with a plain message; no error. */
+        console.info('[gnw] No Game & Watch files yet. Connect a game server or open a content pack to play.');
+        _gnwContentMissing();
+        _programsFailed = true;
+        throw err;
+      });
+    });
+  });
+/* Nobody awaits _programsReady at page load, so a rejection here would be an
+   unhandled error. Marked handled; every boot and preview still sees it
+   through _programsReadyNow, which asks the servers again. */
+_programsReady.catch(() => {});
+/* A server that connects later (or a PIN entered later) brings the files in
+   without a boot having to ask: the plain message goes when they arrive. */
+addEventListener('cws:library-changed', () => { if (_programsFailed) _programsReadyNow().catch(() => {}); });
+/* A game server connected AFTER the page loaded (2026-10-12): the first
+   attempt found no device files anywhere, so the next boot or preview asks the
+   servers again instead of failing for the rest of the visit. The built-in
+   file and the content pack are not fetched again (they were just missing). */
+function _programsReadyNow() {
+  if (_programsFailed) {
+    _programsFailed = false;
+    _programsReady = _gnwFromServers().then(srv => {
+      if (srv) return;
+      _programsFailed = true;
+      throw new Error('no Game & Watch device files: none built in, no content pack, none on a game server');
+    });
+  }
+  return _programsReady;
+}
+
+/* "Batteries not included." — dismissed for good, per browser.
+   The banner's x used to do nothing but remove the node, so the notice was
+   back on the next load; that is the one thing being fixed here. It remains a
+   MESSAGE ABOUT A STATE and not the state: the content really is missing,
+   _programsReady still rejects, the console error above still prints and every
+   emulator entry point behaves exactly as it did. This only stops re-telling
+   someone who has already read it.
+   Read and write are both guarded — private mode and blocked site data throw
+   on either — and when they throw the banner still draws and still closes, it
+   simply is not remembered. */
+/* 2026-10-14: the notice is now the plain "Connect a game server ..." line,
+   and the console note is info, not an error. A new key, so a browser that
+   closed the old panel still sees the new line once. */
+const GNW_NOTICE_BATTERIES_KEY = 'gnw.notice.connect';
+function _gnwNoticeDismissed() {
+  try { return localStorage.getItem(GNW_NOTICE_BATTERIES_KEY) === '1'; } catch (e) { return false; }
+}
+window.gnwBannerDismiss = function () {
+  try { localStorage.setItem(GNW_NOTICE_BATTERIES_KEY, '1'); } catch (e) {}
+  const b = document.getElementById('gnw-content-banner');
+  if (b) b.remove();
+};
+
+// Shown when the emulator content (firmware / artwork / colour-unit firmware) is not
+// present — i.e. someone has the code-only distribution and hasn't run the
+// builder yet. The rest of the site (catalogue, specs, manuals) still works, so
+// this is a friendly top banner, not a fatal error screen. Idempotent.
+function _gnwContentMissing() {
+  /* 28 Oct: the top banner became one message for every source, drawn by
+     notify.js (window.cwSources), which decides whether anything is connected. The banner below
+     stays only as the fallback for a page without notify.js. */
+  if (!window.cwSources && document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', _gnwContentMissing, { once: true }); return; }
+  if (window.cwSources) { window.cwSources.missing('gnw'); return; }
+  if (_gnwNoticeDismissed()) return;   // read once, gone for good
+  if (!document.body) { document.addEventListener('DOMContentLoaded', _gnwContentMissing, { once: true }); return; }
+  if (document.getElementById('gnw-content-banner')) return;
+  /* Focus ring and hover live in a stylesheet because a pseudo-class cannot be
+     written as an inline style, and a close control with no visible focus
+     state is not keyboard reachable in any useful sense. outline paints
+     outside the border box, so neither state moves the header row. */
+  if (!document.getElementById('gnw-content-banner-css')) {
+    const cs = document.createElement('style');
+    cs.id = 'gnw-content-banner-css';
+    cs.textContent =
+        '#gnw-content-banner .gnw-banner-x{flex:0 0 auto;background:none;border:1px solid transparent;'
+      + 'color:#8a9196;font-size:22px;line-height:1;padding:0 4px;cursor:pointer;border-radius:7px}'
+      + '#gnw-content-banner .gnw-banner-x:hover{color:#e6ebf2;border-color:#2a3242;background:rgba(255,255,255,.04)}'
+      + '#gnw-content-banner .gnw-banner-x:focus-visible{outline:2px solid var(--accent,#9be15d);outline-offset:2px;color:#e6ebf2}';
+    document.head.appendChild(cs);
+  }
+  /* A PLAIN MESSAGE (2026-10-14). The device files now come from the player's
+     game servers, so having none at page load is the normal state before one
+     connects, not a fault: one quiet line, the content pack button, and the
+     close control. It goes by itself when the files arrive (_gnwFromServers).
+     The old "Batteries not included" panel, with its builder instructions, is
+     retired: nothing is built in any more. */
+  const el = document.createElement('div');
+  el.id = 'gnw-content-banner';
+  el.setAttribute('role', 'status');
+  el.style.cssText = 'background:#121822;border-bottom:1px solid #2a3242;'
+    + 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#cfd6df;padding:9px 16px;font-size:13px;';
+  const _cloud = !_gnwIsLocalHost() && !!(window.__GNW_CLOUD && window.__GNW_CLOUD.anyConfigured() && window.__GNW_CLOUD.configured('google'));
+  const _btn = 'background:none;color:var(--accent,#9be15d);border:1px solid #2a3242;padding:5px 11px;border-radius:7px;font-weight:600;cursor:pointer;font-size:12.5px';
+  el.innerHTML =
+      '<div style="max-width:1080px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    +   '<div style="flex:1 1 240px;min-width:0">Connect a game server or open a content pack to play.</div>'
+    +   '<button type="button" onclick="window.gnwBannerOpenPack&&window.gnwBannerOpenPack()" style="' + _btn + '">Open content pack</button>'
+    +   (_cloud ? '<button type="button" onclick="window.gnwBannerCloudPick&&window.gnwBannerCloudPick(\'google\')" style="' + _btn + '">Google Drive</button>' : '')
+    +   '<button type="button" class="gnw-banner-x" aria-label="Dismiss this notice" title="Dismiss: this notice will not come back" onclick="window.gnwBannerDismiss&&window.gnwBannerDismiss()">×</button>'
+    +   '<div id="gnw-banner-msg" style="flex:1 0 100%;font-size:12px;color:#8a9196;line-height:1.5;min-height:0"></div>'
+    + '</div>';
+  document.body.insertBefore(el, document.body.firstChild);
+}
+
+// True only when the page is genuinely being served locally, where running the
+// PowerShell builder can actually affect this deployment. Anything else (GitHub
+// Pages, any real domain/IP) is remote — the builder hint is hidden there.
+// Takes an optional host so the decision is unit-testable.
+function _gnwIsLocalHost(h) {
+  h = (h == null) ? location.hostname : h;
+  return h === '' || h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || /\.localhost$/i.test(h);
+}
+
+/* A TRUNCATED SCAN MUST NEVER READ AS A COMPLETE ONE.
+   firmware/site/content_pack.js caps nested archives at 8 levels and 8 GB of nested
+   inflation, mirroring firmware/scripts/lib/build_nintendo.ps1. When a cap fires the counts
+   are a floor, not a total, so the banner says so instead of reporting a tidy
+   "Loaded (3 firmware files …)" for a pack it stopped reading. Returns '' when the scan
+   ran to the end, which is every real pack. */
+function gnwPackScanNote(sum) {
+  const sc = sum && sum.scan;
+  if (!sc) return '';
+  const why = [];
+  if (sc.depthCapHits) why.push(sc.depthCapHits + ' archive' + (sc.depthCapHits === 1 ? '' : 's') +
+                                ' nested deeper than ' + sc.depthLimit + ' levels');
+  if (sc.byteCapHit) why.push('the ' + Math.round(sc.byteLimit / (1024 * 1024 * 1024)) +
+                              ' GB nested-archive limit was reached');
+  return 'INCOMPLETE: this zip wasn’t read all the way through (' + why.join('; ') +
+         '), so anything found is a minimum, not a total. These limits exist to stop a “zip bomb” ' +
+         'hanging this tab; no real content pack comes near them. Open Settings → Content for the detail.';
+}
+
+// Banner's "Open content pack" action: pick a .zip, import it via the content
+// pack (IndexedDB), then reload so the emulators boot from it. Self-contained so
+// the banner works even before the Settings-panel handlers run.
+window.gnwBannerOpenPack = function () {
+  const msg = document.getElementById('gnw-banner-msg');
+  if (!window.__GNW_PACK) { if (msg) msg.textContent = 'Content loader unavailable in this browser.'; return; }
+  let inp = document.getElementById('gnw-banner-file');
+  if (!inp) {
+    inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.zip,application/zip'; inp.id = 'gnw-banner-file'; inp.style.display = 'none';
+    inp.addEventListener('change', function () {
+      const file = inp.files && inp.files[0]; if (!file) return;
+      const m = document.getElementById('gnw-banner-msg');
+      if (m) { m.style.color = '#8a9196'; m.textContent = 'Reading ' + (file.name || 'file') + ' …'; }
+      window.__GNW_PACK.importZip(file).then(function (sum) {
+        if (!m) return;
+        const note = gnwPackScanNote(sum);
+        if (sum && sum.empty) {
+          m.textContent = 'That zip didn’t contain any recognised content.' + (note ? ' ' + note : '');
+          if (note) m.style.color = '#f0b34a';
+          return;
+        }
+        // Deliberately NO auto-reload when the scan was cut short: the reload
+        // would wipe the one message the person needs to read. They reload it
+        // themselves, and Settings → Content still carries the warning after.
+        if (note) {
+          m.style.color = '#f0b34a';
+          m.textContent = 'Loaded (' + sum.programs.found + ' firmware files, ' + sum.art.found + ' SVGs, ' + sum.tft.found + ' colour units). ' +
+                          note + ' Reload the page when you’ve read this.';
+          return;
+        }
+        m.style.color = 'var(--accent,#9be15d)';
+        m.textContent = 'Loaded (' + sum.programs.found + ' firmware files, ' + sum.art.found + ' SVGs, ' + sum.tft.found + ' colour units). Starting the emulators…';
+        setTimeout(function () { location.reload(); }, 800);
+      }).catch(function (err) {
+        if (m) m.textContent = 'Couldn’t read that file: ' + ((err && err.message) || err) + ' (it needs to be a .zip).';
+      });
+    });
+    document.body.appendChild(inp);
+  }
+  inp.value = '';
+  inp.click();
+};
+
+// Banner's "From cloud storage" action: sign in to the provider, let the user
+// pick their .zip, then run it through the same content-pack import + reload.
+window.gnwBannerCloudPick = function (provider) {
+  const m = document.getElementById('gnw-banner-msg');
+  if (!window.__GNW_CLOUD || !window.__GNW_PACK) { if (m) m.textContent = 'Cloud storage is unavailable here.'; return; }
+  const label = provider === 'google' ? 'Google Drive' : provider;
+  if (m) { m.style.color = '#8a9196'; m.textContent = 'Opening ' + label + '. A sign-in window will appear…'; }
+  window.__GNW_CLOUD.pick(provider).then(function (res) {
+    if (m) m.textContent = 'Downloading ' + (res.name || 'your file') + ' …';
+    return window.__GNW_PACK.importZip(res.blob).then(function (sum) {
+      if (!m) return;
+      const note = gnwPackScanNote(sum);        // see gnwPackScanNote above
+      if (sum && sum.empty) {
+        m.textContent = 'That file didn’t contain any recognised content.' + (note ? ' ' + note : '');
+        if (note) m.style.color = '#f0b34a';
+        return;
+      }
+      if (note) {
+        m.style.color = '#f0b34a';
+        m.textContent = 'Loaded (' + sum.programs.found + ' firmware files, ' + sum.art.found + ' SVGs, ' + sum.tft.found + ' colour units). ' +
+                        note + ' Reload the page when you’ve read this.';
+        return;
+      }
+      m.style.color = 'var(--accent,#9be15d)';
+      m.textContent = 'Loaded (' + sum.programs.found + ' firmware files, ' + sum.art.found + ' SVGs, ' + sum.tft.found + ' colour units). Starting the emulators…';
+      setTimeout(function () { location.reload(); }, 800);
+    });
+  }).catch(function (err) {
+    const em = (err && err.message) || String(err);
+    if (!m) return;
+    if (/cancel/i.test(em)) { m.textContent = ''; return; }   // user backed out — no scary error
+    m.style.color = '#f08a8a';
+    m.textContent = 'Couldn’t load from ' + label + ': ' + em;
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Artwork archive (external). Every title's LCD segment artwork — the per-screen
+// SVGs, geometry plus the <title> segment addresses — lives in
+// firmware/output/artwork.json.gz: a single gzip'd JSON keyed by the same relative
+// svgPath strings GAMES and HARDWARE_DEVICE_INFO already use, rather than 71
+// loose .svg files. It's fetched lazily the first time any device's screen is
+// shown (NOT on page load), decompressed in-browser via DecompressionStream, and
+// cached in memory; every later lookup is served off the cached map. _resolveArt
+// is the single gateway all SVG loads go through, so a later stage can swap the
+// backing store (IndexedDB / remote / companion server) without touching the
+// emulator or the hardware pages.
+const _GNW_ART_URL = (function () {
+  try {
+    const s = document.currentScript && document.currentScript.src;
+    if (s) return new URL('../../firmware/output/artwork.json.gz', s).href;
+  } catch (e) {}
+  return 'firmware/output/artwork.json.gz';
+})();
+let _artMap = null;
+let _artReady = null;
+function _loadArtArchive() {
+  if (_artReady) return _artReady;
+  _artReady = fetch(_GNW_ART_URL)
+    .then(r => { if (!r.ok) throw new Error('artwork.json.gz HTTP ' + r.status); return r.body; })
+    .then(body => new Response(body.pipeThrough(new DecompressionStream('gzip'))).json())
+    .then(map => { _artMap = map; return map; })
+    .catch(err => {
+      // No pre-built archive installed — fall back to a user-loaded content pack
+      // (Settings → Content → open a .zip); content_pack.js holds it in IndexedDB.
+      return (window.__GNW_PACK ? window.__GNW_PACK.ready : Promise.resolve()).then(() => {
+        const art = window.__GNW_PACK && window.__GNW_PACK.art();
+        if (art) { _artMap = art; return art; }
+        console.error('[gnw] artwork archive (firmware/output/artwork.json.gz) failed to load — LCDs cannot render:', err);
+        _artReady = null;   // let a later attempt retry the fetch
+        _gnwContentMissing();
+        throw err;
+      });
+    });
+  return _artReady;
+}
+// The single gateway every SVG load goes through. Resolves the artwork SVG text
+// for an svgPath (the same relative path GAMES / HARDWARE_DEVICE_INFO reference).
+function _resolveArt(svgPath) {
+  return _loadArtArchive().then(map => {
+    const svg = map[svgPath];
+    if (svg == null) throw new Error('artwork not found in archive: ' + svgPath);
+    return svg;
+  });
+}
+// Published so the page OUTSIDE this IIFE can use the very same gateway. The
+// Hardware tab draws its clickable segment map from the identical SVG the
+// emulator plays on, and it used to reach it with a plain fetch() of the
+// svgPath -- which stopped resolving the moment the loose .svg files became
+// this archive, giving every device's Hardware tab "Couldn't load the device
+// artwork." Routing it through here keeps ONE loader, one cache and one
+// fallback chain (archive -> content pack) instead of a second copy that can
+// drift. Read-only: it hands back SVG text and exposes nothing that can write
+// to the archive.
+window.GnwArt = { resolve: _resolveArt };
+
+/* Decoded programs are SHARED between instances, keyed on the base64 they came
+   from. The same title can be live in two grids at once (a collection tile and
+   a Video-page game tile) and can be rebuilt on every drawer open, and each of
+   those was decoding the identical 4 KB again.
+     Sharing is safe because a program is read-only: no CPU in this file ever
+   assigns into its program or melody array -- verified before this was added,
+   because two machines sharing a mutable buffer would be a real bug rather
+   than a saving. */
+const _programCache = new Map();
+function decodeProgram(b64) {
+  const hit = _programCache.get(b64);
+  if (hit) return hit;
+  const raw = atob(b64);
+  // 4096 covers both SM5A's largest program (1.8K) and SM510's (4K, e.g. Fire
+  // Attack's id-29) — harmless extra trailing zero bytes for the smaller ones.
+  const out = new Uint8Array(4096);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i) & 0xff;
+  _programCache.set(b64, out);
+  return out;
+}
+
+// ─── Diagnostic log ─────────────────────────────────────────────────────────
+// Records every segment on/off transition (and any unusually slow frame, a
+// likely cause of transient glitches) with a millisecond timestamp, so an
+// intermittent flicker can be captured and inspected after the fact instead
+// of guessed at. Ring-buffered so it's safe to leave running indefinitely.
+
+const SEG_LOG_MAX = 20000;
+const _gnwLog = [];
+function _gnwLogPush(entry) {
+  _gnwLog.push(entry);
+  if (_gnwLog.length > SEG_LOG_MAX) _gnwLog.splice(0, _gnwLog.length - 15000);
+}
+
+// Press L during play, or call from the console: window.gnwDumpLog(15) for
+// the last 15 seconds (omit for the whole buffer). Flags any segment whose
+// ON pulse lasted under ~2 frames as a likely flicker, and marks any frame
+// that had to run an unusually large instruction burst to catch up.
+window.gnwDumpLog = function (lastSeconds) {
+  const now = performance.now();
+  const cutoff = lastSeconds ? now - lastSeconds * 1000 : 0;
+  const entries = _gnwLog.filter(e => e.t >= cutoff);
+  const lastOnAt = new Map();
+  const lines = entries.map(e => {
+    if (e.type === 'frame') {
+      return e.t.toFixed(1) + 'ms  [frame stutter] dt=' + e.dt.toFixed(1) + 'ms cycles=' + e.cycles;
+    }
+    let flag = '';
+    if (e.on) {
+      lastOnAt.set(e.id, e.t);
+    } else {
+      const onAt = lastOnAt.get(e.id);
+      if (onAt !== undefined && (e.t - onAt) < 34) flag = '  <-- SHORT-LIVED (' + (e.t - onAt).toFixed(1) + 'ms)';
+      lastOnAt.delete(e.id);
+    }
+    return e.t.toFixed(1) + 'ms  ' + e.id + '  ' + (e.on ? 'ON ' : 'OFF') + flag;
+  });
+  const text = '[gnw] diagnostic log (' + entries.length + ' events):\n' + lines.join('\n');
+  console.log(text);
+  try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (_) {}
+  _gnwShowLogOverlay(text);
+  return text;
+};
+
+// Shows the dump directly on the page — console.log alone isn't reliable here,
+// since most browsers don't retroactively display log calls made before
+// DevTools was opened. This works regardless of whether DevTools is open.
+function _gnwShowLogOverlay(text) {
+  let box = document.getElementById('gnw-log-overlay');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'gnw-log-overlay';
+    box.style.cssText =
+      'position:fixed; inset:5vh 5vw; z-index:99999; background:#111; color:#0f0; ' +
+      'border:2px solid #0f0; border-radius:8px; padding:12px; display:flex; flex-direction:column; ' +
+      'font:11px/1.4 ui-monospace, Consolas, monospace;';
+    box.innerHTML =
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:#fff;">' +
+      '<b>gnw diagnostic log</b>' +
+      '<span>' +
+      '<button id="gnw-log-copy" style="margin-right:8px;">Copy</button>' +
+      '<button id="gnw-log-close">Close ✕</button>' +
+      '</span></div>' +
+      '<textarea id="gnw-log-text" readonly style="flex:1; width:100%; background:#000; color:#0f0; ' +
+      'border:1px solid #333; font:inherit; resize:none;"></textarea>';
+    document.body.appendChild(box);
+    document.getElementById('gnw-log-close').onclick = () => box.remove();
+    document.getElementById('gnw-log-copy').onclick = () => {
+      const ta = document.getElementById('gnw-log-text');
+      ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+    };
+  }
+  const ta = document.getElementById('gnw-log-text');
+  ta.value = text;
+  ta.scrollTop = ta.scrollHeight;
+  ta.focus();
+  ta.select();
+}
+
+// ─── Audio sample capture ───────────────────────────────────────────────────
+// For inspecting the actual generated waveform as raw numbers instead of by
+// ear — useful for comparing against a reference implementation's own sample
+// stream. null when not capturing (the normal state — costs nothing then).
+let _gnwAudioCapture = null;
+
+// Call from the console: window.gnwCaptureAudio(1000) captures the next
+// ~1000ms of generated samples (default 500ms), then automatically dumps
+// them the same way window.gnwDumpLog() dumps the segment log. Only the
+// currently-open interactive instance's _renderAudioFrame() feeds this.
+window.gnwCaptureAudio = function (ms) {
+  const durationMs = ms || 500;
+  const samples = [];
+  let sampleRate = 44100;
+  const startedAt = performance.now();
+  _gnwAudioCapture = {
+    push(out, sampleIndexStart, sr) {
+      sampleRate = sr;
+      for (let i = 0; i < out.length; i++) samples.push(out[i]);
+      if (performance.now() - startedAt >= durationMs) {
+        _gnwAudioCapture = null;
+        window.gnwDumpAudio(samples, sampleRate);
+      }
+    }
+  };
+  return 'capturing audio for ' + durationMs + 'ms...';
+};
+
+// samples/sampleRate are normally supplied automatically by gnwCaptureAudio's
+// own timeout, but can be called directly with an array to inspect any other
+// captured set the same way.
+window.gnwDumpAudio = function (samples, sampleRate) {
+  sampleRate = sampleRate || 44100;
+  let min = Infinity, max = -Infinity, sum = 0, nanCount = 0;
+  for (const v of samples) {
+    if (Number.isNaN(v)) { nanCount++; continue; }
+    if (v < min) min = v;
+    if (v > max) max = v;
+    sum += v;
+  }
+  const mean = sum / (samples.length - nanCount || 1);
+  const header = '[gnw] audio capture: ' + samples.length + ' samples @ ' + sampleRate + 'Hz (' +
+    (samples.length / sampleRate).toFixed(3) + 's) — min=' + min.toFixed(6) + ' max=' + max.toFixed(6) +
+    ' mean=' + mean.toFixed(6) + ' nanCount=' + nanCount;
+  const lines = [header, 'index,t_ms,value'];
+  for (let i = 0; i < samples.length; i++) {
+    lines.push(i + ',' + (i / sampleRate * 1000).toFixed(3) + ',' + samples[i]);
+  }
+  const text = lines.join('\n');
+  console.log(header);
+  try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (_) {}
+  _gnwShowLogOverlay(text);
+  return text;
+};
+
+// ─── Display ────────────────────────────────────────────────────────────────
+
+/* SEGMENT PERSISTENCE: OUR OWN HYSTERESIS, IN RENDERED FRAMES.
+
+   The core hands us its LCD plane once per rendered frame (cpu.lcd, after
+   cpu.updateLcd()). One sample per ~16.7 ms frame is far coarser than the
+   glass: a real panel integrates its drive over many 64 Hz LCD frames
+   ([90] p156 Fig. 10, 1/T = 64 Hz), so a segment that the program holds
+   steadily looks steady, and a sub-millisecond transient never shows. A
+   single per-frame sample can land on exactly such a transient. Rendered
+   as-is, it flashes for one frame.
+
+   So each segment carries a charge, in milliseconds: it charges while the
+   plane drives it, discharges while the plane does not, and is clamped to
+   [0, ON + HOLD]. It is painted while its charge is at or above ON. A segment
+   must therefore be driven for ON ms before it appears, and once fully
+   charged it stays visible for HOLD ms after the drive stops. Both are set in
+   RENDERED FRAMES, because the artefact they suppress is a sampling artefact
+   of the frame loop, not a property of the glass:
+
+     ON   = 2 frames   one stray sample cannot light a segment on its own;
+     HOLD = 2 frames   one stray missing sample cannot blank one.
+
+   SM5A's C=1 bank (cBits === 1, C === 1) is fed from the live shift register
+   W', which can hold an intermediate value for microseconds. A ~9-simulated-
+   hour headless soak of Ball's demo (the real GnwEmulator / _frame() /
+   GnwDisplay classes in a Node vm, millions of synthetic frames, sampling-
+   phase jitter included) found 225 one-frame flashes at a 2-frame ON, every
+   one on a C=1 segment, at intervals uncorrelated with injected frame
+   hitches: the signature of sampling-phase aliasing. ON = 4 frames on that
+   bank removed it for Ball (0 over an equivalent run); Fire fell from 43 to
+   13. Each further frame roughly halves the residue, as a random-phase model
+   predicts, so a title-specific push past 4 frames remains an option, traded
+   against responsiveness. The rigorous fix is to integrate each segment's
+   on-time inside the step loop rather than sampling once per frame.
+
+   These three numbers are our soak-test results; nothing else sets
+   them. The values are written exactly as before the 2026-10-03 rewrite so
+   the rendered frames are bit-identical to it. */
+const LCD_FRAME_MS   = 1000 / 60;
+const LCD_ON_MS      = 2 * LCD_FRAME_MS;
+const LCD_HOLD_MS    = 2 * LCD_FRAME_MS;
+const LCD_ON_MS_ROW1 = 4 * LCD_FRAME_MS;
+
+class GnwDisplay {
+  // cBits: how many bits of the flat lcd[] index the title's "C" component
+  // occupies -- default 1 (index = (A<<1)|C, C in {0,1}, the SM5A plane);
+  // 2 for the SM510/SM511/SM512 plane (index = (A<<2)|C, C = common H1-H4).
+  // (A<<1)|C on a cBits=2 title would silently collide two unrelated
+  // segments onto the same bit of the same lcd[] slot whenever C is 2 or 3.
+  constructor(svgEl, cBits) {
+    this.cBits = cBits || 1;
+    this.onMs      = LCD_ON_MS;
+    this.capMs     = LCD_ON_MS + LCD_HOLD_MS;
+    this.onMsRow1  = this.cBits === 1 ? Math.max(LCD_ON_MS, LCD_ON_MS_ROW1) : LCD_ON_MS;
+    this.capMsRow1 = this.onMsRow1 + LCD_HOLD_MS;
+    this.map = new Map();     // "A.B.C" -> segment element (a <g> or, on some
+                              // titles' SVGs, a bare <path> with its own
+                              // direct <title> child instead of a wrapping
+                              // <g> -- Chef's SVG has 61 of its 72 segments
+                              // in this bare-<path> form, so both element
+                              // types must be scanned or most segments are
+                              // never registered and stay at their default
+                              // (visible) state forever.
+    this.state = new Map();   // "A.B.C" -> painted on/off state
+    this.charge = new Map();  // "A.B.C" -> charge in ms, 0..cap
+    svgEl.querySelectorAll('g, path').forEach(el => {
+      const t = el.querySelector(':scope > title');
+      if (!t) return;
+      const id = t.textContent.trim();
+      if (/^\d+\.\d+\.\d+$/.test(id)) {
+        this.map.set(id, el);
+        this.state.set(id, false);
+        this.charge.set(id, 0);
+      }
+    });
+  }
+
+  // One rendered frame of dtMs: charge or discharge every segment from the
+  // plane, then paint the ones whose painted state changed.
+  update(lcd, dtMs) {
+    const t = performance.now();
+    const step = Math.max(0, dtMs);
+    this.map.forEach((el, id) => {
+      const [A, B, C] = id.split('.').map(Number);
+      const isRow1 = C === 1 && this.cBits === 1;
+      const cap = isRow1 ? this.capMsRow1 : this.capMs;
+      const onAt = isRow1 ? this.onMsRow1 : this.onMs;
+      const driven = !!((lcd[(A << this.cBits) | C] >> B) & 1);
+      let q = this.charge.get(id);
+      q = driven ? Math.min(cap, q + step) : Math.max(0, q - step);
+      this.charge.set(id, q);
+      const on = q >= onAt;
+      if (this.state.get(id) !== on) {
+        this.state.set(id, on);
+        _gnwLogPush({ t, type: 'seg', id, on });
+        el.style.visibility = on ? 'visible' : 'hidden';
+      }
+    });
+  }
+}
+
+// ─── Audio ──────────────────────────────────────────────────────────────────
+
+/* THE SPEAKER: ONE PIN, A PIEZO DISC, AND THE FILTER THAT IMPLIES.
+
+   The hardware has no tone generator the program writes a frequency to.
+   It has a pin carrying a logic level, wired straight to a piezo disc
+   ([90] p152 (6): "The R1 and R2 output ports are used to directly drive a
+   piezo electric buzzer"). The core reports that level after every step():
+   cpu.rOut on every part (see the constructor). So the
+   signal to deliver is a piecewise-constant waveform whose edges are known
+   exactly in time.
+
+   A piecewise-constant waveform is not band-limited, so it cannot simply be
+   sampled at the host rate: everything above the host's Nyquist would fold
+   back as alias tones -- audible as a buzzer that gets "dirtier" the faster
+   it toggles. The exact remedy is to low-pass the CONTINUOUS waveform and
+   then sample it. For a waveform made of steps that is closed-form: each
+   edge contributes its height times the filter's STEP RESPONSE, so
+
+       y(t) = level before the window
+            + sum over edges j inside the window of  dL_j * S(t - t_j)
+
+   where S is the running integral of the low-pass kernel. This is the
+   band-limited step ("BLEP") method of Stilson & Smith (1996). No
+   intermediate sample rate is involved and no edge time is rounded.
+
+   The kernel is solved from three stated requirements (the clean-room
+   design rules of our speaker model), not tuned by ear:
+
+     passband edge  16,384 Hz = f_OSC / 2   the fastest the pin can toggle is
+                                            once per 61 us instruction; the
+                                            band the part can produce is
+                                            0 .. f_OSC/2 ([86] p91, [90] p149)
+     stopband edge  host sample rate / 2    the host's own Nyquist
+     attenuation    96 dB                   the floor of 16-bit delivery
+
+   A Kaiser-windowed sinc meets them: beta from the attenuation by Kaiser's
+   formula, cutoff midway between the edges, and the LENGTH FOUND BY
+   MEASUREMENT -- grown from Kaiser's estimate until the computed response
+   at the host Nyquist is at or below -96 dB. Nothing about the length is
+   typed in here. If the host rate leaves no room above 16,384 Hz (a host
+   below 32,768 Hz), the passband edge is lowered to 0.8 x the host Nyquist
+   and the design says so in GnwSpeaker.design.
+
+   The mean level is not audio, so a one-pole DC blocker follows, with its
+   pole placed for a 20 Hz corner (the bottom of human hearing) at whatever
+   rate the host runs: pole = exp(-2 pi 20 / fs).
+
+   The output is delayed by half the kernel length (well under a
+   millisecond), because the filter is symmetric and needs the edges just
+   after each instant.
+
+   LOUDNESS, FITTED: the 0 / 0.3 pin levels in GnwEmulator._frame() were set
+   by ear on the earlier speaker path, whose filter did not
+   have unity gain. This path has unity gain, so on its own it played about
+   1.8x louder. OUTPUT_GAIN brings the heard level back to what was
+   chosen then: measured 2026-10-03 on one title per part (ball, fireatk, dkong,
+   bjack, 20 s each, identical input, virtual clock), RMS old/new =
+   0.545 / 0.562 / 0.536 / 0.565. Label: FITTED (to a loudness, not a
+   mechanism). Change it, and the volume changes; nothing else does. */
+const GNW_SPEAKER_OUTPUT_GAIN = 0.55;
+class GnwSpeaker {
+  constructor(sampleRate) {
+    this.sampleRate = sampleRate;
+    this.design = GnwSpeaker.designFor(sampleRate);
+    const d = this.design;
+    this.half = d.halfSeconds;                  // kernel half-length, seconds
+    this.table = d.stepTable;                   // S sampled on [-half, +half]
+    this.tableStep = (2 * this.half) / (this.table.length - 1);
+    this.pole = Math.exp(-2 * Math.PI * 20 / sampleRate);
+    this.base = 0;      // level before every edge still in the queue
+    this.level = 0;     // level after the newest edge
+    this.edgeT = [];    // edge times (seconds), oldest first
+    this.edgeD = [];    // edge heights
+    this.prevX = 0; this.prevY = 0;
+  }
+
+  static designFor(sampleRate) {
+    const cache = (GnwSpeaker._cache = GnwSpeaker._cache || new Map());
+    if (cache.has(sampleRate)) return cache.get(sampleRate);
+    const ATTEN_DB = 96.3;                       // 6.02 x 16 bits
+    const stopHz = sampleRate / 2;
+    let passHz = 16384;
+    let note = 'passband 0..16384 Hz';
+    if (!(stopHz > passHz)) { passHz = 0.8 * stopHz; note = 'host Nyquist ' + stopHz + ' Hz is not above 16384 Hz; passband lowered to ' + passHz + ' Hz'; }
+    const fc = (passHz + stopHz) / 2;
+    const beta = 0.1102 * (ATTEN_DB - 8.7);      // Kaiser, attenuation > 50 dB
+    const i0 = (x) => { let s = 1, term = 1; for (let k = 1; k < 64; k++) { term *= (x / (2 * k)) * (x / (2 * k)); s += term; if (term < 1e-18 * s) break; } return s; };
+    const i0b = i0(beta);
+    // Continuous kernel h(t), half-length `half` seconds.
+    const kernel = (t, half) => {
+      const r = t / half;
+      if (r <= -1 || r >= 1) return 0;
+      const x = 2 * Math.PI * fc * t;
+      const sinc = x === 0 ? 2 * fc : Math.sin(x) / (Math.PI * t);
+      return sinc * i0(beta * Math.sqrt(1 - r * r)) / i0b;
+    };
+    // Its worst response from the host Nyquist up to the host rate (the band
+    // that would fold back), measured on a fine grid (64 points per host
+    // sample period) at 33 frequencies -- a measurement, not a formula.
+    const worstAbove = (half) => {
+      const n = Math.ceil(2 * half * sampleRate * 64);
+      const dt = (2 * half) / n;
+      const ts = new Float64Array(n + 1), hs = new Float64Array(n + 1);
+      let dc = 0;
+      for (let i = 0; i <= n; i++) {
+        const t = -half + i * dt;
+        const h = kernel(t, half) * ((i === 0 || i === n) ? 0.5 : 1);
+        ts[i] = t; hs[i] = h; dc += h;
+      }
+      let worst = 0;
+      for (let m = 0; m <= 32; m++) {
+        const f = stopHz + (m / 32) * stopHz;
+        let re = 0;                               // symmetric: imaginary part is 0
+        for (let i = 0; i <= n; i++) re += hs[i] * Math.cos(2 * Math.PI * f * ts[i]);
+        worst = Math.max(worst, Math.abs(re / dc));
+      }
+      return worst;
+    };
+    // Length: Kaiser's estimate, then grown until the measurement meets it.
+    const dw = 2 * Math.PI * (stopHz - passHz) / sampleRate;
+    let taps = Math.max(3, Math.ceil((ATTEN_DB - 7.95) / (2.285 * dw)));
+    let half, atNyq;
+    for (let guard = 0; guard < 400; guard++) {
+      half = (taps / 2) / sampleRate;
+      atNyq = 20 * Math.log10(Math.max(1e-30, worstAbove(half)));
+      if (-atNyq >= ATTEN_DB) break;
+      taps += 2;
+    }
+    // The step response S(t) = integral of h from -half to t, normalised so
+    // S(+half) = 1, tabulated at 256 points per host sample period.
+    const N = Math.ceil(2 * half * sampleRate * 256) + 1;
+    const step = new Float64Array(N);
+    const dt = (2 * half) / (N - 1);
+    let acc = 0, prev = kernel(-half, half);
+    for (let i = 1; i < N; i++) {
+      const cur = kernel(-half + i * dt, half);
+      acc += (prev + cur) * 0.5 * dt;
+      step[i] = acc;
+      prev = cur;
+    }
+    for (let i = 0; i < N; i++) step[i] /= acc;
+    const d = { sampleRate, passHz, stopHz, cutoffHz: fc, beta, taps,
+                halfSeconds: half, measuredAtNyquistDb: atNyq,
+                meetsRequirement: -atNyq >= ATTEN_DB, note, stepTable: step };
+    cache.set(sampleRate, d);
+    return d;
+  }
+
+  // Start from a known level with no edges pending (a fresh instance).
+  reset(level) {
+    this.base = this.level = level;
+    this.edgeT.length = 0; this.edgeD.length = 0;
+    this.prevX = this.prevY = 0;
+  }
+
+  // The pin moved to `level` at time t (seconds). Times must not go back.
+  edge(t, level) {
+    const d = level - this.level;
+    if (d === 0) return;
+    this.edgeT.push(t); this.edgeD.push(d);
+    this.level = level;
+  }
+
+  // S(x) for x in seconds, linear between table points.
+  _S(x) {
+    if (x <= -this.half) return 0;
+    if (x >= this.half) return 1;
+    const p = (x + this.half) / this.tableStep;
+    const i = p | 0;
+    const f = p - i;
+    const a = this.table[i], b = this.table[i + 1 < this.table.length ? i + 1 : i];
+    return a + (b - a) * f;
+  }
+
+  // The output sample for instant t, delivered `half` seconds late: the
+  // filtered waveform at (t - half), which needs only edges up to t.
+  sample(t) {
+    const c = t - this.half;
+    // Edges older than the window are fully settled: fold them into base.
+    let k = 0;
+    while (k < this.edgeT.length && this.edgeT[k] <= c - this.half) { this.base += this.edgeD[k]; k++; }
+    if (k) { this.edgeT.splice(0, k); this.edgeD.splice(0, k); }
+    let x = this.base;
+    for (let j = 0; j < this.edgeT.length; j++) {
+      const tj = this.edgeT[j];
+      if (tj > t) break;
+      x += this.edgeD[j] * this._S(c - tj);
+    }
+    const y = x - this.prevX + this.pole * this.prevY;
+    this.prevX = x; this.prevY = y;
+    return y * GNW_SPEAKER_OUTPUT_GAIN;
+  }
+}
+
+/* DELIVERY: A RING BUFFER ON THE AUDIO THREAD.
+
+   Runs on the audio rendering thread, so output stays sample-accurate
+   whatever the main thread is doing -- GC pauses, layout, other emulator
+   instances. This replaced an earlier approach that scheduled one new
+   AudioBufferSourceNode per video frame at a precomputed start time:
+   gapless on paper, but any delay in the main thread reaching that .start()
+   before its scheduled time landed as an audible click at that frame's
+   boundary -- on every frame, a constant crackle. Here the main thread tops
+   the ring up once a frame, the audio thread drains it continuously, and a
+   brief underrun HOLDS the last sample rather than snapping to zero (a held
+   level is a far less audible discontinuity). */
+const GNW_WORKLET_CODE = `
+class GnwSpeakerProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.ringSize = Math.ceil(sampleRate * 2); // 2s of headroom
+    this.ring = new Float32Array(this.ringSize);
+    this.writeIdx = 0;
+    this.readIdx = 0;
+    this.available = 0;
+    this.lastSample = 0;
+    this.port.onmessage = (e) => {
+      const chunk = e.data;
+      for (let i = 0; i < chunk.length; i++) {
+        this.ring[this.writeIdx] = chunk[i];
+        this.writeIdx = (this.writeIdx + 1) % this.ringSize;
+      }
+      this.available += chunk.length;
+      // Production should track real elapsed time closely, so this should
+      // never actually trigger -- but if something ever gets the main
+      // thread far enough behind (a long background/suspend), drop the
+      // oldest queued audio instead of letting latency grow unbounded.
+      if (this.available > this.ringSize) {
+        const drop = this.available - this.ringSize;
+        this.readIdx = (this.readIdx + drop) % this.ringSize;
+        this.available = this.ringSize;
+      }
+    };
+  }
+  process(inputs, outputs) {
+    const out = outputs[0][0];
+    for (let i = 0; i < out.length; i++) {
+      if (this.available > 0) {
+        this.lastSample = this.ring[this.readIdx];
+        this.readIdx = (this.readIdx + 1) % this.ringSize;
+        this.available--;
+      }
+      out[i] = this.lastSample;
+    }
+    return true;
+  }
+}
+registerProcessor('gnw-speaker-processor', GnwSpeakerProcessor);
+`;
+
+let _playMuted = false;   // play-modal mute (key "−" / the button); persists across game switches
+
+class GnwAudio {
+  init() {
+    this.ctx = null; this.gain = null; this.sampleRate = 44100; this.node = null; this.ready = false;
+    try {
+      this.ctx    = new (window.AudioContext || window.webkitAudioContext)();
+      this.gain   = this.ctx.createGain();
+      this.gain.gain.value = _playMuted ? 0 : 1;   // honour a mute chosen before this game booted
+      this.gain.connect(this.ctx.destination);
+      this.sampleRate = this.ctx.sampleRate;
+      const blobUrl = URL.createObjectURL(new Blob([GNW_WORKLET_CODE], { type: 'application/javascript' }));
+      this.ctx.audioWorklet.addModule(blobUrl)
+        .then(() => {
+          if (!this.ctx) return; // destroy() may have already run while this was loading
+          this.node = new AudioWorkletNode(this.ctx, 'gnw-speaker-processor');
+          this.node.connect(this.gain);
+          this.ready = true;
+        })
+        .catch(() => {})
+        .finally(() => URL.revokeObjectURL(blobUrl));
+    } catch (_) {}
+    this.speaker = new GnwSpeaker(this.sampleRate);
+  }
+
+  // samples: Float32Array, one per host audio sample, handed to the
+  // worklet's ring buffer (see GNW_WORKLET_CODE for why not scheduled).
+  playSamples(samples) {
+    if (!this.ready || !this.node || samples.length === 0) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    this.node.port.postMessage(samples);
+  }
+
+  destroy() {
+    try { if (this.node) this.node.disconnect(); } catch (_) {}
+    try { if (this.ctx) this.ctx.close(); } catch (_) {}
+    this.ctx = null; this.node = null; this.ready = false;
+  }
+}
+
+// ─── Emulator ───────────────────────────────────────────────────────────────
+
+// The crystal is 32,768 Hz and the parts run one instruction per clkDiv
+// crystal periods: 2 (16,384 instructions/s) on SM5A and SM510, fixed for
+// the chip's lifetime; SM511/SM512 start at 4 (8,192/s) and the program can
+// switch between 2 and 4 at run time. Running at the full 32,768 Hz (an
+// early bug here) played every game at twice real speed. So cpuHz is a
+// per-instance value read fresh every frame from cpu.clkDiv, never a module
+// constant.
+
+// Keyboard shortcut -> named button(s), shared across all games (a game
+// simply won't have some of these in its `hotspots`/`inputRows`, e.g.
+// Flagman has no left/right, Ball/Vermin have no btn1-4 — see
+// GnwEmulator._held()). Each key maps to a list since Q/E do double duty
+// (left/right on hammer games, upper-left/upper-right on quad-button
+// games) — never ambiguous in practice since a game only ever defines one
+// of those hotspot sets. 1/2/3/4 = Game A/B/Time/ALARM on every title.
+//
+// 4 USED TO BE RESET, and that is why this comment used to say so. The
+// unified cross-device scheme puts the fourth operational button, ALARM, on
+// 4 -- it is a real button on nearly every title here (see the `alarm: 8`
+// entry in almost every inputRows), it had no key at all, and it was the
+// only one of the four you could press on the artwork but not type. Reset
+// keeps R (and the on-screen control); it is an emulator function, not a
+// button on the device, so it does not get a digit. Arrow keys are
+// hammer-only (left/right, not "up-left" etc.), so
+// the 4-direction titles use Q/E/A/D instead — laid out to mirror the
+// on-screen 2x2 corners (Q/E top row, A/D bottom row).
+/* A key maps to a LIST of button names, and every name is set on press. That
+   works because a game only ever reads the names its own inputRows mention --
+   an entry for a button this title doesn't have is simply never looked at.
+   So the Micro Vs. additions below ('fire'/'p2*') cost the other 52 titles
+   nothing, and can share keys that already mean something else elsewhere
+   (a/d stay btn3/btn4 for the quad-pad titles AND become player 2's
+   left/right for a two-player one). */
+const KEY_TO_BUTTON = {
+  '1': ['gameA'],
+  '2': ['gameB'],
+  '3': ['time'],
+  '4': ['alarm'],
+  // Player 1 -- arrows + space, unchanged for every existing title.
+  'ArrowLeft':  ['left', 'btn3'],
+  'ArrowRight': ['right', 'btn1'],
+  'q': ['left', 'btn1', 'hit'], 'Q': ['left', 'btn1', 'hit'],
+  'e': ['right', 'btn2'], 'E': ['right', 'btn2'],
+  'a': ['btn3', 'p2left'], 'A': ['btn3', 'p2left'],
+  'd': ['btn4', 'p2right'], 'D': ['btn4', 'p2right'],
+  'ArrowUp':   ['up', 'btn2'],
+  'ArrowDown': ['down', 'btn4'],
+  ' ': ['open', 'jump', 'fire'],
+  // Player 2 (Micro Vs. System only) -- WASD + F, so both players can sit at
+  // one keyboard without fighting over keys. a/d are shared with the quad-pad
+  // titles' btn3/btn4 above; harmless, per this table's own comment.
+  'w': ['p2up'], 'W': ['p2up'],
+  's': ['p2down'], 'S': ['p2down'],
+  'f': ['p2fire'], 'F': ['p2fire'],
+};
+
+/* ---------------------------------------------------------------------------
+ *  ONE FRAME LOOP FOR EVERY AMBIENT PREVIEW.
+ *
+ *  Each GnwEmulator used to drive itself with its own requestAnimationFrame,
+ *  so a grid of twelve live tiles scheduled twelve callbacks a frame to do
+ *  twelve small pieces of the same work. The Game Boy tiles already run this
+ *  way -- one page loop stepping every device -- and the Video page makes it
+ *  matter more, because its grid can hold tiles from several catalogues at
+ *  once.
+ *
+ *  DELIBERATELY LIMITED TO PREVIEWS. The interactive Play modal keeps its own
+ *  rAF: it is a single instance, and its pause and rewind paths all
+ *  drive _emu.raf directly. Folding that into a shared loop would rewrite
+ *  machinery that works, to save a callback that does not multiply.
+ * ------------------------------------------------------------------------- */
+const _gnwPreviewLoop = { live: new Set(), raf: 0 };
+/* FOREGROUND MEDIA (2026-10-04): while a play window or the film player is open
+   (index.html's gnwForegroundActive), the grid's tile instances are HELD -- not
+   stepped, not stopped, so they resume where they were (_frame caps the gap at
+   50 ms). The drawer's big reveal is not a tile and keeps running. With nothing
+   left to step the loop stops outright; the gnw:foreground event restarts it.
+   A device drawer holds them the same way (index.html's gnwTilesHeld, 23 Oct):
+   it used to stop every tile, so closing the drawer rebooted them all. */
+const _gnwTilesHeld = () => typeof window.gnwTilesHeld === 'function' ? window.gnwTilesHeld()
+  : (typeof window.gnwForegroundActive === 'function' && window.gnwForegroundActive());
+const _gnwKickPreviews = () => {
+  if (_gnwPreviewLoop.live.size && !_gnwPreviewLoop.raf) _gnwPreviewLoop.raf = requestAnimationFrame(_gnwPreviewTick);
+};
+window.gnwKickTilePreviews = _gnwKickPreviews;   // index.html resumeCollectionTiles()
+document.addEventListener('gnw:foreground', e => {
+  if (!e.detail.active) _gnwKickPreviews();
+});
+function _gnwPreviewTick(t) {
+  _gnwPreviewLoop.raf = 0;
+  const held = _gnwTilesHeld();
+  let stepped = false;
+  /* Snapshot: an instance may stop itself from inside _frame (end of attract),
+     and mutating the set under its own iteration is how that becomes a bug. */
+  for (const emu of Array.from(_gnwPreviewLoop.live)) {
+    if (!_gnwPreviewLoop.live.has(emu)) continue;
+    if (held && emu._tileHold) continue;
+    stepped = true;
+    /* Dropped from the loop rather than left to throw every frame -- but said
+       out loud. A preview that dies silently is indistinguishable from one that
+       was never started, which is the exact failure this project has chased
+       twice now. */
+    try { emu._frame(t); }
+    catch (e) { _gnwPreviewLoop.live.delete(emu); console.warn('[gnw] preview stopped after an error:', e); }
+  }
+  if (_gnwPreviewLoop.live.size && (stepped || !held)) _gnwPreviewLoop.raf = requestAnimationFrame(_gnwPreviewTick);
+}
+function _gnwPreviewAdd(emu) {
+  _gnwPreviewLoop.live.add(emu);
+  if (!_gnwPreviewLoop.raf) _gnwPreviewLoop.raf = requestAnimationFrame(_gnwPreviewTick);
+}
+function _gnwPreviewRemove(emu) {
+  _gnwPreviewLoop.live.delete(emu);
+  if (!_gnwPreviewLoop.live.size && _gnwPreviewLoop.raf) {
+    cancelAnimationFrame(_gnwPreviewLoop.raf);
+    _gnwPreviewLoop.raf = 0;
+  }
+}
+
+class GnwEmulator {
+  // gameKey: which entry in GAMES to boot (required).
+  // opts.audio: false skips creating an AudioContext entirely (ambient/preview instances)
+  constructor(gameKey, opts) {
+    opts = opts || {};
+    this.gameKey  = gameKey;                 // stable localStorage key for save states
+    this.game     = GAMES[gameKey];
+    // Effective keyboard→button map: the global KEY_TO_BUTTON, with any per-device
+    // `keyMap` merged over it (e.g. Black Jack remaps Q/E/A/D so its 4 corner
+    // buttons read as a spatial grid instead of the default btn1-4 order).
+    this._keyMap  = this.game.keyMap ? Object.assign({}, KEY_TO_BUTTON, this.game.keyMap) : KEY_TO_BUTTON;
+    // The CPU comes from the clean-room core, and only from it. cpuFor()
+    // returns null for a title the core does not route or a part it
+    // refuses; that is a hard failure here, never a quiet fallback.
+    const core = window.GWC_CORE;
+    if (!core || typeof core.cpuFor !== 'function')
+      throw new Error('Game & Watch core (play/gnw/gwc-core.js) is not loaded');
+    this.cpu      = core.cpuFor(gameKey, this.game, decodeProgram);
+    if (!this.cpu)
+      throw new Error('Game & Watch core has no CPU for "' + gameKey + '"' +
+        (core.refused && core.refused.length ? ' (refused: ' + JSON.stringify(core.refused) + ')' : ''));
+    this.cpu.rMuxInvert = !!this.game.rMuxInvert;
+    // Which member carries the speaker pin: cpu.rOut, the R-pin level the core
+    // computes, on every part (SM510's R pins are a divider-gated tone;
+    // SM511/SM512's are the melody generator's output; SM5A's are the R latch
+    // complemented, ~R, as the datasheet's overbarred /R1 prints it). Until
+    // 2026-10-04 SM5A played cpu.r, the latch itself: same pitch and rhythm,
+    // opposite resting level. The level/volume mapping in _frame() (0 when
+    // high, 0.3 when low) is ours.
+    this._useROut = true;
+    this.disp     = null;
+    this.disp2    = null;
+    this.audio    = opts.audio === false ? null : new GnwAudio();
+    this.raf      = null;
+    this.keys     = Object.create(null);
+    this._kButtons = Object.create(null);  // { buttonName: true } for each currently-held on-screen/touch button
+    this._inputsSuppressed = false;        // see _held() / _resetWithButtonHeld()
+    this.t0       = 0;
+    // Per-instance instruction rate (32768Hz crystal / cpu.clkDiv) — read
+    // fresh every frame rather than cached as a constant, since SM511's
+    // clkDiv can change at runtime via its own CLKHI/CLKLO opcodes (see the
+    // comment above the old module-level CPU_HZ constant this replaced).
+    this.cpuHz    = 32768 / this.cpu.clkDiv;
+    this.r1p      = (this._useROut ? this.cpu.rOut : this.cpu.r) & 1;  // matches boot state, avoids a spurious click on the first frame
+    // Audio sample-integration state — see GnwAudio and _renderAudioFrame().
+    // Both counters are cumulative and self-referential (samples needed is
+    // derived from cycles run so far) — no wall-clock alignment needed
+    // since playback is a continuously-drained ring buffer, not samples
+    // scheduled at particular AudioContext times.
+    this._audioLevel   = (this.r1p ? 0 : 0.3);  // speaker = ~R&1 (RMASK_DIRECT), scaled to a comfortable volume
+    this._audioCycles  = 0;      // total CPU cycles run so far (diagnostic only — see _audioSec)
+    this._audioSec     = 0;      // total audio TIME so far, accumulated per frame at that frame's own rate (see _renderAudioFrame)
+    this._audioSamples = 0;      // total audio samples already generated so far
+    this._commitAssistActive = false;  // see game.commitAssist handling in _frame()
+  }
+
+  // opts.interactive: false skips wiring the on-device button-press artwork lookup
+  // (which otherwise does global getElementById calls — safe to skip for a
+  // muted/non-interactive ambient preview instance, and necessary to avoid it
+  // hijacking the real modal's button elements by id collision).
+  // svgEl2: optional second SVG root for dual-screen (Multi Screen) titles
+  // -- see game.dualScreen. The CPU's lcd[] array is one shared flat array
+  // (see GnwDisplay's own comment for the (A,B,C) index formula), so a
+  // second GnwDisplay instance reading from the same array is all a second
+  // physical screen needs; no CPU-level change required.
+  // dbgEl: unused since 2026-10-15 (it was Developer Mode's #play-dbg counter, retired).
+  mount(svgEl, dbgEl, opts, svgEl2) {
+    opts = opts || {};
+    this._interactive = opts.interactive !== false;
+    // Hide all segments initially; disp.update() will reveal active ones each
+    // frame. Must scan both <g>-wrapped AND bare-<path> segments (Chef's SVG
+    // has 61 of its 72 segments in the bare-<path> form — see GnwDisplay's
+    // constructor comment) or every bare-<path> segment that happens to be
+    // off in the very first digit the program ever draws is left at whatever the
+    // SVG/CSS's own default visibility is (visible, on this artwork) instead
+    // of hidden — GnwDisplay.update()'s debounced state starts at "off" for
+    // every segment, so a segment that's genuinely off from frame one never
+    // triggers an explicit style write to correct that mismatch (its state
+    // already matches "off", nothing to update), leaving it permanently
+    // showing a segment that should never have been lit at all.
+    let segCount = 0;
+    svgEl.querySelectorAll('g, path').forEach(el => {
+      const t = el.querySelector(':scope > title');
+      if (t && /^\d+\.\d+\.\d+$/.test(t.textContent.trim())) {
+        segCount++;
+        el.style.visibility = 'hidden';
+      }
+    });
+    this.disp = new GnwDisplay(svgEl, this.game.lcdCBits);
+    this.disp2 = null;
+    if (svgEl2) {
+      svgEl2.querySelectorAll('g, path').forEach(el => {
+        const t = el.querySelector(':scope > title');
+        if (t && /^\d+\.\d+\.\d+$/.test(t.textContent.trim())) el.style.visibility = 'hidden';
+      });
+      this.disp2 = new GnwDisplay(svgEl2, this.game.lcdCBits);
+    }
+    if (this.audio) this.audio.init();
+    if (this._interactive) {
+      this._btnEls = {};
+      // _hotspotEls: the clickable hotspot DIVs, cached alongside the img
+      // overlays. Used by the press-HIGHLIGHT path (game.pressHighlight) for
+      // titles whose bundle has no correctly-oriented pressed-state art -- we
+      // glow the hotspot instead of swapping in a foreign PNG. See
+      // _updateButtonArt() + the .play-hotspot.pressed CSS.
+      this._hotspotEls = {};
+      for (const name in BUTTON_DEFS) {
+        this._btnEls[name] = document.getElementById(BUTTON_DEFS[name].imgId);
+        this._hotspotEls[name] = document.querySelector('#play-emu-root .play-hotspot.' + BUTTON_DEFS[name].hotspotClass);
+      }
+    } else {
+      this._btnEls = null;
+      this._hotspotEls = null;
+    }
+  }
+
+  // Rewind is only for the interactive play-modal emulator. The ambient tile
+  // previews and the drawer's big-reveal (both mount with interactive:false)
+  // must NOT allocate a ring — there is one live tile instance per device, and
+  // a 3600-slot RewindBuffer each is tens of thousands of typed-array allocs
+  // that stall the main thread (froze every tile + blocked the drawer open).
+  start() {
+    this._syncClockToNow();
+    if (this._interactive && this.cpu && !this._rew) this._rew = new RewindBuffer(this.cpu);
+    this.t0 = this.startTime = performance.now();
+    /* Previews are stepped by the one shared loop; only the Play modal keeps a
+       rAF of its own. See _gnwPreviewLoop. */
+    this._running = true;
+    if (this._sharedLoop) { _gnwPreviewAdd(this); return; }
+    this.raf = requestAnimationFrame(t => this._frame(t));
+  }
+  stop() {
+    this.stopAttract();
+    this._running = false;
+    if (this._sharedLoop) _gnwPreviewRemove(this);
+    if (this.raf) { cancelAnimationFrame(this.raf); this.raf = null; }
+    if (this.audio) this.audio.destroy();
+  }
+
+  // _commitAssistActive must be cleared here too, not just in the
+  // constructor — without this, resetting mid-game (e.g. via ACL) while
+  // Game A was held left it stuck true, so the very next _frame() call
+  // force-wrote game.commitAssist's RAM value into the just-reset cpu.ram
+  // during the critical ~300-cycle boot window, corrupting the program's own
+  // init sequence (symptom: buttons stop responding and the display never
+  // settles after a reset — looks like "the program didn't load", but it's
+  // this stale flag stomping boot-time RAM state before the program's own
+  // startup code gets to run). Affects any title using commitAssist
+  // (Popeye, Fire/FR-27) whenever reset happens while Game A was active.
+  // _flushPendingReleases()/_midBootRelease(): an ACL is a power-on, so no
+  // button may still be LOGICALLY held across it (the 5s extended hold is
+  // ours, not the user's — see _flushPendingReleases' own comment), and a
+  // button that genuinely IS still down gets the same blind mid-reboot
+  // release _resetWithButtonHeld() gives it, so the two reset paths cannot
+  // diverge the way the two INPUT paths once did.
+  resetGame() {
+    this._flushPendingReleases();
+    this.cpu.reset();
+    this._prevInRows = null;
+    this._commitAssistActive = false;
+    if (this._rew) this._rew.reset();
+    this._syncClockToNow(this._midBootRelease());
+  }
+
+  // clockRam gives per-game RAM offsets for hour-tens/ones, minute-tens/ones,
+  // second-tens/ones (12h format, rolls 12->1 — every title so far uses the
+  // same format, just different RAM addresses). Seconds aren't displayed on
+  // screen, but the program does track them internally and rolls them into the
+  // minute digits — without setting those too, the clock could start up to
+  // 59s behind the real time. Each program writes its own 12:00:00 default within
+  // its first ~225 cycles of boot; let that run once, then overwrite with the
+  // browser's current time (there's no RTC chip to hook into — the clock is
+  // just a RAM counter the game increments off its own divider).
+  // Just the "compute h/m/s and write clockRam" half of a sync, split out
+  // so _frame()'s attract-mode keep-alive (below) can re-poke fresh values
+  // into a title that's already running without re-running the boot burst.
+  // See the attract-mode keep-alive comment in _frame() for why a bare RAM
+  // write, not a real button press, is what several program families actually
+  // need here.
+  _pokeClockRam() {
+    const cpu = this.cpu, cr = this.game.clockRam;
+    const now = new Date();
+    let h = now.getHours() % 12; if (h === 0) h = 12;
+    const m = now.getMinutes();
+    const s = now.getSeconds();
+    // cr.pmBit (only set for programs verified to use it — see the Wide Screen
+    // titles' clockRam comments): the hour-tens cell only ever needs bit 0
+    // to hold its own digit (0 or 1), so these programs repurpose one of the
+    // three otherwise-unused bits in that same nibble as the AM/PM flag
+    // rather than spending a whole extra RAM cell on it. Without ORing it
+    // in here, that bit is always left at 0, so the display always showed
+    // AM regardless of the real time.
+    const pm = cr.pmBit && now.getHours() >= 12 ? cr.pmBit : 0;
+    cpu.ram[cr.hT] = Math.floor(h / 10) | pm;
+    cpu.ram[cr.hO] = h % 10;
+    cpu.ram[cr.mT] = Math.floor(m / 10);
+    cpu.ram[cr.mO] = m % 10;
+    cpu.ram[cr.sT] = Math.floor(s / 10);
+    cpu.ram[cr.sO] = s % 10;
+  }
+
+  // midBoot: optional { at, fn } — fn runs once, right before boot cycle
+  // `at`, letting _resetWithButtonHeld() briefly flip button state mid-way
+  // through the 300-cycle boot rather than holding it the entire time.
+  _syncClockToNow(midBoot) {
+    const cpu = this.cpu, cr = this.game.clockRam;
+    // A fresh CPU has inFixedRow = 0 (Vermin/Ball's fixed-row wiring) as a
+    // placeholder — _readInputs() is what
+    // normally corrects this to -1 for R-gated games, but that only runs
+    // once the frame loop starts, which is AFTER this boot run. Without
+    // this call, every R-gated game's first ~300 cycles read K-line input
+    // through the wrong (fixed-row-0) path instead of gating by R — for
+    // most titles nothing input-sensitive happens that early so it's
+    // invisible, but any program that checks a K-line button within its very
+    // first few instructions (as Helmet does) would always see 0
+    // regardless of reality.
+    this._readInputs();
+    // game.bootSyncCycles: Fire Attack's own boot-init routine doesn't write
+    // its default "12:00" into the persistent hour/minute counters until
+    // ~cycle 416 (confirmed via direct write-tracing) — later than every
+    // other title's boot-init, which always completes within 300. Syncing at
+    // the usual 300 landed before that write, so the game's own default
+    // immediately clobbered the real time we'd just written. Every other
+    // title keeps the default (300) via this being undefined.
+    const bootCycles = this.game.bootSyncCycles || 300;
+    for (let i = 0; i < bootCycles; i++) {
+      if (midBoot && i === midBoot.at) midBoot.fn();
+      cpu.step();
+    }
+    this._pokeClockRam();
+    // This RAM write is out-of-band from the program's own display pipeline —
+    // the digits don't actually reach the LCD until the program's own redraw
+    // code runs, reads these cells, and TW-commits each digit's segments
+    // (SM5A's O-register latch). If the very first rendered frame paints
+    // before that redraw finishes, whichever digit the program hasn't gotten to
+    // yet still shows its stale pre-poke committed segments (on Chef,
+    // that's the full lamp-test "8" pattern) instead of the real digit —
+    // seen live as an extra stray segment (e.g. minutes-ones "5" flashing
+    // as "8") for exactly one frame before the program catches up and it
+    // self-corrects. How soon that first frame lands relative to real
+    // elapsed time is timing-jitter-dependent (same class of issue as the
+    // dash/startup-delay bugs above), so it's intermittent rather than
+    // always-reproducible. Confirmed via direct cycle-by-cycle tracing
+    // (Chef, several different poked times) that the program's redraw always
+    // finishes within ~180 cycles of this point — running a fixed 300 extra
+    // "blind" cycles here (same order of magnitude as bootCycles itself)
+    // guarantees every digit's O-register reflects the real time before
+    // start()/_frame() ever calls updateLcd() for the first time, so the
+    // stale image is never actually painted. Plain extra instruction
+    // execution, not a RAM force — can't corrupt state the way the old
+    // Chef-only sweepFix hack could.
+    for (let i = 0; i < (this.game.postSyncSettleCycles || 300); i++) cpu.step();
+  }
+
+  // ─── Attract/demo loop ──────────────────────────────────────────────────
+  // Boots into Time mode (the clock display) as the default demo state,
+  // until a real visitor presses a button — at which point it hands off
+  // control permanently (until the modal is reopened).
+
+  // Operates on this instance's own _kButtons directly (not via the global
+  // window.gnwPress/gnwRelease, which act on the shared interactive _emu —
+  // wrong target for an independent instance like the ambient tile preview).
+  //
+  // Games with a fixedRow (Vermin/Ball) need Time held to switch from their
+  // gameplay-idle screen to a live clock display. The 4 direction-button
+  // titles (Flagman/Judge/Manhole/Lion) and the widescreen hammer titles
+  // (Parachute/Octopus/Popeye/Chef, flagged via game.lampTestOnBoot) need
+  // the same Time press to dismiss their fresh-boot lamp-test screen into
+  // demo mode — same as a player pressing Time by hand once the program's row
+  // assignment was fixed (see the GAMES registry inputRows comment). Helmet
+  // also uses game.lampTestOnBoot, but for an unrelated reason: its boot
+  // screen isn't a lamp test, it's frozen — see the lampTestOnBoot comment
+  // on Helmet's GAMES entry.
+  // Fire is still excluded: it already shows its clock continuously from
+  // boot with no lamp test to dismiss, and holding Time on it triggers the
+  // real hold-to-fast-forward/set mechanism real G&W clocks have instead.
+  //
+  // Vermin/Ball (fixedRow) need Time held continuously — their idle screen
+  // only shows a live clock while Time stays down. The lamp-test titles
+  // only need a brief press to dismiss the lamp test and commit the
+  // synced time to the display, same as a real button tap — release it
+  // shortly after instead of holding indefinitely.
+  //
+  // game.attractKick (currently unused by any shipped title — Chef briefly
+  // used it, see its GAMES entry comment for why that was wrong) exists
+  // for a possible future title whose demo genuinely needs one extra brief
+  // button press after the Time tap to start animating, in addition to
+  // the plain lamp-test dismiss every title above gets.
+  /* THE FIRST REAL FRAME (2026-10-17). A tile preview is mounted with
+     its segment art held invisible and sets _onShown; this calls it once the
+     screen shows a real picture: the boot lamp-test window is over, something
+     is lit, and it is not (nearly) everything lit, for three frames running.
+     The blur should show over the loading so there is no flashing;
+     the lamp test (every segment black for ~1.2 s) was the flash seen after
+     it. Never waits for ever: after 3 s of real time it reports anyway. */
+  _checkShown(now) {
+    if (this._shownSince === undefined) { this._shownSince = now; this._shownFrames = 0; }
+    if (now - this._shownSince < 3000) {
+      if (this._bootDismissPending) { this._shownFrames = 0; return; }
+      let on = 0, all = 0;
+      const count = d => { if (d && d.state) d.state.forEach(v => { all++; if (v) on++; }); };
+      count(this.disp); count(this.disp2);
+      if (!all || !on || on > all * 0.6) { this._shownFrames = 0; return; }
+      if (++this._shownFrames < 3) return;
+    }
+    const cb = this._onShown;
+    this._onShown = null;
+    try { cb(); } catch (e) {}
+  }
+
+  startAttract() {
+    this._attractActive = true;
+    this._bootDismissPending = false;   // set true only during the ~1.2s boot lamp-test window (below)
+    this._lastClockRefresh = 0; // force _frame()'s keep-alive to poke fresh values right away, not wait out a stale timestamp from a previous attract session
+    if (this.game.fixedRow === undefined && !this._hasQuadButtons() && !this.game.lampTestOnBoot) return;
+    // The boot lamp-test is dismissed by the wall-clock tap below. Until it fires,
+    // FREEZING the emu (Keys/Saves/Pause) or REWINDING into these frames would
+    // strand the unit on 12:00. Flag the window so the UI can no-op those actions
+    // and rewind-capture can skip these frames — without touching the dismiss.
+    this._bootDismissPending = true;
+    // the tap is timed in EMULATED ms (_attractAfter / _attractTick),
+    // not wall ms: a slow frame runs at most 50 ms of instructions, so a wall-timed
+    // 200 ms tap could carry almost none and leave the program in time-set.
+    this._attractSteps = [];
+    this._attractEmuMs = 0;
+    this._attractTimer = this._attractAfter(1200, () => {
+      if (!this._attractActive) return;
+      this._kButtons['time'] = true;
+      this._attractHoldingTime = true;
+      // Route through the same reset-with-button-held path a real Time
+      // click already uses (gnwPress calls this too) — a no-op for titles
+      // that don't need it (see the guard at the top of the method), but
+      // for Chef specifically, setting _kButtons.time directly without it
+      // (the old behaviour here) left the CPU relying on the same unreliable
+      // K-line wakeup latch documented at length on Chef's GAMES entry,
+      // producing a garbled clock digit instead of the clean idle tableau
+      // a manual Time click already correctly reaches.
+      this._resetWithButtonHeld();
+      this._bootDismissPending = false;   // lamp-test dismissed — freezing/rewinding is safe from here
+      if (this._hasQuadButtons() || this.game.lampTestOnBoot) {
+        this._attractReleaseTimer = this._attractAfter(200, () => {
+          delete this._kButtons['time'];
+          this._attractHoldingTime = false;
+          if (this.game.attractKick) {
+            const kick = this.game.attractKick;
+            this._kButtons[kick] = true;
+            this._attractKickReleaseTimer = this._attractAfter(200, () => {
+              if (!this._attractActive) return;
+              delete this._kButtons[kick];
+            });
+          }
+        });
+      }
+    });
+  }
+
+  // the attract schedule, in EMULATED ms since startAttract().
+  // The press (scheduled from startAttract) is due when a frame's END reaches
+  // 1200 ms: the frame the old wall timer picked at a steady cadence. A step
+  // scheduled by a step (release, kick) is due when a frame STARTS after at
+  // least that many ms of instructions have run since its parent acted, so
+  // Time is held for >= 200 ms of emulated time whatever the frame rate.
+  _attractAfter(ms, fn) {
+    const step = { due: this._attractEmuMs + ms, fn, nested: !!this._attractFiring };
+    this._attractSteps.push(step);
+    return step;
+  }
+  // Called by _frame() with the frame's own dt, before _readInputs().
+  _attractTick(dt) {
+    if (!this._attractSteps || !this._attractSteps.length) return;
+    const start = this._attractEmuMs, end = start + dt;
+    this._attractFiring = true;
+    try {
+      for (;;) {
+        if (!this._attractActive) { this._attractSteps = []; break; }
+        this._attractSteps.sort((a, b) => a.due - b.due);
+        const step = this._attractSteps.find(x => (x.nested ? start : end) >= x.due - 1e-6);
+        if (!step) break;
+        this._attractSteps.splice(this._attractSteps.indexOf(step), 1);
+        this._attractEmuMs = start;   // 'now' for the step and anything it schedules
+        step.fn();
+      }
+    } finally { this._attractFiring = false; this._attractEmuMs = end; }
+  }
+
+  _hasQuadButtons() {
+    return this.game.inputRows.some(row => 'btn1' in row || 'btn2' in row || 'btn3' in row || 'btn4' in row);
+  }
+
+  // Manhole/Judge/Lion/Flagman's CPU can end a halt cycle with R at a value
+  // that happens to exclude the mode-button row (gameA/gameB/time) — the
+  // once-a-second gamma timer eventually forces a wakeup regardless, but
+  // whether the program's main loop actually notices the held button during
+  // that brief awake window depends on which R value it's cycling through
+  // right then, so a single gamma tick isn't a sure thing — it can take a
+  // few tries. A quick tap normally releases long before even one tick
+  // fires, so the program never gets a chance at all. Keep those 3 buttons
+  // (only on titles with direction buttons) logically held for several
+  // gamma periods after release so there's a real window of attempts —
+  // direction buttons stay untouched since gameplay depends on them
+  // staying immediately responsive. Shared by mouse/touch (gnwPress/
+  // gnwRelease) and the keyboard (keydown/keyup) so neither path bypasses
+  // it. The token bump on every (re-)press cancels any earlier pending
+  // release outright, rather than fighting over the same key/button.
+  _bumpReleaseToken(key) {
+    const tokens = (this._releaseTokens = this._releaseTokens || {});
+    tokens[key] = (tokens[key] || 0) + 1;
+  }
+  // needsMinHold is decided by the caller — gnwRelease() checks the
+  // button name (gameA/gameB/time), keyup() checks what the released key
+  // maps to — since a button name and a raw keyboard key aren't the same
+  // namespace.
+  _delayedRelease(key, needsMinHold, clear) {
+    if (!needsMinHold || (!this._hasQuadButtons() && !this.game.needsResetForModeButtons)) { clear(); return; }
+    const tokens = (this._releaseTokens = this._releaseTokens || {});
+    const myToken = tokens[key];
+    // Register the deferred clear so a reset can run it EARLY — see
+    // _flushPendingReleases(). Keyed the same way the token is, so the
+    // keyboard key '1' and the button name 'gameA' each get their own
+    // entry and neither source can shadow the other.
+    const pending = (this._pendingReleases = this._pendingReleases || Object.create(null));
+    pending[key] = { token: myToken, clear };
+    setTimeout(() => {
+      const p = pending[key];
+      if (p && p.token === myToken) delete pending[key];
+      if (tokens[key] === myToken) clear();
+    }, 5000);
+  }
+
+  /* THE EXTENDED HOLD MUST NOT SURVIVE A RESET, WHATEVER SCHEDULED IT.
+     _delayedRelease() keeps gameA/gameB/time (and Helmet's hammers)
+     logically held for 5 REAL seconds after the user let go, so a quick
+     tap survives long enough for the program's infrequent poll to see it.
+     That hold is purely ours — the physical button is already back up —
+     and an ACL arriving inside that window used to reboot the CPU with a
+     mode button still asserted for the whole 300-cycle boot burst. That
+     is precisely the state _resetWithButtonHeld()'s own comment describes:
+     "a frozen, blank panel that reads as an ACL". Measured on 10 of 18
+     Silver/Gold/Wide Screen devices (Manhole/Helmet/Lion read 0 lit
+     segments at a 2s gap against 56/66/57 at a 6s gap); the mechanism
+     reaches every title where _hasQuadButtons() || needsResetForModeButtons,
+     i.e. far more than that slice. Chef is exempt for the same reason it
+     always was — modeButtonsRegisterQuickly opts it out of the hold, so it
+     never had a pending release to survive.
+
+     Flushing by PENDING RELEASE rather than by input source is the same
+     identity argument as _resetWithButtonHeld()'s _inputsSuppressed: a
+     button the user is genuinely still holding has no pending release yet
+     and is correctly left alone, and a fourth input source added later
+     gets this for free because it schedules its release through the same
+     one door. */
+  _flushPendingReleases() {
+    const pending = this._pendingReleases;
+    if (!pending) return;
+    const tokens = this._releaseTokens || {};
+    for (const key in pending) {
+      const p = pending[key];
+      delete pending[key];
+      // A re-press since the release bumped the token; that press is live,
+      // so its (now cancelled) old release must not fire here either.
+      if (p && tokens[key] === p.token) p.clear();
+    }
+  }
+
+  // The mid-reboot blind release, factored out so EVERY reset path takes
+  // the identical one — see _resetWithButtonHeld() for the full argument
+  // about why it has to be blind to the input source.
+  _midBootRelease() {
+    return {
+      at: 20,
+      fn: () => {
+        this._inputsSuppressed = true;
+        try { this._readInputs(); }
+        finally { this._inputsSuppressed = false; }
+      }
+    };
+  }
+
+  stopAttract() {
+    this._attractActive = false;
+    this._bootDismissPending = false;
+    this._attractSteps = [];   // the attract steps are emulated-time, not timers
+    this._attractTimer = this._attractReleaseTimer = this._attractKickReleaseTimer = null;
+    if (this._attractHoldingTime) { delete this._kButtons['time']; this._attractHoldingTime = false; }
+    if (this.game.attractKick) delete this._kButtons[this.game.attractKick];
+  }
+
+  // held(name): true if `name` is currently pressed, via on-screen/touch
+  // (_kButtons) or its bound keyboard key (KEY_TO_BUTTON).
+  //
+  // _inputsSuppressed forces EVERY button to read released for the duration of
+  // one _readInputs() call, whichever source is holding it. It exists for the
+  // mid-reboot release in _resetWithButtonHeld() — see the long comment there
+  // for why that release has to be blind to the input source.
+  _held(name) {
+    if (this._inputsSuppressed) return false;
+    if (this._kButtons[name]) return true;
+    for (const key in this._keyMap) if (this._keyMap[key].includes(name) && this.keys[key]) return true;
+    return false;
+  }
+
+  _readInputs() {
+    const cpu = this.cpu, game = this.game;
+    // BA / B pins — hammers, active LOW (0 = pressed). Only Ball/Vermin-style
+    // games have these at all (Flagman etc. read everything through K instead).
+    // swapHammers (Parachute/Octopus/Popeye) crosses which hotspot drives
+    // which pin, since their B/BA wiring is reversed relative to Ball.
+    // (hammerActiveHigh was tried per the real driver's IP_ACTIVE_HIGH
+    // declaration for these three titles, on the theory the idle level is
+    // inverted too — reverted: it broke the empirically-confirmed working
+    // swapHammers left/right behaviour, so evidently gameplay reads these
+    // pins through some other path than the boot-time TB/TAL check that
+    // motivated the theory.)
+    const rightBtn = game.swapHammers ? 'left' : 'right';
+    const leftBtn  = game.swapHammers ? 'right' : 'left';
+    const hBA = game.hotspots.right ? (this._held(rightBtn) ? 0 : 1) : 1;
+    const hB  = game.hotspots.left  ? (this._held(leftBtn)  ? 0 : 1) : 1;
+    cpu.inBA = hBA;
+    cpu.inB  = hB;
+    // The factory test contacts the Cheats menu holds (2026-10-26; play/cores/gnw/core.mjs
+    // ext.cheats): a pin's level, or bits on an input row. Unset = the unit exactly as before.
+    const cs = this.cheatSwitches;
+    if (cs && cs.BA != null) cpu.inBA = cs.BA;
+    if (cs && cs.B != null) cpu.inB = cs.B;
+    // 28 Oct 2026: the button art shows the player's press, not a held contact; and SM510 /
+    // SM511 / SM512 never pass inB / inBA to the program (the hotspots would close a contact), so there
+    // the contacts have their own wire (gwc-core testContacts; null = both pins open, as before).
+    const pinContact = !!(cs && (cs.B != null || cs.BA != null));
+    this._hammerArt = pinContact ? { inB: hB, inBA: hBA } : null;
+    if ('testContacts' in cpu) cpu.testContacts = pinContact ? { B: cs.B, BA: cs.BA } : null;
+    // Each game.inputRows[i] is one hardware input row (IN.0/IN.1/IN.2),
+    // mapping the named buttons that live on that row to the K-bit each
+    // sets — see the GAMES registry comment on inputRows for why this has
+    // to be per-row rather than one flat merged bitmask. The core gates
+    // these by its strobe lines (ABI §3, inRows).
+    const rows = game.inputRows;
+    const newRows = rows.map(rowBits => {
+      let v = 0;
+      for (const name in rowBits) if (this._held(name)) v |= rowBits[name];
+      return v;
+    });
+    if (cs && cs.rows) for (const i in cs.rows) {
+      const r = cs.rows[i]; while (newRows.length <= i) newRows.push(0);
+      newRows[i] = (newRows[i] & ~r.m) | (r.v & r.m);
+    }
+    // The wake line is re-latched only when a button's held state actually
+    // changes, not continuously (the core's updateKLine(), ABI §3). Compare against last frame's rows so we
+    // only call updateKLine() on an actual change, same as the real event.
+    const changed = !this._prevInRows
+      || newRows.length !== this._prevInRows.length
+      || newRows.some((v, i) => v !== this._prevInRows[i]);
+    cpu.inRows = newRows;
+    cpu.inFixedRow = game.fixedRow !== undefined ? game.fixedRow : -1;
+    if (changed) cpu.updateKLine();
+    this._prevInRows = newRows;
+  }
+
+  _frame(now) {
+    /* this.raf doubles as the "am I running" flag, and the Play modal's
+       pause/resume paths set it directly rather than calling start(), so it
+       stays authoritative for that instance. A shared-loop preview has no raf
+       of its own -- _gnwPreviewTick drives it -- so it needs its own flag or
+       every frame would return here. */
+    if (!this.raf && !this._running) return;
+    const dt = Math.min(now - this.t0, 50);  // cap at 50 ms to avoid spiral
+    this.t0  = now;
+    this._attractTick(dt);   // the attract tap, in emulated time
+    this._readInputs();
+
+    // Refresh cpuHz every frame, not just once at construction — SM511's
+    // clkDiv can change at runtime (CLKHI/CLKLO), so a title using those
+    // needs N (below) computed against whatever rate is current right now,
+    // not whatever it was at boot.
+    this.cpuHz = 32768 / this.cpu.clkDiv;
+    // Fractional cycles owed carry over instead of being truncated away each
+    // frame — (dt*cpuHz/1000)|0 always rounds DOWN, so on its own it drops
+    // roughly half a cycle's worth of time every single frame, one direction
+    // only. That's a systematic (not random-noise) drift: at 60fps it adds up
+    // to ~1-2ms of "missing" time per second, which the audio scheduler (see
+    // _renderAudioFrame) relies on staying tightly in sync with the real
+    // AudioContext clock — small per-frame loses compound over a play session
+    // until scheduled audio buffers land behind where playback already is,
+    // which is exactly what made audio increasingly break up over time.
+    this._cycleDebt = (this._cycleDebt || 0) + dt * this.cpuHz / 1000;
+    const N = this._cycleDebt | 0;
+    this._cycleDebt -= N;
+    if (dt > 20) _gnwLogPush({ t: now, type: 'frame', dt, cycles: N }); // catch-up burst — a likely glitch trigger
+    const cpu = this.cpu;
+    // Attract-mode clock keep-alive. Several program families (confirmed live:
+    // Judge, Octopus, Popeye, Fire Attack, Turtle Bridge, Snoopy Tennis,
+    // Donkey Kong Jr., Mario's Cement Factory, Manhole NH-103, Super Mario
+    // Bros., Climber, Balloon Fight) only advance their own internal
+    // seconds/minutes RAM while their Time-display code path is actively
+    // being polled — once startAttract()'s brief Time tap is released,
+    // some of these freeze the displayed digits outright, others resume
+    // counting from a fresh internal zero instead of the real value
+    // _syncClockToNow() poked in at boot. Either way the visible clock
+    // drifts up to a full minute out of phase with every other device's
+    // tile, which all stay correct because they're fixedRow titles
+    // (Vermin/Ball/Fire) that keep Time held continuously, or their own
+    // program happens to keep ticking correctly on its own after release
+    // (Parachute/Chef/Fire-FR27/Tropical Fish/Mickey Mouse/Egg/the four
+    // reset-vector-trick titles).
+    // Fix: periodically re-poke just the RAM cells (not a real button
+    // press/hold) so the displayed digits stay accurate regardless of
+    // whether a given program's own tick logic is keeping up. Deliberately a
+    // bare RAM write rather than re-pressing/holding Time — Octopus/
+    // Popeye/Parachute/Chef share one clock program, and Chef's own history
+    // (see timeIsFastForward) shows that program treats Time held past ~4s as
+    // the real hold-to-set-clock gesture, so simulating a longer hold here
+    // to "fix" the tick rate would risk corrupting the clock instead.
+    // Gated on _attractActive only, never during real interactive play —
+    // any actual visitor input calls stopAttract() first (see
+    // startAttract()'s own comment), so this can never race with a real
+    // player's use of these same RAM cells mid-game.
+    if (this._attractActive && now - (this._lastClockRefresh || 0) > 5000) {
+      this._lastClockRefresh = now;
+      this._pokeClockRam();
+    }
+    // commitAssist's held/yields state only depends on button state, which
+    // can't change mid-frame, so it's resolved once here — but see below
+    // (inside the step loop) for why the actual RAM force can't wait until
+    // after the loop the way it used to.
+    // yieldsTo is checked BEFORE holdButton, not after — a released
+    // GameA/GameB/Time key stays logically "held" for up to 5 real seconds
+    // after keyup on titles needing extended hold (see _delayedRelease()),
+    // so a quick GameA-then-GameB switch leaves both _held('gameA') and
+    // _held('gameB') true at once for that whole window. Checking
+    // holdButton first (the old order) let GameA's stale leftover hold win
+    // every time, permanently locking the assist onto GameA's RAM value
+    // and starving whatever GameB/Time actually needed to happen — found
+    // via a live repro (rapid GameA -> GameB -> Time keypresses showed the
+    // clock and score digits getting corrupted) that traced back to
+    // ram[57] staying force-pinned to 8 the whole time. yieldsTo-first
+    // means an explicit fresh press of any yieldsTo button always wins,
+    // regardless of an older button's stale hold state.
+    const assist = this.game.commitAssist;
+    if (assist) {
+      if (assist.yieldsTo.some(name => this._held(name))) this._commitAssistActive = false;
+      else if (this._held(assist.holdButton)) this._commitAssistActive = true;
+    }
+    // Record every speaker-level transition (cycle offset within this frame,
+    // new level) instead of scheduling each one as its own Web Audio event —
+    // _renderAudioFrame() below turns them into band-limited samples.
+    const transitions = this.audio ? [] : null;
+    for (let i = 0; i < N; i++) {
+      cpu.step();
+      // Popeye/Fire's own commit-collision cells get re-cleared by the program
+      // on a slow ~8-9-frame cadence, but forcing after every single step
+      // (rather than once per frame) is strictly safer regardless.
+      if (assist && this._commitAssistActive && (cpu.ram[assist.ramAddr] & 0xf) !== assist.value) {
+        cpu.ram[assist.ramAddr] = assist.value;
+      }
+      const r1 = (this._useROut ? cpu.rOut : cpu.r) & 1;
+      if (r1 !== this.r1p) {
+        this.r1p = r1;
+        if (transitions) transitions.push(i, r1 ? 0 : 0.3);
+      }
+    }
+    if (transitions) this._renderAudioFrame(transitions, N);
+
+    // The real render rate, measured every ~30 frames (_fps)
+    this._dbgTick = ((this._dbgTick || 0) + 1);
+    if (this._dbgTick % 30 === 1) {
+      const winStart = this._dbgWindowStart || now;
+      this._fps = 30000 / Math.max(1, now - winStart);
+      this._dbgWindowStart = now;
+    }
+
+    cpu.updateLcd();
+    // One snapshot per rendered frame (byte-copy).
+    // Skip ONLY the ~1.2s boot lamp-test frames (NOT the clock or gameplay) so you
+    // can't rewind back into the un-dismissed 12:00 and strand the unit. This flag
+    // is false during the clock/gameplay, so normal rewind is unaffected.
+    if (this._rew && !_rewinding && !this._bootDismissPending) this._rew.capture(cpu);
+    if (this.disp) this.disp.update(cpu.lcd, dt);
+    if (this.disp2) this.disp2.update(cpu.lcd, dt);
+    this._updateButtonArt();
+    if (this._onShown) this._checkShown(now);
+    /* A shared-loop instance is re-driven by _gnwPreviewTick, so scheduling
+       here as well would give it two frames per frame. */
+    if (!this._sharedLoop) this.raf = requestAnimationFrame(t => this._frame(t));
+  }
+
+  // Turns this frame's recorded (cycleOffset, newLevel) transition pairs into
+  // host audio samples through GnwSpeaker, and hands them to the ring buffer.
+  // Per-frame cost is O(transitions + samples) whatever the tone frequency,
+  // instead of one Web Audio scheduling call per transition.
+  //
+  // AUDIO TIME IS ACCUMULATED IN SECONDS, frame by frame, at the rate each
+  // frame actually ran at (N / cpuHz). It used to be a cumulative cycle count
+  // divided by whatever cpuHz was current, which is exact only while the rate
+  // never changes -- and eight SM511 titles change it about twice a second
+  // (CLKHI on wake, CLKLO before halt: pinball 29.8% awake, mmousep/dkcirc
+  // 25.1%, mbaway 24.5%, dkjrp 21.8%, snoopyp 21.3%, mariocmt 18.7%, popeyep
+  // 16.6%; smbn/climbern hold a fixed 8192 Hz). Measured on Pinball PB-59, one
+  // Game A session, the delivery path instrumented (a wrapped
+  // AudioWorkletNode's port.postMessage), twelve consecutive 5-second
+  // windows: windows 0-7 emitted exactly 240,000 samples each; the window in
+  // which clkDiv went 2 -> 4 emitted 3,020,400 (12.6x its budget), and every
+  // window after it was exactly silent. Re-dating cycles under a halved rate
+  // doubled frameEndSec, one frame emitted the whole leap, and the sample
+  // counter then sat permanently ahead of honest time. Accumulating seconds
+  // removed both halves. _audioCycles is kept as a plain diagnostic counter.
+  //
+  // Each output sample is taken only after every edge up to its own instant
+  // has been handed to the speaker, so an edge between two samples is never
+  // seen late by either.
+  _renderAudioFrame(transitions, N) {
+    const audio = this.audio;
+    if (!audio || !audio.ctx || !audio.speaker) return;
+    const sampleRate = audio.sampleRate;
+    const sp = audio.speaker;
+    if (!this._speakerPrimed) { sp.reset(this._audioLevel); this._speakerPrimed = true; }
+
+    const frameStartSec = this._audioSec;
+    this._audioCycles += N;
+    this._audioSec += N / this.cpuHz;
+    const frameEndSec = this._audioSec;
+
+    const totalShouldExist = Math.floor(frameEndSec * sampleRate);
+    const toEmit = totalShouldExist - this._audioSamples;
+
+    let curLevel = this._audioLevel;
+    let ti = 0;
+    let out = null;
+    if (toEmit > 0) out = new Float32Array(toEmit);
+    for (let k = 0; k < toEmit; k++) {
+      const sampleEndSec = (this._audioSamples + k + 1) / sampleRate;
+      while (ti < transitions.length && frameStartSec + transitions[ti] / this.cpuHz <= sampleEndSec) {
+        curLevel = transitions[ti + 1];
+        sp.edge(frameStartSec + transitions[ti] / this.cpuHz, curLevel);
+        ti += 2;
+      }
+      out[k] = sp.sample(sampleEndSec);
+    }
+    // Edges after this frame's last emitted sample (but inside the frame)
+    // are handed over now, so they are in place for the next frame's samples.
+    for (; ti < transitions.length; ti += 2) {
+      curLevel = transitions[ti + 1];
+      sp.edge(frameStartSec + transitions[ti] / this.cpuHz, curLevel);
+    }
+    this._audioLevel = curLevel;
+
+    if (!out) return;
+
+    if (_gnwAudioCapture) _gnwAudioCapture.push(out, this._audioSamples, sampleRate);
+
+    this._audioSamples = totalShouldExist;
+    audio.playSamples(out);
+  }
+
+  // Toggle the on-device button-press artwork from the actual input state,
+  // so keyboard, on-screen buttons, and device hotspots all agree. Hammers
+  // reflect the CPU's latched pins; K-based buttons reflect _held() directly
+  // (not a CPU read) since which row is "active" cycles with R every few
+  // cycles and isn't a meaningful snapshot of what the user is holding.
+  _updateButtonArt() {
+    if (!this._btnEls) return;
+    const cpu = this.cpu;
+    // pressHighlight: this title's cabinet has no correctly-oriented pressed-
+    // state PNGs (e.g. smbspecial's portrait Table Top reuses smbn's LANDSCAPE
+    // Animation frames), so instead of pasting a foreign PNG we glow the
+    // hotspot itself. The img overlays stay hidden (see noPressedArt in
+    // _applyGameArtwork); we toggle .pressed on the hotspot DIV instead.
+    const highlightAll = !!this.game.pressHighlight;
+    const hlButtons = this.game.highlightButtons;   // per-button glow (e.g. wrong-size synthesized d-pad crops)
+    for (const name in this._btnEls) {
+      const swap = !!this.game.swapHammers;
+      const pins = this._hammerArt || cpu;
+      const pressed = name === 'left' ? (swap ? pins.inBA === 0 : pins.inB === 0)
+                    : name === 'right' ? (swap ? pins.inB === 0 : pins.inBA === 0)
+                    : this._held(name);
+      if (highlightAll || (hlButtons && hlButtons.indexOf(name) >= 0)) {
+        const hs = this._hotspotEls && this._hotspotEls[name];
+        if (hs) hs.classList.toggle('pressed', pressed);
+        const el0 = this._btnEls[name];
+        if (el0) el0.classList.remove('show');   // never stretch this button's wrong-size overlay
+        continue;
+      }
+      const el = this._btnEls[name];
+      if (!el) continue;
+      el.classList.toggle('show', pressed);
+    }
+  }
+
+  keydown(e) {
+    this.keys[e.key] = true;
+    this._bumpReleaseToken(e.key);
+    this.stopAttract();
+    // Reset is R only. 4 used to reset here as well; it is now ALARM (the
+    // fourth operational button) under the unified cross-device key scheme,
+    // and a digit that silently wiped the game while the other three digits
+    // pressed a button was the same class of surprise as the digits-as-ACL
+    // bug fixed earlier. Reset is an emulator function and keeps its letter.
+    if (e.key === 'r' || e.key === 'R') this.resetGame();
+    if (e.key === 'l' || e.key === 'L') window.gnwDumpLog(15);
+    const names = this._keyMap[e.key] || [];
+    if (names.includes('gameA') || names.includes('gameB') || names.includes('time')) this._resetWithButtonHeld();
+  }
+  keyup(e) {
+    const names = this._keyMap[e.key] || [];
+    const needsMinHold = names.some(n => this._needsMinHold(n));
+    this._delayedRelease(e.key, needsMinHold, () => { this.keys[e.key] = false; });
+  }
+
+  // Helmet reads its hammer pins (left/right) through the same kind of
+  // infrequent, easy-to-miss polling as the quad-button titles' mode
+  // buttons — confirmed live: a single tap/hold-then-release left no
+  // lasting change, but several quick taps in a row did. Unlike
+  // Vermin/Ball/Fire (which have fixedRow set and read hammers reliably
+  // every loop pass), Helmet has no fixedRow, so it's the only title
+  // this condition currently matches. gameA/gameB/time also keep this as
+  // a second line of defence alongside _resetWithButtonHeld() — the reset
+  // trick handles the common case, but staying logically held afterward
+  // costs nothing and covers any edge case the reset alone doesn't.
+  _needsMinHold(btn) {
+    // Time is deliberately excluded when game.timeIsFastForward is set:
+    // Chef's program (and presumably any title with this same real-hardware
+    // quirk) treats Time held past ~4 seconds as the set-clock/
+    // fast-forward gesture real G&W clocks have, visibly corrupting the
+    // displayed digits and rolling the minutes rapidly — confirmed via
+    // direct RAM tracing (hT/hO jump to invalid values and mT/mO start
+    // incrementing every ~1s instead of never, at exactly the point Time
+    // had been artificially held via the extended min-hold below).
+    if (btn === 'time' && this.game.timeIsFastForward) return false;
+    // GameA/GameB excluded when game.modeButtonsRegisterQuickly is set:
+    // this used to be genuinely needed on Chef (a quick click's debounce
+    // poll could silently miss the press entirely, before the R-mux input
+    // formula was fixed), but with that
+    // fixed, a real GameA/GameB press now registers reliably on its own.
+    // Leaving the extension on made it actively harmful instead of just
+    // unnecessary: Chef's program has its own "is the mode button still held?"
+    // debounce loop that waits to see the button genuinely go back up
+    // before it'll let gameplay actually start — with the button staying
+    // logically held for up to 5 real seconds after release, that loop
+    // just kept re-polling "yes" and looping (visible as the post-press
+    // "3 static chefs" intro pose briefly flickering every ~1s gamma tick
+    // and reverting, never settling into sustained animation) until the
+    // stale hold happened to expire — matching the ~4s delay before Game A
+    // "actually starts" that a real user sees, confirmed by simulating a
+    // real quick release instead: gameplay starts within a few frames.
+    if ((btn === 'gameA' || btn === 'gameB') && this.game.modeButtonsRegisterQuickly) return false;
+    if (btn === 'gameA' || btn === 'gameB' || btn === 'time') {
+      return this._hasQuadButtons() || !!this.game.needsResetForModeButtons;
+    }
+    // Excluded when game.hammersNeedQuickTap is set: Chef's own catch
+    // mechanic reads the hammer as a discrete tap (press, then release) —
+    // the extended hold below (needed so needsResetForModeButtons titles
+    // register a quick GameA/GameB/Time click at all) was also catching
+    // Left/Right, since Chef has no fixedRow and does have hotspots.left/
+    // right. That left a real hammer tap logically "held" for up to 5 real
+    // seconds after release, so the program's own catch-detection (which wants
+    // to see the hammer actually go back up before it'll register the next
+    // press) didn't process the catch until the stale hold finally expired
+    // or the next round's own reset happened to clear it first — looked
+    // like input was queued and only applied "at the start of the next
+    // round." Other hammer titles (Popeye/Octopus/Parachute/Fire(WS)) don't
+    // actually hit this in practice (none of them combine hotspots.left/
+    // right with needsResetForModeButtons the way Chef does — see
+    // _delayedRelease()'s own gating), so this is scoped to Chef only
+    // rather than changed for every fixedRow-less hammer title.
+    if ((btn === 'left' || btn === 'right') && this.game.hammersNeedQuickTap) return false;
+    if (btn === 'left' || btn === 'right') {
+      return this.game.fixedRow === undefined && !!(this.game.hotspots.left || this.game.hotspots.right);
+    }
+    return false;
+  }
+
+  // Manhole/Judge/Lion/Flagman/Helmet only recognise GameA/GameB/Time from
+  // a fresh reset — confirmed by hand and reproduced here. But holding the
+  // button through the *entire* 300-cycle reboot isn't right either: it
+  // left Manhole permanently stuck (twCount never advancing past the
+  // first frame), where releasing it partway through and letting the rest
+  // of boot run clean, then re-asserting it for the ongoing frame loop,
+  // correctly reaches gameplay for both Judge and Manhole (and, verified
+  // separately, Helmet). So: briefly flip it off ~20 cycles into the
+  // reboot, then restore it once boot completes — the very next real
+  // frame's _readInputs() sees that as a fresh press and still gets the
+  // standard extended min-hold afterward as a second line of defence (see
+  // _needsMinHold).
+  _resetWithButtonHeld() {
+    // game.noResetOnModeButtons: opts a _hasQuadButtons() title OUT of this
+    // reset (Manhole NH-103 needs this -- see its own GAMES entry comment).
+    // Confirmed against a reference trace (a genuine Time/GameA K-line
+    // change, no reset) that NH-103's own program doesn't need the reset-vector
+    // trick at all, unlike the old MH-06/Judge/Lion/Flagman/Chef quirk this
+    // method exists for -- _hasQuadButtons() blanket-applying it here was
+    // accidentally harmless before a since-fixed CPU-core bug changed
+    // exactly when this reset's raw cycle-burst lands, which
+    // could now leave NH-103's CPU stuck CEND-halted for the rest of a play
+    // session (confirmed live: the clock stopped ticking entirely).
+    if (this.game.noResetOnModeButtons) return;
+    if (!this._hasQuadButtons() && !this.game.needsResetForModeButtons) return;
+    this.cpu.reset();
+    this._prevInRows = null;
+    /* THE MID-REBOOT RELEASE MUST BE BLIND TO THE INPUT SOURCE.
+       This used to blank _kButtons only -- the on-screen/touch source --
+       and left this.keys (the keyboard source) untouched. A mouse/touch
+       press therefore got the brief release the reboot needs, and the
+       identical press made with 1/2/3 did not: _held() still answered
+       "pressed" here, the program booted with the mode button asserted for
+       the whole reboot and never saw a fresh press afterwards, so it
+       stuck exactly where this method's own comment says holding a button
+       through the entire reboot sticks -- a frozen, blank panel that reads
+       as an ACL. Every title that reaches this reset was affected; how
+       visible it was depended only on the program.
+       Suppressing by identity instead of by source keeps the two paths
+       identical and cannot drift apart again when a third input source
+       (gamepad, TV remote) is added. The suppression itself now lives in
+       _midBootRelease(), shared with resetGame() so the two RESET paths
+       can't diverge either. */
+    this._syncClockToNow(this._midBootRelease());
+  }
+}
+
+// ─── Modal integration ──────────────────────────────────────────────────────
+
+let _emu = null, _kd = null, _ku = null;
+let _pendingBootKey = null; // set while the "tap to play" prompt is showing (see openPlayModal's autoBoot:false path)
+
+// Diagnostic console helpers for the currently-open play modal instance —
+// gnwPokeRam/gnwPeekRam read/write a raw nibble directly in CPU RAM
+// (bm/bl-folded address, e.g. 0x30 = bm:3,bl:0), useful for manually
+// forcing or inspecting game-state flags while debugging a title's program
+// behaviour from the console.
+window.gnwPokeRam = function (addr, value) {
+  if (!_emu) { console.warn('[gnw] no play modal open'); return; }
+  _emu.cpu.ram[addr & 0x7f] = value & 0xf;
+  console.log('[gnw] ram[0x' + addr.toString(16) + '] = ' + (value & 0xf));
+};
+window.gnwPeekRam = function (addr) {
+  if (!_emu) { console.warn('[gnw] no play modal open'); return null; }
+  return _emu.cpu.ram[addr & 0x7f] & 0xf;
+};
+// Manually drives N synthetic 1000/60ms frames on the currently-open play
+// modal instance, bypassing real wall-clock/rAF timing entirely — useful in
+// automated/sandboxed tabs where rAF throttling can silently starve
+// real-time progress, or for stepping past a boot/attract sequence quickly.
+window.gnwStepFrames = function (n) {
+  if (!_emu) { console.warn('[gnw] no play modal open'); return null; }
+  const frameMs = 1000 / 60;
+  let t = _emu.t0 || performance.now();
+  for (let i = 0; i < n; i++) {
+    t += frameMs;
+    _emu.raf = 1;
+    _emu._frame(t);
+  }
+  return window.gnwPeekState();
+};
+window.gnwPeekState = function () {
+  if (!_emu) return null;
+  const cpu = _emu.cpu;
+  return { pc: cpu.pc.toString(16), halt: cpu.halt, lcdSum: cpu.lcd.reduce((a,b)=>a+b,0), ram30: cpu.ram[0x30]&0xf };
+};
+// Diagnostic snapshot of the currently-open play modal instance's internal
+// state — button-hold bookkeeping, CPU display-commit counters, and the raw
+// LCD segment array — for debugging input-timing or display-refresh issues
+// from the console.
+window.gnwDebugEmu = function () {
+  if (!_emu) return null;
+  return {
+    needsResetForModeButtons: !!_emu.game.needsResetForModeButtons,
+    hasQuadButtons: _emu._hasQuadButtons(),
+    kButtons: Object.assign({}, _emu._kButtons),
+    keys: Object.assign({}, _emu.keys),
+    twCount: _emu.cpu._twCount,
+    cendCount: _emu.cpu._cendCount,
+    lcd: Array.from(_emu.cpu.lcd),
+  };
+};
+
+// `scripted` is true only for the attract-mode driver's own calls — real
+// clicks/taps from the page never pass it, so they always hand off control.
+// `btn` is just a button name (left/right/gameA/gameB/time/btn1-4) — which
+// ones actually do anything depends on the currently-loaded game's hotspots.
+window.gnwPress = function (btn, scripted) {
+  if (!scripted && _emu) _emu.stopAttract();
+  if (!_emu) return;
+  _emu._kButtons[btn] = true;
+  _emu._bumpReleaseToken(btn);
+  if (btn === 'gameA' || btn === 'gameB' || btn === 'time') _emu._resetWithButtonHeld();
+};
+window.gnwRelease = function (btn, scripted) {
+  if (!_emu) return;
+  // The release may land after a minimum hold, by which time the window can have closed
+  // (_emu null) or another title booted: let go on the instance that was pressed.
+  const emu = _emu;
+  emu._delayedRelease(btn, emu._needsMinHold(btn), () => delete emu._kButtons[btn]);
+};
+window.gnwTap = function (btn, scripted) {
+  if (btn === 'reset') {
+    if (!scripted && _emu) _emu.stopAttract();
+    if (_emu) _emu.resetGame();
+    return;
+  }
+  gnwPress(btn, scripted); setTimeout(() => gnwRelease(btn, scripted), 120);
+};
+
+// Tears down whatever interactive instance is currently running (if any),
+// without touching any overlay's visibility — shared by closePlayModal() and
+// the lightbox's emulator slide, which both host the same relocatable markup.
+function _stopPlayEmulator() {
+  if (_rewinding) window.gnwStopRewind();
+  if (_emu) { _emu.stop(); _emu = null; }
+  if (_kd)  { document.removeEventListener('keydown', _kd); _kd = null; }
+  if (_ku)  { document.removeEventListener('keyup',   _ku); _ku = null; }
+  _pendingBootKey = null;
+  const prompt = document.getElementById('play-start-prompt');
+  if (prompt) prompt.style.display = 'none';
+  // Wipe the LCD segments so the device we're leaving never ghosts onto the
+  // next one: its frozen last frame would otherwise sit in these containers
+  // through the next device's open/zoom-in (before that device's own SVG has
+  // fetched and mounted) and linger as this modal closes. _bootPlayEmulator
+  // refills #play-svg-container with the new title's SVG right after.
+  ['play-svg-container', 'play-svg-container-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+}
+
+// Every button any game might have — not every game uses all of them (Ball/
+// Vermin have hammers but no quad buttons, Flagman has quad buttons but no
+// hammers). Maps each to its overlay <img> id, hotspot CSS class, and
+// pressed-state artwork file, so _applyGameArtwork can show/position only
+// what a given game's `hotspots` actually defines and hide the rest.
+const BUTTON_DEFS = {
+  left:  { imgId: 'play-btn-img-left',  hotspotClass: 'hammer-left',  file: 'Animation/Left-Flat.png' },
+  right: { imgId: 'play-btn-img-right', hotspotClass: 'hammer-right', file: 'Animation/Right-Flat.png' },
+  btn1:  { imgId: 'play-btn-img-btn1',  hotspotClass: 'quad-btn1',    file: 'Animation/1-Flat.png' },
+  btn2:  { imgId: 'play-btn-img-btn2',  hotspotClass: 'quad-btn2',    file: 'Animation/2-Flat.png' },
+  btn3:  { imgId: 'play-btn-img-btn3',  hotspotClass: 'quad-btn3',    file: 'Animation/3-Flat.png' },
+  btn4:  { imgId: 'play-btn-img-btn4',  hotspotClass: 'quad-btn4',    file: 'Animation/4-Flat.png' },
+  gameA: { imgId: 'play-btn-img-gameA', hotspotClass: 'round-a',      file: 'Animation/Grey-Flat-1.png' },
+  gameB: { imgId: 'play-btn-img-gameB', hotspotClass: 'round-b',      file: 'Animation/Grey-Flat-2.png' },
+  time:  { imgId: 'play-btn-img-time',  hotspotClass: 'round-time',   file: 'Animation/Grey-Flat-3.png' },
+  // Snoopy Tennis's shape: one hammer-style button (Hit, where Left normally
+  // sits) plus a stacked pair (Up/Down, where Right normally sits) instead
+  // of a second hammer or a 4-way quad pad — no existing BUTTON_DEFS entry
+  // fit, so these three are new.
+  hit:   { imgId: 'play-btn-img-hit',   hotspotClass: 'updown-hit',   file: 'Animation/Hit-Flat.png' },
+  up:    { imgId: 'play-btn-img-up',    hotspotClass: 'updown-up',    file: 'Animation/Up-Flat.png' },
+  down:  { imgId: 'play-btn-img-down',  hotspotClass: 'updown-down',  file: 'Animation/Down-Flat.png' },
+  // Mario's Cement Factory's own dedicated third button (drops the cement
+  // bucket) -- physically separate from Left/Right, no existing shape fit.
+  open:  { imgId: 'play-btn-img-open',  hotspotClass: 'hammer-open',  file: 'Animation/Jump-Flat.png' },
+  // Donkey Kong Jr.'s own dedicated Jump button, sitting opposite a genuine
+  // single 4-way D-pad cluster (reused via btn1-4, see its GAMES entry
+  // comment) -- same shape/position as Cement Factory's Open, different
+  // name/artwork file, so its own BUTTON_DEFS entry rather than reusing
+  // 'open' (titles never share a live instance, but distinct names keep
+  // the DOM lookup unambiguous).
+  jump:  { imgId: 'play-btn-img-jump',  hotspotClass: 'hammer-jump',  file: 'Animation/Jump-Flat.png' },
+  // Super Mario Bros' third round mode button -- every prior title's
+  // 'alarm' K-line bit (present in several inputRows tables already) has
+  // never had an actual on-screen button wired to it before now; this
+  // title's community layout treats it as a genuinely separate, clickable
+  // button from Game/Time (its own Grey-Flat-1.png artwork position), so
+  // it gets its own shape rather than silently reusing gameB's slot for a
+  // button that isn't Game B.
+  alarm: { imgId: 'play-btn-img-alarm', hotspotClass: 'round-alarm',  file: 'Animation/Grey-Flat-1.png' },
+};
+
+// Sets a unit-image element's src and, once it actually loads, stamps its
+// real natural aspect ratio onto containerId's CSS aspect-ratio — shared by
+// the Play modal (_applyGameArtwork) and each collection-tile preview
+// (gnwMountTilePreview), the two places a device's case artwork is shown at
+// a size other than the image's own pixels. Attaching the listener before
+// setting src catches both the cached-and-fires-async case (virtually all
+// browsers) and the not-yet-cached case; if the image is already loaded by
+// the time this runs (imgEl.complete), apply immediately too since a fresh
+// 'load' listener never fires for an already-complete image.
+// hint: optional known aspect-ratio ("W / H") for this title (game.unitAspect),
+// applied synchronously up front so the box already has the right shape before
+// Unit.png has even started loading. Without it, .play-device sits at its CSS
+// default (2227/1500, the Silver/Gold ratio) until the 'load' handler below
+// corrects it — invisible for titles close to that ratio, but for the two
+// Super Colour titles (997/2094) and two Multi Screen titles (1767/2199), both
+// far taller/narrower than the default, that correction visibly snapped the
+// whole device box a beat after the modal opened ("the CSS resizes the device
+// a little", reported live). The 'load' handler still runs regardless of the
+// hint — it's the actual source of truth (so a wrong/stale hint self-corrects
+// visibly instead of silently drifting), the hint just avoids ever painting
+// the wrong shape first.
+function _applyUnitAspectRatio(imgId, src, containerId, hint) {
+  const imgEl = document.getElementById(imgId);
+  if (!imgEl) return;
+  const containerEl = document.getElementById(containerId);
+  if (hint && containerEl) containerEl.style.aspectRatio = hint;
+  const apply = () => {
+    if (containerEl && imgEl.naturalWidth && imgEl.naturalHeight) {
+      containerEl.style.aspectRatio = imgEl.naturalWidth + ' / ' + imgEl.naturalHeight;
+    }
+  };
+  imgEl.addEventListener('load', apply, { once: true });
+  imgEl.src = src;
+  if (imgEl.complete) apply();
+}
+
+// Applies a game's artwork paths, screen-glass box, and button-hotspot
+// positions to the shared #play-emu-root markup — needed because that one
+// set of DOM nodes gets reused for whichever game is currently loaded.
+// Zoom-view state (see the Zoom functions after this) -- reset whenever the
+// normal artwork is (re)applied, e.g. a fresh game boot.
+let _zoomActive = false;
+let _zoomStartW = 0;       // device width in the normal (un-zoomed) view -- the curtain's closed size
+function _applyGameArtwork(gameKey) {
+  const game = GAMES[gameKey];
+  const art = game.artPath;
+  _zoomActive = false;
+  const _dev0 = document.getElementById('play-device');
+  if (_dev0) { _dev0.classList.remove('play-zoomed'); _dev0.style.width = ''; _dev0.style.height = ''; _dev0.style.clipPath = ''; }
+  const _ov0 = document.getElementById('play-overlay');
+  if (_ov0) { _ov0.classList.remove('play-zoom-wide'); _ov0.classList.remove('play-zoom-clip'); }
+  const setSrc = (id, file) => { const el = document.getElementById(id); if (el) el.src = art + file; };
+  // Wide Screen titles' Unit.png is a genuinely different, taller aspect
+  // ratio (2611x1579) than the Silver/Gold series (2227x1500) — real Wide
+  // Screen devices are physically more elongated. .play-device's CSS
+  // aspect-ratio used to be hardcoded to the Silver dimensions for every
+  // title, silently squishing every Wide Screen device's artwork to match
+  // (object-fit:fill on the unit image stretches it to whatever box it's
+  // given). Derived from the actual loaded image's natural size here
+  // instead of a maintained per-game constant, so it can never drift from
+  // the real artwork.
+  _applyUnitAspectRatio('play-unit-img', art + 'Unit.png', 'play-device', game.unitAspect);
+  // Multi Screen titles (game.screen2) have no single Background.png -- each
+  // screen gets its own Background-Top.png/Background-Bottom.png, set below.
+  if (!game.screen2) setSrc('play-lcd-bg', 'Background.png');
+
+  const screenEl = document.getElementById('play-svg-container');
+  const lcdBgEl = document.getElementById('play-lcd-bg');
+  const hideEl = document.getElementById('play-lcd-hide');
+  // Ball's hiding-line mask (see GAMES.ball's own comment) sits ABOVE the
+  // segments (drawn after #play-svg-container in the static markup) but
+  // confined to the exact same screen-glass box, so it never bleeds onto
+  // the surrounding device frame. Most titles don't have one.
+  if (hideEl) {
+    if (game.hideLines) { hideEl.src = art + 'Background2.png'; hideEl.style.display = ''; }
+    else { hideEl.removeAttribute('src'); hideEl.style.display = 'none'; }
+  }
+  // game.lcdInverted: real "inverted lcd screen" titles (confirmed via the
+  // reference driver's own hardware description, so far only the
+  // Panorama-series Donkey Kong Jr./Mickey Mouse/Donkey Kong Circus/
+  // Mario's Bombs Away) trace their segments as light/white marks, not the
+  // usual dark ones -- the shared mix-blend-mode:multiply every other
+  // title's #play-svg-container svg CSS rule relies on (segment colour
+  // tints through the backdrop texture) actively HIDES a white segment
+  // against a dark backdrop instead (white × dark ≈ dark, "on" and "off"
+  // become visually identical -- confirmed live as a real, silent
+  // rendering bug: 123 of 131 segments genuinely had visibility:visible
+  // with a correct #fffffe fill, yet nothing showed at all). The
+  // .lcd-inverted class (see its own CSS rule) switches mix-blend-mode to
+  // normal instead, so these segments paint as plain opaque shapes over
+  // the (now solid black, not the real hardware's own multiply-tinted
+  // texture -- see each title's own Background.png comment) backdrop.
+  // (screenEl2 isn't declared yet at this point in the function -- see the
+  // matching toggle call further down, right after its own declaration.)
+  if (screenEl) screenEl.classList.toggle('lcd-inverted', !!game.lcdInverted);
+  [screenEl, lcdBgEl, hideEl].forEach(el => {
+    if (!el) return;
+    // Crystal Screen titles are the one case where the backing does NOT
+    // share the segments' box: the layout insets it a little inside the panel
+    // (see CRYSTAL_SHELL.bg), and at these sizes the difference shows.
+    const rect = (game.panel && el === lcdBgEl) ? game.panel.bg : game.screen;
+    el.style.left = rect.left + '%';
+    el.style.top = rect.top + '%';
+    el.style.width = rect.width + '%';
+    el.style.height = rect.height + '%';
+  });
+
+  // Multi Screen titles only (game.dualScreen/game.screen2) -- second LCD
+  // glass/segment box for the bottom screen. Hidden for every other title.
+  const screenEl2 = document.getElementById('play-svg-container-2');
+  const lcdBgEl2 = document.getElementById('play-lcd-bg-2');
+  if (screenEl2) screenEl2.classList.toggle('lcd-inverted', !!game.lcdInverted);
+  if (game.screen2) {
+    // game.bgFile/bgFile2: every dual-screen title before Lifeboat is
+    // vertically stacked (top/bottom LCDs), so 'Background-Top.png'/
+    // '-Bottom.png' was safe to hardcode. Lifeboat is the first genuinely
+    // WIDE (left/right LCD) Multi Screen title -- its real artwork bundle
+    // names the files 'Background-Left.png'/'-Right.png' instead, so this
+    // pair of fields lets a title override the filenames while every
+    // existing top/bottom title keeps working unchanged via the defaults.
+    setSrc('play-lcd-bg-2', game.bgFile2 || 'Background-Bottom.png');
+    setSrc('play-lcd-bg', game.bgFile || 'Background-Top.png');
+    [screenEl2, lcdBgEl2].forEach(el => {
+      if (!el) return;
+      // 'block', not '' -- '' just clears any inline override and falls
+      // back to the stylesheet's own display:none default (see the CSS
+      // comment above #play-svg-container-2), which left this box
+      // permanently hidden even once positioned correctly (confirmed live:
+      // the bottom screen never appeared despite its box/segments/SVG all
+      // being present and correct in the DOM).
+      el.style.display = 'block';
+      el.style.left = game.screen2.left + '%';
+      el.style.top = game.screen2.top + '%';
+      el.style.width = game.screen2.width + '%';
+      el.style.height = game.screen2.height + '%';
+    });
+  } else {
+    if (screenEl2) screenEl2.style.display = 'none';
+    if (lcdBgEl2) lcdBgEl2.style.display = 'none';
+  }
+
+  for (const name in BUTTON_DEFS) {
+    const def = BUTTON_DEFS[name];
+    const imgEl = document.getElementById(def.imgId);
+    const hotspotEl = document.querySelector('#play-emu-root .play-hotspot.' + def.hotspotClass);
+    const hs = game.hotspots[name];
+    if (hs) {
+      // game.noPressedArt: this title's artwork bundle ships no
+      // pressed-state PNGs, so there's nothing to light up on press --
+      // currently just the Table Top cabinet, whose bundle only draws
+      // button art for the Panorama shell it lives in. The hotspot is still
+      // placed and still works; only the visual feedback is absent. Without
+      // this the loop would point every overlay at a file that 404s.
+      // game.pressedArt[name]: a per-title file name where the bundle names
+      // the press art differently; null where it ships none for that button.
+      const file = game.pressedArt && name in game.pressedArt ? game.pressedArt[name] : def.file;
+      if (imgEl) {
+        if (game.noPressedArt || !file) { imgEl.removeAttribute('src'); imgEl.style.display = 'none'; }
+        else { imgEl.src = art + file; imgEl.style.display = ''; }
+      }
+      if (hotspotEl) {
+        hotspotEl.style.display = '';
+        hotspotEl.style.left = hs.left + '%';
+        hotspotEl.style.top = hs.top + '%';
+        hotspotEl.style.width = hs.width + '%';
+        hotspotEl.style.height = hs.height + '%';
+      }
+    } else {
+      if (imgEl) imgEl.style.display = 'none';
+      if (hotspotEl) hotspotEl.style.display = 'none';
+    }
+  }
+
+  // Show/hide the whole Left/Right vs 1/2/3/4 control-bar groups depending
+  // on which set of buttons this game actually has.
+  const hammerGroup = document.querySelector('#play-overlay .play-hammer-controls');
+  const quadGroup = document.querySelector('#play-overlay .play-quad-controls');
+  const updownGroup = document.querySelector('#play-overlay .play-updown-controls');
+  const openGroup = document.querySelector('#play-overlay .play-open-controls');
+  const jumpGroup = document.querySelector('#play-overlay .play-jump-controls');
+  // Micro Vs. only. Gated on game.microVs rather than on a hotspot the way
+  // every other group is, precisely because this shape HAS no movement
+  // hotspots -- there's nothing on the console to click (see
+  // MICROVS_HOTSPOTS), which is exactly why its controls have to appear
+  // here. Also swap in each title's own name for the action button: Boxing
+  // punches, Donkey Kong 3 sprays, Hockey shoots -- same mechanism as
+  // jumpLabel does for the single-button titles.
+  const microVsGroup = document.querySelector('#play-overlay .play-microvs-controls');
+  if (microVsGroup) microVsGroup.style.display = game.microVs ? 'contents' : 'none';
+  if (game.microVs) {
+    const fireLabel = game.fireLabel || 'Fire';
+    const f1 = document.getElementById('play-fire-label');
+    const f2 = document.getElementById('play-p2fire-label');
+    if (f1) f1.textContent = fireLabel;
+    if (f2) f2.textContent = fireLabel;
+  }
+  if (hammerGroup) hammerGroup.style.display = game.hotspots.left ? 'contents' : 'none';
+  if (quadGroup) quadGroup.style.display = game.hotspots.btn1 ? 'contents' : 'none';
+  // Gated on hotspots.up, not hotspots.hit -- this same three-button
+  // (Hit/Up/Down) group is shared by two different real shapes: Snoopy
+  // Tennis's hit+up/down cluster (has both), and Super Mario Bros./
+  // Climber/Balloon Fight's plain D-pad+jump cluster (up/down but no hit
+  // at all). Gating on hotspots.hit alone left the whole group -- Up and
+  // Down included -- hidden for the second shape even though those three
+  // titles' emulator core already reads Up/Down input correctly; only the
+  // on-screen control-bar entries for them were missing. The Hit button
+  // itself still needs its own visibility check below since it doesn't
+  // apply to the second shape.
+  if (updownGroup) updownGroup.style.display = game.hotspots.up ? 'contents' : 'none';
+  const hitCtrlBtn = document.getElementById('play-ctrl-hit');
+  if (hitCtrlBtn) hitCtrlBtn.style.display = game.hotspots.hit ? '' : 'none';
+  if (openGroup) openGroup.style.display = game.hotspots.open ? 'contents' : 'none';
+  if (jumpGroup) jumpGroup.style.display = game.hotspots.jump ? 'contents' : 'none';
+  // Balloon Fight's single action button is physically labeled "Eject" on
+  // the real device (it ejects air to fly, not a jump) -- every other
+  // title sharing this same internal `jump` hotspot/button plumbing
+  // (Donkey Kong Jr., Super Mario Bros., Climber) really is a jump button,
+  // so the label is per-game rather than renaming the shared mechanism.
+  const jumpLabelEl = document.getElementById('play-jump-label');
+  if (jumpLabelEl) jumpLabelEl.textContent = game.jumpLabel || 'Jump';
+  const jumpHotspotEl = document.getElementById('play-hotspot-jump');
+  if (jumpHotspotEl) jumpHotspotEl.title = game.jumpLabel || 'Jump';
+
+  _applyPanelLayers(game, {
+    overlay:   document.getElementById('play-lcd-overlay'),
+    gradient:  document.getElementById('play-gradient'),
+    gradient2: document.getElementById('play-gradient-2'),
+  });
+
+  // game.unitBehindScreen -- see the .unit-behind CSS. Only the Table Top
+  // cabinet needs it: its unit art has no window cut for the LCD.
+  const playDeviceEl = document.getElementById('play-device');
+  if (playDeviceEl) {
+    playDeviceEl.classList.toggle('unit-behind', !!game.unitBehindScreen);
+    // Non-rectangular cases (Micro Vs./Panorama/Table Top) need their #111 box
+    // backing dropped so the empty silhouette corners aren't a black rectangle.
+    // Stamp the series so the per-series .play-device CSS can target them; the
+    // gameKey->series map is built in index.html (a gameKey has no series here).
+    const _series = (window.GNW_KEY_TO_SERIES && window.GNW_KEY_TO_SERIES[gameKey]) || '';
+    if (_series) playDeviceEl.dataset.series = _series; else delete playDeviceEl.dataset.series;
+  }
+
+  const titleEl = document.querySelector('#play-overlay .modal-title');
+  if (titleEl) titleEl.innerHTML = game.title + ' <span style="font-weight:400;font-size:13px;color:var(--muted)">' + game.subtitle + '</span>';
+}
+
+// ---- Zoom view (Table Tops) --------------------------------------------
+// A title's `zoom` config (currently the Table Tops) is a close-up "Zoom"
+// layout -- a bigger screen so the tiny LCD is actually playable (via keyboard;
+// the on-device hotspots are cropped out and hidden in zoom, see .play-zoomed).
+// Toggling swaps the unit image to the zoom art and moves the LCD backing +
+// segments to the zoom layout's larger screen rect; toggling off re-applies the
+// normal artwork.
+window.gnwGameHasZoom = function (gameKey) { return !!(GAMES[gameKey] && GAMES[gameKey].zoom); };
+window.gnwIsZoomed = function () { return _zoomActive; };
+
+// Curtain animation, "final image first, then move the curtains" both ways:
+//  * OPEN: the zoom art is applied and the device pinned to its FINAL (wide)
+//    size FIRST, then a clip-path inset draws the sides open from the old narrow
+//    width to full -- only the sides move, art + LCD stay at a fixed scale (never
+//    scaled up, which read as a "zoom in"). #play-emu-root is a full-width centred
+//    clipper (see CSS) holding the oversized device centred with overflow hidden.
+//  * CLOSE: the cabinet is shown FIRST (_applyGameArtwork), then the modal panel
+//    curtains closed around it (dropping play-zoom-wide animates its max-width
+//    back to normal). The cabinet is narrower than the zoom so it can't be
+//    revealed by a widening clip the way the zoom is; the panel closing in is the
+//    matching motion. See the else branch's own comment.
+window.gnwSetZoom = function (gameKey, on) {
+  const game = GAMES[gameKey];
+  const dev = document.getElementById('play-device');
+  const ov = document.getElementById('play-overlay');
+  if (!dev) return _zoomActive;
+  const openCurtain = (fromInset) => {
+    // start clipped to the narrow (closed) width with no transition, commit it,
+    // then release to fully open so the CSS clip-path transition draws it out
+    dev.style.transition = 'none';
+    dev.style.clipPath = `inset(0 ${fromInset}px 0 ${fromInset}px)`;
+    void dev.offsetWidth;
+    dev.style.transition = '';
+    dev.style.clipPath = 'inset(0 0px 0 0px)';
+  };
+  if (on && game && game.zoom) {
+    const z = game.zoom;
+    const start = dev.getBoundingClientRect();
+    // Only a device that ISN'T already zoomed reports the true narrow (closed)
+    // width. Re-opening mid-close (the user toggling faster than the ~520ms close)
+    // would otherwise measure the still-final 1385px and compute a ~0 curtain,
+    // so keep the cached narrow width in that case.
+    if (!dev.classList.contains('play-zoomed')) _zoomStartW = start.width;
+    const finalH = start.height;                        // keep the SAME height as un-zoomed
+    const [aw, ah] = z.aspect.split('/').map(parseFloat);
+    const finalW = finalH * (aw / ah);                  // height-bound final (open) width
+    _applyUnitAspectRatio('play-unit-img', game.artPath + z.unit, 'play-device', z.aspect);
+    ['play-svg-container', 'play-lcd-bg', 'play-lcd-hide'].forEach(id => {
+      const el = document.getElementById(id); if (!el) return;
+      el.style.left = z.screen.left + '%'; el.style.top = z.screen.top + '%';
+      el.style.width = z.screen.width + '%'; el.style.height = z.screen.height + '%';
+    });
+    // Pin to an explicit final size: as a centred flex item its width:auto would
+    // collapse (all children are absolutely positioned) and its block width would
+    // track the animating container and scale. Fixed px keeps it rock-steady while
+    // the clip-path draws the curtain.
+    dev.style.width = finalW + 'px';
+    dev.style.height = finalH + 'px';
+    dev.classList.add('play-zoomed');
+    if (ov) { ov.classList.add('play-zoom-wide'); ov.classList.add('play-zoom-clip'); }
+    openCurtain(Math.max(0, (finalW - _zoomStartW) / 2));
+    _zoomActive = true;
+  } else {
+    // Close = "final image first, then move the curtains". Show the CABINET (the
+    // destination) immediately, then curtain closed AROUND it: _applyGameArtwork
+    // swaps the cabinet art/rect back and drops play-zoom-wide, and dropping that
+    // class animates the modal's max-width from the wide zoom width down to normal
+    // via its CSS transition -- the visible "curtains closing" -- with the cabinet
+    // already in place. (The old path curtained the zoom shut first and only
+    // swapped the cabinet in at the very end, which read as "inserting the final
+    // image at the end" -- exactly what the user asked to avoid. The cabinet is
+    // narrower than the zoom, so it can't itself be revealed BY a widening
+    // curtain the way the zoom is on open; the panel closing around it is the
+    // matching motion.)
+    if (game) _applyGameArtwork(gameKey);  // cabinet art/rect/size + clears the pin, clip, play-zoom-wide/clip
+    _zoomActive = false;
+  }
+  return _zoomActive;
+};
+
+/* game.panel -- extra LCD layers for titles whose screen isn't a plain
+   opaque backing + segments + case. Two families need it, for different
+   reasons, which is why this is `panel` (what it describes) rather than
+   `crystal` (the first series that happened to want it):
+
+     Crystal Screen (1986)  -- a genuinely TRANSPARENT LCD:
+       backing                    (already drawn: .play-lcd-bg / .tile-emu-bg)
+       segments, multiply         (already drawn: the SVG)
+       backing AGAIN at 10%  <-- overlay: what sells "you're seeing through it"
+       case                       (already drawn: Unit.png)
+       Gradient  at 5%       <-- glass reflection, over the case
+       Gradient2 at 10%      <-- ditto
+
+     Micro Vs. System (1984) -- opaque, but its backing box is inset from the
+       segment box, so it still needs panel.bg. Boxing additionally uses the
+       overlay (10%) and two reflections (15%); Donkey Kong 3 and Hockey set
+       those to alpha 0.0 in their own layouts, so they declare bg alone.
+
+   Every number, including the alphas and which layers exist at all, is read
+   off each unit's own community default.lay "Unit Only" view. Shared by the play
+   modal and the tile preview, which build the same stack out of different
+   elements -- hence taking them as a parameter rather than reaching for ids.
+
+   Not implemented: The layout also draws a second copy of the segments at 5%
+   alpha, offset a few px (a soft drop-shadow of the LCD onto its backing).
+   It needs a whole second render of the segment SVG every frame -- real
+   cost on a page that can have 49+ tile previews live at once -- for an
+   effect that is, at 0.05, close to invisible. Revisit if the panels ever
+   look too "flat" against a real unit.
+
+   els = { overlay, gradient, gradient2 }; any may be absent. */
+function _applyPanelLayers(game, els) {
+  const p = game.panel;
+  // Crystal ships Gradient.png/Gradient2.png; Micro Vs. names its pair
+  // Gradient1.png/Gradient2.png. Per-game rather than renamed on copy, so
+  // each folder keeps the filenames its community bundle actually shipped.
+  const files = (p && p.gradientFiles) || ['Gradient.png', 'Gradient2.png'];
+  const place = (el, rect, alpha, src) => {
+    if (!el) return;
+    // A layer is only drawn if this game actually declares it AND gives it a
+    // real alpha. Both matter: a title can want panel.bg (an inset backing)
+    // and no overlay at all, and the layout expresses "no layer" as alpha 0.0 --
+    // drawing that would be a no-op at best and a wrong lift of the whole
+    // panel at worst.
+    if (!p || !rect || !(alpha > 0)) { el.style.display = 'none'; el.removeAttribute('src'); return; }
+    el.src = game.artPath + src;
+    el.style.left = rect.left + '%';
+    el.style.top = rect.top + '%';
+    el.style.width = rect.width + '%';
+    el.style.height = rect.height + '%';
+    el.style.opacity = alpha;
+    // Explicitly 'block', not '' -- these elements' CSS default IS
+    // display:none (that's what keeps them off every ordinary title), so
+    // clearing the inline style would just hand them back to it.
+    el.style.display = 'block';
+  };
+  place(els.overlay,   p && p.bg,       p && p.bgOverlayAlpha, 'Background.png');
+  place(els.gradient,  p && p.gradient, p && p.gradientAlpha,  files[0]);
+  place(els.gradient2, p && p.gradient, p && p.gradient2Alpha, files[1]);
+}
+
+// Core boot sequence — fetches the given game's SVG and mounts a fresh
+// interactive GnwEmulator into whichever #play-svg-container
+// elements are currently in the document (the #play-emu-root markup gets
+// relocated between the nav Play modal and the lightbox's emulator slide;
+// wherever it currently lives is where this boots into). Does not touch
+// overlay visibility — callers handle that themselves.
+// Returns the fetch/mount promise (not just fire-and-forget) so callers
+// that need the CPU to genuinely exist before proceeding can await real
+// completion instead of racing an in-flight SVG fetch.
+// Parses raw SVG text into a mounted, styled root element the same way for
+// both screens of a Multi Screen title (and the single screen of every
+// other title) -- factored out so _bootPlayEmulator's dual-screen path
+// doesn't duplicate this element-prep logic per screen.
+function _parseGnwSvg(txt) {
+  const doc = new DOMParser().parseFromString(txt, 'image/svg+xml');
+  const svg = doc.documentElement;
+  svg.removeAttribute('width');
+  svg.removeAttribute('height');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  // Force explicit inline style — bypass any CSS specificity issues
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;';
+  // Hide white background rect (layer ID varies per SVG -- select by its
+  // consistent Inkscape label, not a hardcoded ID like 'layer2', since some
+  // titles' top/bottom SVGs swap which numbered layer is the background).
+  const bg = _findLayerByLabel(svg, 'white');
+  if (bg) bg.style.display = 'none';
+  return svg;
+}
+
+function _findLayerByLabel(svg, label) {
+  const gs = svg.getElementsByTagName('g');
+  for (let i = 0; i < gs.length; i++) {
+    if (gs[i].getAttribute('inkscape:label') === label) return gs[i];
+  }
+  return null;
+}
+
+function _bootPlayEmulator(gameKey) {
+  const screen = document.getElementById('play-svg-container');
+  const game = GAMES[gameKey];
+  if (!screen || !game) return Promise.resolve();
+  _stopPlayEmulator();
+  _applyGameArtwork(gameKey);
+
+  // Multi Screen titles (game.dualScreen/svgPath2) fetch both screens' SVGs
+  // in parallel and mount them together -- see GnwEmulator.mount()'s svgEl2
+  // param and GnwDisplay's own comment for why a second screen needs no
+  // CPU-level change, just a second display instance off the same cpu.lcd[].
+  const fetchSvg = _resolveArt;   // artwork now served from firmware/output/artwork.json.gz via the _resolveArt gateway
+  const fetches = game.svgPath2 ? Promise.all([fetchSvg(game.svgPath), fetchSvg(game.svgPath2)]) : fetchSvg(game.svgPath).then(txt => [txt, null]);
+
+  return _programsReadyNow().then(() => fetches)
+    .then(([txt, txt2]) => {
+      const svg = _parseGnwSvg(txt);
+      screen.innerHTML = '';
+      screen.appendChild(svg);
+
+      let svg2 = null;
+      if (txt2) {
+        svg2 = _parseGnwSvg(txt2);
+        const screen2 = document.getElementById('play-svg-container-2');
+        if (screen2) { screen2.innerHTML = ''; screen2.appendChild(svg2); }
+      }
+
+      _emu = new GnwEmulator(gameKey);
+      _emu.mount(svg, null, null, svg2);
+      // preventDefault for every key this emulator actually binds (arrows,
+      // space, 1/2/3/q/e/a/d, ...) -- without it, ArrowUp/ArrowDown/Space
+      // still worked as game input, but ALSO ran the browser's own default
+      // action for them (scrolling the page), so playing Crab Grab's
+      // Up/Down or Spitball Sparky's Shooter (bound to Space) visibly
+      // scrolled/jumped the page underneath the modal on every press.
+      // KEY_TO_BUTTON-scoped rather than a blanket preventDefault so it
+      // doesn't swallow unrelated keys (Tab, browser shortcuts, etc).
+      // Skip game input while the user is typing in a field (the save-slot
+      // comment box) -- otherwise the modal's document-level handler eats most
+      // letters/arrows as game buttons and the textarea never receives them.
+      _kd  = e => { if (_gnwIsTypingTarget(e.target)) return; if (e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'Left') && !(_emu && _emu.game && _emu.game.microVs)) { e.preventDefault(); window.gnwStartRewind(); return; } if (e.key === '-') { e.preventDefault(); window.gnwToggleMute(); return; } if (e.key !== 'Escape') { if (KEY_TO_BUTTON[e.key] || (_emu && _emu._keyMap && _emu._keyMap[e.key])) e.preventDefault(); _emu.keydown(e); } };
+      _ku  = e => { if (_gnwIsTypingTarget(e.target)) return; if (_rewinding && (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'Control')) window.gnwStopRewind(); if (KEY_TO_BUTTON[e.key]) e.preventDefault(); _emu.keyup(e); };
+      document.addEventListener('keydown', _kd);
+      document.addEventListener('keyup',   _ku);
+      _emu.start();
+      _emu.startAttract();
+      window.gnwUpdateSaveButtons();   // _emu now exists — enable Save (unless slots are full)
+    })
+    .catch(err => {
+      console.error('[gnw] fetch/init error:', err);
+      screen.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#e86;font-size:13px;">Failed to load game: ' + err.message + '</div>';
+    });
+}
+
+// Moves the shared #play-emu-root markup (device art + controls) into the
+// given container if it isn't already there — used to relocate the one
+// interactive instance between the nav Play modal and the collection page's
+// gallery/lightbox emulator slide.
+function _relocatePlayEmuRoot(container) {
+  const root = document.getElementById('play-emu-root');
+  if (root && container && root.parentElement !== container) container.appendChild(root);
+}
+
+window.gnwBootPlayEmulator     = _bootPlayEmulator;
+window.gnwStopPlayEmulator     = _stopPlayEmulator;
+window.gnwRelocatePlayEmuRoot  = _relocatePlayEmuRoot;
+
+// True only when the interactive Play emulator exists AND has left its
+// attract/demo loop -- i.e. the visitor is genuinely playing, not watching the
+// boot/attract sequence. startAttract() sets _attractActive=true on boot; the
+// first real input calls stopAttract() (_attractActive=false). Used by the
+// play-time tracker so demo mode is never counted. Strict === false so the
+// brief pre-attract window (flag still undefined) doesn't count either.
+window.gnwIsActivelyPlaying = function () {
+  return !!(_emu && _emu._attractActive === false);
+};
+// The Continue row (continuerow.js) restores a save into the open modal. That is the
+// player's own game, not the attract demo, so the demo stops exactly as it does on a
+// first real input. _emu is private to this file's IIFE, so the row cannot reach it
+// itself: this is its hook. true = there was a game to stop it in. (site regress, 2026-10-07)
+window.gnwStopAttract = function () {
+  if (!_emu) return false;
+  _emu.stopAttract();
+  return true;
+};
+
+// opts.autoBoot: false shows the modal with the correct device art/title
+// (via _applyGameArtwork) but skips fetching the program/SVG and starting the
+// CPU/audio -- used for deep links (#/play/<key>) landing from an email or
+// blog post, where nothing actually clicked "play" yet. A "Tap to play"
+// prompt takes over the boot from there (see gnwStartPlayFromPrompt).
+window.openPlayModal = function (gameKey, opts) {
+  const overlay = document.getElementById('play-overlay');
+  const home    = document.getElementById('play-modal-emu-home');
+  if (!overlay || !GAMES[gameKey]) return;
+  _relocatePlayEmuRoot(home);
+  // Tear down any device still loaded from a previous open BEFORE applying the
+  // new artwork, so the outgoing device's segments are cleared up front rather
+  // than lingering behind the new device through its ~0.75s zoom-in (the boot,
+  // which normally stops the old emulator, is deferred until that finishes).
+  _stopPlayEmulator();
+  // Apply the CORRECT device artwork BEFORE opening — .open triggers the
+  // zoom-in, so setting the art first means switching straight from one game's
+  // Play to another's zooms in the right device from the first frame instead of
+  // flashing the previously-loaded one and snapping over.
+  _applyGameArtwork(gameKey);
+  openOverlay('play-overlay');
+  window.gnwSyncMuteBtn();   // reflect the persisted mute state on the button
+  _playPaused = false; window.gnwSyncPauseBtn();   // a freshly opened game is running, not paused
+  window.gnwCloseSaveGrid(true); window.gnwUpdateSaveButtons();   // never open the save grid onto a fresh game
+  if (window.gnwCloseKeys) window.gnwCloseKeys(true);            // nor the controls screen from the previous device
+  if (opts && opts.autoBoot === false) {
+    _stopPlayEmulator();
+    _applyGameArtwork(gameKey);
+    _pendingBootKey = gameKey;
+    const prompt = document.getElementById('play-start-prompt');
+    if (prompt) prompt.style.display = 'flex';
+  } else {
+    // Let the play-window zoom-in reveal (CSS animation on #play-overlay.open .modal)
+    // play fully before booting: _bootPlayEmulator blocks the main thread long enough
+    // to eat the whole ~0.32s animation, so booting synchronously makes the window pop
+    // in at full size with no visible zoom. Wait for the animation to finish, then boot;
+    // reduced-motion (animation disabled) and a safety-net timeout both boot immediately.
+    const modal = overlay.querySelector('.modal');
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!modal || reduce) {
+      _bootPlayEmulator(gameKey);
+    } else {
+      let booted = false;
+      const boot = () => { if (booted) return; booted = true; modal.removeEventListener('animationend', onEnd); _bootPlayEmulator(gameKey); };
+      const onEnd = (e) => { if (e.target === modal && e.animationName === 'play-window-zoom-in') boot(); };
+      modal.addEventListener('animationend', onEnd);
+      setTimeout(boot, 850); // safety net just past the ~0.75s reveal in case animationend doesn't fire
+    }
+  }
+};
+
+window.gnwStartPlayFromPrompt = function () {
+  const key = _pendingBootKey;
+  _pendingBootKey = null;
+  const prompt = document.getElementById('play-start-prompt');
+  if (prompt) prompt.style.display = 'none';
+  return key ? _bootPlayEmulator(key) : Promise.resolve();
+};
+
+window.closePlayModal = function () {
+  window.gnwCloseSaveGrid(true);
+  if (window.gnwCloseKeys) window.gnwCloseKeys(true);   // don't carry the controls screen to the next device
+  _stopPlayEmulator();
+  closeOverlay('play-overlay');
+};
+
+// Play-modal mute — toggled by the right-justified control-bar button and the
+// "−" key. Applies to the live audio immediately and is remembered (GnwAudio.init
+// reads _playMuted) so it survives switching between devices.
+window.gnwToggleMute = function () {
+  _playMuted = !_playMuted;
+  try { if (_emu && _emu.audio && _emu.audio.gain) _emu.audio.gain.gain.value = _playMuted ? 0 : 1; } catch (e) {}
+  window.gnwSyncMuteBtn();
+};
+window.gnwSyncMuteBtn = function () {
+  const btn = document.getElementById('play-mute-btn');
+  if (!btn) return;
+  btn.classList.toggle('muted', _playMuted);
+  btn.setAttribute('aria-pressed', _playMuted ? 'true' : 'false');
+  const lbl = document.getElementById('play-mute-label');
+  if (lbl) lbl.textContent = _playMuted ? '🔇' : '🔊';
+};
+
+// Play-modal pause — freezes the emulator loop (cancels its rAF and suspends the
+// audio context) and shows a PAUSED overlay on the screen; the button flips to a
+// play icon to resume. _frame caps dt at 50ms, and resume resets t0, so there's
+// no time-jump/fast-forward when unpausing. Per game session (reset on open).
+const _PAUSE_ICON = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx=".6" fill="currentColor"/><rect x="7.4" y="1.5" width="2.6" height="9" rx=".6" fill="currentColor"/></svg>';
+const _PLAY_ICON  = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5 L10 6 L3 10.5 Z" fill="currentColor"/></svg>';
+let _playPaused = false;
+window.gnwTogglePause = function () {
+  if (!_emu) return;
+  if (_emu._bootDismissPending) return;   // don't freeze mid boot lamp-test (would strand on 12:00)
+  _playPaused = !_playPaused;
+  if (_playPaused) {
+    if (_emu.raf) { cancelAnimationFrame(_emu.raf); _emu.raf = null; }
+    try { if (_emu.audio && _emu.audio.ctx) _emu.audio.ctx.suspend(); } catch (e) {}
+  } else {
+    _emu.t0 = performance.now();                       // avoid a dt jump on resume
+    try { if (_emu.audio && _emu.audio.ctx) _emu.audio.ctx.resume(); } catch (e) {}
+    if (!_emu.raf) _emu.raf = requestAnimationFrame(t => _emu._frame(t));
+  }
+  window.gnwSyncPauseBtn();
+};
+window.gnwSyncPauseBtn = function () {
+  const btn = document.getElementById('play-pause-toggle');
+  if (btn) {
+    // The pill button carries an icon span + a text label; swap just the icon so
+    // the "Pause"/"Resume" label survives. Falls back to whole-button innerHTML
+    // for any older icon-only layout.
+    const ico = document.getElementById('play-pause-ico');
+    if (ico) ico.innerHTML = _playPaused ? _PLAY_ICON : _PAUSE_ICON;
+    else btn.innerHTML = _playPaused ? _PLAY_ICON : _PAUSE_ICON;
+    const lbl = document.getElementById('play-pause-lbl');
+    if (lbl) lbl.textContent = _playPaused ? 'Resume' : 'Pause';
+    btn.title = _playPaused ? 'Resume' : 'Pause';
+    btn.setAttribute('aria-label', _playPaused ? 'Resume' : 'Pause');
+    btn.setAttribute('aria-pressed', _playPaused ? 'true' : 'false');
+  }
+  const ind = document.getElementById('play-paused-indicator');
+  if (ind) ind.style.display = _playPaused ? 'flex' : 'none';
+};
+
+// ─── Overlay-pill morph ─────────────────────────────────────────────────────
+// The top-centre controls pill (#play-toolbar-pill) doubles as the Back control
+// for the Saves grid / Keys screen: in gameplay it shows the five controls, and
+// when a sub-screen opens it morphs into a compact "← <title>" Back button. The
+// controls/back groups swap via the .sub-open class; the pill smoothly
+// extends/shrinks between the two by tweening an explicit px width (a FLIP-style
+// measure: read the current width, flip the state, read the target width, then
+// animate old→new). `instant` (or a reduced-motion preference) skips the tween —
+// used for the silent, mutually-exclusive pre-close and on modal open/close.
+function _gnwSetPill(mode, title, instant) {
+  var pill = document.getElementById('play-toolbar-pill');
+  if (!pill) return;
+  var back = mode === 'back';
+  // 2026-10-05: the morph is shared (play/play-pill.js) with the NES window's bar; the body below is the fallback.
+  if (window.PlayPill) { window.PlayPill.morph(pill, back, { title: title, titleEl: document.getElementById('play-pill-back-title'), instant: instant }); return; }
+  if (title != null) { var t = document.getElementById('play-pill-back-title'); if (t) t.textContent = title; }
+  var reduce = false;
+  try { reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (pill.classList.contains('sub-open') === back) return;   // already in the target state
+  if (instant || reduce) { pill.style.width = ''; pill.classList.toggle('sub-open', back); return; }
+  var from = pill.getBoundingClientRect().width;
+  pill.style.width = 'auto';
+  pill.classList.toggle('sub-open', back);
+  var to = pill.getBoundingClientRect().width;
+  pill.style.width = from + 'px';
+  void pill.offsetWidth;                                       // force a reflow so the next set animates
+  pill.style.width = to + 'px';
+  var done = function () { pill.style.width = ''; pill.removeEventListener('transitionend', done); };
+  clearTimeout(pill._pillT); pill._pillT = setTimeout(done, 360);   // fallback if transitionend is missed
+  pill.addEventListener('transitionend', done);
+}
+// Back control on the morphed pill — returns from whichever sub-screen is open.
+/* Is the Controls or Saved states screen open? Read from this file's own state
+   rather than the toolbar pill's look, which a layout can hide (2026-10-14). */
+window.gnwSubOpen = function () { return !!(_gridOpen || _keysOpen); };
+window.gnwPillBack = function () {
+  if (_gridOpen) window.gnwCloseSaveGrid();
+  else if (_keysOpen) window.gnwCloseKeys();
+  else _gnwSetPill('game');
+};
+
+// ─── Visual Filmstrip Rewind ────────────────────────────────────────────────
+// Scrub backward through play with a VHS-style effect. These Sharp chips carry
+// tiny state (RAM + the 18-byte LCD + a few registers, ~200 bytes), so there's
+// no need for anything clever like keyframes or diffs: we keep a ring of FULL
+// snapshots — one per rendered frame — in slots that are PRE-ALLOCATED once, so
+// capture is a pure byte-copy with zero per-frame allocation/GC, and rewind is
+// an O(1) seek (no decode, no buffering — the whole point: it has to be instant).
+// ~60s of history for a couple of MB. Chip-agnostic: the snapshot shape is read
+// off the live cpu (same field rules as _serializeCpu), so one path covers
+// every part the core provides (SM5A/SM510/SM511/SM512). Driven by Ctrl+Left or the rewind button (hold to run).
+/* The core's fixed data, never saved or rewound: its program and melody memory
+   (gwc-core.js names since 24 Oct 2026). No member of the core's CPU has either
+   name today; the rule is here so a core that exposes them is still safe. */
+const _GWC_FIXED_DATA = /^(program|melodyMemory)$/;
+const REWIND_CAP  = 3600;   // frames of history (~60s at 60fps)
+const REWIND_STEP = 6;      // frames rewound per tick (~6x reverse speed)
+class RewindBuffer {
+  constructor(cpu) {
+    this.cap = REWIND_CAP; this.head = 0; this.size = 0; this.steps = 0;
+    this._scalar = []; this._typed = []; this._arr = [];      // field shape, read off the cpu
+    for (const k in cpu) {
+      if (!Object.prototype.hasOwnProperty.call(cpu, k) || _GWC_FIXED_DATA.test(k)) continue;
+      const v = cpu[k];
+      if (typeof v === 'number' || typeof v === 'boolean') this._scalar.push(k);
+      // ANY typed array, remembering its constructor — SM5A's lcd is a
+      // Uint8Array but SM510/SM511/SM512 use a Uint16Array (and ram is a
+      // Uint8Array on all). Matching only Uint8Array here silently dropped the
+      // Uint16 lcd, so on those chips the screen never moved while rewinding.
+      else if (ArrayBuffer.isView(v) && !(v instanceof DataView)) this._typed.push([k, v.length, v.constructor]);
+      else if (Array.isArray(v)) this._arr.push([k, v.length]);
+    }
+    this.slots = new Array(this.cap);
+    for (let i = 0; i < this.cap; i++) {
+      const slot = { s: {}, u: {}, a: {} };
+      for (const [k, n, Ctor] of this._typed) slot.u[k] = new Ctor(n);
+      for (const [k, n] of this._arr) slot.a[k] = new Array(n).fill(0);
+      this.slots[i] = slot;
+    }
+  }
+  capture(cpu) {                                              // live cpu -> next slot (byte-copy)
+    const slot = this.slots[this.head];
+    for (const k of this._scalar) slot.s[k] = cpu[k];
+    for (const [k] of this._typed) slot.u[k].set(cpu[k]);
+    for (const [k, n] of this._arr) { const src = cpu[k], dst = slot.a[k]; for (let j = 0; j < n; j++) dst[j] = src[j]; }
+    this.head = (this.head + 1) % this.cap;
+    if (this.size < this.cap) this.size++;
+    this.steps = 0;
+  }
+  stepBack() { if (this.steps >= this.size - 1) return false; this.steps++; return true; }
+  restore(cpu) {                                             // slot at current rewind offset -> live cpu
+    const slot = this.slots[(this.head - 1 - this.steps + this.cap * 2) % this.cap];
+    for (const k of this._scalar) cpu[k] = slot.s[k];
+    for (const [k] of this._typed) cpu[k].set(slot.u[k]);
+    for (const [k, n] of this._arr) { const dst = cpu[k], src = slot.a[k]; for (let j = 0; j < n; j++) dst[j] = src[j]; }
+  }
+  commit() { this.head = (this.head - this.steps + this.cap * 2) % this.cap; this.size = Math.max(1, this.size - this.steps); this.steps = 0; }  // resume from here; drop the future we rewound past
+  reset()  { this.head = 0; this.size = 0; this.steps = 0; }
+}
+
+let _rewinding = false, _rewRaf = null;
+window.gnwStartRewind = function () {
+  if (_rewinding || !_emu || !_emu.cpu || !_emu._rew || _emu._rew.size < 2) return;
+  _rewinding = true;
+  if (_emu.raf) { cancelAnimationFrame(_emu.raf); _emu.raf = null; }   // freeze forward play + audio
+  try { if (_emu.audio && _emu.audio.ctx) _emu.audio.ctx.suspend(); } catch (e) {}
+  window.addEventListener('blur', window.gnwStopRewind, { once: true });   // never get stuck rewinding on alt-tab
+  _gnwSetRewindUI(true);
+  const tick = () => {
+    if (!_rewinding) return;
+    for (let i = 0; i < REWIND_STEP; i++) { if (!_emu._rew.stepBack()) break; }
+    _emu._rew.restore(_emu.cpu);
+    if (_emu.disp)  _emu.disp.update(_emu.cpu.lcd, 1e9);   // 1e9ms drives the decay model to snap exactly to the restored frame (no ghosting)
+    if (_emu.disp2) _emu.disp2.update(_emu.cpu.lcd, 1e9);
+    _gnwUpdateRewindHud(_emu._rew.steps);
+    _rewRaf = requestAnimationFrame(tick);
+  };
+  _rewRaf = requestAnimationFrame(tick);
+};
+window.gnwStopRewind = function () {
+  if (!_rewinding) return;
+  _rewinding = false;
+  if (_rewRaf) { cancelAnimationFrame(_rewRaf); _rewRaf = null; }
+  window.removeEventListener('blur', window.gnwStopRewind);
+  if (_emu && _emu._rew) _emu._rew.commit();
+  _gnwSetRewindUI(false);
+  if (_emu) {                                               // resume forward play from the rewound-to point
+    _emu.t0 = performance.now();
+    try { if (_emu.audio && _emu.audio.ctx && !_playPaused) _emu.audio.ctx.resume(); } catch (e) {}
+    if (!_emu.raf && !_playPaused) _emu.raf = requestAnimationFrame(t => _emu._frame(t));
+  }
+};
+function _gnwSetRewindUI(on) {
+  const dev = document.getElementById('play-device');         if (dev) dev.classList.toggle('gnw-rewinding', on);
+  const btn = document.getElementById('play-rewind-btn');     if (btn) btn.classList.toggle('active', on);
+  const ov  = document.getElementById('play-rewind-overlay');
+  const ov2 = document.getElementById('play-rewind-overlay-2');
+  const sc  = document.getElementById('play-svg-container');
+  const sc2 = document.getElementById('play-svg-container-2');
+  // Pin each scan overlay to the exact LCD glass box. _applyGameArtwork() sets
+  // those boxes (inline % left/top/width/height) per title on the segment
+  // containers, so mirroring them lands the VHS effect on the screen(s), never
+  // the case — and drives the second overlay only when a Multi Screen title
+  // actually shows its bottom/right glass (#play-svg-container-2 visible).
+  const pin = (el, src, show) => {
+    if (!el) return;
+    if (on && show && src) {
+      el.style.left = src.style.left; el.style.top = src.style.top;
+      el.style.width = src.style.width; el.style.height = src.style.height;
+    }
+    el.classList.toggle('on', on && show);
+  };
+  pin(ov, sc, true);
+  pin(ov2, sc2, !!(sc2 && sc2.style.display !== 'none' && sc2.style.width));
+  const hud = document.getElementById('play-rewind-hud'); if (hud) hud.classList.toggle('on', on);   // the timer pill (now top-centre, outside the scan overlay)
+  const pausedInd = document.getElementById('play-paused-indicator');
+  if (pausedInd && on) pausedInd.style.display = 'none';      // hide PAUSED while the REW HUD is up
+  if (!on) window.gnwSyncPauseBtn();                          // restore PAUSED indicator if we were paused
+  if (on) _gnwUpdateRewindHud(_emu && _emu._rew ? _emu._rew.steps : 0);
+}
+function _gnwUpdateRewindHud(stepsBack) {
+  const hud = document.getElementById('play-rewind-hud');
+  if (hud) hud.textContent = '◄◄ REW  ' + (stepsBack / 60).toFixed(1) + 's';
+}
+
+// Warm the browser cache with every classic device's tile artwork (LCD
+// background + Unit case) so opening the collection is instant instead of the
+// tiles popping in. Fire-and-forget during idle time — keeps the files as files
+// (HTTP/2 parallel, full resolution, no base64 bloat), just fetched earlier.
+window.gnwPreloadTileArt = function () {
+  try {
+    for (const key in GAMES) {
+      const g = GAMES[key];
+      if (!g || !g.folder) continue;
+      new Image().src = g.folder + '/' + (g.bgFile || 'Background.png');
+      new Image().src = g.folder + '/Unit.png';
+      if (g.hideLines) new Image().src = g.folder + '/Background2.png';
+    }
+  } catch (e) {}
+};
+
+// ─── Save states ──────────────────────────────────────────────────────────
+// A full G&W save is tiny — the CPU RAM + LCD segment state + a handful of
+// registers/timers, ~200 bytes. Serialise every own DATA field of the CPU (skip
+// the immutable program/melody), so one code path covers every chip class
+// (SM5A/SM510/SM511/SM512) with no per-chip knowledge. Typed arrays are tagged
+// with '#', plain arrays with '@', so restore puts each back in place.
+function _serializeCpu(cpu){
+  var s = {};
+  for (var k in cpu){
+    if (!Object.prototype.hasOwnProperty.call(cpu, k)) continue;
+    if (_GWC_FIXED_DATA.test(k)) continue;              // immutable program/melody data
+    var v = cpu[k];
+    if (typeof v === 'number' || typeof v === 'boolean') s[k] = v;
+    else if (v instanceof Uint8Array) s['#'+k] = Array.from(v);
+    else if (Array.isArray(v)) s['@'+k] = v.slice();
+  }
+  return s;
+}
+function _restoreCpu(cpu, s){
+  for (var k in s){
+    if (k.charAt(0) === '#'){ var a = cpu[k.slice(1)]; if (a instanceof Uint8Array) a.set(s[k]); }
+    else if (k.charAt(0) === '@'){ var arr = cpu[k.slice(1)]; if (Array.isArray(arr)){ arr.length = 0; for (var i=0;i<s[k].length;i++) arr.push(s[k][i]); } }
+    else if (k in cpu){ cpu[k] = s[k]; }
+  }
+}
+// Snapshot the running game -> plain object (game key + CPU state + a copy of the
+// 18-byte LCD for the thumbnail), or null if nothing is playing.
+window.gnwSaveState = function(){
+  if (!_emu || !_emu.cpu) return null;
+  return { key: _emu.gameKey || null, ts: Date.now(),
+           cpu: _serializeCpu(_emu.cpu), lcd: Array.from(_emu.cpu.lcd) };
+};
+// Restore a snapshot into the running game (must be the same title). The next
+// frame renders straight from the restored cpu.lcd.
+window.gnwLoadState = function(st){
+  if (!_emu || !_emu.cpu || !st || !st.cpu) return false;
+  _restoreCpu(_emu.cpu, st.cpu);
+  return true;
+};
+
+// ─── Rewind history for the Continue row (continuerow.js, 2026-10-07) ───────
+// The rewind is saved with the game as well, so when the user launches the
+// save, they can rewind as well. The RewindBuffer above is handed out oldest
+// frame first as ONE flat byte block, every frame the same length -- each own
+// scalar as a float64, each typed array as its raw bytes, each numeric plain
+// array as float64s -- plus, per frame, a JSON line holding the plain arrays
+// whose elements are NOT numbers. That second part is not an edge case: the
+// site core (gwc-core.js _withState) keeps the whole machine as a JSON string
+// in cpu.coreState[0], which the buffer copies like any array element, so a
+// history without it would rewind nothing. `shape` names every field, so a
+// history only ever loads into a cpu of the same shape. Frames rewound past
+// (an unreleased hold) are not history. continuerow.js delta-codes and
+// compresses all of it; nothing is stored here.
+function _rewJsonKeys(R, cpu){
+  return R._arr.filter(([k]) => { const a = cpu[k]; return Array.isArray(a) && a.some(v => typeof v !== 'number' && typeof v !== 'boolean'); }).map(([k]) => k);
+}
+function _rewShape(R, jk){
+  return 's:' + R._scalar.join(',') + '|u:' + R._typed.map(t => t[0] + ':' + t[1] + ':' + t[2].name).join(',')
+    + '|a:' + R._arr.filter(t => !jk.includes(t[0])).map(t => t[0] + ':' + t[1]).join(',') + '|j:' + jk.join(',');
+}
+function _rewFrameBytes(R, jk){
+  let n = R._scalar.length * 8;
+  for (const [, len, Ctor] of R._typed) n += len * Ctor.BYTES_PER_ELEMENT;
+  for (const [k, len] of R._arr) if (!jk.includes(k)) n += len * 8;
+  return n;
+}
+window.gnwRewindExport = function(){
+  const R = _emu && _emu._rew, cpu = _emu && _emu.cpu;
+  if (!R || !cpu) return null;
+  const n = R.size - R.steps;
+  if (n < 1) return null;
+  const jk = _rewJsonKeys(R, cpu);
+  const size = _rewFrameBytes(R, jk), data = new Uint8Array(n * size), dv = new DataView(data.buffer), side = jk.length ? [] : null;
+  for (let i = 0; i < n; i++) {
+    const slot = R.slots[(R.head - R.steps - n + i + R.cap * 2) % R.cap];
+    let o = i * size;
+    for (const k of R._scalar) { dv.setFloat64(o, +slot.s[k], true); o += 8; }
+    for (const [k] of R._typed) { const v = slot.u[k]; data.set(new Uint8Array(v.buffer, v.byteOffset, v.byteLength), o); o += v.byteLength; }
+    for (const [k, len] of R._arr) { if (jk.includes(k)) continue; const a = slot.a[k]; for (let j = 0; j < len; j++) { dv.setFloat64(o, +a[j], true); o += 8; } }
+    if (side) { const j = {}; for (const k of jk) j[k] = slot.a[k]; side.push(JSON.stringify(j)); }
+  }
+  return { n, size, data, side, meta: { key: _emu.gameKey || null, shape: _rewShape(R, jk), fps: 60 } };
+};
+// Fill the RewindBuffer from such a history (after gnwLoadState). Returns the
+// number of frames now in it, or 0 when the history does not fit this machine.
+window.gnwRewindImport = function(h){
+  const R = _emu && _emu._rew, cpu = _emu && _emu.cpu;
+  if (!R || !cpu || !h || !h.data || !h.meta) return 0;
+  const jk = _rewJsonKeys(R, cpu);
+  if (h.meta.shape !== _rewShape(R, jk) || h.size !== _rewFrameBytes(R, jk) || (jk.length && !(Array.isArray(h.side) && h.side.length === h.n))) return 0;
+  if (h.meta.key && _emu.gameKey && h.meta.key !== _emu.gameKey) return 0;
+  const dv = new DataView(h.data.buffer, h.data.byteOffset, h.data.byteLength);
+  const from = Math.max(0, h.n - R.cap);
+  R.reset();
+  for (let i = from; i < h.n; i++) {
+    const slot = R.slots[R.head];
+    let o = i * h.size;
+    for (const k of R._scalar) { const v = dv.getFloat64(o, true); slot.s[k] = typeof cpu[k] === 'boolean' ? v !== 0 : v; o += 8; }
+    for (const [k] of R._typed) { const u = slot.u[k]; new Uint8Array(u.buffer, u.byteOffset, u.byteLength).set(h.data.subarray(o, o + u.byteLength)); o += u.byteLength; }
+    for (const [k, len] of R._arr) { if (jk.includes(k)) continue; const a = slot.a[k], live = cpu[k]; for (let j = 0; j < len; j++) { const v = dv.getFloat64(o, true); a[j] = typeof live[j] === 'boolean' ? v !== 0 : v; o += 8; } }
+    if (jk.length) { const j = JSON.parse(h.side[i]); for (const k of jk) { const a = slot.a[k], src = j[k] || []; for (let x = 0; x < a.length; x++) a[x] = src[x]; } }
+    R.head = (R.head + 1) % R.cap;
+    if (R.size < R.cap) R.size++;
+  }
+  R.steps = 0;
+  return R.size;
+};
+
+// ─── Save-state UI: 12-slot grid, in-place Load view, slide-in toast ────────
+// Design follows the approved mockup. Persistence is per-title in localStorage
+// under gnw.saves.<gameKey>: a fixed 12-length array, each entry null or
+// { ts, comment, thumb (PNG data URL), state (gnwSaveState object) }. The grid
+// swaps into the play area in place (no reload) and freezes the emulator while
+// it's up; Back thaws it. All of this lives here (not index.html) because it
+// needs the live _emu and the on-screen LCD to build each slot's thumbnail.
+// Storage always holds the maximum (12) so no stored save is ever destroyed
+// when a device that renders fewer slots (dual-screen) is opened -- we only
+// RENDER the device-appropriate count.
+const _SAVE_SLOTS = 12;
+const _saveKeyFor = k => 'gnw.saves.' + k;
+
+// Multi Screen (dual-LCD) devices show BOTH screens per thumbnail, so the grid
+// reflows to fit the new thumbnail shape:
+//   vertical  (screen2 stacked BELOW screen1)  -> 8 slots, 4 cols, tall thumb
+//   horizontal(screen2 to the RIGHT of screen1)-> 6 slots, 2 cols, wide thumb
+//   single screen                              -> 12 slots, 4 cols (unchanged)
+// Orientation comes from which axis the two screens are offset along.
+function _saveDualOrient(game){
+  if (!game || !game.dualScreen || !game.screen || !game.screen2) return null;
+  var dl = Math.abs(game.screen2.left - game.screen.left);
+  var dt = Math.abs(game.screen2.top  - game.screen.top);
+  return dl > dt ? 'h' : 'v';
+}
+function _saveSlotCountFor(game){
+  var o = _saveDualOrient(game);
+  return o === 'v' ? 8 : o === 'h' ? 6 : 12;
+}
+function _saveGridColsFor(game){
+  return _saveDualOrient(game) === 'h' ? 2 : 4;
+}
+// Inter-screen gaps, shared between the composited canvas (_saveRenderThumb)
+// and the CSS box aspect (_saveThumbAspect) so they stay identical.
+const _SAVE_GAP_V = 0.05, _SAVE_GAP_H = 0.07;
+// The DISPLAYED pixel aspect (w/h) of a live LCD screen -- the SAME thing the
+// play window shows: the Background.png is stretched to its glass rect, which
+// differs from the image's own natural aspect, so we read the on-screen box
+// (getBoundingClientRect) to reproduce the exact in-game proportions rather
+// than the raw file aspect. Falls back to the image's natural aspect (then
+// 4:3) when the element isn't laid out yet.
+function _saveScreenAspect(id){
+  var e = document.getElementById(id);
+  var r = e && e.getBoundingClientRect();
+  if (r && r.width > 2 && r.height > 2) return r.width / r.height;
+  var aw = (e && e.naturalWidth) || 4, ah = (e && e.naturalHeight) || 3;
+  return aw / ah;
+}
+// Composited thumbnail aspect (width / height). CRITICAL: this must equal the
+// real _saveRenderThumb canvas aspect exactly, or `background-size:cover` on
+// .save-thumb crops/squishes the image. Both are built from each screen's
+// live DISPLAYED aspect (via _saveScreenAspect) plus the same gap, so a screen
+// in the thumbnail has the identical proportions it shows in the play window.
+// null for single-screen (keeps the fixed-height box, unchanged).
+function _saveThumbAspect(game){
+  var o = _saveDualOrient(game);
+  if (!o) return null;
+  var a1 = _saveScreenAspect('play-lcd-bg');    // displayed w/h of screen 1
+  var a2 = _saveScreenAspect('play-lcd-bg-2');   // displayed w/h of screen 2
+  if (o === 'v'){
+    // Screens stacked, each drawn at width 1; heights are 1/a each.
+    return 1 / (1 / a1 + _SAVE_GAP_V + 1 / a2);
+  }
+  // Side by side, each drawn at width 1; height = the taller of the two.
+  return (1 + _SAVE_GAP_H + 1) / Math.max(1 / a1, 1 / a2);
+}
+// True when a keystroke is destined for an editable field (the comment box) --
+// game input must yield to it. Used by the play modal's keydown/keyup handlers.
+function _gnwIsTypingTarget(t){
+  if (!t) return false;
+  var n = t.nodeName;
+  return n === 'INPUT' || n === 'TEXTAREA' || n === 'SELECT' || t.isContentEditable;
+}
+function _saveLoadSlots(key){
+  try { var a = JSON.parse(localStorage.getItem(_saveKeyFor(key)) || 'null');
+        if (Array.isArray(a)) { a.length = _SAVE_SLOTS; return a; } } catch (e) {}
+  return new Array(_SAVE_SLOTS).fill(null);
+}
+function _saveStoreSlots(key, arr){
+  try { localStorage.setItem(_saveKeyFor(key), JSON.stringify(arr)); } catch (e) {}
+}
+function _saveRelTime(ts){
+  var s = Math.round((Date.now() - ts) / 1000);
+  if (s < 45) return 'just now';
+  var m = Math.round(s / 60); if (m < 60) return m + 'm ago';
+  var h = Math.round(m / 60); if (h < 24) return h + 'h ago';
+  return Math.round(h / 24) + 'd ago';
+}
+
+// Rasterise ONE screen (its Background.png + segment SVG, composited with the
+// same multiply-blend / inverted handling the live screen uses) to an offscreen
+// canvas W px wide, its height following the background's own aspect. Rendered
+// at ~2x the on-screen slot size (see the _SAVE_RASTER_* widths) so the 2-col
+// horizontal thumbs aren't upscaled to blur. Async (the cloned SVG loads as an
+// Image); calls cb(canvas) -- or cb(null) if there's no SVG yet, or the
+// bg-only canvas if the SVG fails to load.
+function _saveRasterScreen(bg, cont, inverted, W, cb){
+  try {
+    var svg = cont && cont.querySelector('svg');
+    if (!svg) { cb(null); return; }
+    // Height from the screen's live DISPLAYED aspect (the stretched glass rect),
+    // so the rasterised screen matches the play window exactly -- not the raw
+    // Background.png file aspect. Both bg AND svg are then drawn to that same
+    // WxH, reproducing the live stretch the play modal applies to both layers.
+    var r = bg && bg.getBoundingClientRect();
+    var aspect = (r && r.width > 2 && r.height > 2)
+      ? (r.width / r.height)
+      : (((bg && bg.naturalWidth) || 4) / ((bg && bg.naturalHeight) || 3));
+    var H = Math.max(1, Math.round(W / aspect));
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    if (inverted) { ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H); }
+    else if (bg && bg.complete && bg.naturalWidth) { try { ctx.drawImage(bg, 0, 0, W, H); } catch (e) {} }
+    var clone = svg.cloneNode(true);
+    clone.setAttribute('width', W); clone.setAttribute('height', H);
+    var xml = new XMLSerializer().serializeToString(clone);
+    var img = new Image();
+    img.onload = function(){
+      ctx.globalCompositeOperation = inverted ? 'source-over' : 'multiply';
+      try { ctx.drawImage(img, 0, 0, W, H); } catch (e) {}
+      ctx.globalCompositeOperation = 'source-over';
+      cb(cv);
+    };
+    img.onerror = function(){ cb(cv); };   // still return the bg-only canvas
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+  } catch (e) { cb(null); }
+}
+
+// Rasterise the live LCD to a small JPEG data URL: a frozen snapshot of this
+// instant. Single-screen titles capture the one screen exactly as before;
+// Multi Screen (dual-LCD) titles capture BOTH screens, composited into one
+// canvas -- stacked (vertical) or side by side (horizontal), each keeping its
+// own multiply/inverted handling. Async; calls cb(url|null).
+// Per-screen raster widths: ~2x the displayed slot so nothing is upscaled to
+// blur. Single is ~1 col wide (~207px displayed), vertical dual each fills a
+// column, horizontal dual each is ~half a wide 2-col slot (~223px displayed).
+const _SAVE_RASTER_SINGLE = 380, _SAVE_RASTER_V = 400, _SAVE_RASTER_H = 340;
+// JPEG quality: the LCD art is a photo, so JPEG beats PNG on size; 0.9 keeps it
+// crisp with no visible artifacts while staying small enough for localStorage.
+const _SAVE_JPEG_Q = 0.9;
+function _saveRenderThumb(cb){
+  try {
+    var game = _emu && _emu.game;
+    var inverted = !!(game && game.lcdInverted);
+    var bg   = document.getElementById('play-lcd-bg');
+    var cont = document.getElementById('play-svg-container');
+    var orient = _saveDualOrient(game);
+
+    if (!orient) {                                       // single screen -- unchanged shape
+      _saveRasterScreen(bg, cont, inverted, _SAVE_RASTER_SINGLE, function(cv){
+        if (!cv) { cb(null); return; }
+        try { cb(cv.toDataURL('image/jpeg', _SAVE_JPEG_Q)); } catch (e) { cb(null); }
+      });
+      return;
+    }
+
+    var bg2   = document.getElementById('play-lcd-bg-2');
+    var cont2 = document.getElementById('play-svg-container-2');
+    // Vertical: both full width, stacked. Horizontal: each ~half width, side by
+    // side. The gap fractions (_SAVE_GAP_V/H) match _saveThumbAspect exactly so
+    // the CSS box aspect equals this canvas aspect (no crop under cover).
+    // Composite once both screens' canvases are ready.
+    var wEach = orient === 'v' ? _SAVE_RASTER_V : _SAVE_RASTER_H;
+    _saveRasterScreen(bg, cont, inverted, wEach, function(c1){
+      _saveRasterScreen(bg2, cont2, inverted, wEach, function(c2){
+        if (!c1 && !c2) { cb(null); return; }
+        var out = document.createElement('canvas'), ctx;
+        if (orient === 'v') {
+          var W  = Math.max(c1 ? c1.width : 0, c2 ? c2.width : 0);
+          var h1 = c1 ? c1.height : 0, h2 = c2 ? c2.height : 0;
+          var gapV = Math.round(W * _SAVE_GAP_V);
+          out.width = W; out.height = h1 + gapV + h2;
+          ctx = out.getContext('2d');
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+          ctx.fillStyle = inverted ? '#0a0a0a' : '#aeb7a2';
+          ctx.fillRect(0, 0, out.width, out.height);
+          if (c1) ctx.drawImage(c1, 0, 0);
+          if (c2) ctx.drawImage(c2, 0, h1 + gapV);
+        } else {
+          var w1 = c1 ? c1.width : 0, w2 = c2 ? c2.width : 0;
+          var H  = Math.max(c1 ? c1.height : 0, c2 ? c2.height : 0);
+          var gapH = Math.round(Math.max(w1, w2) * _SAVE_GAP_H);
+          out.width = w1 + gapH + w2; out.height = H;
+          ctx = out.getContext('2d');
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+          ctx.fillStyle = inverted ? '#0a0a0a' : '#aeb7a2';
+          ctx.fillRect(0, 0, out.width, out.height);
+          if (c1) ctx.drawImage(c1, 0, Math.round((H - c1.height) / 2));
+          if (c2) ctx.drawImage(c2, w1 + gapH, Math.round((H - c2.height) / 2));
+        }
+        try { cb(out.toDataURL('image/jpeg', _SAVE_JPEG_Q)); } catch (e) { cb(null); }
+      });
+    });
+  } catch (e) { cb(null); }
+}
+
+// The Continue row (continuerow.js, 2026-10-04) keeps one save per title when the
+// play window closes, with this same picture. Read-only: it rasterises the LCD.
+window.gnwRenderSaveThumb = _saveRenderThumb;
+
+// Freeze/thaw the emulator around the grid — same mechanism as gnwTogglePause,
+// but without touching the pause button/overlay (the grid covers the screen).
+// Thaw is a no-op if the user had genuinely paused, so their pause survives.
+let _gridOpen = false, _gridAudioSuspended = false;
+function _saveFreeze(){
+  if (!_emu) return;
+  if (_emu.raf) { cancelAnimationFrame(_emu.raf); _emu.raf = null; }
+  try { if (_emu.audio && _emu.audio.ctx && _emu.audio.ctx.state === 'running') { _emu.audio.ctx.suspend(); _gridAudioSuspended = true; } } catch (e) {}
+}
+function _saveThaw(){
+  if (!_emu || _playPaused) return;
+  if (_gridAudioSuspended) { try { _emu.audio.ctx.resume(); } catch (e) {} _gridAudioSuspended = false; }
+  _emu.t0 = performance.now();                          // no dt jump on resume
+  if (!_emu.raf) _emu.raf = requestAnimationFrame(t => _emu._frame(t));
+}
+// A brief bright pulse on the glass to acknowledge a load.
+function _saveFlash(){
+  var el = document.getElementById('play-lcd-bg'); if (!el) return;
+  el.style.transition = 'none'; el.style.filter = 'brightness(2.2)';
+  requestAnimationFrame(function(){
+    el.style.transition = 'filter .45s'; el.style.filter = 'none';
+    setTimeout(function(){ el.style.transition = ''; }, 500);
+  });
+}
+
+// ===== Controls / Keys screen ============================================
+// A per-device diagram of the unit's buttons drawn as OUTLINES and labelled
+// with the keyboard keys that operate them. It's generated from the game's own
+// hotspot geometry (same % coordinate space as the live device), with the LCD
+// screen region(s) squeezed out of the middle so the buttons sit compactly —
+// so one component covers every G&W title automatically. Replaces the old
+// static text legend; uses the same overlay + Back pattern as the save grid.
+// Non-directional buttons: friendly label + the key(s) that press them. (The
+// four D-pad directions are handled by _dpadHTML, not here.)
+// NB: the generic Controls-diagram ENGINE (BUTTON_META, _DIR_ARROW, _glyphKey,
+// _dpadCross, _keysButtons, _keysLayout, _dpadHTML/_stickHTML/_rockerHTML, the
+// HTML builder, _keysFit, the live-highlight input, and the .keys-* CSS) now
+// lives in the shared keys-diagram.js (window.KeysDiagram), loaded before this
+// file. Only the PER-DEVICE DATA (KEYS_OVERRIDE + LAYOUT_n_KEYS below) and the
+// thin _emu wiring stay here.
+
+// Targeted per-title exceptions. The geometry engine handles POSITIONS/grouping
+// for EVERY unit automatically; this only tweaks the handful of things geometry
+// can't know (a mode-cluster that reads too small, a special control type, …).
+// Keep it minimal — most titles need no entry, and nothing here changes a unit
+// that already looks right (e.g. Donkey Kong).
+
+// Shared Controls-diagram tuning for the LAYOUT_1 family (one code base per
+// layout): diagram-only knobs, gameplay untouched. Tuned live against Vermin.
+var LAYOUT_1_KEYS = { opDX: 9, opDY: 2.4, opGap: 0.05 };
+// LAYOUT_2 family: 4 circles (Q/E/A/D) + the Game A/B/Time pill row. noRocker
+// keeps the touching pairs as circles; the pill row is tightened toward Time
+// (anchored right — Time can't move further right, the circle column is there).
+var LAYOUT_2_KEYS = { noRocker: true, opAnchor: 'right', opGap: 0.05 };
+// LAYOUT_4 family: 4 circles (Q/E/A/D) + the Game A/B/Time operational COLUMN
+// up the right edge. Same noRocker reason as LAYOUT_2 (Mickey Mouse/Egg's
+// touching top/bottom pairs would otherwise merge into rockers; Fire Attack and
+// Manhole NH-103 already have a real gap and don't merge, but carry the flag
+// too for a single shared treatment). No pill-position tuning yet; opDX/opDY/opAnchor
+// are tuned interactively later, as with Layouts 1 & 2.
+var LAYOUT_4_KEYS = { noRocker: true };
+// LAYOUT_6 family: FOUR discrete directional CIRCLES in a plus/cross (up/down/
+// left/right), labelled with ARROW keys (not Q/E/A/D). dirCircles makes
+// _keysButtons SKIP both the D-pad merge (Donkey Kong Jr.'s btn1-4 cross) and
+// the rocker merge (SMB/Climber/Balloon Fight's touching up/down & left/right
+// pairs), so the four directions render individually; _keysRenderDiagram then
+// draws each as a circle showing its direction arrow. The Jump/action button
+// and the Game/Time column render normally, unchanged. No pill-tuning yet.
+var LAYOUT_6_KEYS = { dirCircles: true };
+// LAYOUT_7 (Mario's Cement Factory ML-102): same discrete-circle style as
+// Layout 6 but only Left/Right (no up/down) + Open + Game/Time column. With the
+// up/down positions empty there's room, so enlarge the L/R circles via dirScale.
+var LAYOUT_7_KEYS = { dirCircles: true, dirScale: 1.35 };  // L/R match the Open (Space) action button
+// LAYOUT_9 (Mickey & Donald DM-53, Squish MG-61): H-rocker + V-rocker + pill
+// column. Diagram-only: their pill hotspots are ~2× wider / ~3× taller than Green
+// House's, so shrink them via opScale to match. (Positioning tuning added below.)
+var LAYOUT_9_KEYS = { opScale: 0.5, dirDY: -14 };
+// LAYOUT_12 (Rain Shower LP-57): D-pad + Move button + Game A/B/Time. The real
+// pills sit tucked to the RIGHT, toward the Move button — not centred where the
+// derive lands them — so opDX nudges the diagram cluster right. padTime pads the
+// single-word "Time" pill (3/Time) to the same 3-line height as Game A / Game B.
+var LAYOUT_12_KEYS = { opDX: 9, padTime: true };
+// LAYOUT_13 (Life Boat TC-58): CLONED from Layout 12 — identical treatment (pills
+// tucked RIGHT toward the right-side button via opDX + Time padded to 3 lines).
+// The ONLY difference is the device's LEFT control: Life Boat has a single Left
+// BUTTON where Rain Shower has a D-pad — and that comes from the hotspots, not
+// this object — so sharing LAYOUT_12_KEYS gives "Layout 12 with a button on the
+// left" for free.
+var LAYOUT_13_KEYS = LAYOUT_12_KEYS;
+// LAYOUT_15 (Table Top cabinets — Popeye PG-74 is the base): a directional STICK
+// + a round action button + Game A/B/Time row. Shared by Snoopy SM-73, DK Jr
+// CJ-71, Popeye PG-74, Mario's Cement Factory CM-72 — one code base. `stick`
+// renders the joystick (DK Jr's btn1-4 map to a 4-way stick); `actionCircle`
+// squares the action button (Punch/Open) into a true circle (not an oblong);
+// `opScale` enlarges the mode pills so "1/Game/A" fits instead of being clipped.
+var LAYOUT_15_KEYS = { stick: true, actionCircle: true, actionScale: 1.5, opScale: 1.6 };
+// LAYOUT_18 (Panorama Snoopy SM-91 / Popeye PG-92 / Mario's Bombs Away TB-94): a
+// horizontal Left/Right ROCKER on the left + a round action button on the right +
+// Game/Time pills. The rocker derives too skinny next to the big button, so grow
+// its height to ~30% of the button's rendered height.
+var LAYOUT_18_KEYS = { rockerHrel: 0.30 };
+var KEYS_OVERRIDE = {
+  // LAYOUT_15 — Table Top cabinets (Popeye PG-74 is the base): directional STICK
+  // + round action button + Game A/B/Time row. All four share LAYOUT_15_KEYS.
+  // DK Jr CJ-71 reads a 4-way pad (btn1-4) — the stick builder maps those to the
+  // same joystick element, so its Controls match the left/right-only siblings.
+  snoopyt:  LAYOUT_15_KEYS,
+  popeyet:  LAYOUT_15_KEYS,
+  mariocmt: LAYOUT_15_KEYS,
+  dkjrt:    LAYOUT_15_KEYS,
+  // LAYOUT_16 — Donkey Kong Jr. Panorama CJ-93: D-pad + Jump + Game/Time. Layout
+  // is already correct; just shrink the Jump button so it reads smaller than the
+  // D-pad (its raw hotspot made it slightly larger).
+  dkjrp:    { actionScale: 0.65 },
+  // LAYOUT_17 — dual-button Panorama siblings. Mickey Mouse DC-95 (mmousep) is the
+  // base (already correct: two Left/Right circle buttons + Game/Time); DK Circus
+  // MK-96 (dkcirc) has byte-identical hotspots, so it clones mmousep — one code base.
+  dkcirc:   { cloneFrom: 'mmousep' },
+  // LAYOUT_18 — Panorama Snoopy/Popeye/Mario's Bombs Away: L/R rocker + button +
+  // pills; grow the too-skinny rocker (see LAYOUT_18_KEYS).
+  snoopyp:  LAYOUT_18_KEYS,
+  popeyep:  LAYOUT_18_KEYS,
+  mbaway:   LAYOUT_18_KEYS,
+  // LAYOUT_19 / 20 — Spitball Sparky BU-201 / Crab Grab UD-202: layout is correct,
+  // but each has a tiny `alarm` hotspot that renders as a keyless "Alarm" pill —
+  // hide it from the diagram (gameplay hotspots untouched).
+  ssparky:  { hideButtons: ['alarm'] },
+  cgrab:    { hideButtons: ['alarm'] },
+  // LAYOUT_21 — Micro Vs. System: constructed P1 (arrow cross) + P2 (WASD cross)
+  // controllers + centred pills (see MICROVS_KEYS_HOTSPOTS / LAYOUT_21_KEYS).
+  boxing:   LAYOUT_21_KEYS,
+  dkong3:   LAYOUT_21_KEYS,
+  dkhockey: LAYOUT_21_KEYS,
+  // LAYOUT_23 — SMB Special: reshape to a Balloon-Fight-style big-button diagram
+  // (keysHotspots), which also drops the keyless alarm pill.
+  smbspecial: LAYOUT_23_KEYS,
+  // Gold Cliff is a DK-52-style Multi Screen unit with the identical control
+  // ergonomics (d-pad + Game/Continue + Jump); its own hotspots are oversized
+  // click targets (13% jump, big Game squares) and mirrored, so borrow Donkey
+  // Kong's clean control geometry wholesale — they are the same layout.
+  gcliff:   { cloneFrom: 'dkong' },
+  // Mario Bros has TWO up/down rockers (one per hand); showing arrows on both
+  // reads as impossible, so label them with the Q/E/A/D letter bindings.
+  // opDX nudges its centred pills to the right (same fix as Vermin/Layout 1).
+  mario:    { letters: true, opDX: 9 },
+  // LAYOUT_9 — Mickey & Donald / Squish: shrink the oversized pills (opScale).
+  mickdon:  LAYOUT_9_KEYS,
+  squish:   LAYOUT_9_KEYS,
+  // LAYOUT_12 — Rain Shower: nudge the Game A/B/Time pills right toward Move,
+  // and pad the "Time" pill to the same 3-line height as Game A/B.
+  rshower:  LAYOUT_12_KEYS,
+  // LAYOUT_13 — Life Boat: Left/Right buttons on opposite sides + Game/Time row,
+  // pills left natural (no opDX); padTime keeps Time 3 lines tall like Layout 12.
+  lboat:    LAYOUT_13_KEYS,
+  // LAYOUT_4 members — four round buttons (two left up/down, two right up/down),
+  // Q/E/A/D by position, with the Game A/B/Time operational column. Fire Attack
+  // ID-29 is the template; Mickey Mouse MC-25 and Egg EG-26 fold onto its
+  // byte-identical hotspots (LAYOUT_4) and need noRocker to stop their touching
+  // top/bottom pairs merging into rockers. Manhole NH-103 is the same control
+  // type on a different chassis — it keeps its own hotspots but shares this
+  // diagram treatment. Gameplay (inputRows) untouched for all four.
+  fireatk:   LAYOUT_4_KEYS,
+  mmouse:    LAYOUT_4_KEYS,
+  egg:       LAYOUT_4_KEYS,
+  manholews: LAYOUT_4_KEYS,
+  // Black Jack's btn1-4 are four ROUND buttons (two left, two right), not two
+  // rockers — the touching-pair detector would otherwise merge them.
+  // Black Jack's four corner buttons aren't directional — give them their real
+  // card-game functions (by key: Q/E/A/D) instead of the generic arrows.
+  bjack:    { noRocker: true, meta: {
+    btn1: { label: 'Double Down',    keys: ['Q'] },   // top-left
+    btn2: { label: 'Bet ×10 / Hit',  keys: ['A'] },   // bottom-left
+    btn3: { label: 'Bet ×1 / Stand', keys: ['D'] },   // bottom-right
+    btn4: { label: 'Enter',          keys: ['E'] },   // top-right
+  } },
+  // LAYOUT_6 members — four discrete directional CIRCLES in a cross (up/down/
+  // left/right), arrow-labelled. Donkey Kong Jr. DJ-101 wires the cross as
+  // btn1-4 (would otherwise merge into a D-pad); SMB YM-105, Climber DR-106 and
+  // Balloon Fight BF-107 use named up/down/left/right (would otherwise merge
+  // into rockers). Climber+Balloon Fight share byte-identical hotspots (LAYOUT_6);
+  // SMB and DK Jr. keep their own inline hotspots (different molds), sharing only
+  // this diagram treatment. Gameplay (inputRows) untouched for all four.
+  dkjr:     LAYOUT_6_KEYS,
+  smbn:     LAYOUT_6_KEYS,
+  climbern: LAYOUT_6_KEYS,
+  bfightn:  LAYOUT_6_KEYS,
+  // LAYOUT_7 — ML-102: enlarge the L/R circles (no up/down, so there's room).
+  mariocm:  LAYOUT_7_KEYS,
+  // LAYOUT_2 members — four round buttons (two left up/down, two right up/down),
+  // Q/E/A/D by position. Their btn1/btn3 and btn2/btn4 pairs touch vertically,
+  // so without noRocker the detector would merge each side into a see-saw
+  // rocker; these are discrete circles on the real hardware.
+  flagman:  LAYOUT_2_KEYS,
+  judge:    LAYOUT_2_KEYS,
+  manhole:  LAYOUT_2_KEYS,
+  lion:     LAYOUT_2_KEYS,
+  // LAYOUT_1 diagram tuning (Controls page only — never gameplay): the derived
+  // pill cluster spreads centred between the two side buttons, but on the real
+  // hardware Game A/B/Time sit tucked toward the RIGHT and a touch lower than the
+  // side buttons. Push right (opDX), tighten (opGap), drop below L/R (opDY).
+  vermin:      LAYOUT_1_KEYS,
+  ball:        LAYOUT_1_KEYS,
+  ballreissue: LAYOUT_1_KEYS,
+  fire:        LAYOUT_1_KEYS,
+  helmet:      LAYOUT_1_KEYS,
+};
+
+var _keysOpen = false;
+
+function _keysEnsureDom(){
+  if (document.getElementById('play-keys-panel')) return;
+  var style = document.createElement('style');
+  style.textContent =
+    '#play-head-actions.keys-open #play-save-btn,#play-head-actions.keys-open #play-load-btn,' +
+      '#play-head-actions.keys-open #play-rewind-btn,#play-head-actions.keys-open #play-keys-btn,' +
+      '#play-head-actions.keys-open #play-pause-toggle,#play-head-actions.keys-open #play-mute-btn,' +
+      '#play-head-actions.keys-open #play-zoom-toggle{display:none!important}' +
+    '#play-head-actions.keys-open #play-keys-headbar{display:flex!important}' +
+    '#play-emu-root{position:relative}' +
+    '#play-keys-panel{position:absolute;inset:0;z-index:80;display:none;flex-direction:row;gap:16px;' +
+      // extra top padding clears the morphed Back pill floating at top-centre (z:90)
+      'background:linear-gradient(180deg,var(--bg-1),var(--bg-0));border-radius:14px;padding:54px 18px 18px;overflow:hidden}' +
+    '#play-keys-panel.open{display:flex}' +
+    '';
+  document.head.appendChild(style);
+  // The generic .keys-* diagram CSS lives in the shared engine.
+  if (window.KeysDiagram) window.KeysDiagram.ensureCss(document);
+  var panel = document.createElement('div');
+  panel.id = 'play-keys-panel';
+  var root = document.getElementById('play-emu-root');
+  if (root) root.appendChild(panel);
+  window.addEventListener('resize', function(){ if (_keysOpen) _keysFit(); });
+}
+
+// Thin caller: build the Controls diagram for the current device via the shared
+// engine. All geometry/HTML/CSS live in keys-diagram.js; here we only supply the
+// per-device DATA (the live game, its aspect, its KEYS_OVERRIDE) + the registry.
+function _keysRenderDiagram(){
+  var panel = document.getElementById('play-keys-panel'); if (!panel || !_emu || !window.KeysDiagram) return;
+  var dev = document.getElementById('play-device');
+  var ar = (dev && dev.offsetHeight) ? dev.offsetWidth / dev.offsetHeight : 1;   // artwork aspect → true button proportions
+  window.KeysDiagram.render(panel, {
+    game: _emu.game, gameKey: _emu.gameKey, ar: ar,
+    override: KEYS_OVERRIDE[_emu.gameKey] || {},
+    meta: (KEYS_OVERRIDE[_emu.gameKey] || {}).meta,   // per-device button-label overrides (e.g. Black Jack's Double Down/Hit/Stand/Enter)
+    games: GAMES, overrides: KEYS_OVERRIDE
+  });
+}
+function _keysFit(){ if (window.KeysDiagram) window.KeysDiagram.fit(document.getElementById('play-keys-panel')); }
+// Game help (2026-10-04, shortcuts.js): the open device's button list for the ? help over the game,
+// from the same data the Controls diagram above is drawn from.
+window.gnwControlsInfo = function(){
+  if (!_emu || !_emu.game || !window.KeysDiagram || !window.KeysDiagram.buttons) return null;
+  var ov = KEYS_OVERRIDE[_emu.gameKey] || {};
+  return { gameKey: _emu.gameKey, microVs: !!_emu.game.microVs,
+    buttons: window.KeysDiagram.buttons({ game: _emu.game, override: ov, meta: ov.meta }) };
+};
+
+window.gnwOpenKeys = function(){
+  if (!_emu) return;
+  if (_emu._bootDismissPending) return;   // don't freeze mid boot lamp-test (would strand on 12:00)
+  _keysEnsureDom();
+  if (window.gnwCloseSaveGrid) window.gnwCloseSaveGrid(true);   // mutually exclusive with the save grid
+  _saveFreeze();                                                // pause while reading the controls
+  _keysOpen = true;
+  _keysRenderDiagram();
+  var p = document.getElementById('play-keys-panel'); if (p) p.classList.add('open');
+  var h = document.getElementById('play-head-actions'); if (h) h.classList.add('keys-open');
+  _gnwSetPill('back', 'Controls');
+  _keysFit();
+  if (window.KeysDiagram) window.KeysDiagram.attachInput(document.getElementById('play-keys-panel'));   // light buttons live as their keys are pressed
+};
+window.gnwCloseKeys = function(silent){
+  if (window.KeysDiagram) window.KeysDiagram.detachInput();
+  var p = document.getElementById('play-keys-panel'); if (p) p.classList.remove('open');
+  var h = document.getElementById('play-head-actions'); if (h) h.classList.remove('keys-open');
+  _gnwSetPill('game', null, silent);   // silent (mutual-exclusive/modal) = instant; user Back = animated
+  if (!silent) _saveThaw();   // always resume the game/demo on a real close (idempotent; respects a user pause)
+  _keysOpen = false;
+};
+
+// Inject the grid panel (into #play-emu-root, so it travels with the device),
+// the toast (into body), and the CSS — once.
+function _saveEnsureDom(){
+  if (document.getElementById('play-save-panel')) return;
+  var style = document.createElement('style');
+  style.textContent =
+    '#play-save-btn{--c:var(--accent)}' +
+    // While the grid is open, the header shows only Back + slot info (more room
+    // for the grid, and forces the user out through Back).
+    '#play-head-actions.saves-open #play-save-btn,#play-head-actions.saves-open #play-load-btn,' +
+      '#play-head-actions.saves-open #play-pause-toggle,' +
+      '#play-head-actions.saves-open #play-zoom-toggle{display:none!important}' +
+    '#play-head-actions.saves-open #play-saves-headbar{display:flex!important}' +
+    '#play-emu-root{position:relative}' +
+    '#play-save-panel{position:absolute;inset:0;z-index:80;display:none;flex-direction:column;' +
+      // extra top padding clears the morphed Back pill floating at top-centre (z:90)
+      'background:linear-gradient(180deg,var(--bg-1),var(--bg-0));border-radius:14px;padding:54px 18px 16px;overflow:auto;scrollbar-width:none}' +
+    '#play-save-panel::-webkit-scrollbar{display:none}' +
+    '#play-save-panel.open{display:flex}' +
+    '.save-back{font:inherit;font-size:12px;font-weight:700;color:var(--text);background:transparent;' +
+      'border:1px solid var(--line);border-radius:9px;padding:6px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}' +
+    '.save-back:hover{background:var(--bg-3)}' +
+    // grid-auto-rows:min-content + align-*:start keep every slot at its natural
+    // (minimal) height -- an expanded slot grows its own row and pushes the rows
+    // below down, but empty/collapsed slots never stretch to fill it.
+    // width:100% + justify-items:stretch force the grid to fill the panel so the
+    // four 1fr columns are true equal fractions (otherwise the grid shrink-wraps
+    // to its widest item). align-items:start keeps each slot at its own (minimal)
+    // height. NB: do NOT use grid-auto-rows:min-content -- with the thumb's
+    // percentage-padding aspect box it triggers a pathological intrinsic pass
+    // that inflates empty rows; default auto rows size to the real content.
+    '.save-grid{display:grid;width:100%;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;align-items:start;justify-items:stretch}' +
+    // Horizontal (side-by-side) Multi Screen titles use a 2-column grid so each
+    // wider both-screens thumb has room. Two-class specificity so it also wins
+    // over the narrow-screen media query below.
+    '.save-grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}' +
+    '@media(max-width:640px){.save-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
+    // Dual-screen thumbs drop the fixed height and take their shape from the
+    // composited canvas aspect (set as --thumb-ar on the grid) so BOTH screens
+    // are fully visible. Column width is definite (minmax(0,1fr)), so the
+    // aspect-ratio height is definite too -- no intrinsic-sizing inflation.
+    '.save-grid.dual .save-thumb{height:auto;aspect-ratio:var(--thumb-ar,1.4)}' +
+    // Flex column so the thumb + meta always stretch to the full slot width (no
+    // shrink-wrapping to the meta text), and the slot is exactly as tall as its
+    // content -- every slot the same minimal height.
+    '.save-slot{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg-2);' +
+      'overflow:hidden;cursor:pointer;width:100%;min-width:0;align-self:start;transition:border-color .14s,box-shadow .14s}' +
+    '.save-slot:hover{border-color:#3b4557}' +
+    '.save-slot.expanded{border-color:rgba(155,225,93,.55);box-shadow:0 10px 26px -14px rgba(0,0,0,.7)}' +
+    // Fixed-height thumb with the snapshot as a background-image (NOT an <img>):
+    // sidesteps every replaced-element / aspect-ratio intrinsic-sizing pitfall
+    // that inflated empty slots. Identical box for filled and empty slots.
+    '.save-thumb{position:relative;width:100%;height:146px;flex:0 0 auto;background:#aeb7a2 center center/cover no-repeat;overflow:hidden;border-bottom:1px solid var(--line)}' +
+    '.save-meta{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;font-size:10.5px;color:var(--muted)}' +
+    '.save-idx{font-family:ui-monospace,Consolas,monospace;font-weight:800;color:var(--muted)}' +
+    '.save-slot.save-empty{border-style:dashed;background:transparent}' +
+    '.save-slot.save-empty .save-thumb{background:repeating-linear-gradient(135deg,rgba(255,255,255,.02) 0 10px,transparent 10px 20px)}' +
+    '.save-plus{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:32px;' +
+      'border:2px dashed #3b4557;border-radius:50%;color:#5a6474;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1}' +
+    '.save-slot.save-empty .save-meta{color:#5a6474}' +
+    '.save-slot.save-empty:hover .save-plus{border-color:var(--accent);color:var(--accent)}' +
+    // display:none (not max-height:0) so the collapsed detail contributes NOTHING
+    // to the slot's intrinsic size -- otherwise grid min-content sizing counts its
+    // natural height and stretches every row (and the empty slots) to the expanded
+    // height. A short fade-in on expand keeps it from popping.
+    '.save-detail{display:none;border-top:1px solid var(--line);animation:saveDetailIn .18s ease}' +
+    '@keyframes saveDetailIn{from{opacity:0}to{opacity:1}}' +
+    '.save-slot.expanded .save-detail{display:block}' +
+    '.save-pad{padding:9px;display:flex;flex-direction:column;gap:8px}' +
+    '.save-acts{display:flex;gap:7px}' +
+    '.save-acts .save-btn{flex:1;justify-content:center;font:inherit;font-size:11.5px;font-weight:700;padding:6px 8px;' +
+      'border-radius:7px;border:1px solid var(--line);background:var(--bg-3);color:var(--text);cursor:pointer;' +
+      'display:inline-flex;align-items:center;gap:4px}' +
+    '.save-acts .load{border-color:rgba(155,225,93,.5);color:#cbeeb0}' +
+    '.save-acts .load:hover{background:rgba(155,225,93,.12)}' +
+    '.save-acts .del{border-color:rgba(224,107,93,.4);color:#f0b7af}' +
+    '.save-acts .del:hover{background:rgba(224,107,93,.12)}' +
+    // Light mode: the dark-mode light-green/red text is invisible on the light
+    // slot background -- use darker, higher-contrast ink for Load/Del there.
+    ':root[data-theme="light"] .save-acts .load{color:#2c6e17;border-color:rgba(90,150,45,.6)}' +
+    ':root[data-theme="light"] .save-acts .del{color:#b23a2a;border-color:rgba(190,70,55,.55)}' +
+    '.save-comment{width:100%;background:var(--bg-0);border:1px solid var(--line);border-radius:6px;color:var(--text);' +
+      'font:inherit;font-size:12px;padding:7px 8px;resize:none;min-height:42px}' +
+    '.save-comment::placeholder{color:#57616f}' +
+    '#play-save-toast{position:fixed;right:22px;bottom:22px;width:min(300px,80vw);z-index:1200;' +
+      'background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:11px;display:flex;gap:11px;align-items:center;' +
+      'box-shadow:0 18px 40px -16px rgba(0,0,0,.7);transform:translateX(140%);transition:transform .5s cubic-bezier(.2,.8,.25,1)}' +
+    '#play-save-toast.in{transform:translateX(0)}' +
+    '#play-save-toast .tthumb{width:56px;height:42px;border-radius:6px;background:#aeb7a2;flex:0 0 auto;overflow:hidden}' +
+    '#play-save-toast .tthumb img{width:100%;height:100%;object-fit:cover;display:block}' +
+    '#play-save-toast .tx b{font-size:13px;color:var(--text)}' +
+    '#play-save-toast .tx span{display:block;font-size:11px;color:var(--muted);margin-top:1px}' +
+    '#play-save-toast .check{margin-left:auto;color:var(--accent);font-size:18px}';
+  document.head.appendChild(style);
+
+  var root = document.getElementById('play-emu-root');
+  if (root) {
+    var panel = document.createElement('div');
+    panel.id = 'play-save-panel';
+    panel.innerHTML = '<div class="save-grid"></div>';   // Back + count now live in the modal header
+    root.appendChild(panel);
+  }
+  var toast = document.createElement('div');
+  toast.id = 'play-save-toast';
+  toast.innerHTML = '<div class="tthumb"></div><div class="tx"><b>Game saved</b><span></span></div><div class="check">✓</div>';
+  document.body.appendChild(toast);
+}
+
+function _saveRenderGrid(){
+  if (!_emu) return;
+  var grid = document.querySelector('#play-save-panel .save-grid');
+  if (!grid) return;
+  var key = _emu.gameKey;
+  var game = _emu.game;
+  var slots = _saveLoadSlots(key);
+  // Reflow the grid for this device: single 12/4-col, vertical dual 8/4-col,
+  // horizontal dual 6/2-col. Storage still holds all 12 (see _saveLoadSlots);
+  // we only RENDER the device-appropriate count so no stored save is lost.
+  var n = _saveSlotCountFor(game);
+  var orient = _saveDualOrient(game);
+  grid.classList.toggle('cols-2', _saveGridColsFor(game) === 2);
+  grid.classList.toggle('dual', !!orient);
+  if (orient) grid.style.setProperty('--thumb-ar', _saveThumbAspect(game));
+  else grid.style.removeProperty('--thumb-ar');
+  grid.innerHTML = '';
+  slots.slice(0, n).forEach(function(s, i){
+    var el = document.createElement('div');
+    /* Reachable without a mouse (2026-10-14): a pad, a remote or Tab focuses a
+       slot, and A, OK, Enter or Space presses it (index.html's [data-key-activate]). */
+    el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('data-key-activate', '');
+    if (!s) {
+      el.className = 'save-slot save-empty';   // NB: not "empty" -- collides with the site-wide .empty{padding:60px} rule
+      el.innerHTML = '<div class="save-thumb"><span class="save-plus">+</span></div>' +
+        '<div class="save-meta"><span class="save-idx">' + (i + 1) + '</span><span>Save here</span></div>';
+      el.onclick = function(){ _saveToSlot(i); };
+    } else {
+      el.className = 'save-slot';
+      el.innerHTML = '<div class="save-thumb"' + (s.thumb ? ' style="background-image:url(' + s.thumb + ')"' : '') + '></div>' +
+        '<div class="save-meta"><span class="save-idx">' + (i + 1) + '</span><span>' + _saveRelTime(s.ts) + '</span></div>' +
+        '<div class="save-detail"><div class="save-pad">' +
+          '<div class="save-acts"><button type="button" class="save-btn load">▶ Load</button>' +
+          '<button type="button" class="save-btn del">🗑 Delete</button></div>' +
+          '<textarea class="save-comment" placeholder="Add a note about this save…"></textarea>' +
+        '</div></div>';
+      el.querySelector('.save-comment').value = s.comment || '';
+      el.onclick = function(e){
+        if (e.target.closest('.save-detail')) return;   // don't collapse while using the panel
+        var open = el.classList.contains('expanded');
+        grid.querySelectorAll('.save-slot.expanded').forEach(function(x){ x.classList.remove('expanded'); });
+        if (!open) el.classList.add('expanded');
+      };
+      el.querySelector('.load').onclick = function(){ _saveLoadSlot(i); };
+      el.querySelector('.del').onclick  = function(){ _saveDeleteSlot(i); };
+      el.querySelector('.save-comment').oninput = function(ev){
+        var arr = _saveLoadSlots(key); if (arr[i]) { arr[i].comment = ev.target.value; _saveStoreSlots(key, arr); }
+      };
+    }
+    grid.appendChild(el);
+  });
+  var used = slots.slice(0, n).filter(Boolean).length;
+  var cnt = document.getElementById('play-saves-count');
+  if (cnt) cnt.textContent = used + ' / ' + n + ' used';
+  window.gnwUpdateSaveButtons();
+}
+
+// Capture the running game into slot i (from an empty-slot tap or the header
+// Save button), then persist + toast. Async because the thumbnail is.
+function _saveToSlot(i){
+  if (!_emu) return;
+  _saveEnsureDom();                                     // toast lives in this DOM
+  var key = _emu.gameKey;
+  var state = window.gnwSaveState(); if (!state) return;
+  _saveRenderThumb(function(thumb){
+    var arr = _saveLoadSlots(key);
+    arr[i] = { ts: Date.now(), comment: (arr[i] && arr[i].comment) || '', thumb: thumb, state: state };
+    _saveStoreSlots(key, arr);
+    if (_gridOpen) _saveRenderGrid();
+    _saveShowToast(i, thumb);
+    window.gnwUpdateSaveButtons();
+  });
+}
+function _saveLoadSlot(i){
+  if (!_emu) return;
+  var s = _saveLoadSlots(_emu.gameKey)[i];
+  if (!s || !s.state) return;
+  window.gnwLoadState(s.state);
+  window.gnwCloseSaveGrid();
+  _saveFlash();
+}
+function _saveDeleteSlot(i){
+  if (!_emu) return;
+  var key = _emu.gameKey;
+  var arr = _saveLoadSlots(key); arr[i] = null; _saveStoreSlots(key, arr);
+  _saveRenderGrid();
+}
+function _saveShowToast(i, thumb){
+  var toast = document.getElementById('play-save-toast'); if (!toast) return;
+  toast.querySelector('.tthumb').innerHTML = thumb ? '<img src="' + thumb + '" alt="">' : '';
+  toast.querySelector('.tx span').textContent = 'Slot ' + (i + 1) + ' · just now';
+  toast.classList.add('in');
+  clearTimeout(toast._t); toast._t = setTimeout(function(){ toast.classList.remove('in'); }, 2600);
+}
+
+// ── public API (called from index.html's header buttons + modal open/close) ──
+window.gnwSaveSlot = function(){
+  if (!_emu) return;
+  // Only the device-appropriate slots are visible, so fill within that range.
+  var free = _saveLoadSlots(_emu.gameKey).slice(0, _saveSlotCountFor(_emu.game)).indexOf(null);
+  if (free < 0) return;                                 // full — button is disabled anyway
+  _saveToSlot(free);
+};
+window.gnwOpenSaveGrid = function(){
+  if (!_emu) return;
+  if (_emu._bootDismissPending) return;   // don't freeze mid boot lamp-test (would strand on 12:00)
+  if (window.gnwCloseKeys) window.gnwCloseKeys(true);   // mutually exclusive with the controls screen
+  _saveEnsureDom();
+  _saveFreeze();
+  _gridOpen = true;
+  _saveRenderGrid();
+  var p = document.getElementById('play-save-panel'); if (p) p.classList.add('open');
+  var h = document.getElementById('play-head-actions'); if (h) h.classList.add('saves-open');
+  _gnwSetPill('back', 'Saved states');
+};
+window.gnwCloseSaveGrid = function(silent){
+  var p = document.getElementById('play-save-panel'); if (p) p.classList.remove('open');
+  var h = document.getElementById('play-head-actions'); if (h) h.classList.remove('saves-open');
+  _gnwSetPill('game', null, silent);   // silent (mutual-exclusive/modal) = instant; user Back = animated
+  if (_gridOpen && !silent) _saveThaw();
+  _gridOpen = false;
+};
+window.gnwUpdateSaveButtons = function(){
+  var save = document.getElementById('play-save-btn'); if (!save) return;
+  var full = false, n = _SAVE_SLOTS;
+  if (_emu) { n = _saveSlotCountFor(_emu.game); full = _saveLoadSlots(_emu.gameKey).slice(0, n).indexOf(null) < 0; }
+  save.disabled = !_emu || full;
+  save.title = full ? ('All ' + n + ' slots full: delete one to save') : 'Save game to a slot';
+};
+
+// ─── Ambient tile preview ───────────────────────────────────────────────────
+// A completely separate, muted, non-interactive instance for the collection
+// page's device tile — always running the Time-mode demo, never receiving
+// input, so attract mode never hands off control. Independent of _emu (the
+// interactive instance) so the two can never cross-talk.
+
+// Keyed by gameKey (not a single instance) so multiple different games' tiles
+// can run their own ambient preview simultaneously without stopping each other.
+const _tileEmus = {};
+
+// The big collection-page "device reveal" preview (slides in on the left when a
+// tile's drawer opens) is a SEPARATE emulator instance from the tiles' own
+// ambient previews -- its own single slot, not keyed into _tileEmus. That
+// isolation is deliberate: gnwMountTilePreview stops any existing instance of
+// the SAME gameKey (below), so routing the big reveal through _tileEmus would
+// stop the clicked device's own tile preview still running behind the drawer.
+const _bigPreview = { emu: null };
+
+/* THE STATIC HALF OF A TILE: THE DEVICE'S OWN GEOMETRY.
+ *
+ * Split out of _mountPreviewInto because it is NOT part of running an
+ * emulator, and tying the two together was a real bug. The CSS defaults on
+ * .tile-emu / .tile-emu-bg / .tile-emu-svg are Vermin's screen-glass
+ * percentages and Vermin's 2227x1500 case -- a Silver-series single-screen
+ * shape -- kept only as the fallback from when this was Vermin-only. EVERY
+ * other title needs its own box applied here or it renders at Vermin's.
+ *
+ * So when the TV / low-power path skipped the preview mount (see
+ * _previewsSuppressed() in index.html) it did not merely stop the CPU, which
+ * is all it meant to do: it also left every tile wearing Vermin's single-screen
+ * geometry. Single-screen devices looked right by accident, the twelve Multi
+ * Screen clamshells were squished into a landscape box with their second panel
+ * still display:none, and the side-by-side units (Lifeboat, Mario Bros., Rain
+ * Shower) were cropped by Vermin's one centred screen rect.
+ *
+ * Layout is cheap, needs no program, no segment SVG and no fetch, so it is applied
+ * unconditionally now -- a TV shows a correctly-proportioned, correctly-
+ * screened, static device. Idempotent: safe to call on every render sweep and
+ * again from the preview mount below. Returns false when this container can't
+ * be laid out, so the caller can bail the same way it used to. */
+window.gnwApplyTileLayout = function (containerEl, gameKey) {
+  if (!containerEl) return false;
+  const game = GAMES[gameKey];
+  if (!game) return false;
+  // PREVIEW-ART OVERRIDE: a title may declare game.preview to show DIFFERENT art
+  // in the non-interactive previews (tile + drawer stage) than in the Play modal.
+  // Only smbspecial uses this today (full flip-lid cabinet here, zoomed crop in
+  // Play). `pv` is the source of truth for the screen-glass box + segment SVG on
+  // this path; the tile's Unit/Background <img> srcs are set from previewFolder in
+  // deviceCardHTML/tileEmuLayersHTML. Titles without .preview fall back to `game`,
+  // so every other device is byte-for-byte unaffected.
+  const pv = game.preview || game;
+  const screen = containerEl.querySelector('.tile-emu-svg');
+  if (!screen) return false;
+  // Same Wide-Screen-vs-Silver aspect-ratio fix as _applyGameArtwork(), for
+  // the tile's own Unit.png — see _applyUnitAspectRatio's comment. The
+  // tile's <img> src is already set directly in the static HTML
+  // (deviceCardHTML), not here, so this just reads whatever's already
+  // loading/loaded rather than assigning a new src.
+  const unitEl = containerEl.querySelector('.tile-emu-unit');
+  if (unitEl) {
+    const applyTileAspect = () => {
+      if (!unitEl.naturalWidth || !unitEl.naturalHeight) return;
+      containerEl.style.aspectRatio = unitEl.naturalWidth + ' / ' + unitEl.naturalHeight;
+      // .tile-emu's CSS width is a fixed 90% (see its own comment for why
+      // width:auto isn't usable here) -- fine for every title whose case is
+      // wide enough that width is the binding constraint, but Spitball
+      // Sparky/Crab Grab's real 997x2094 case is proportionally TALLER
+      // than the tile-tall-2x .img box itself, so 90% width would derive a
+      // height taller than the tile and get clipped by .img's own
+      // overflow:hidden (confirmed live: the LCD showed but the case
+      // photo above/below it was cropped off). Recompute width down from
+      // 90% whenever the device's own aspect ratio is narrower than the
+      // tile's, so the resulting height instead tops out at 90% of the
+      // tile -- the same "whichever axis actually binds" fix
+      // .play-device's CSS got, just done here in JS since width:auto
+      // can't do it for an absolutely-positioned centered box.
+      const imgBox = containerEl.parentElement;
+      if (!imgBox) return;
+      const boxRect = imgBox.getBoundingClientRect();
+      if (!boxRect.width || !boxRect.height) return;
+      const deviceWH = unitEl.naturalWidth / unitEl.naturalHeight;
+      const boxWH = boxRect.width / boxRect.height;
+      if (deviceWH < boxWH) {
+        containerEl.style.width = (90 * (deviceWH / boxWH)).toFixed(2) + '%';
+      } else {
+        containerEl.style.width = '90%';
+      }
+    };
+    /* PERSISTENT, not {once:true}, and registered at most once per element.
+       Two reasons the old one-shot listener was not enough now that layout is
+       applied on every sweep rather than only at mount:
+         * the TV/low-power path DEMOTES a scrolled-away tile's artwork
+           (src removed, data-src restored) and re-promotes it on the way back,
+           so the unit image genuinely loads more than once per element, and a
+           spent one-shot listener left the second load unmeasured;
+         * an unloaded <img> reports complete===true with naturalWidth 0, so the
+           first call frequently bails and the listener is the only thing that
+           ever applies the real aspect ratio.
+       applyTileAspect only writes two style properties from the image's own
+       dimensions, so re-running it is idempotent. */
+    if (!unitEl.__gnwAspectBound) {
+      unitEl.__gnwAspectBound = true;
+      unitEl.addEventListener('load', applyTileAspect);
+    }
+    if (unitEl.complete) applyTileAspect();
+  }
+  // The CSS class's left/top/width/height are just Vermin's screen-glass
+  // percentages as a fallback default (from when this was Vermin-only) —
+  // every other title needs its own box applied here, same as
+  // _applyGameArtwork() does for the play modal, or its LCD renders at
+  // Vermin's (smaller, non-widescreen) box instead of its own.
+  const bgEl = containerEl.querySelector('.tile-emu-bg');
+  const hideEl = containerEl.querySelector('.tile-emu-hide');
+  // game.lcdInverted -- see _applyGameArtwork()'s own comment for the full
+  // writeup, same fix needed for the ambient tile preview.
+  screen.classList.toggle('lcd-inverted', !!game.lcdInverted);
+  [screen, bgEl, hideEl].forEach(el => {
+    if (!el) return;
+    // Crystal Screen backing is inset from the segments -- see the matching
+    // comment in _applyGameArtwork(). (pv.screen = the preview-override glass box
+    // when this title has one, else game.screen -- see the `pv` note above.)
+    const rect = (game.panel && el === bgEl) ? game.panel.bg : pv.screen;
+    el.style.left = rect.left + '%';
+    el.style.top = rect.top + '%';
+    el.style.width = rect.width + '%';
+    el.style.height = rect.height + '%';
+  });
+  // Crystal Screen see-through panel -- same three layers the play modal
+  // gets, built here out of the tile's own elements.
+  _applyPanelLayers(game, {
+    overlay:   containerEl.querySelector('.tile-emu-overlay'),
+    gradient:  containerEl.querySelector('.tile-emu-gradient'),
+    gradient2: containerEl.querySelector('.tile-emu-gradient-2'),
+  });
+  // Same unit-behind-the-LCD case the play modal handles -- see the
+  // .unit-behind CSS.
+  containerEl.classList.toggle('unit-behind', !!game.unitBehindScreen);
+
+  // Multi Screen titles only (game.screen2/svgPath2) -- second LCD glass/
+  // segment box for the bottom screen, same mechanism as _applyGameArtwork()
+  // gets in the Play modal. Hidden for every other title (see the CSS
+  // default for .tile-emu-bg-2/.tile-emu-svg-2).
+  const screen2 = containerEl.querySelector('.tile-emu-svg-2');
+  const bgEl2 = containerEl.querySelector('.tile-emu-bg-2');
+  if (screen2) screen2.classList.toggle('lcd-inverted', !!game.lcdInverted);
+  if (game.screen2 && screen2 && bgEl2) {
+    // See _applyGameArtwork()'s own game.bgFile/bgFile2 comment -- same
+    // override, needed here too since this function re-sets bgEl's src
+    // unconditionally, overwriting whatever the static HTML template's own
+    // GNW_EMULATED_GAMES.bgFile already put there.
+    // Routed through the page's tile-artwork map (index.html, _tileArtUrl) so
+    // these two layers get the same small WebP derivative every other tile
+    // layer gets. The hook is optional by construction: with no map loaded it
+    // is the identity function, and with no page hook at all the `|| (u => u)`
+    // keeps this working standalone.
+    const _art = window.gnwTileArtUrl || (u => u);
+    bgEl2.src = _art(game.artPath + (game.bgFile2 || 'Background-Bottom.png'));
+    bgEl.src = _art(game.artPath + (game.bgFile || 'Background-Top.png'));
+    [screen2, bgEl2].forEach(el => {
+      el.style.display = 'block';
+      el.style.left = game.screen2.left + '%';
+      el.style.top = game.screen2.top + '%';
+      el.style.width = game.screen2.width + '%';
+      el.style.height = game.screen2.height + '%';
+    });
+  }
+  return true;
+};
+
+// containerEl must contain a child matching '.tile-emu-svg' as the SVG mount point.
+// The tile's own Unit/Background artwork <img> srcs are set directly in the
+// static HTML (deviceCardHTML) — this only needs gameKey for program/SVG/clock.
+// store/storeKey say WHERE to remember the live instance (so tile previews use
+// _tileEmus keyed by slot, the big reveal uses its own _bigPreview slot) --
+// both share this one body so the mount logic never forks into parallel copies.
+function _mountPreviewInto(containerEl, gameKey, store, storeKey) {
+  if (!containerEl) return;
+  const game = GAMES[gameKey];
+  if (!game) return;
+  const pv = game.preview || game;
+  if (store[storeKey]) { store[storeKey].stop(); store[storeKey] = null; }
+  /* ONE MOUNT PER SLOT AT A TIME (2026-10-17). The artwork fetch is
+     asynchronous; a second mount (or a stop) arriving before it resolves used
+     to leave the first one to start a core anyway and overwrite the slot
+     without stopping it, an orphan stepping a detached or off-screen tile for
+     the rest of the visit. The newest mount owns the slot; a stop clears it. */
+  const tok = {};
+  (store.__tok || (store.__tok = {}))[storeKey] = tok;
+  const isTile = store === _tileEmus;
+  const screen = containerEl.querySelector('.tile-emu-svg');
+  if (!screen) return;
+  /* The tile reveal (index.html _tileRevealCheck) keeps this tile behind its
+     loading blur while the attribute says 'pending', and fades it in once,
+     when it says '1' (first real frame) or 'x' (the mount gave up). */
+  if (isTile) containerEl.setAttribute('data-gnw-shown', 'pending');
+  // The device's own geometry first — the half that is now also applied
+  // without an emulator (see gnwApplyTileLayout). Re-applying it here keeps
+  // this function correct on its own, whatever the caller did or didn't do.
+  if (!window.gnwApplyTileLayout(containerEl, gameKey)) { if (isTile) containerEl.setAttribute('data-gnw-shown', 'x'); return; }
+  const screen2 = containerEl.querySelector('.tile-emu-svg-2');
+
+  const parseSvg = txt => {
+    const doc = new DOMParser().parseFromString(txt, 'image/svg+xml');
+    const svg = doc.documentElement;
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;';
+    const bg = _findLayerByLabel(svg, 'white');
+    if (bg) bg.style.display = 'none';
+    return svg;
+  };
+
+  const fetchSvg = _resolveArt;   // artwork now served from firmware/output/artwork.json.gz via the _resolveArt gateway
+  // pv.svgPath = the preview-override segment art when present (smbspecial reuses
+  // smbn's regardless, so this is a no-op for it, but keeps the override coherent).
+  const fetches = pv.svgPath2 ? Promise.all([fetchSvg(pv.svgPath), fetchSvg(pv.svgPath2)]) : fetchSvg(pv.svgPath).then(txt => [txt, null]);
+
+  _programsReadyNow().then(() => fetches)
+    .then(([txt, txt2]) => {
+      if (store.__tok[storeKey] !== tok) return;   // superseded or stopped meanwhile
+      const svg = parseSvg(txt);
+      let svg2 = null;
+      if (txt2 && screen2) svg2 = parseSvg(txt2);
+      /* A TILE'S NEW SEGMENT ART WAITS INVISIBLE UNTIL ITS FIRST REAL FRAME
+         (2026-10-17). Added beside whatever the screen already shows
+         (a tile scrolled back into view still holds its last frozen frame),
+         and swapped in only when the new core has drawn a real picture, so a
+         remount never shows an empty LCD or the lamp test. Opacity, not
+         visibility: GnwDisplay sets each segment's own visibility, which would
+         override a hidden parent. The drawer's big preview is unchanged. */
+      if (isTile) {
+        svg.style.opacity = '0';
+        screen.appendChild(svg);
+        if (svg2) { svg2.style.opacity = '0'; screen2.appendChild(svg2); }
+      } else {
+        screen.innerHTML = '';
+        screen.appendChild(svg);
+        if (svg2) { screen2.innerHTML = ''; screen2.appendChild(svg2); }
+      }
+
+      const emu = new GnwEmulator(gameKey, { audio: false });
+      emu._sharedLoop = true;          // stepped by _gnwPreviewLoop, not its own rAF
+      emu._tileHold = isTile;          // a grid tile: held while a game or film is in front
+      emu.mount(svg, null, { interactive: false }, svg2);
+      if (isTile) {
+        emu._onShown = () => {
+          [[screen, svg], [screen2, svg2]].forEach(([box, keep]) => {
+            if (!box || !keep) return;
+            Array.from(box.children).forEach(ch => { if (ch !== keep) ch.remove(); });
+            keep.style.opacity = '';
+          });
+          containerEl.setAttribute('data-gnw-shown', '1');
+        };
+      }
+      emu.start();
+      emu.startAttract();
+      if (store[storeKey]) store[storeKey].stop();
+      store[storeKey] = emu;
+    })
+    .catch(err => {
+      if (isTile && store.__tok && store.__tok[storeKey] === tok) containerEl.setAttribute('data-gnw-shown', 'x');
+      /* Missing artwork stays silent -- the tile keeps its placeholder. A core
+         that declines a title is a fault, and says so: there is no fallback. */
+      if (err && /Game & Watch core/.test(err.message)) console.error('[gnw] preview ' + gameKey + ':', err.message);
+    });
+}
+
+/* Tile ambient previews, keyed by SLOT rather than by game.
+ *
+ * One instance per gameKey was a hidden assumption that a title appears in at
+ * most one grid. It does not: the Video page's game widget renders the same
+ * catalogue card the collection does, so a title can legitimately be live in
+ * two grids at once. With one slot per game the second mount ran
+ * store[gameKey].stop() and KILLED the first grid's emulator -- the caller
+ * that mounted last won, and the other tile was left with case art and a dead
+ * LCD. (The Game Boy tiles hit exactly this and are keyed id@grid for it.)
+ *
+ * The slot is the caller's business, because only the caller knows which grid
+ * it is filling. Omitting it keeps the old behaviour, so every existing call
+ * site is unaffected. */
+window.gnwMountTilePreview = function (containerEl, gameKey, slot) {
+  _mountPreviewInto(containerEl, gameKey, _tileEmus, slot || gameKey);
+};
+
+// The big left-side device reveal: its own single slot, non-interactive demo
+// mode exactly like a tile preview, but isolated from _tileEmus (see the
+// _bigPreview comment above). gnwStopBigPreview tears it down on drawer close.
+window.gnwMountBigPreview = function (containerEl, gameKey) {
+  _mountPreviewInto(containerEl, gameKey, _bigPreview, 'emu');
+};
+window.gnwStopBigPreview = function () {
+  if (_bigPreview.emu) { _bigPreview.emu.stop(); _bigPreview.emu = null; }
+};
+
+/* Omit the slot to stop every ambient tile preview. Takes the SLOT that
+   gnwMountTilePreview was given, which for a single-grid caller is still just
+   the game key. */
+window.gnwStopTilePreview = function (slot) {
+  if (slot) {
+    if (_tileEmus.__tok) delete _tileEmus.__tok[slot];   // a mount still fetching is cancelled too
+    if (_tileEmus[slot]) { _tileEmus[slot].stop(); _tileEmus[slot] = null; }
+  } else {
+    if (_tileEmus.__tok) _tileEmus.__tok = {};
+    Object.keys(_tileEmus).forEach(k => { if (k !== '__tok' && _tileEmus[k]) _tileEmus[k].stop(); });
+    for (const k in _tileEmus) if (k !== '__tok') delete _tileEmus[k];
+  }
+};
+
+})();

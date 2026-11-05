@@ -1,0 +1,113 @@
+{
+ "format": 1,
+ "list": "gbc",
+ "label": "Game Boy Color",
+ "guards": [
+  "game-boy"
+ ],
+ "count": 17,
+ "entries": {
+  "081f283109a14a0e4758edd97fc1d4e141d3c3b1906811ae7afa4c9d167fba9c": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Mythri (USA) (Proto 1) (2000-08-02)"
+  },
+  "1c9e7b337a06e2be5d045abe8e8f5fe9080073542fd4e53b55a9fa7020385281": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Beta) (1998-06-15) (GB Compatible)"
+  },
+  "1cfb4d7021b3e17dc6a1b7a240090232c8e18d082247f40df60a7327fcd50f02": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "Action Replay Pro (World) (Unl)"
+  },
+  "343aa6cbce4bd7f174c1ac2c4b01cd545e4377360d3f8be0d5331a7bcd5c6c0c": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
+   "title": "GameShark MX (USA) (v1.02) (Unl)"
+  },
+  "436c9c6743f91a200cb2d30dca95f87375ff8e2eed7eb19fa41972c86bbca8fe": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its header fails the console's own start-up check, so a real console refuses this file too.",
+   "title": "Bingyuan Lixian Ji II (Taiwan) (Unl) (Alt)"
+  },
+  "48c476ae5a89918999a683a33aac6cd6658ef0497b30b116bd1084c30bbdcd7f": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Mythri (USA) (Proto 2) (2001-03-31)"
+  },
+  "48c6c76e3c6bd49420a3d63a26e146528d07959b52021a73fc5f9d8c0f1f6d00": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Dragon Ball - Final Bout (Taiwan) (Unl)"
+  },
+  "4bf0059da50d4f4438fe79ccc18b394e658d800eefa1cb2d0338639cbf0ce185": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Tyrannosaurus Tex (USA) (Proto)"
+  },
+  "4c89efada14242ab94670af4460514ce22a19046098a94b52a95b3c25a87c43d": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Rev 1) (Demo) (Special Version 2) (GB Compatible)"
+  },
+  "5f22b311117de4a8dd8947cb3a6819504468c4444d6754ffc94da53442f4ced6": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "the console's start-up logo check refuses this cartridge on its own, as a real console does.",
+   "title": "Mail Junkies World Port (United Kingdom) (v1.01) (Unl)"
+  },
+  "71cb58b5f26bd2d5f0ff924e018cc96ae44184a8070f6c81254b88b5e64ea289": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its header fails the console's own start-up check, so a real console refuses this file too.",
+   "title": "Shantae (World) (GBA Enhanced) (Switch)"
+  },
+  "76dd86b7d2e79bf61327ec839c659557b132b1a13a3dfb5b5bb19592b9349991": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Beta) (1998-06-15) (GB Compatible) (Alt)"
+  },
+  "7934ce16ed80616d946f8270c55c4cf9209951e2dd36afe6ceb57dcab6900bfe": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is a communication add-on that waits for its link hardware, which is not emulated.",
+   "title": "SmartCom (Europe) (Unl)"
+  },
+  "afa55d726b87c8fbf8d2b70e61df035749833210ab1dcf211e67c152dd6c4ff4": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Zook Z (USA) (Unl)"
+  },
+  "ca0f5befc3f2ca2a3cabdfc76b080f00ab98c848a4b81a594cc1bd62a7e5b3b0": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Rev 1) (Demo) (Special Version 1) (GB Compatible)"
+  },
+  "cf4a7c4e3a66c64d1fd26670b20cfefddb287f7509f1694e3b3e2daa569d560b": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes while starting up.",
+   "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Beta) (1998-07-14T181500) (GB Compatible)"
+  },
+  "ee12fd4d2a7c5ce75ff775ba0f3cc1f26a9988049b1f603039d551eb8278c5cb": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Super Fighters S (Taiwan) (GB Compatible) (Unl)"
+  }
+ }
+}

@@ -1,0 +1,218 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "tj",
+ "label": "Tetris Jr.",
+ "device": "art",
+ "theme": {
+  "press": "rgba(255,255,255,.55)",
+  "pressInk": "#10131a"
+ },
+ "art": {
+  "controls": [
+   {
+    "id": "left",
+    "label": "Left",
+    "input": "ArrowLeft",
+    "shape": "rect",
+    "x": 0.089,
+    "y": 0.8455,
+    "w": 0.042,
+    "h": 0.033
+   },
+   {
+    "id": "right",
+    "label": "Right",
+    "input": "ArrowRight",
+    "shape": "rect",
+    "x": 0.171,
+    "y": 0.8455,
+    "w": 0.042,
+    "h": 0.033
+   },
+   {
+    "id": "up",
+    "label": "Rotate",
+    "input": "ArrowUp",
+    "shape": "rect",
+    "x": 0.13,
+    "y": 0.8135,
+    "w": 0.04,
+    "h": 0.033
+   },
+   {
+    "id": "down",
+    "label": "Drop",
+    "input": "ArrowDown",
+    "shape": "rect",
+    "x": 0.13,
+    "y": 0.8775,
+    "w": 0.04,
+    "h": 0.033
+   },
+   {
+    "id": "round",
+    "label": "Rotate",
+    "input": "Space",
+    "shape": "circle",
+    "x": 0.869,
+    "y": 0.846,
+    "w": 0.068,
+    "h": 0.054
+   },
+   {
+    "id": "gameA",
+    "label": "Game A",
+    "input": "Digit1",
+    "shape": "pill",
+    "x": 0.859,
+    "y": 0.577,
+    "w": 0.044,
+    "h": 0.036
+   },
+   {
+    "id": "gameB",
+    "label": "Game B",
+    "input": "Digit2",
+    "shape": "pill",
+    "x": 0.858,
+    "y": 0.63,
+    "w": 0.044,
+    "h": 0.036
+   },
+   {
+    "id": "time",
+    "label": "Time",
+    "input": "Digit3",
+    "shape": "pill",
+    "x": 0.858,
+    "y": 0.683,
+    "w": 0.044,
+    "h": 0.036
+   }
+  ]
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "round",
+      "label": "ROTATE",
+      "input": "Space",
+      "shape": "circle",
+      "x": 0.6,
+      "y": 0.5,
+      "w": 0.58,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "modes",
+    "dock": "bc",
+    "row": {
+     "gap": 8
+    },
+    "controls": [
+     {
+      "id": "gameA",
+      "label": "GAME A",
+      "input": "Digit1",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "gameB",
+      "label": "GAME B",
+      "input": "Digit2",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "time",
+      "label": "TIME",
+      "input": "Digit3",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "provenance": [
+  {
+   "what": "art buttons",
+   "source": "play/tetrisjr/index.html #hot-* CSS (percent of #device over PrototypeTetrisJrArt.webp)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "inputs",
+   "source": "play/tetrisjr/index.html KEYS and Digit1/2/3",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

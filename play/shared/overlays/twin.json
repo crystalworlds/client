@@ -1,0 +1,352 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "twin",
+ "label": "Game & Watch: Super Mario Bros. / The Legend of Zelda (colour units)",
+ "device": "art",
+ "theme": {
+  "press": "rgba(255,255,255,.55)",
+  "pressInk": "#10131a"
+ },
+ "art": {
+  "controls": [
+   {
+    "id": "game",
+    "label": "Game",
+    "input": "Digit1",
+    "shape": "rect",
+    "x": 0.83,
+    "y": 0.14,
+    "w": 0.06,
+    "h": 0.08
+   },
+   {
+    "id": "time",
+    "label": "Time",
+    "input": "Digit3",
+    "shape": "rect",
+    "x": 0.83,
+    "y": 0.257,
+    "w": 0.06,
+    "h": 0.08
+   },
+   {
+    "id": "pause",
+    "label": "Pause",
+    "input": "Digit2",
+    "shape": "rect",
+    "x": 0.83,
+    "y": 0.375,
+    "w": 0.07,
+    "h": 0.08
+   },
+   {
+    "id": "b",
+    "label": "B",
+    "input": "KeyZ",
+    "shape": "circle",
+    "x": 0.8195,
+    "y": 0.724,
+    "w": 0.075,
+    "h": 0.128
+   },
+   {
+    "id": "a",
+    "label": "A",
+    "input": "KeyX",
+    "shape": "circle",
+    "x": 0.9235,
+    "y": 0.724,
+    "w": 0.075,
+    "h": 0.128
+   },
+   {
+    "id": "up",
+    "label": "Up",
+    "input": "ArrowUp",
+    "shape": "rect",
+    "x": 0.127,
+    "y": 0.6275,
+    "w": 0.08,
+    "h": 0.085
+   },
+   {
+    "id": "down",
+    "label": "Down",
+    "input": "ArrowDown",
+    "shape": "rect",
+    "x": 0.127,
+    "y": 0.8225,
+    "w": 0.08,
+    "h": 0.085
+   },
+   {
+    "id": "left",
+    "label": "Left",
+    "input": "ArrowLeft",
+    "shape": "rect",
+    "x": 0.067,
+    "y": 0.7255,
+    "w": 0.062,
+    "h": 0.095
+   },
+   {
+    "id": "right",
+    "label": "Right",
+    "input": "ArrowRight",
+    "shape": "rect",
+    "x": 0.184,
+    "y": 0.7255,
+    "w": 0.062,
+    "h": 0.095
+   }
+  ],
+  "variants": {
+   "zelda": [
+    {
+     "id": "game",
+     "label": "Game",
+     "input": "Digit1",
+     "shape": "rect",
+     "x": 0.83,
+     "y": 0.14,
+     "w": 0.06,
+     "h": 0.08
+    },
+    {
+     "id": "time",
+     "label": "Time",
+     "input": "Digit3",
+     "shape": "rect",
+     "x": 0.83,
+     "y": 0.257,
+     "w": 0.06,
+     "h": 0.08
+    },
+    {
+     "id": "pause",
+     "label": "Pause",
+     "input": "Digit2",
+     "shape": "rect",
+     "x": 0.83,
+     "y": 0.375,
+     "w": 0.07,
+     "h": 0.08
+    },
+    {
+     "id": "select",
+     "label": "Select",
+     "input": "ShiftRight",
+     "shape": "pill",
+     "x": 0.822,
+     "y": 0.619,
+     "w": 0.092,
+     "h": 0.05
+    },
+    {
+     "id": "start",
+     "label": "Start",
+     "input": "Enter",
+     "shape": "pill",
+     "x": 0.924,
+     "y": 0.619,
+     "w": 0.092,
+     "h": 0.05
+    },
+    {
+     "id": "b",
+     "label": "B",
+     "input": "KeyZ",
+     "shape": "circle",
+     "x": 0.8195,
+     "y": 0.793,
+     "w": 0.075,
+     "h": 0.128
+    },
+    {
+     "id": "a",
+     "label": "A",
+     "input": "KeyX",
+     "shape": "circle",
+     "x": 0.9235,
+     "y": 0.793,
+     "w": 0.075,
+     "h": 0.128
+    },
+    {
+     "id": "up",
+     "label": "Up",
+     "input": "ArrowUp",
+     "shape": "rect",
+     "x": 0.127,
+     "y": 0.6275,
+     "w": 0.08,
+     "h": 0.085
+    },
+    {
+     "id": "down",
+     "label": "Down",
+     "input": "ArrowDown",
+     "shape": "rect",
+     "x": 0.127,
+     "y": 0.8225,
+     "w": 0.08,
+     "h": 0.085
+    },
+    {
+     "id": "left",
+     "label": "Left",
+     "input": "ArrowLeft",
+     "shape": "rect",
+     "x": 0.067,
+     "y": 0.7255,
+     "w": 0.062,
+     "h": 0.095
+    },
+    {
+     "id": "right",
+     "label": "Right",
+     "input": "ArrowRight",
+     "shape": "rect",
+     "x": 0.184,
+     "y": 0.7255,
+     "w": 0.062,
+     "h": 0.095
+    }
+   ]
+  }
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "b",
+      "label": "B",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.23,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     },
+     {
+      "id": "a",
+      "label": "A",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.77,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "modes",
+    "dock": "bc",
+    "row": {
+     "gap": 8
+    },
+    "controls": [
+     {
+      "id": "game",
+      "label": "GAME",
+      "input": "Digit1",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "time",
+      "label": "TIME",
+      "input": "Digit3",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "pause",
+      "label": "PAUSE",
+      "input": "Digit2",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "provenance": [
+  {
+   "what": "art buttons",
+   "source": "play/mario/index.html and play/zelda/index.html .hot boxes (percent of the device photograph)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "inputs",
+   "source": "play/twin-harness.js KEYMAP",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

@@ -1,0 +1,158 @@
+{
+ "systems": [
+  {
+   "key": "gnw",
+   "file": "list-gnw.json.gz",
+   "tested": "2026-11-02",
+   "counts": [
+    61,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "tft",
+   "file": "list-gnw.json.gz",
+   "tested": "2026-10-29",
+   "counts": [
+    2,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "gb",
+   "file": "list-gb.json.gz",
+   "tested": "2026-10-31",
+   "counts": [
+    1321,
+    2,
+    7,
+    0
+   ]
+  },
+  {
+   "key": "gbc",
+   "file": "list-gb.json.gz",
+   "tested": "2026-10-31",
+   "counts": [
+    1484,
+    9,
+    2,
+    0
+   ]
+  },
+  {
+   "key": "sgb",
+   "file": "list-gb.json.gz",
+   "tested": "2026-10-31",
+   "counts": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "nes",
+   "file": "list-nes.json.gz",
+   "tested": "2026-11-01",
+   "counts": [
+    2952,
+    56,
+    103,
+    0
+   ]
+  },
+  {
+   "key": "famicom",
+   "file": "list-nes.json.gz",
+   "tested": "2026-11-01",
+   "counts": [
+    1123,
+    4,
+    5,
+    0
+   ]
+  },
+  {
+   "key": "fds",
+   "file": "list-nes.json.gz",
+   "tested": "2026-11-01",
+   "counts": [
+    273,
+    13,
+    1,
+    0
+   ]
+  },
+  {
+   "key": "pm",
+   "file": "list-pm.json.gz",
+   "tested": "2026-10-29",
+   "counts": [
+    17,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "tj",
+   "file": "list-gnw.json.gz",
+   "tested": "",
+   "counts": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "atari2600",
+   "file": "list-a2600.json.gz",
+   "tested": "2026-10-29",
+   "counts": [
+    805,
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "atari5200",
+   "file": "list-a5200.json.gz",
+   "tested": "2026-10-28",
+   "counts": [
+    484,
+    10,
+    1,
+    0
+   ]
+  },
+  {
+   "key": "atari7800",
+   "file": "list-a7800.json.gz",
+   "tested": "2026-10-29",
+   "counts": [
+    314,
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "atarilynx",
+   "file": "list-alynx.json.gz",
+   "tested": "2026-10-29",
+   "counts": [
+    812,
+    48,
+    0,
+    0
+   ]
+  }
+ ]
+}

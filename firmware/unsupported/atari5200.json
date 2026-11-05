@@ -1,0 +1,119 @@
+{
+ "format": 1,
+ "list": "atari5200",
+ "label": "Atari 5200",
+ "guards": [
+  "atari5200"
+ ],
+ "count": 18,
+ "entries": {
+  "06b250f18983d058c0f156ce7ee88ae48b6eaf11e6f10f21dccf6ac7ffb6a6af": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "it is the console's firmware, not a cartridge.",
+   "title": "Atari 5200"
+  },
+  "28ff13b0587f9e5f9d0a9f1a07e6285cb717a557c881cc159cb6512d9f799d17": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "Crystal Castles - XE bear 5200"
+  },
+  "2eb9badb62e00ee66ea5f56192de08a4ecc3bade33511409517e1b945a9f9455": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "3-D Asteroids"
+  },
+  "30cd00911a1e4fbfef87ae0fb485bc75e8e10d7d17c5f72b4c40860e19979e10": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "MULE"
+  },
+  "3c73bc353340dc3fa994db1b68fee08a36c0e52b604c58ee2e09d5c2467de360": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it is console firmware, not a cartridge.",
+   "title": "5200_alt"
+  },
+  "3cf6d633113fe2e8aeda02bf398bffaf25d73c05d59175febe4ead5ac58fc576": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "frogstar_robot_spiderman"
+  },
+  "4e4750a2127d79fb3afb6b09af8e213e1f9d044f3506fd37b166be18a0a0859a": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Bbsb Xegs"
+  },
+  "6b38922e813e3d248ecba9136a17d901adad78aba118617bb191d8630e54f67c": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "Protector II"
+  },
+  "6cf7cbc1830f439835cb4db19f5d9ab41655f810d59c0b7c6152866ad9a126ea": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "sakuras2b"
+  },
+  "6f8b717b29041cd9087b62a3616918b982e557f9df62b22bde85e3138e217dde": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it is one of three parts of a split copy; the complete file plays.",
+   "title": "Bounty Bob Strikes Back!"
+  },
+  "8d74cded6a0f232e0f6878242d5a5aada87085cc4e109e0812ec6bc5cd7d5842": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "it needs a cartridge board that isn't built yet.",
+   "title": "Adventure II demos"
+  },
+  "a9e833ab56512edadbe787ad119509b71367c84be2ec3ebdd18d8533b598a802": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "slime_16kb"
+  },
+  "b7455bfb79ec32d39a42800ecea3361ed9b751a9137f45ecd107def39373177b": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it is one of three parts of a split copy; the complete file plays.",
+   "title": "Bounty Bob Strikes Back!"
+  },
+  "c05096cfd6ca771329dd318043174c26701f3378fcecfba92add9424b8b1ffaf": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it is one of three parts of a split copy; the complete file plays.",
+   "title": "Bounty Bob Strikes Back!"
+  },
+  "c329b5a04abce2c7aa55869286f2fcf1af98436c523dc4e8d10de5e65b630094": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "it is replacement console firmware, not a cartridge.",
+   "title": "altfirmware-2.50-test26"
+  },
+  "c8f5482c454ded660a96b089600291b473230c27cb6f6d59029aff94aebdcad0": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it needs a cartridge board that isn't built yet.",
+   "title": "Adventure II demos"
+  },
+  "e6651911339c01efd4890012502b0c33eb0e1bb7035a7bde5cde8307150e1aea": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "purple_nurple"
+  },
+  "f04c5da4299e9d578831605e9850843454e2bf6991e9df71146736a6956e15fd": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Bbsb Xegs"
+  }
+ }
+}

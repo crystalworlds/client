@@ -1,0 +1,182 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "pm",
+ "label": "Pokémon mini",
+ "device": "art",
+ "theme": {
+  "press": "rgba(255,255,255,.55)",
+  "pressInk": "#10131a"
+ },
+ "art": {
+  "size": [
+   198,
+   254
+  ],
+  "controls": [
+   {
+    "id": "dpad",
+    "label": "D-pad",
+    "input": null,
+    "shape": "dpad",
+    "x": 0.247,
+    "y": 0.7095,
+    "w": 0.27,
+    "h": 0.213,
+    "dirs": {
+     "up": "pm:up",
+     "down": "pm:down",
+     "left": "pm:left",
+     "right": "pm:right"
+    }
+   },
+   {
+    "id": "a",
+    "label": "A",
+    "input": "pm:a",
+    "shape": "circle",
+    "x": 0.845,
+    "y": 0.6495,
+    "w": 0.12,
+    "h": 0.093
+   },
+   {
+    "id": "b",
+    "label": "B",
+    "input": "pm:b",
+    "shape": "circle",
+    "x": 0.674,
+    "y": 0.7535,
+    "w": 0.12,
+    "h": 0.093
+   },
+   {
+    "id": "c",
+    "label": "C",
+    "input": "pm:c",
+    "shape": "rect",
+    "x": 0.9325,
+    "y": 0.1815,
+    "w": 0.135,
+    "h": 0.257
+   }
+  ]
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1,
+      "dirs": {
+       "up": "pm:up",
+       "down": "pm:down",
+       "left": "pm:left",
+       "right": "pm:right"
+      }
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "b",
+      "label": "B",
+      "input": "pm:b",
+      "shape": "circle",
+      "x": 0.25,
+      "y": 0.73,
+      "w": 0.5,
+      "sq": true
+     },
+     {
+      "id": "a",
+      "label": "A",
+      "input": "pm:a",
+      "shape": "circle",
+      "x": 0.75,
+      "y": 0.41,
+      "w": 0.5,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "c",
+    "dock": "tr",
+    "w": 0.5,
+    "h": 0.32,
+    "controls": [
+     {
+      "id": "c",
+      "label": "C",
+      "input": "pm:c",
+      "shape": "pill",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "power",
+   "label": "Power",
+   "input": "pm:power"
+  },
+  {
+   "id": "shake",
+   "label": "Shake",
+   "input": "pm:shake"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "art buttons",
+   "source": "play/pokemini/pm-embed.js CTRL (percent of the shell box, measured on PokemonMiniConsole.png 233x300: D-pad 26..88 x 181..244, A 183..210 x 181..208, B 143..170 x 212..239, C 207..229 x 16..92)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "Power and Shake",
+   "source": "pm-embed.js: neither has a control on the front of the shell, so they go in the strip with the Atari extras",
+   "licence": "site-owned"
+  },
+  {
+   "what": "inputs",
+   "source": "PokemonMiniDevice.press/release names, the same path play-pad.js uses",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

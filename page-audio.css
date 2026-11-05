@@ -1,0 +1,74 @@
+/* Home-page narration (2026-10-12). The recordings play from a "Listen"
+   button at each narrated section and a soft marker follows the words.
+   Nothing here depends on hover: the page is also driven on a TV.
+   Idle, the only visible addition is the button; words are wrapped in spans
+   only once a narration first plays, and the marker is absolutely positioned
+   inside its paragraph, so playing never moves the text.
+   No light-theme rules: the home view re-declares the dark palette in light
+   mode (it sits on the black LCD screen), and everything here uses tokens. */
+
+.pa-btn {
+  appearance: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 40px; padding: 0 16px 0 12px; border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .04em;
+  text-transform: none; line-height: 1; white-space: nowrap;
+  align-self: center;
+  transition: border-color .2s, background .2s, color .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pa-btn[hidden] { display: none; }
+.pa-btn svg { width: 16px; height: 16px; flex: none; fill: currentColor; }
+/* Pause/Resume shows the pause glyph while playing, the play glyph while paused. */
+.pa-pause .pa-ico-pause { display: none; }
+.pa-ctl[data-state="playing"] .pa-pause .pa-ico-play { display: none; }
+.pa-ctl[data-state="playing"] .pa-pause .pa-ico-pause { display: block; }
+.pa-ctl[data-state="playing"] .pa-pause,
+.pa-ctl[data-state="paused"] .pa-pause {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), .55);
+  background: rgba(var(--accent-rgb), .10);
+}
+.pa-btn:focus { outline: none; }
+.pa-btn:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 3px;
+}
+.pa-btn.is-error { opacity: .6; cursor: default; }
+
+/* Placement: one row directly after each section's heading, the same in all
+   seven places. Its height is fixed at the 40px button height, so swapping
+   Listen for Pause/Resume + Stop never moves the text below; the row is
+   wide enough for both buttons at 360px. */
+.pa-ctl {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 8px;
+  height: 40px; margin: 14px 0 0;
+  font-size: 14px; letter-spacing: normal; text-transform: none; font-weight: 400;
+}
+.hero-title + .pa-ctl { margin: 0 0 18px; }
+.section-kicker + .pa-ctl { margin: 12px 0 0; }
+
+/* Narrated paragraphs get a positioned, isolated box so the marker can sit
+   behind the words without escaping the card background. Neither property
+   moves anything. */
+.pa-p { position: relative; isolation: isolate; }
+.pa-marker {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  z-index: -1; pointer-events: none;
+  border-radius: 5px;
+  background: rgba(var(--accent-rgb), .24);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), .18);
+  opacity: 0;
+  transition: transform .14s ease-out, width .14s ease-out, height .14s ease-out, opacity .2s;
+}
+.pa-marker.is-on { opacity: 1; }
+.pa-marker.pa-snap { transition: opacity .2s; }
+.pa-p.is-current .pa-w { cursor: pointer; }
+.pa-w.is-word { color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pa-marker, .pa-marker.pa-snap { transition: none; }
+  .pa-btn { transition: none; }
+}

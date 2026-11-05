@@ -1,0 +1,10 @@
+{
+ "format": 1,
+ "list": "tft",
+ "label": "Game & Watch colour screen units",
+ "guards": [
+  "twin"
+ ],
+ "count": 0,
+ "entries": {}
+}

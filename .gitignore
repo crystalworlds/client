@@ -1,0 +1,56 @@
+# Game files, console firmware and BIOS images: never published.
+# Bring your own; the site reads them from your device or your game server.
+*.nes
+*.unf
+*.unif
+*.fds
+*.qd
+*.gb
+*.gbc
+*.sgb
+*.min
+*.minc
+*.a26
+*.a52
+*.a78
+*.lnx
+*.lyx
+*.o
+firmware/**/*.bin
+firmware/**/*.rom
+play/gameboy/**/*.bin
+
+# Where games and BIOS files go for a local build, and what the build writes.
+firmware/games/
+firmware/output/*
+!firmware/output/artwork.json.gz
+play/gameboy/carts/
+
+# Files a local build writes from your own games.
+play/mario/firmware_mario.js
+play/zelda/firmware_zelda.js
+
+# Pokemon mini start-up snapshots: they hold game screen graphics.
+play/pokemini/pm-states.json
+
+# Settings for this machine only. Each has a .example file to copy.
+*.local.json
+
+# Build outputs.
+node_modules/
+gameboy-core/build/
+artwork/_tiles/
+__pycache__/
+*.pyc
+
+# Backups and editor, tool and system files.
+*.bak
+*.orig
+*.rej
+*~
+*.swp
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

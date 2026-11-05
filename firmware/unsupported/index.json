@@ -1,0 +1,99 @@
+{
+ "format": 1,
+ "lists": {
+  "nes": {
+   "file": "nes.json",
+   "count": 984,
+   "sha256": "3595bf0997e911d9b03347b9655986c19ae8402586f4c95fb9eb0ad04b4cb73f",
+   "label": "NES, Famicom and Famicom Disk System",
+   "guards": [
+    "nes",
+    "famicom",
+    "fds"
+   ]
+  },
+  "gb": {
+   "file": "gb.json",
+   "count": 13,
+   "sha256": "e912dc9810ca61bb0dce4ccbe474fc184b2d9c8cb386c8a1609a638857fcd676",
+   "label": "Game Boy",
+   "guards": [
+    "game-boy"
+   ]
+  },
+  "gbc": {
+   "file": "gbc.json",
+   "count": 17,
+   "sha256": "708e494f43eafeffc160651fd5727f6b6df8c6ef2b1dfd0702229f8561b25227",
+   "label": "Game Boy Color",
+   "guards": [
+    "game-boy"
+   ]
+  },
+  "atari2600": {
+   "file": "atari2600.json",
+   "count": 4,
+   "sha256": "2a095339dc9ba6c03ab7bf50589ba487688de2e47aa5bf4e0460c79508f7af82",
+   "label": "Atari 2600",
+   "guards": [
+    "atari2600"
+   ]
+  },
+  "atari5200": {
+   "file": "atari5200.json",
+   "count": 18,
+   "sha256": "75c5c8f29a50fd7919a89bc7148ba72c8cec17734612062f9c7e99313ab7f20a",
+   "label": "Atari 5200",
+   "guards": [
+    "atari5200"
+   ]
+  },
+  "atari7800": {
+   "file": "atari7800.json",
+   "count": 3,
+   "sha256": "1c17bc2506791af923706b1328d0fac61bff837d78c4212e001ca958ed43ffb0",
+   "label": "Atari 7800",
+   "guards": [
+    "atari7800"
+   ]
+  },
+  "atarilynx": {
+   "file": "atarilynx.json",
+   "count": 53,
+   "sha256": "84e2912b34df07347ce583302089795d8255597282d5ea7d6546e5018de98180",
+   "label": "Atari Lynx",
+   "guards": [
+    "atarilynx"
+   ]
+  },
+  "pokemini": {
+   "file": "pokemini.json",
+   "count": 0,
+   "sha256": "296f4c588c945fcfbde9a7d764ae54c5b5d8a6c56495a21da57022b75d83d83a",
+   "label": "Pokémon mini",
+   "guards": [
+    "pokemon-mini"
+   ]
+  },
+  "gnw": {
+   "file": "gnw.json",
+   "count": 0,
+   "sha256": "4e276f998ff58db509ad7ae2cf6bc8ab738d249bbec65ba6246fedb0433ead0a",
+   "label": "Game & Watch",
+   "guards": [
+    "gnw"
+   ]
+  },
+  "tft": {
+   "file": "tft.json",
+   "count": 0,
+   "sha256": "5b3b9e6259ba8e11a9820d2e5fa396fe4952845779649a68e7c831edc1879e6a",
+   "label": "Game & Watch colour screen units",
+   "guards": [
+    "twin"
+   ]
+  }
+ },
+ "total": 1092,
+ "version": "73a45067ce1198c8dada2d1f67277feb9cb1f3bfac0afcae87536f1c89d0852f"
+}

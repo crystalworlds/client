@@ -1,0 +1,85 @@
+NOTICE -- THIRD-PARTY RIGHTS, TRADEMARKS AND SCOPE
+==================================================
+
+CrystalWorlds.Media is an independent, non-commercial fan tribute and
+preservation project. It is unofficial fan work.
+
+  * It is NOT affiliated with, authorised by, endorsed by, sponsored by, or
+    connected to Nintendo Co., Ltd., The Pokemon Company, Atari, Epyx,
+    Sharp Corporation, STMicroelectronics, Tetris Holding LLC, The Tetris
+    Company, or any other rights holder.
+
+  * All trademarks, trade names, product names, logos and character designs
+    referenced anywhere in this project or its documentation remain the
+    property of their respective owners. This includes, without limitation,
+    "Nintendo", "Game & Watch", "Game Boy", "Famicom", "Pokemon", "Atari",
+    "Lynx" and "Tetris". They are used only for
+    identification and descriptive purposes -- to state which historical
+    device is being documented -- and no claim of ownership, affiliation or
+    endorsement is made or implied.
+
+
+NO LICENSE IS GRANTED TO THIRD-PARTY MATERIAL
+---------------------------------------------
+
+The project licence (LICENSE, the CrystalWorlds.Media Project Licence 1.1)
+applies ONLY to material authored from scratch by this project.
+
+They do NOT apply, and are NOT capable of applying, to any material that
+depicts, reproduces, traces or is derived from artwork, industrial design,
+packaging, printed documentation, audio or other expression owned by a third
+party.
+
+The project does not own such material and therefore cannot license it.
+Nothing in this distribution should be read as a grant of rights in it, and no
+such grant is intended or made. Any person redistributing or reusing material
+from this project is responsible for satisfying themselves as to the rights
+position of the specific files they use.
+
+
+THIRD-PARTY IMAGERY IN THIS DISTRIBUTION
+----------------------------------------
+
+This distribution includes device photographs, box art, printed-manual scans
+and on-screen imagery depicting the hardware and games of Nintendo, Atari and
+other rights holders (and, for the Tetris Jr. prototype, material relating to
+Tetris). That imagery is owned by its respective rights holders. It is
+included solely for identification, documentation and preservation, is NOT
+covered by the project licence, and no rights in it are granted.
+
+The game files and firmware the emulators run (cartridge and handheld
+firmware, colour-unit flash images) are NOT distributed with this project.
+They are supplied by each player from their own dumps -- see
+firmware/scripts/lib/build_nintendo.ps1 for the Game & Watch firmware.
+
+
+GOOD-FAITH POSITION AND CONTACT
+-------------------------------
+
+This project exists to document and preserve historical handheld electronic
+games. The site and its client are free of charge: nothing on them is sold,
+there is no advertising, and no game, emulator or page of the site is behind
+a payment or a subscription. People who choose to sponsor the project through
+GitHub Sponsors may receive extras such as early builds and access to further
+source repositories; no game files or console firmware are ever sold,
+supplied or made available in any of them.
+
+If you are a rights holder and object to any part of this project, please
+contact the maintainers at the address below. Good-faith requests will be
+acted on promptly and without argument, including removal of the material
+concerned.
+
+    Project : CrystalWorlds.Media
+    Contact : info@crystalworlds.media
+    Web     : https://crystalworlds.media/
+
+
+DISCLAIMER OF WARRANTY
+----------------------
+
+This project is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose and non-infringement. In no event shall the
+copyright holder be liable for any claim, damages or other liability, whether
+in an action of contract, tort or otherwise, arising from, out of or in
+connection with this project or its use.

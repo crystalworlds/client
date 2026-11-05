@@ -1,0 +1,365 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "gb",
+ "label": "Game Boy / Game Boy Color",
+ "device": "float",
+ "theme": {
+  "press": "rgba(155,188,15,.62)",
+  "pressInk": "#0b0c0e"
+ },
+ "art": {
+  "controls": [],
+  "variants": {
+   "dmg": [
+    {
+     "id": "dpad",
+     "label": "D-pad",
+     "shape": "dpad",
+     "x": 0.2298,
+     "y": 0.6346,
+     "w": 0.2419,
+     "h": 0.1423
+    },
+    {
+     "id": "b",
+     "label": "B",
+     "input": "KeyZ",
+     "shape": "circle",
+     "x": 0.6865,
+     "y": 0.6495,
+     "w": 0.1371,
+     "h": 0.0807
+    },
+    {
+     "id": "a",
+     "label": "A",
+     "input": "KeyX",
+     "shape": "circle",
+     "x": 0.8367,
+     "y": 0.6091,
+     "w": 0.1371,
+     "h": 0.0807
+    },
+    {
+     "id": "select",
+     "label": "SELECT",
+     "input": "ShiftRight",
+     "shape": "pill",
+     "x": 0.375,
+     "y": 0.7675,
+     "w": 0.1331,
+     "h": 0.0308,
+     "rot": -25
+    },
+    {
+     "id": "start",
+     "label": "START",
+     "input": "Enter",
+     "shape": "pill",
+     "x": 0.5302,
+     "y": 0.7669,
+     "w": 0.1331,
+     "h": 0.0308,
+     "rot": -25
+    }
+   ],
+   "cgb": [
+    {
+     "id": "dpad",
+     "label": "D-pad",
+     "shape": "dpad",
+     "x": 0.2396,
+     "y": 0.6221,
+     "w": 0.2337,
+     "h": 0.1385
+    },
+    {
+     "id": "b",
+     "label": "B",
+     "input": "KeyZ",
+     "shape": "circle",
+     "x": 0.6604,
+     "y": 0.6379,
+     "w": 0.1307,
+     "h": 0.0775
+    },
+    {
+     "id": "a",
+     "label": "A",
+     "input": "KeyX",
+     "shape": "circle",
+     "x": 0.8238,
+     "y": 0.6068,
+     "w": 0.1307,
+     "h": 0.0775
+    },
+    {
+     "id": "select",
+     "label": "SELECT",
+     "input": "ShiftRight",
+     "shape": "pill",
+     "x": 0.4347,
+     "y": 0.7758,
+     "w": 0.095,
+     "h": 0.0282
+    },
+    {
+     "id": "start",
+     "label": "START",
+     "input": "Enter",
+     "shape": "pill",
+     "x": 0.5693,
+     "y": 0.7758,
+     "w": 0.095,
+     "h": 0.0282
+    }
+   ],
+   "cgbAtomic": [
+    {
+     "id": "dpad",
+     "label": "D-pad",
+     "shape": "dpad",
+     "x": 0.2439,
+     "y": 0.621,
+     "w": 0.2337,
+     "h": 0.1385
+    },
+    {
+     "id": "b",
+     "label": "B",
+     "input": "KeyZ",
+     "shape": "circle",
+     "x": 0.6583,
+     "y": 0.6404,
+     "w": 0.1307,
+     "h": 0.0775
+    },
+    {
+     "id": "a",
+     "label": "A",
+     "input": "KeyX",
+     "shape": "circle",
+     "x": 0.8164,
+     "y": 0.6102,
+     "w": 0.1307,
+     "h": 0.0775
+    },
+    {
+     "id": "select",
+     "label": "SELECT",
+     "input": "ShiftRight",
+     "shape": "pill",
+     "x": 0.4402,
+     "y": 0.775,
+     "w": 0.095,
+     "h": 0.0282
+    },
+    {
+     "id": "start",
+     "label": "START",
+     "input": "Enter",
+     "shape": "pill",
+     "x": 0.5729,
+     "y": 0.775,
+     "w": 0.095,
+     "h": 0.0282
+    }
+   ],
+   "cgbPokemon": [
+    {
+     "id": "dpad",
+     "label": "D-pad",
+     "shape": "dpad",
+     "x": 0.2105,
+     "y": 0.6616,
+     "w": 0.2438,
+     "h": 0.1408
+    },
+    {
+     "id": "b",
+     "label": "B",
+     "input": "KeyZ",
+     "shape": "circle",
+     "x": 0.6711,
+     "y": 0.6796,
+     "w": 0.1357,
+     "h": 0.0784
+    },
+    {
+     "id": "a",
+     "label": "A",
+     "input": "KeyX",
+     "shape": "circle",
+     "x": 0.8511,
+     "y": 0.6456,
+     "w": 0.1357,
+     "h": 0.0784
+    },
+    {
+     "id": "select",
+     "label": "SELECT",
+     "input": "ShiftRight",
+     "shape": "pill",
+     "x": 0.4211,
+     "y": 0.8292,
+     "w": 0.097,
+     "h": 0.0256
+    },
+    {
+     "id": "start",
+     "label": "START",
+     "input": "Enter",
+     "shape": "pill",
+     "x": 0.5693,
+     "y": 0.83,
+     "w": 0.097,
+     "h": 0.0256
+    }
+   ]
+  }
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "b",
+      "label": "B",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.25,
+      "y": 0.73,
+      "w": 0.5,
+      "sq": true
+     },
+     {
+      "id": "a",
+      "label": "A",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.75,
+      "y": 0.41,
+      "w": 0.5,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "se",
+    "dock": "bc",
+    "row": {
+     "gap": 12
+    },
+    "portrait": {
+     "row": {
+      "gap": 4
+     }
+    },
+    "controls": [
+     {
+      "id": "select",
+      "label": "SELECT",
+      "input": "ShiftRight",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ],
+      "rot": -25,
+      "portrait": {
+       "w": [
+        44,
+        11,
+        78
+       ]
+      }
+     },
+     {
+      "id": "start",
+      "label": "START",
+      "input": "Enter",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ],
+      "rot": -25,
+      "portrait": {
+       "w": [
+        44,
+        11,
+        78
+       ]
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "provenance": [
+  {
+   "what": "art buttons (the whole console, shown on a tall narrow screen, 2026-10-17)",
+   "source": "measured 2026-10-17 by colour masks on the site's own art (play/cores/gb/art.mjs BEZEL images), checked on 3-4x gridded crops: GameBoyConsole.png 496x843: d-pad cross 58..170 x 479..591, B cap centre (340.5,547.5) dia 54, A (415,513.5) dia 53, SELECT pill centre (186,647), START (263,646.5), slant -25deg (the float pad's measured slant); GameBoyColorConsole.png and the four colour shells (all 505x852, identical to 2 px): d-pad 66..176 x 475..585, B (333.5,543.5) dia 52, A (416,517) dia 52, SELECT (219.5,661) 37x12, START (287.5,661); GameBoyColorPokemonConsole.svg rendered at 722x1250: d-pad 70..234 x 743..911, B (484.5,849.5) dia 81, A (614.5,807) dia 82, SELECT (304,1036.5) 56x19, START (411,1037.5) 58x23. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons about 1.25x, pills about 1.2x long and 1.4x to 2x thick). Used only while the whole console is shown (setArtView); the cropped band keeps the float pad",
+   "licence": "site-owned measurement of the site's own artwork"
+  },
+  {
+   "what": "float pad: d-pad box, B/A positions, Select/Start pills and their -25deg slant",
+   "source": "play/gameboy/index.html #touchOverlay CSS (--gbov-dpad clamp(104px,26vw,168px), portrait clamp(118px,34vw,152px), gap 10px; B left:0 bottom:2%, A right:0 bottom:34%, 50% wide; pills clamp(56px,14vw,78px) x clamp(21px,5vw,27px), portrait width clamp(44px,11vw,78px), gap 12/4px); the slant measured from GameBoyConsole.png by image moments (SELECT -25.22deg, START -25.32deg)",
+   "licence": "site-owned measurement of the site's own artwork"
+  },
+  {
+   "what": "inputs",
+   "source": "play/play-pad.js FN.gb (KeyX A, KeyZ B, Enter Start, ShiftRight Select, arrows)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

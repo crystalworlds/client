@@ -1,0 +1,4 @@
+{
+  "_comment": "Optional. Copy this file to site.local.json (never shipped) to give this copy of the site one address. When the page is opened from the site server under another name on the same port (an IP address, localhost, the computer's name), it moves to this address, so sign-ins are kept in one place. Leave the file out and nothing moves.",
+  "one_address": "https://name.example:8443"
+}

@@ -1,0 +1,54 @@
+/* hw-diagram.css: the labelled console picture at the top of a Hardware tab
+   (hw-diagram.js). A spec-sheet card: title top left, the picture in the
+   middle with labelled boxes around it joined by leader lines, the specs
+   table bottom right. A blueprint grid behind it in both themes. The boxes
+   and lines are SVG text, so they stay sharp. Under 700 px of width the
+   narrow layout shows instead: a smaller picture, boxes in columns either
+   side, the specs table full width under it. */
+.hwd {
+  --hwd-bg: #0d1626; --hwd-grid: rgba(120,165,255,.09); --hwd-grid2: rgba(120,165,255,.18);
+  --hwd-box: #121d31; --hwd-line: #7fb0ff; --hwd-line2: #2a3a58; --hwd-text: #e7ecf2; --hwd-muted: #93a3c0;
+  --hwd-ring: #0d1626;
+  container-type: inline-size;
+  margin: 0 0 26px; padding: 14px 16px 16px;
+  border: 1px solid var(--hwd-line2); border-radius: 14px;
+  color: var(--hwd-text);
+  background-color: var(--hwd-bg);
+  background-image:
+    linear-gradient(var(--hwd-grid2) 1px, transparent 1px), linear-gradient(90deg, var(--hwd-grid2) 1px, transparent 1px),
+    linear-gradient(var(--hwd-grid) 1px, transparent 1px), linear-gradient(90deg, var(--hwd-grid) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  background-position: -1px -1px;
+}
+:root[data-theme="light"] .hwd {
+  --hwd-bg: #edf3fc; --hwd-grid: rgba(40,90,190,.10); --hwd-grid2: rgba(40,90,190,.20);
+  --hwd-box: #ffffff; --hwd-line: #2b62c4; --hwd-line2: #c6d3ea; --hwd-text: #1b2230; --hwd-muted: #58626f;
+  --hwd-ring: #ffffff;
+}
+.hwd-head { margin: 0 0 4px; }
+.hwd-head h3 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.01em; color: var(--hwd-text); }
+.hwd-head p { margin: 2px 0 0; font-size: 13px; line-height: 1.4; color: var(--hwd-muted); }
+.hwd-pic { position: relative; }
+.hwd-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hwd-svg-phone { display: none; }
+.hwd-leaders polyline { fill: none; stroke: var(--hwd-line); stroke-width: var(--hwd-stroke, 2.4); stroke-linejoin: round; stroke-linecap: round; }
+.hwd-dot { fill: var(--hwd-line); stroke: var(--hwd-ring); stroke-width: 2.5; }
+.hwd-lab rect { fill: var(--hwd-box); stroke: var(--hwd-line); stroke-width: 1.6; }
+.hwd-lab text { fill: var(--hwd-text); font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 600; font-size: var(--hwd-font, 21px); dominant-baseline: central; }
+.hwd-foot { display: flex; justify-content: flex-end; margin-top: 4px; }
+.hwd-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; width: min(100%, 600px); padding: 10px 14px 12px; border: 1px solid var(--hwd-line); border-radius: 10px; background: var(--hwd-box); }
+.hwd-specs-h { grid-column: 1 / -1; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--hwd-line); font-weight: 700; padding-bottom: 6px; border-bottom: 1px solid var(--hwd-line2); }
+.hwd-spec .k { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--hwd-muted); margin-bottom: 2px; }
+.hwd-spec .v { display: block; font-size: 13px; line-height: 1.45; color: var(--hwd-text); }
+@container (max-width: 699px) {
+  .hwd-svg-desk { display: none; }
+  .hwd-svg-phone { display: block; }
+  .hwd-specs { width: 100%; grid-template-columns: 1fr; }
+}
+@media (max-width: 699px) {
+  .hwd { margin-left: -20px; margin-right: -20px; padding: 10px 8px 12px; border-radius: 10px; }
+  .hwd-head h3 { font-size: 19px; }
+  .hwd-svg-desk { display: none; }
+  .hwd-svg-phone { display: block; }
+  .hwd-specs { width: 100%; grid-template-columns: 1fr; }
+}

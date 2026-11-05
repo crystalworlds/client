@@ -1,0 +1,150 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "nes",
+ "label": "NES / Famicom / Famicom Disk System",
+ "device": "float",
+ "theme": {
+  "press": "rgba(228,88,79,.72)",
+  "pressInk": "#140506",
+  "fill": "rgba(120,24,20,.40)"
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "b",
+      "label": "B",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.23,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     },
+     {
+      "id": "a",
+      "label": "A",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.77,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "se",
+    "dock": "bc",
+    "row": {
+     "gap": 12
+    },
+    "bottom": 6,
+    "controls": [
+     {
+      "id": "select",
+      "label": "SELECT",
+      "input": "ShiftRight",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     },
+     {
+      "id": "start",
+      "label": "START",
+      "input": "Enter",
+      "shape": "pill",
+      "w": [
+       56,
+       14,
+       78
+      ],
+      "h": [
+       21,
+       5,
+       27
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "mic",
+   "label": "Mic",
+   "input": "KeyM",
+   "when": "mic"
+  },
+  {
+   "id": "flip",
+   "label": "Flip disk",
+   "input": "KeyD",
+   "when": "disk"
+  },
+  {
+   "id": "coin",
+   "label": "Coin",
+   "input": "Digit5",
+   "when": "vs"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "float pad",
+   "source": "play/nes/index.html #touchOverlay CSS (--nesov-dpad as the Game Boy; B/A level, 46% wide, face box 0.62 units tall; Select/Start level, unrotated, clamp(56px,14vw,78px) x clamp(21px,5vw,27px), 6px from the bottom)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "inputs",
+   "source": "play/play-pad.js FN.nes; play/nes/app.js periphKey (KeyM Famicom microphone, Digit5 VS coin) and NES BAR (KeyD flips the disk)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

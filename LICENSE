@@ -1,0 +1,492 @@
+CRYSTALWORLDS.MEDIA PROJECT LICENCE 1.1
+=======================================
+
+Version 1.1, 4 November 2026. It replaces version 1.0.
+
+Copyright (c) 2026 the CrystalWorlds.Media project. All rights reserved
+except as granted below.
+
+This single licence covers both the project's software and its original
+writing and interface art. It replaces the project's earlier split of
+PolyForm Noncommercial 1.0.0 (code) and CC BY-NC-SA 4.0 (assets), which
+together granted a right this project does not intend to grant: the right to
+take the work apart.
+
+
+PLAIN-LANGUAGE SUMMARY
+----------------------
+The sections below are what legally binds. This summary is here so the intent
+is not in doubt.
+
+  YOU MAY, FREELY AND WITHOUT ASKING:
+    * run the Project, privately or publicly, for non-commercial purposes
+    * study it, and learn from it
+    * change it, and publish your changed version of the WHOLE Project
+    * share it, whole, changed or unchanged
+    * read, build, run and test its source code and its emulator cores to
+      check the results it publishes, and publish what you find (section 3B)
+    * repeat its clean-room proof, with an AI if you like, only to check its
+      results, and publish what you find (section 3D)
+    * read, use, cite and reference its research and documentation, use the
+      facts it states, with credit, to improve your own projects, and quote
+      reasonable excerpts with credit, in paid work too (section 3A)
+
+  ON ONE CONDITION:
+    * credit this project, visibly, as set out in section 4
+
+  YOU MAY NOT, WITHOUT ASKING FIRST:
+    * take a piece out and use it on its own -- an emulator core, a device
+      page, the interface, the artwork pipeline, the harnesses
+    * make money from it, in any way
+    * call your version "Crystal Worlds", or present it, or yourself, as
+      this project (section 4A)
+    * copy its research and documentation in its entirety, or substantial
+      parts of it, or present any of it as your own work (section 3A)
+    * build an emulator, an emulator core or a front end from its research
+      and documentation (section 3A)
+    * have an AI or any other automated system build software mainly from
+      its research, documentation or source code, or train, fine-tune or
+      test an AI model on them (section 3C)
+    * mine its text or data: that right is reserved (section 3E)
+    * anything else this licence does not grant
+
+  YOU MAY NOT, AT ALL:
+    * use its source code or its emulator cores (as source or as built
+      files), in part or in full, to develop any other front-end software
+      (section 3B)
+
+  THE SHORT VERSION OF THE WHOLE THING:
+    ** YOU MAY CHANGE IT. YOU MAY NOT SEVER IT. **
+
+  Everything is "please ask" unless this licence says otherwise. The answer is
+  often yes. See section 7.
+
+  AND, IMPORTANTLY: parts of this project are other people's work under other
+  people's licences, and NOTHING above applies to them. Section 6 names them.
+  Where section 6 applies, their licence governs and this one does not.
+
+
+1. DEFINITIONS
+--------------
+"The Project" means CrystalWorlds.Media as distributed: the site, its pages,
+its emulator cores, its interface, its data, its documentation, its build and
+verification tooling, taken together as one work.
+
+"Project Material" means everything in the Project that this project itself
+wrote or made, and that is not Exempt Material.
+
+"Exempt Material" means the third-party work listed in section 6, which is
+governed by its own licence and not by this one.
+
+"Component" means any separable part of the Project: a source file, a compiled
+artefact, a WebAssembly module, a page, a stylesheet, a data file, an image, a
+document, a tool, or any identifiable subset of these.
+
+"Source Code" means the Project Material in the form software is made from:
+source files, build and check scripts and build notes, wherever the Project
+publishes them, including in a repository that holds only the source of its
+emulator cores.
+
+"Cores" means the Project's emulators and emulator cores, both as Source Code
+and as built files (WebAssembly modules, scripts, and any other compiled or
+generated form), including the built files in the Project's client and on its
+site.
+
+"Front-End Software" means software through which people find, launch, play,
+watch, view or manage games or other media: for example an emulator front
+end, a launcher, a game library site or app, a media player, or a play
+window. "Other Front-End Software" means any Front-End Software except the
+Project itself and a modified version of the whole Project that is
+distributed as the Project under section 2(c), in compliance with this
+licence. Software that uses the Project, or any part of it, as the base of a
+different product is Other Front-End Software.
+
+"Automated System" means any software that produces code, text or other
+output from what it is given, including a machine-learning model, an AI
+assistant, chatbot or agent, and a code generator.
+
+"Non-commercial" means not primarily intended for or directed toward
+commercial advantage or monetary compensation. Being paid for something else
+while using the Project does not by itself make your use commercial; charging
+for the Project, charging for access to it, bundling it into a paid product or
+service, or using it to advertise or promote a paid product or service, does.
+
+
+2. GRANT
+--------
+Subject to every condition and limit in this licence, you are granted a
+worldwide, royalty-free, non-exclusive licence to:
+
+  (a) use and run the Project for non-commercial purposes;
+  (b) copy and distribute the Project;
+  (c) modify the Project and distribute your modified version of it.
+
+Permissions (b) and (c) apply TO THE PROJECT AS A WHOLE. They do not extend
+to any Component on its own. See section 3.
+
+
+3. THE LIMIT -- NO SEVERANCE
+----------------------------
+You may not extract, isolate, sever, re-package or distribute any Component of
+the Project Material separately from the Project, or incorporate any Component
+into another work, without prior written permission. Our test-cartridge
+downloads (the zips under /downloads) are an exception: each carries its own
+MIT licence, in the LICENSE file inside the zip, and that licence governs it.
+
+This is the central restriction of this licence and it is deliberate. The
+emulator cores in particular were written here, from an understanding of the
+hardware rather than from anyone else's source, and they are not offered as
+standalone libraries.
+
+For the avoidance of doubt:
+
+  PERMITTED, no permission needed:
+    * forking the whole Project and publishing your changed version of it,
+      with credit, non-commercially
+    * removing parts you do not want from YOUR copy of the whole Project
+    * quoting the documentation, with credit
+
+  NOT PERMITTED without asking:
+    * publishing a Component of this Project as a library, package or asset
+    * copying this Project's interface or device pages into another site
+
+  NOT PERMITTED AT ALL (section 3B):
+    * shipping an emulator core from this Project inside your own application,
+      or using one, in part or in full, to develop Other Front-End Software
+
+Modification is welcome. Dismantling is not. If what you want is a part rather
+than the whole, section 7 is the route, and it is a real route, except for
+what section 3B prohibits.
+
+
+3A. RESEARCH AND DOCUMENTATION -- CITE IT, DO NOT CLAIM IT
+----------------------------------------------------------
+"Research and Documentation" means the Project Material that is written
+explanation: the Hardware and Emulation pages, the compatibility research and
+results, the test write-ups, and the Project's other documentation.
+
+The facts that the Research and Documentation reports belong to no one, and
+this licence claims no right over them. What this project owns, and what this
+section licenses, is the written work: its wording, its tables and diagrams,
+and the way it is selected and arranged.
+
+In addition to section 2, you are granted a worldwide, royalty-free,
+non-exclusive licence to:
+
+  (a) read, study and use the Research and Documentation for research,
+      writing, teaching and your own understanding, and use the facts and
+      findings it states, with credit, to check, correct and improve your
+      own existing projects;
+  (b) cite it, reference it and link to it;
+  (c) quote reasonable excerpts of it in your own work, whether or not that
+      work is commercial.
+
+Section 3 does not stop you doing anything this section permits.
+
+QUOTATION IN COMMERCIAL WORK: permission (c) is an exception to section 5,
+for quotation only. A book, a paid article, a monetised video or a commercial
+product may quote reasonable excerpts, with credit as below. No other
+commercial use is granted by this section: copying the Research and
+Documentation in its entirety or in substantial parts, presenting it as your
+own work, and every other commercial use of the Project Material remain
+governed by section 5 and are not permitted without asking.
+
+ON ONE CONDITION: where you quote it under (c), credit the CrystalWorlds.Media
+project as the source of the quoted text, next to it or in your references,
+with a link where one is possible. Where your work uses a finding you learned
+here under (a), credit the project in the same way.
+
+NOT PERMITTED without asking:
+  * copying the Research and Documentation in its entirety, or substantial
+    parts of it, into another work, whether word for word or lightly
+    reworded;
+  * presenting any of its wording, tables or diagrams as your own work, or
+    removing the credit from what you quote;
+  * using the Research and Documentation as the source from which you build
+    an emulator, an emulator core or Front-End Software. Permission (a)
+    covers improving a project you already have with what you learn here;
+    it does not cover building a new one from it.
+
+Copying the Research and Documentation as part of the WHOLE Project, under
+section 2, remains permitted as before. Nothing in this section limits what
+the law already allows you to do without a licence, such as quotation for
+criticism, review, research or reporting.
+
+
+3B. SOURCE CODE AND CORES -- FOR CHECKING OUR RESULTS, NOT FOR OTHER FRONT ENDS
+-------------------------------------------------------------------------------
+The Project publishes results: test scores, comparisons with other
+emulators, and the outcome of rebuilding its Cores from its own
+documentation. The Source Code is provided so that those results can be
+reviewed and substantiated: anyone who has it can check the Project's claims
+for themselves.
+
+For that purpose, and non-commercially, you may:
+
+  (a) read and study the Source Code;
+  (b) build the Cores from it, run and test them, and compare what you build
+      with the built files the Project ships;
+  (c) publish what you find, quoting reasonable excerpts of the Source Code
+      where that is needed to show a finding, with credit as in section 3A.
+
+Section 3 does not stop you doing anything this section permits.
+
+PROHIBITED: you may not use the Source Code or the Cores, in part or in full,
+to develop Other Front-End Software. That includes, among other things:
+
+  * copying, translating, adapting or porting any of the Source Code into it;
+  * running a Core, as Source Code or as built files, inside it or alongside
+    it as part of it, or distributing a Core with it;
+  * using the Source Code or a Core as the model, template or reference that
+    it is written, built or tested against.
+
+This restriction applies to the Cores in every form: their Source Code, and
+their built files wherever they are published, including in the Project's
+client and on its site. It is a prohibition, not a "please ask" item, and
+section 7 does not apply to it.
+
+This section takes nothing away from sections 2 and 3: you may still run the
+Project, and change and share the WHOLE Project as they allow. It does not
+limit section 3A, which covers the Research and Documentation, and it claims
+no right over the facts about the original hardware.
+
+
+3C. AUTOMATED USE -- NO AI-BUILT COPIES, NO AI TRAINING
+-------------------------------------------------------
+Without prior written permission, you may not:
+
+  (a) use an Automated System to produce software (an emulator, an emulator
+      core, a component of one, or Front-End Software) for which the
+      Research and Documentation or the Source Code is the main source,
+      whether you give the Automated System the text or code, in whole or
+      in part, point it at them, or have it read them in any other way;
+  (b) distribute, sell, publish or offer as a service any software produced
+      as described in (a);
+  (c) use the Research and Documentation or the Source Code, in whole or in
+      part, to train, fine-tune or evaluate a machine-learning model, or put
+      them in a dataset collected for that purpose;
+  (d) remove or alter this licence, the NOTICE file, or any notice or
+      identifying mark in the Project's files.
+
+"The main source" means that the work supplies most of what the software
+needs to know about the hardware it emulates, or that the output is a
+substantially complete emulator or core, or a component of one, built from
+it. For example:
+
+  NOT PERMITTED: giving an Automated System an Emulation page, or the Source
+  Code of a Core, and asking it to write the emulator or the part it
+  describes; asking it to port or rewrite a Core in another language.
+
+  PERMITTED: asking an Automated System to explain, search, translate or
+  summarise a passage for your own understanding; using a fact you learned
+  here, with credit, to have one fault fixed in a project you already have,
+  as section 3A allows.
+
+You may use ordinary tools, automated ones included, to read, search,
+translate or summarise the Research and Documentation and the Source Code
+for your own understanding, and you may use the facts you learn, with
+credit, to improve your own existing projects as section 3A allows. Section
+3B applies in addition to this section: what it prohibits stays prohibited,
+whatever permission is given under this one.
+
+
+3D. VERIFICATION -- REPEATING OUR CLEAN-ROOM PROOF
+--------------------------------------------------
+The Project publishes a clean-room method: an emulator is built from an
+Emulation page alone, by a builder (which may be an Automated System) that
+has not seen the Project's Source Code, and is then tested against the
+Project's own Core. The Project's claims rest partly on that proof, so anyone
+may repeat it.
+
+You may follow that method, including with an Automated System, solely to
+check the Project's published results, and only non-commercially. You may
+publish your findings: the scores, the comparisons, the differences you
+found and how you worked.
+
+You may not distribute, publish, sell or offer as a service what you build
+that way, or use it for anything other than that check. Sections 3A and 3C
+do not stop you doing what this section permits, and this section permits
+nothing else.
+
+
+3E. TEXT AND DATA MINING -- RESERVED
+------------------------------------
+The rights holder expressly reserves the use of the Project, including the
+Research and Documentation and the Source Code, for text and data mining,
+within the meaning of Article 4(3) of Directive (EU) 2019/790 on copyright
+and related rights in the Digital Single Market, and of any similar law
+elsewhere. This reservation is part of this licence, travels with every copy
+of the Project, and applies wherever a copy is published.
+
+No right of text and data mining is granted by this licence, except what
+section 3D permits. This does not affect any exception that the law gives
+and does not allow to be excluded, such as text and data mining for
+scientific research under Article 3 of that Directive.
+
+
+4. ATTRIBUTION
+--------------
+Any distribution of the Project, modified or unmodified, must:
+
+  (a) name the CrystalWorlds.Media project visibly to the people who use it,
+      not only in a source file comment;
+  (b) link to the Project's canonical source where one is reachable;
+  (c) retain this licence, the NOTICE file and the THIRD-PARTY-NOTICES file,
+      unaltered;
+  (d) state clearly that your version is modified, if it is, and not imply
+      that this project produced, endorsed or approved it;
+  (e) preserve the credits this project gives to others -- in particular the
+      Game & Watch artwork credits on the About page and in
+      THIRD-PARTY-NOTICES. Those name people who are not us, and dropping
+      their credit is not yours to do.
+
+
+4A. THE NAME -- NO PRETENDING TO BE US
+--------------------------------------
+"Crystal Worlds", "CrystalWorlds.Media" and the project's logo identify this
+project and the people who make it. This licence grants no right to use them
+except as this section allows.
+
+  (a) A MODIFIED version of the Project must not be called "Crystal Worlds",
+      "CrystalWorlds.Media" or any confusingly similar name, and must not use
+      the project's logo. Before you distribute or host a modified version,
+      replace the name and logo where they identify the site to its users
+      (page titles, headings, the logo, the app name and icon).
+
+  (b) No version, modified or unmodified, and no person or service hosting
+      one, may present itself as this project, as run by this project, or as
+      endorsed or approved by it. That includes using the name or logo in a
+      domain name, an account or app-store name, or any promotion.
+
+  (c) An UNMODIFIED copy may keep the name where it already appears in the
+      Project's own pages, as long as (b) is respected.
+
+  (d) The credit section 4 requires ("based on the Crystal Worlds project",
+      with a link) is a permitted use of the name, and remains required.
+
+Permission for any other use of the name or logo can be asked for under
+section 7.
+
+
+5. COMMERCIAL USE
+-----------------
+No commercial use of the Project Material is granted by this licence. That
+includes selling it, selling anything that contains it, charging for access to
+it, placing it behind advertising, and using it to promote a paid product or
+service.
+
+Commercial use requires prior written permission. Ask -- see section 7.
+
+The one exception is quoting reasonable excerpts of the Research and
+Documentation, with credit, which section 3A permits in commercial work too.
+
+
+6. EXEMPT MATERIAL -- OTHER PEOPLE'S WORK, OTHER PEOPLE'S TERMS
+---------------------------------------------------------------
+Parts of this Project are not ours. Sections 2 to 5 DO NOT APPLY to them, and
+nothing in this licence restricts, qualifies or adds conditions to the rights
+their own licences grant you. Where this licence and an Exempt Material
+licence differ, the Exempt Material licence governs that material.
+
+This section is not a courtesy. The licences below forbid the imposition of
+further restrictions, and this project intends to honour them exactly.
+
+  (a) (Retired 2026-10-03.) This item covered the earlier Game & Watch
+      engine, which is no longer part of the Project. The Game & Watch,
+      Game Boy, Game Boy Color, Pokemon mini and NES cores are all
+      clean-room work written here -- comprehension in, independent code
+      out -- as recorded in each core's own provenance record. They are
+      Project Material and sections 3 and 3B apply to them in full.
+
+  (b) THE VIDEO PIPELINE -- LGPL-2.1-or-later and MPL-2.0.
+      FFmpeg's libraries, compiled to WebAssembly by libav.js and shipped as
+      the vendor/libav-* binaries, are under the GNU Lesser General Public
+      License version 2.1 or later. The LGPL expressly requires that you be
+      able to modify and replace that library, and permits commercial use;
+      section 3 does not restrict it. The full licence text travels with the
+      binaries at vendor/COPYING.LGPLv2.1, and the corresponding source is
+      identified in THIRD-PARTY-NOTICES.
+
+      The container muxing alongside it is mediabunny, under MPL-2.0,
+      redistributed unmodified with its own header intact. MPL-2.0 permits
+      commercial use and file-level modification; section 3 does not restrict
+      it.
+
+  (c) THE GAME & WATCH ARTWORK AND LAYOUT GEOMETRY.
+      The community artwork and the 53 gnw_*.lay layouts are the work of
+      hydef, DarthMarino, Henrik Algestam, ICEknight and others, released
+      openly in a public forum thread. This project asserts no licence over
+      their work on their behalf, and this licence grants you nothing in
+      respect of it. What is owed there is credit, and it is given on the
+      About page and in THIRD-PARTY-NOTICES.
+
+  (d) ANY OTHER COMPONENT LISTED IN THIRD-PARTY-NOTICES, on the terms stated
+      there.
+
+THIRD-PARTY-NOTICES is the authoritative list. If it and this section ever
+disagree, THIRD-PARTY-NOTICES governs.
+
+
+7. ASKING -- EVERYTHING IS "PLEASE ASK"
+---------------------------------------
+Anything this licence does not grant, you may still have: ask. The one
+exception is what section 3B prohibits, which is not granted on request.
+
+That includes using the work commercially, using a Component in another
+work, or anything else. Requests are welcomed and considered in good
+faith, and non-commercial fan and preservation work is looked on kindly.
+Permission must be in writing to count, and permission granted for one thing
+is not permission for another.
+
+HOW TO ASK
+
+  Issues:  https://github.com/Psghetti/crystalworlds/issues
+  Email:   info [at] crystalworlds.media
+
+  (The address is written with "[at]" on purpose. The site assembles it at
+  click time so that scrapers do not see a clean string in its HTML, and a
+  plain-text licence in a public repository would defeat that. Replace the
+  "[at]" with "@".)
+
+An issue is preferred for anything that is not private: this licence requires
+permission to be in writing, and a tracker provides that by default, with a
+public record both sides can point at later.
+
+
+8. NO RIGHTS IN THIRD-PARTY PROPERTY
+------------------------------------
+This Project is an independent, non-commercial fan tribute and preservation
+project. It is unofficial. Nothing in it, and nothing in this licence, grants
+you any right in any trademark, trade name, character, game title,
+game file (cartridge or disk image) or other property of Nintendo Co., Ltd., Sharp Corporation, The Tetris
+Company, Atari, or any other rights holder. See the NOTICE file.
+
+No cartridge firmware or game file (cartridge or disk image) is distributed with this Project, and no
+licence to any such material is granted or implied.
+
+
+9. TERMINATION
+--------------
+If you breach this licence, your rights under it end automatically. They are
+reinstated if you cure the breach within 30 days of becoming aware of it,
+unless this project has notified you of the breach, in which case reinstatement
+is at this project's discretion.
+
+
+10. NO WARRANTY, NO LIABILITY
+-----------------------------
+THE PROJECT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE PROJECT OR THE USE OR OTHER DEALINGS IN THE
+PROJECT.
+
+
+11. SEVERABILITY
+----------------
+If any provision of this licence is held unenforceable, the remainder stays in
+force. Nothing in this clause permits the severance of the Project itself;
+section 3 is a condition of the grant in section 2, and if section 3 is held
+unenforceable then the grant in section 2(b) and 2(c) does not apply to you.

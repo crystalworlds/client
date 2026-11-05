@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<!--
+  play/host/index.html -- THE ONE PLAY HOST (the Core API, the build plan).
+
+  One page for every console: ?sys=<id>#<game>. Per console only the device art and
+  the play screen differ; the Control Bar, pause, rewind, saves, Continue, input and
+  sound are this page's, the same for all.
+
+  The site's only play window, for every console (2026-10-15: the old per-console
+  pages are retired and the ?host= / ?ui= switch is gone; play/shared/host-bridge.js
+  sends every launch here). With ?preview=1 it is a tile's or the drawer's silent
+  live picture.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/x-icon" href="../../FavIcon/favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Play</title>
+<script>/* The preview classes before the first paint (host.mjs sets cw-preview again when it starts). */
+(function () { try { var q = new URLSearchParams(location.search); if (q.get('preview') === '1') { var c = document.documentElement.classList; c.add('cw-preview'); if (q.get('art') === '1') c.add('cw-preview-art'); } } catch (_) {} })();</script>
+<style>
+  :root { --bg:var(--cw-bar-panel-to,#0b0c0e); --panel:var(--cw-bar-panel-from,#15171b); --line:var(--cw-bar-line,#2a2e36); --ink:var(--cw-bar-ink,#e6e8ec); --dim:var(--cw-bar-dim,#9aa1ad); --accent:var(--cw-bar-accent-edge,#9bbc0f); }
+  /* Colour tokens (themes step 0, 2026-10-14): the page's own names read the Control Bar's
+     --cw-bar-* tokens (play/shared/control-bar.js copies them in from the site), with today's
+     values as fallbacks. Game screens and their black stay black: never recoloured. */
+  html, body { height:100%; margin:0; }
+  body { background:var(--bg); color:var(--ink); overflow:hidden; display:flex; flex-direction:column;
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  #stage { position:relative; flex:1; display:flex; flex-direction:column; min-height:0; }
+  #screenBox { flex:1; display:grid; place-items:center; min-height:0; padding:14px; overflow:hidden;
+    background:radial-gradient(ellipse at 50% 35%, var(--cw-bar-host-stage,#14161a) 0%, var(--bg) 70%); }
+  #screenBox.art-mode { padding:0; }
+  /* SEAMLESS START (2026-10-15): nothing of the device shows until its artwork has
+     decoded and the layout is at its final size; then it is revealed whole and the core starts.
+     Hidden with visibility, so the layout is still computed while it waits. A small loader shows
+     only if the wait is long enough to notice. */
+  body.cw-booting #lcdWrap, body.cw-booting .cb-bar, body.cw-booting #hostFooter { visibility:hidden; }
+  /* PREVIEW (a tile's or the drawer's live picture): the screen alone, edge to edge, nothing else. */
+  .cw-preview body { background:#000; }
+  .cw-preview #hostFooter, .cw-preview #hostLog, .cw-preview #bootLoader, .cw-preview #startScreen, .cw-preview #msg,
+  .cw-preview #speedHud, .cw-preview #pausedBadge, .cw-preview .cb-bar, .cw-preview #rewindScan { display:none !important; }
+  .cw-preview #screenBox, .cw-preview #screenBox.full { padding:0 !important; background:#000; }
+  .cw-preview #lcdWrap:not(.has-art) canvas#screen { box-shadow:none; border-radius:0; }
+  /* A preview that draws the device art (&art=1: Tetris Jr.'s tile and drawer) lets the page behind
+     show through every clear pixel of the art: no black page, no black box and no box shadow, from
+     the first paint on (the class is set in the head, before the body is drawn). */
+  .cw-preview-art, .cw-preview-art body, .cw-preview-art #screenBox, .cw-preview-art #screenBox.full { background:transparent !important; }
+  .cw-preview-art #lcdWrap, .cw-preview-art #lcdWrap.has-art { box-shadow:none; }
+  #bootLoader { position:absolute; left:50%; top:50%; width:28px; height:28px; margin:-14px 0 0 -14px; border-radius:50%;
+    border:3px solid rgba(255,255,255,.12); border-top-color:var(--dim); opacity:0; pointer-events:none; z-index:5; }
+  body.cw-booting #bootLoader { animation:cwBootIn .2s ease .35s forwards, cwBootSpin .9s linear infinite; }
+  @keyframes cwBootIn { to { opacity:1 } }
+  @keyframes cwBootSpin { to { transform:rotate(360deg) } }
+  @media (prefers-reduced-motion: reduce) { body.cw-booting #bootLoader { animation:cwBootIn .2s ease .35s forwards; } }
+  #screenBox.full { padding:58px 8px 8px; background:#000; }
+  #lcdWrap { position:relative; line-height:0; overflow:hidden; }
+  #lcdWrap.has-art { box-shadow:0 14px 34px #0007; }
+  #lcdWrap.art-off { box-shadow:none; }
+  #lcdWrap.art-off #art, #lcdWrap:not(.has-art) #art { display:none; }
+  /* The art's glass: a photograph's screen is translucent, so the game goes BEHIND it
+     and the glare falls on the picture; an opaque render puts the game in front. */
+  #art { position:absolute; left:0; top:0; z-index:1; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+  canvas#screen { position:relative; z-index:0; image-rendering:pixelated; background:#000; display:block; }
+  #lcdWrap.glass-opaque canvas#screen { z-index:2; }
+  #lcdWrap:not(.has-art) canvas#screen, #lcdWrap.art-off canvas#screen { border-radius:3px; box-shadow:0 0 0 8px var(--cw-bar-host-bezel,#1a1d22), 0 10px 30px #0006; }
+
+  #pausedBadge { position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center; pointer-events:none; }
+  body.paused #pausedBadge { display:flex; }
+  #pausedBadge span { background:rgba(16,18,22,.82); border:1px solid var(--line); border-radius:10px; color:var(--ink);
+    font-weight:700; font-size:15px; letter-spacing:.18em; padding:10px 20px; box-shadow:0 8px 26px rgba(0,0,0,.5); }
+  #rewindHud { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:62; display:none; white-space:nowrap;
+    background:rgba(16,18,22,.82); border:1px solid var(--line); border-radius:8px; color:var(--cw-bar-host-speed-ink,#ffd27a); font-size:13px; font-weight:700;
+    letter-spacing:.08em; padding:5px 12px; font-variant-numeric:tabular-nums; box-shadow:0 8px 26px rgba(0,0,0,.5); }
+  body.rewinding #rewindHud { display:block; }
+  /* VHS scan bands over the screen while rewinding, as the Game & Watch window does it. */
+  /* Placed over the game screen by the presenter (inside #lcdWrap, the canvas's own box). */
+  #rewindScan { position:absolute; left:0; top:0; z-index:4; display:none; overflow:hidden; pointer-events:none; }
+  body.rewinding #rewindScan { display:block; }
+  #rewindScan::after { content:""; position:absolute; left:0; right:0; top:-20%; bottom:-20%;
+    background-image:repeating-linear-gradient(0deg, rgba(255,255,255,.20) 0, rgba(255,255,255,.20) 4px, transparent 4px, transparent 18px);
+    mix-blend-mode:screen; animation:host-scan .16s steps(2) infinite; }
+  @keyframes host-scan { 0%{transform:translateY(0)} 50%{transform:translateY(9px)} 100%{transform:translateY(-6px)} }
+  @media (prefers-reduced-motion: reduce) { #rewindScan::after { animation:none; } }
+
+  /* The one shared start screen: shown only when the browser refused to start sound
+     after the launching press (counted; the target is never). */
+  #startScreen { position:absolute; inset:0; z-index:120; display:flex; align-items:center; justify-content:center;
+    background:rgba(6,8,12,.72); cursor:pointer; }
+  #startScreen[hidden] { display:none; }
+  #startScreen .ss-card { display:flex; flex-direction:column; align-items:center; gap:12px; padding:22px 28px; border-radius:16px;
+    background:rgba(21,23,27,.92); border:1px solid var(--line); font-weight:700; font-size:17px; letter-spacing:.04em; }
+  #startScreen .ss-sub { font-weight:500; font-size:13px; color:var(--dim); letter-spacing:0; max-width:36ch; text-align:center; line-height:1.4; }
+  body.cb-tv #startScreen .ss-card { font-size:24px; }
+
+  #msg { position:absolute; inset:0; z-index:110; display:flex; align-items:center; justify-content:center; padding:24px; }
+  #msg[hidden] { display:none; }
+  #msg .m-card { max-width:46ch; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; }
+  #msg h2 { margin:0 0 8px; font-size:17px; }
+  #msg p { margin:0 0 12px; color:var(--dim); }
+  #msg button { font:inherit; font-weight:600; color:var(--ink); background:var(--cw-bar-field,#1d2026); border:1px solid var(--line); border-radius:9px; padding:8px 14px; cursor:pointer; }
+  #msg button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  /* Files opened on this device before (2026-10-19): one button each, then Forget. */
+  #msgRecent { margin-top:14px; }
+  #msgRecent[hidden] { display:none; }
+  #msgRecent .m-sub { margin:0 0 6px; font-size:13px; }
+  #msgRecent ul { list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:6px; max-height:40vh; overflow:auto; }
+  #msgRecent li button { width:100%; text-align:left; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #msgRecent #msgForget { font-weight:500; font-size:13px; padding:6px 12px; }
+
+  .host-keys { width:100%; }
+  .host-keygrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px 14px; }
+  .host-key { display:flex; align-items:center; gap:8px; }
+  .host-key-l { min-width:4.5em; color:var(--dim); }
+  .host-note { color:var(--dim); font-size:12px; }
+  .host-check { display:inline-flex; align-items:center; gap:4px; }
+  body.cb-full #art { display:none; }
+
+  /* THE STATUS LINE (2026-10-14: the old Game Boy page's footer, back). One line of
+     fixed height that never wraps, so nothing in it can resize the play area (the 1942
+     fix: what does not fit scrolls sideways). The log opens ABOVE it, over the stage, so
+     opening it never moves the game. */
+  #hostFooter { display:flex; align-items:center; gap:10px; flex-wrap:nowrap; white-space:nowrap;
+    flex:0 0 auto; height:30px; box-sizing:border-box; overflow:hidden;
+    padding:0 14px; border-top:1px solid var(--line); background:var(--panel);
+    font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--dim); }
+  #hostFooter::-webkit-scrollbar { display:none; }
+  #hostFooter > * { flex:0 0 auto; }
+  #hostFooter > [data-off] { display:none; }   /* an item that does not fit is dropped whole, never cut */
+  #hostFooter b { color:var(--ink); font-weight:600; }
+  #hostFooter .chip { padding:1px 7px; border-radius:9px; border:1px solid var(--line); }
+  #hostFooter .chip.live { color:var(--accent); border-color:var(--cw-bar-accent-deep,#3d4a1e); }
+  #hostFooter .chip.silent { color:var(--cw-bar-warn,#e0a800); border-color:var(--cw-bar-host-warn-deep,#4a3d1e); }
+  #hostFooter button { background:none; border:1px solid var(--line); color:var(--dim); border-radius:9px; padding:1px 8px; font:inherit; cursor:pointer; margin-left:auto; }
+  #hostFooter button[aria-expanded="true"] { color:var(--ink); border-color:var(--cw-bar-host-line-on,#3a404a); }
+  /* Under the bar's menus (95) so the More menu's "Status and log" item stays reachable to close it (bug, 2026-10-15). */
+  #hostLog { position:absolute; left:0; right:0; bottom:0; z-index:85; max-height:min(40vh, 320px); overflow:auto;
+    margin:0; padding:8px 14px; box-sizing:border-box; background:rgba(10,12,15,.94); border-top:1px solid var(--line);
+    font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--dim); white-space:pre-wrap; }
+  #hostLog[hidden] { display:none; }
+  body.cb-full #hostFooter, body.cb-full #hostLog { display:none; }
+  /* Small screens: no status line during play; the game gets the room (2026-10-14).
+     Measured on this frame's own size. The status and the log stay one item away in the
+     bar ("Status and log"), which a large screen does not need. */
+  @media (max-width: 900px), (max-height: 500px) { #hostFooter { display:none; } }
+  /* The bar's Log item shows at every size now (2026-10-29: the bar's second row is Keys, Help,
+     Log and Settings); on a large screen it is the same toggle as the status line's Log button. */
+
+  /* The speed, shown briefly when it changes (Ctrl+Right or the Speed menu). */
+  #speedHud { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:62; display:none; white-space:nowrap;
+    background:rgba(16,18,22,.82); border:1px solid var(--line); border-radius:8px; color:var(--cw-bar-host-rewind-ink,#9fe0ff); font-size:13px; font-weight:700;
+    letter-spacing:.08em; padding:5px 12px; box-shadow:0 8px 26px rgba(0,0,0,.5); pointer-events:none; }
+  #speedHud.show { display:block; }
+  body.rewinding #speedHud { display:none; }
+
+  /* Keys: the device's diagram, then its key list, with room between them (2026-10-14). */
+  .host-keys { display:flex; flex-direction:column; align-items:center; gap:clamp(18px, 4vh, 36px); }
+  .host-keys > .gbk-diagram { margin:0 auto; }
+  .host-keys > .host-keylist { width:100%; }
+  /* A drawn diagram fitted to the window (host.mjs fitKeysDiagram) scales its lettering with its
+     own width, so a key name stays inside its button (3 Nov). At full size these are the old sizes. */
+  .host-keys .keys-diagram { container-type:inline-size; }
+  /* A unit with no extra keys has an empty side column: no column, so no line beside the picture. */
+  .host-keys .keys-extra:empty { display:none; }
+  /* A wide window puts a tall drawn picture (host.mjs marks it .host-keys-side) beside its key
+     list rather than above it (4 Nov), so it has the panel's whole height and is drawn as large
+     as that allows. A wide, low picture stays above the list, where it is larger. */
+  @media (min-width: 760px) {
+    .cb-tabpanel:has(> .host-keys-side) { width:min(100%, 1100px); }
+    .host-keys.host-keys-side { flex-direction:row; align-items:center; gap:28px; }
+    .host-keys.host-keys-side > :first-child { flex:1 1 58%; min-width:0; }
+    .host-keys.host-keys-side > .host-keylist { flex:1 1 42%; width:auto; min-width:0; }
+  }
+  .host-keys .keys-rocker .rk { font-size:clamp(9px, 2.9cqw, 18px); }
+  .host-keys .keys-txt { font-size:clamp(9px, 2.6cqw, 16px); }
+  /* Each button's lettering is sized by that button (4 Nov): as large as it allows, never cut. */
+  .host-keys .keys-btn, .host-keys .keys-dpad { container-type:size; }
+  .host-keys .keys-btn .kk { font-size:clamp(8px, min(30cqh, 21cqw), 24px); }
+  .host-keys .keys-btn .kl { font-size:clamp(6px, min(16cqh, 13cqw), 14px); }
+  .host-keys .keys-btn .ka { font-size:clamp(6px, min(14cqh, 12cqw), 12px); }
+  .host-keys .keys-dpad .dk { font-size:clamp(9px, 13cqmin, 24px); }
+  .host-keys .keys-stick .st-arrow { font-size:clamp(8px, 2.4cqw, 15px); }
+  /* A light gun's crosshair and a pointer device's cursor (the NES Zapper, the Arkanoid paddle). */
+  .host-xhair { position:absolute; z-index:3; width:26px; height:26px; margin:-13px 0 0 -13px; pointer-events:none;
+    border:2px solid rgba(255,80,80,.9); border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.6); }
+  .host-xhair::before, .host-xhair::after { content:""; position:absolute; background:rgba(255,80,80,.9); }
+  .host-xhair::before { left:50%; top:-6px; bottom:-6px; width:2px; margin-left:-1px; }
+  .host-xhair::after { top:50%; left:-6px; right:-6px; height:2px; margin-top:-1px; }
+  .host-xhair[hidden] { display:none; }
+  body.host-pointer #screenBox { cursor:crosshair; touch-action:none; }
+  .host-portlabel { margin:10px 0 4px; font-weight:700; font-size:12px; letter-spacing:.06em; color:var(--dim); text-transform:uppercase; }
+</style>
+</head>
+<body class="cw-booting">
+<div id="stage">
+  <div id="bootLoader" aria-hidden="true"></div>
+  <div id="screenBox">
+    <div id="lcdWrap">
+      <img id="art" alt="">
+      <canvas id="screen" width="160" height="144"></canvas>
+    </div>
+  </div>
+  <div id="rewindScan" aria-hidden="true"></div>
+  <div id="pausedBadge" aria-hidden="true"><span>PAUSED</span></div>
+  <div id="rewindHud" aria-hidden="true">◄◄ REW</div>
+  <div id="speedHud" aria-hidden="true"></div>
+  <pre id="hostLog" hidden aria-label="Log"></pre>
+  <div id="msg" hidden><div class="m-card"><h2 id="msgTitle"></h2><p id="msgBody"></p><button type="button" id="msgOpen" hidden>Choose a file…</button><div id="msgRecent" hidden><p class="m-sub">Opened on this device before:</p><ul></ul><button type="button" id="msgForget">Forget this list</button></div></div></div>
+  <div id="startScreen" hidden role="button" tabindex="0" aria-label="Start sound">
+    <div class="ss-card">
+      <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="9" width="9.5" height="6" rx="2.4"/><rect x="4.5" y="6.8" width="3.5" height="2.3" rx="0.8"/><path d="M1.5 11.3h9.5"/><rect x="13" y="9" width="9.5" height="6" rx="2.4"/><rect x="16" y="14.9" width="3.5" height="2.3" rx="0.8"/><path d="M13 12.7h9.5"/></svg>
+      <span id="startLabel">Insert Batteries</span>
+      <span class="ss-sub">The sound was held back until you press something. Tap, click or press a key to start it (a controller button plays without sound).</span>
+    </div>
+  </div>
+</div>
+
+<footer id="hostFooter" aria-label="Status">
+  <span data-pri="7">mode <b id="fMode">host</b></span>
+  <span id="fSpeed" data-pri="6">normal speed</span>
+  <span id="fAudio" data-pri="5" class="chip silent">audio: …</span>
+  <span id="fCarts" data-pri="4">cartridge: …</span>
+  <span id="fFps" data-pri="3">0.0 fps</span>
+  <span id="fRing" data-pri="2">history: …</span>
+  <button type="button" id="btnLog" data-pri="9" aria-expanded="false" aria-controls="hostLog">log</button>
+</footer>
+
+<script>/* Every key physically held, seen before any other listener (the Control Bar and play-keys.js take
+   the keyboard while a panel is open): the Keys diagram lights from it (input.mjs litSet). Codes only. */
+(function(){var s=window.__cwRawKeys=new Set();addEventListener('keydown',function(e){s.add(e.code);},true);addEventListener('keyup',function(e){s.delete(e.code);},true);addEventListener('blur',function(){s.clear();});})();</script>
+<script src="../../firmware/site/sha.js?v=2.0.0"></script>
+<script src="../../firmware/site/unsupported.js?v=2.0.0"></script>
+<script src="./cw-audio.js?v=2.0.0"></script>
+<script src="../play-keys.js?v=2.0.0"></script>
+<script src="../shared/overlay.js?v=2.0.0"></script>
+<script src="../play-pill.js?v=2.0.0"></script>
+<script src="../shared/control-bar.js?v=2.0.0"></script>
+<script type="module" src="./host.mjs?v=2.0.0"></script>
+</body>
+</html>

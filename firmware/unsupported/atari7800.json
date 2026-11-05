@@ -1,0 +1,29 @@
+{
+ "format": 1,
+ "list": "atari7800",
+ "label": "Atari 7800",
+ "guards": [
+  "atari7800"
+ ],
+ "count": 3,
+ "entries": {
+  "469ae455c6a996325576e87dbafec7843ac1caca2db1e4c0d096a734473fa3a2": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "Shantae Tiles"
+  },
+  "4a3ab8af0419b39e01a704af4fc9d321bd7a0a576aa50bda552d33418a477e2f": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "Ninjish Guy - Perilous Island"
+  },
+  "7f010e1ce168ebfa0ea095f63e34e467e57d9fd424ec835c4122fd92e9d8f5a0": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Slots"
+  }
+ }
+}

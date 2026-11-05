@@ -1,0 +1,329 @@
+{
+ "format": 1,
+ "list": "atarilynx",
+ "label": "Atari Lynx",
+ "guards": [
+  "atarilynx"
+ ],
+ "count": 53,
+ "entries": {
+  "06882e3c948898c1ebe990ff58efef40d3466a1f9fc04cbf16077a616d055719": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-phobyx1"
+  },
+  "0e3835f7637dd2aaf7063a329f6f061a68ff95462da53c9aab7403c1dca78fcc": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "wav"
+  },
+  "11afa2494e557f4a6b978ac65c6f0f901d37d8d05c6db7549ab76d1c62de8694": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-sintab_8"
+  },
+  "1fdd51f48ecc86baf47354ca116d4d375645be706edcf7b2318e36bdcf9144ad": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "zzz_unk_testredeye.bin"
+  },
+  "203794884af53e7d0e97683c70df16bdbc9edeaa26da66846b33bd57978f0fd4": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Bitchy"
+  },
+  "2266d2b165d4a6fa3e686679aa714b6829e861a9e8af0b1748b7f39f8e5da206": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-ATARI"
+  },
+  "28e1f5312829d8a79f5c40c5a1e388ad5f90bd9667aa436238630ed1263bb65d": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "GameMenuBin1.6"
+  },
+  "2b2b57a4c5239c7cfb792ecf637497c989e3f3b1d54ab3c590df7eb466ab1501": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "menu1.7"
+  },
+  "2b4fab5f64f97f9052450dd6c4fc8e4600a71c95e6fae084adc8299330666fae": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Wizzy"
+  },
+  "2dc8148aa054e61715c2aa64e242c3ce087647cab5d8f3d36d101e878803b269": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "menu1.5"
+  },
+  "2e37362b4e1adaffbe16c958303b35cd0fe0a65af763abcd1f503659b9f900ec": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "PegSolitaireV1.4"
+  },
+  "30dc675b5f2d1333cdb079003f9ce35d871537715cb672d011a75e3d483503ab": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "main"
+  },
+  "3640cb4ef53865ff4b680fcbb0dbc6218fa630b7fa9c6d2ac5970ff19d1bf32c": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-Befok#Packraw by Jum Hig"
+  },
+  "368698ebcd1935537ecde1188bfbbaa81f33bc93cddd2481c3a5680a596d1300": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "img"
+  },
+  "388ae856a603fb3c1dab9c242694980a9205f40a77444fa52ce8e1b6b974a24f": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-Unknown Game 'T-RES'"
+  },
+  "3a2bd5ead381bfd015ae8bdca13c692b6ae23530fca087413cacddef26b32304": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "cube3"
+  },
+  "3cd51a4a24300b7b187e563376495e07b02719bf61ddf0faffd7e9102293640f": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Lynx SD Menu v1.9"
+  },
+  "44a08e83722c25d5ec4a04cfc1fca3c74aa6ba7988eb242ef10bcd582b0b0b6a": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Micro Font Data by Bastian Schick"
+  },
+  "45f4193545da025f92a1a4b5624c731d17570e3f245aa32ce3a4f2dfd0a6de68": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "CARDHEADER"
+  },
+  "5269c9e01a81387fb4f25bdde9d9149faaad6390bfb49928393d61f91d364edc": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "REPLAYER08"
+  },
+  "54fbfb28aa9360b197770afe881637733242302169aa08f86dc20a7d7e46c563": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Digidemo"
+  },
+  "5cf458c6fb46127248f15b1270009c79e73a529d4e88b2195f9d047bd2761b90": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "VVCS"
+  },
+  "614bee58e5710a403d2a1bf1522253f94e9cc150f2e3306394b269e5cd4dc126": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Puzzler 2000 V0.2 Demo"
+  },
+  "681099218cd71fbcd731252c31f21d690377fcc41211537fed8f3fa1d8260606": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "zzz_unk_LYNX Talons.rom"
+  },
+  "6c8a308c22d5b2233e36f04fbba561dd88a1d692f6bb61c059e98965f20977e6": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "zzz_unk_Bzone008.rom"
+  },
+  "6e6f38fb134d282e4f2fca953ecdc5e870d652e27b4439bb99ed9a54f4f3510f": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-Befok#Maze by Jum Hig"
+  },
+  "6f4eb9609658aaab4fb75db75de2a70472ea462b1e8d259956292702fc5c2b0e": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "tutowav"
+  },
+  "70cae154c69f8dc14ecc7d27d86547b3f6691b84d49ae834495b7750a37bf48a": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "rom20030930"
+  },
+  "762b14cccabd0969cfbcf0b37cde96f31557181c04782cbf2c9feb8236ea606b": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "BRK Server Installer by Bastian Schick"
+  },
+  "7de553f24e61a0f4943e77f65ab827c0bc84edba6f6023df16b3cf597da3ba17": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "zzz_unk_lynxram.bin"
+  },
+  "849ca73feb70020e873839bbf968b964f0a63ea12eeea73205682389d97cb7fc": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Just sharing..."
+  },
+  "8c8216cd7ced131f722b2706ffd11d36de44db10242513dc6f074003921f485a": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Popcorn"
+  },
+  "8c8518f46084c7872a3cda48f4fbf2cebce10a6f04d9a5047a65b7aeb2c8a499": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Lynx Othello"
+  },
+  "98570d9d978bf830b4626bdf1c44617dc1e29678bd72de26df11d93acd890d00": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Snake"
+  },
+  "ad4106a7eb8068ea15a9d2de6b7fad4d6567f8b26a89c35bb8c7c936fdccfe0d": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Grail of the Lava Kingdom, The"
+  },
+  "b5287b51c339efd32856c18231e83ac541b4123221c3d59e8df79665131979bf": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Mines 2"
+  },
+  "b92d17508b89727574005ac9bf8eea69b03bfdbd2f11c038b09b3c8c322bd17c": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-INSERT"
+  },
+  "bf7f19eb0ce0684df48e6c38b33aaa30e85afa9a99910848f9c494e304997853": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "Cardhead"
+  },
+  "c505da2a3b510a5b19fd9d48cc6fbe3fd13d148f9166f9ea91810f65c88578e6": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "miniply3"
+  },
+  "c7ecdfd7869692266f6a49396ea6489680fcdc8f2bf83d28f0707c1dfc07d6d3": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-knight moves"
+  },
+  "cb3e5372b948cb80b86933c2d2807069762c8cd5a647537da2899c01c7278cef": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "C65 - Demo1"
+  },
+  "cfae83855e63516d888326b1ad345e5226f0c9aad712962698d2bfd957cc63d9": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Digidemo 2"
+  },
+  "cfb49e3fa7230633c3edecf8ddcc337e64a1f4824805e53587e149d0e19f133d": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "BRK"
+  },
+  "d4e23c905631deb419d8ca83fc9a1683ac5bebf64c3bf70efc2c511ece6a5be2": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "menu1.8"
+  },
+  "db0561d31fa4d1773e937f746723ee52705fd9144cf0610bc88f9255a9aab0ce": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "VVCS"
+  },
+  "dcd0fb21d5e79aac77ce5b84f4c919b455f4767ab3d9e1aab2979e1b80303360": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing: it is built for an SD-card cartridge, which the emulator doesn't have yet.",
+   "title": "flappy_test"
+  },
+  "df53104b79f29636bbca6014affb52fefee3cfce187d00019209e50b22f93197": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "tpp.bin_withQuartet"
+  },
+  "e37854cfbee9417329c472070b956ae095a613cdd897071cd5c2f0f004c7e228": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "zzz_unk_Bzone.bin"
+  },
+  "e3bdc6fad376b9cd7f28cbdf45e0798c84c9491e7b165243c92435f31d5c9bbb": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "cube3"
+  },
+  "e3d2ec8f29a97ed2a36e0cdf3ee30c164bba1ed13b0cf693e01adaac0b07c02d": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "menu"
+  },
+  "f121478b0383eed738f829caf8ac98319d13948af42330f1a94e1e6e208ba57b": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "lynx-160-102-16"
+  },
+  "f9137b082ba70ba7c91153b9ba8fc718cbca87ecafd34fb4b23b785fbd071c78": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "BRK Server Installer"
+  },
+  "fcdc9e9397f79c18e926102594d3d51222ca6b73f8338efcbce9f2d2ee737d14": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "ZZZ-UNK-Tetris"
+  }
+ }
+}

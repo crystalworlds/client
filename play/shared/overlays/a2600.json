@@ -1,0 +1,127 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "a2600",
+ "label": "Atari 2600",
+ "device": "float",
+ "theme": {
+  "press": "rgba(210,105,30,.72)",
+  "pressInk": "#160a03"
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "fire",
+      "label": "FIRE",
+      "input": "Space",
+      "shape": "circle",
+      "x": 0.6,
+      "y": 0.5,
+      "w": 0.58,
+      "sq": true
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "diffL",
+   "label": "Left diff.",
+   "kind": "toggle",
+   "call": "switch",
+   "arg": 64,
+   "states": [
+    "B",
+    "A"
+   ]
+  },
+  {
+   "id": "colour",
+   "label": "TV type",
+   "kind": "toggle",
+   "call": "switch",
+   "arg": 8,
+   "states": [
+    "B&W",
+    "Colour"
+   ]
+  },
+  {
+   "id": "select",
+   "label": "Select",
+   "input": "F2"
+  },
+  {
+   "id": "reset",
+   "label": "Reset",
+   "input": "F1"
+  },
+  {
+   "id": "diffR",
+   "label": "Right diff.",
+   "kind": "toggle",
+   "call": "switch",
+   "arg": 128,
+   "states": [
+    "B",
+    "A"
+   ]
+  }
+ ],
+ "provenance": [
+  {
+   "what": "switch bits",
+   "source": "play/atari2600/app.js (atari_set_switches: 1 reset, 2 select, 8 colour, 64/128 difficulty A when set), from the core's docs/INTERFACE.md",
+   "licence": "site-owned"
+  },
+  {
+   "what": "joystick",
+   "source": "play/play-pad.js FN.a2600 (arrows, Space fire, F1 Game Reset, F2 Game Select)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "pad sizes",
+   "source": "the Game Boy float pad units (one look across the site)",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

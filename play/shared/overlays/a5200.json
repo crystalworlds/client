@@ -1,0 +1,228 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "a5200",
+ "label": "Atari 5200",
+ "device": "float",
+ "theme": {
+  "press": "rgba(210,105,30,.72)",
+  "pressInk": "#160a03"
+ },
+ "status": "in use: the 5200 plays in the one play host; these are its on-screen controls",
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "fire1",
+      "label": "1",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.23,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     },
+     {
+      "id": "fire2",
+      "label": "2",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.77,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "keypad",
+    "dock": "tr",
+    "w": 0.9,
+    "h": 1.05,
+    "controls": [
+     {
+      "id": "k1",
+      "label": "1",
+      "input": "Digit1",
+      "shape": "rect",
+      "x": 0.1667,
+      "y": 0.125,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k2",
+      "label": "2",
+      "input": "Digit2",
+      "shape": "rect",
+      "x": 0.5,
+      "y": 0.125,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k3",
+      "label": "3",
+      "input": "Digit3",
+      "shape": "rect",
+      "x": 0.8333,
+      "y": 0.125,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k4",
+      "label": "4",
+      "input": "Digit4",
+      "shape": "rect",
+      "x": 0.1667,
+      "y": 0.375,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k5",
+      "label": "5",
+      "input": "Digit5",
+      "shape": "rect",
+      "x": 0.5,
+      "y": 0.375,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k6",
+      "label": "6",
+      "input": "Digit6",
+      "shape": "rect",
+      "x": 0.8333,
+      "y": 0.375,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k7",
+      "label": "7",
+      "input": "Digit7",
+      "shape": "rect",
+      "x": 0.1667,
+      "y": 0.625,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k8",
+      "label": "8",
+      "input": "Digit8",
+      "shape": "rect",
+      "x": 0.5,
+      "y": 0.625,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k9",
+      "label": "9",
+      "input": "Digit9",
+      "shape": "rect",
+      "x": 0.8333,
+      "y": 0.625,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k*",
+      "label": "*",
+      "input": "Minus",
+      "shape": "rect",
+      "x": 0.1667,
+      "y": 0.875,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k0",
+      "label": "0",
+      "input": "Digit0",
+      "shape": "rect",
+      "x": 0.5,
+      "y": 0.875,
+      "w": 0.3,
+      "h": 0.22
+     },
+     {
+      "id": "k#",
+      "label": "#",
+      "input": "Equal",
+      "shape": "rect",
+      "x": 0.8333,
+      "y": 0.875,
+      "w": 0.3,
+      "h": 0.22
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "start",
+   "label": "Start",
+   "input": "Enter"
+  },
+  {
+   "id": "pause",
+   "label": "Pause",
+   "input": "F3"
+  },
+  {
+   "id": "reset",
+   "label": "Reset",
+   "input": "F1"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "controller layout",
+   "source": "the 5200 controller as photographed in Atari5200Console.png (stick, fire buttons, 12-key keypad, Start / Pause / Reset); arranged, not traced",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format and behaviour ideas",
+   "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
+   "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  }
+ ]
+}

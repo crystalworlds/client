@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /emby-proxy/
+Disallow: /carts/
+
+Sitemap: https://crystalworlds.media/sitemap.xml

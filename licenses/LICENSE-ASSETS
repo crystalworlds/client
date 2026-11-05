@@ -1,0 +1,38 @@
+THIS FILE IS SUPERSEDED
+=======================
+
+The project's original writing and interface art were previously licensed
+under CC BY-NC-SA 4.0, separately from the code.
+
+That split is retired. A single licence now covers BOTH the project's software
+and its original writing and interface art:
+
+    ../LICENSE      (CrystalWorlds.Media Project Licence 1.1)
+    licenses/LICENSE  (identical copy)
+
+WHY IT CHANGED
+--------------
+CC BY-NC-SA 4.0 and PolyForm Noncommercial 1.0.0 both forbade commercial use,
+which was intended. But both also expressly permitted the work to be taken
+apart and its pieces reused -- ShareAlike grants adaptation and
+redistribution, and PolyForm grants "use, copy, modify, share and build upon
+freely". That was not intended.
+
+The replacement licence keeps what was wanted and removes what was not:
+
+  * non-commercial use, modification and redistribution of the WHOLE project
+    remain permitted, with attribution and without asking;
+  * extracting a component -- an emulator core, a page, the interface -- and
+    using it on its own now requires permission.
+
+Everything is "please ask" unless the licence says otherwise.
+
+WHAT DID NOT CHANGE
+-------------------
+Nothing about third-party material. The FFmpeg/libav.js video pipeline (LGPL-2.1-or-later),
+mediabunny (MPL-2.0) and the Game & Watch community artwork are EXEMPT and
+carry their own terms, which the new licence explicitly does not restrict.
+See section 6 of the licence, the NOTICE file, and THIRD-PARTY-NOTICES.
+
+Copies obtained under the previous licences keep the terms they were obtained
+under; this change is prospective only.

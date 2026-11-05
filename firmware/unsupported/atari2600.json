@@ -1,0 +1,35 @@
+{
+ "format": 1,
+ "list": "atari2600",
+ "label": "Atari 2600",
+ "guards": [
+  "atari2600"
+ ],
+ "count": 4,
+ "entries": {
+  "1e13dce6c877de6d7f627a4fb9b82f06bcd520e3ffcc5b3e02fdae0bb0ca50c6": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "this is an unfinished development build that never started on a real console. The finished Racer plays.",
+   "title": "Racer"
+  },
+  "1ebd8ad31bd975cb7f15d7b104fc3ea059d2b400a50a5934fb97f7a7b45f9dd1": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "this prototype was never finished: it is only a title screen with the golden arches, and that still picture is all a real console shows too.",
+   "title": "McDonald's - Golden Arches Adventure"
+  },
+  "a924d20f04e320b9b45e22a0207a86f8ede38f5311457e828a509f5528a3155b": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it needs ExerVision's exercise bike, which plugs into the left joystick port. Without the bike it waits and shows nothing, on a real console too.",
+   "title": "Video Cartridge Bicycle Trainer"
+  },
+  "d3dd7b9bdb000e2fa6c48956a8f2ef6ed85525adc8c5a5096a123992ed600c4c": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "this is an early build of Dark Chambers that is only a title screen, and that still picture is all a real console shows too. The finished Dark Chambers plays.",
+   "title": "Dungeon"
+  }
+ }
+}

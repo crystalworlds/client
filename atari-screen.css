@@ -1,0 +1,463 @@
+/* atari-screen.css -- the four Atari screen apertures, each declared ONCE for
+   the whole site.
+
+   READ nes-screen.css FIRST. This file is its sibling and follows its rules
+   deliberately rather than inventing a second arrangement; what is written at
+   length there is not repeated here. The short version of why either file
+   exists: two documents put a moving picture on each of these screens and they
+   are not in the same tree --
+
+     index.html                 the Media tile and the drawer stage
+     play/atari<sys>/index.html the play page, behind its own surface slot
+
+   -- so the aperture is one measurement of one photograph and gets one
+   declaration. The alternative, a copy per surface, is the defect this site
+   fixed on 2026-09-30: the Game Boy aperture was written out three times, each
+   copy carrying a comment asking the reader to keep it in step with the other
+   two, and when the artwork was replaced only one copy was re-measured. The
+   tiles overhung while the drawer looked right. Comments do not keep numbers in
+   step; a single declaration does.
+
+   WHY FOUR SYSTEMS SHARE ONE FILE AND ONE SET OF CLASSES
+   ---------------------------------------------------------------------------
+   Because the alternative is four copies of the same twelve rules, which is the
+   same defect one level up. The per-system numbers are declared below under
+   their own prefixes (--a2600-*, --a5200-*, --a7800-*, --lynx-*) and the
+   CONSUMING RULES never name a system: they read --at-*, and a single mapping
+   block per system points --at-* at that system's own properties. A mapping is
+   a reference, not a copy -- exactly the relationship index.html's
+   .device-card[data-system="nes"] block has with nes-screen.css.
+
+   The selector is [data-system="..."], the SAME attribute index.html already
+   puts on a .device-card and the same one nes-screen.css's consumer keys off.
+   A play page sets it on its own <html>. So there is one way to say "this
+   subtree is showing an Atari 5200" and both documents say it that way.
+
+   HOW THE FIGURES WERE MEASURED, AND BY WHAT
+   ---------------------------------------------------------------------------
+       python3 WASM_Source/atari-artwork/aperture.py <photo.png>
+   prints every block below. Its header carries the method and the two traps it
+   exists to avoid; the headlines are:
+
+     * THE SCREEN IS NOT CUT OUT of any of these photographs. Each aperture is
+       a translucent GLARE LAYER carrying the reflections and wear the real
+       tube or LCD has, so the emulator surface is stacked UNDER the photograph
+       and the glare falls on the game. That is the point of the artwork and it
+       is what the design asked for: "image in front of screen to see glare and
+       scratches (same as NES did)". Consequence worth knowing before it is
+       reported as a bug: behind 37% glass the picture is dimmed and slightly
+       desaturated. That is the artwork's doing, not the code's, and the remedy
+       if one is ever wanted is a lighter alpha in the PNG.
+
+     * THE 5200'S GLARE IS NOT WEAKER THAN THE NES'S. Its screen reads as a
+       plain light grey, and the expectation going in was that its glare layer
+       would be far weaker and would need a different treatment. Measured, it
+       is alpha 95/255 -- 37.3% opaque, slightly STRONGER than the NES's 88 --
+       and so are the 2600's and the 7800's, all three to the same value. What
+       makes the 5200 look pale is its glass TONE (#5c5f5e against the NES's
+       #4f4f4f), not its opacity. The Lynx is the one that differs: 72/255,
+       28.2%, because it is an LCD behind a plastic window rather than a tube.
+       Nothing was carried across from the NES; every number here came off its
+       own PNG.
+
+     * THE BOX IS THE FIRST FULLY OPAQUE RING, not the glare plateau. This is
+       the NES's 2026-10-01 correction and it is built into the detector here
+       rather than bolted on: between the flat glare and the opaque bezel there
+       is an antialiased fringe one to three pixels wide which is still
+       see-through, and a surface stopping at the plateau leaves it uncovered --
+       a pale hairline across the top and bottom of the screen on a light page.
+       Overfilling into bezel that masks it is free; underfilling is the fault.
+
+     * THE RADIUS IS SCORED. Each one below is the largest that uncovers ZERO
+       translucent pixels, capped at what the artwork's own corner measures.
+       On the 5200 those two disagree sharply -- see its block.
+
+   IF A PHOTOGRAPH IS EVER REPLACED, re-measure. Do not adjust these by eye.
+   WASM_Source/atari-artwork/verify.sh re-detects every rectangle on every run
+   and FAILS if one no longer matches what is written here, so a swapped image
+   cannot pass quietly.
+   ------------------------------------------------------------------------- */
+:root {
+  /* ---- ATARI 2600 -------------------------------------------------------
+     atari2600.png, 734x539 RGBA. A wood-grain CRT television with a four-switch
+     VCS, two CX40 joysticks and a stack of cartridge boxes below and beside it.
+     Aperture 309x228 at (144,55), aspect 1.3553. Glare plateau alpha 95/255
+     over 65,030 px; glass tone sampled from the photograph's own screen.
+     Corner 22px, which uncovers nothing (the largest that still uncovers
+     nothing is 32px, so there is headroom and spending it buys nothing). */
+  /* 2026-10-22: atari2600-tile.png, 520x624 (5:6), the set with its controller below it; measured by atari-artwork/aperture.py. */
+  --a2600-scr-l: 11.15%;   /* 58 / 520 */
+  --a2600-scr-t: 10.42%;   /* 65 / 624 */
+  --a2600-scr-w: 59.42%;   /* 309 / 520 */
+  --a2600-scr-h: 36.54%;   /* 228 / 624 */
+  --a2600-scr-bg: #4c4f51;
+  --a2600-scr-radius: 7.1% / 9.6%;        /* 22px of a 309x228 box */
+  /* The television body, for the play view's crop: 477x336 at (105,19). A
+     SEPARATE measurement from the aperture -- the centre-line walk out to
+     background from the middle of the glass -- so this is not a second copy of
+     anything. On this photograph it is the measurement that matters most: the
+     NES's silhouette rule returns 647x346 here, because the stack of cartridge
+     boxes leans against the set and widens the silhouette gradually instead of
+     in one step. The boxes are not the television. */
+  --a2600-tv-l: 3.85%;   /* 20 / 520 */
+  --a2600-tv-t: 4.65%;   /* 29 / 624 */
+  --a2600-tv-w: 91.54%;   /* 476 / 520 */
+  --a2600-tv-h: 48.24%;   /* 301 / 624 (second build: the rebuilt tile's body is measured to the plinth's foot; the first build's was 281) */
+  --a2600-tv-scale: 1.09244;   /* 520 / 476 */
+  --a2600-art-aspect: 520 / 624;
+  --a2600-tv-aspect: 476 / 301;
+  --a2600-art-aspect-num: 0.83333;
+  --a2600-tv-aspect-num: 1.58140;
+
+  /* ---- ATARI 5200 -------------------------------------------------------
+     atari5200.png, 859x564 RGBA. A silver-trimmed CRT television with a
+     four-port 5200, two analogue controllers and a sales brochure below it.
+     Aperture 325x245 at (240,70), aspect 1.3265. Glare plateau alpha 95/255 --
+     the same as the 2600's and the 7800's, and the figure that settles the
+     "the 5200 is just grey, its glare must be weaker" expectation: it is not.
+     THE RADIUS IS 3px AND THAT IS NOT A TYPO. This bezel carries a one-pixel
+     translucent SEAM -- chrome trim -- running diagonally into all four corners
+     of the aperture box. It does not push the box out (the glass's own bow
+     already reaches as far), but it lies exactly where a corner radius cuts,
+     so the 23px the corner itself measures would carve 39 of those pixels open
+     and show the page through a hairline at each corner. 3px is the largest
+     that uncovers none. The radius is only ever seen as the shape of the
+     glass-tone backing in the moment before the first frame lands, because the
+     surface sits under an opaque bezel -- so under-rounding costs nothing here
+     and over-rounding costs a hairline. aperture.py scores this on every run;
+     it is not a judgement call left to the next reader. */
+  /* 2026-10-22: atari5200-tile.png, 520x624 (5:6), the set with its controller below it; measured by atari-artwork/aperture.py. */
+  --a5200-scr-l: 10.38%;   /* 54 / 520 */
+  --a5200-scr-t: 11.22%;   /* 70 / 624 */
+  --a5200-scr-w: 62.50%;   /* 325 / 520 */
+  --a5200-scr-h: 39.26%;   /* 245 / 624 */
+  --a5200-scr-bg: #5c5f5e;
+  --a5200-scr-radius: 0.9% / 1.2%;        /* 3px, scored -- see above */
+  --a5200-tv-l: 4.23%;   /* 22 / 520 */
+  --a5200-tv-t: 3.37%;   /* 21 / 624 */
+  --a5200-tv-w: 91.73%;   /* 477 / 520 */
+  --a5200-tv-h: 51.60%;   /* 322 / 624 */
+  --a5200-tv-scale: 1.09015;   /* 520 / 477 */
+  --a5200-art-aspect: 520 / 624;
+  --a5200-tv-aspect: 477 / 322;
+  --a5200-art-aspect-num: 0.83333;
+  --a5200-tv-aspect-num: 1.48137;
+
+  /* ---- ATARI 7800 -------------------------------------------------------
+     atari7800.png, 761x584 RGBA. A dark CRT television with a 7800 ProSystem,
+     two ProLine pads and a CX24 below it.
+     Aperture 338x253 at (148,61), aspect 1.3360 -- the closest of the four to
+     a nominal 4:3, 0.2% off. Glare plateau alpha 95/255 over 79,931 px.
+     Corner 20px, uncovering nothing (largest safe is 30px). */
+  /* 2026-10-22: atari7800-tile.png, 550x660 (5:6), the set with its controller below it; measured by atari-artwork/aperture.py. */
+  --a7800-scr-l: 10.73%;   /* 59 / 550 */
+  --a7800-scr-t: 8.64%;   /* 57 / 660 */
+  --a7800-scr-w: 61.45%;   /* 338 / 550 */
+  --a7800-scr-h: 38.33%;   /* 253 / 660 */
+  --a7800-scr-bg: #4d4e4e;
+  --a7800-scr-radius: 5.9% / 7.9%;        /* 20px of a 338x253 box */
+  --a7800-tv-l: 4.18%;   /* 23 / 550 */
+  --a7800-tv-t: 2.73%;   /* 18 / 660 */
+  --a7800-tv-w: 91.82%;   /* 505 / 550 */
+  --a7800-tv-h: 49.85%;   /* 329 / 660 */
+  --a7800-tv-scale: 1.08911;   /* 550 / 505 */
+  --a7800-art-aspect: 550 / 660;
+  --a7800-tv-aspect: 505 / 329;
+  --a7800-art-aspect-num: 0.83333;
+  --a7800-tv-aspect-num: 1.53495;
+
+  /* ---- ATARI LYNX -------------------------------------------------------
+     atarilynx.png, 1009x540 RGBA. AND IT IS NOT A TELEVISION. The other three
+     photographs are a CRT with a console below it; this is a Lynx II held flat
+     to the camera, so "the device body" is the handheld itself and the crop
+     below is very nearly the whole picture (968x499 of 1009x540). Every rule
+     in this file still applies unchanged, which is the test of whether the
+     arrangement was general or merely worked on televisions.
+     Aperture 292x183 at (363,149), aspect 1.5956 -- against the Lynx's own
+     160x102 framebuffer, 1.5686. That agreement is the check that this is the
+     LCD and not the bezel recess around it: no other rectangle in the picture
+     is that shape.
+     Glare plateau alpha 72/255, 28.2% -- the one artwork here whose glass
+     differs from the other three, because it is an LCD behind a scratched
+     plastic window rather than a tube. Lighter glass, and the scratches are
+     the visible part of it.
+     Corner 0px: the aperture is a 100.0%-filled rectangle, i.e. the window has
+     no measurable rounding at this size. Declared rather than omitted so the
+     fact that it was measured is on the record. */
+  --lynx-scr-l: 35.98%;    /* 363 / 1009 */
+  --lynx-scr-t: 27.59%;    /* 149 / 540 */
+  --lynx-scr-w: 28.94%;    /* 292 / 1009 */
+  --lynx-scr-h: 33.89%;    /* 183 / 540 */
+  --lynx-scr-bg: #7d8182;
+  --lynx-scr-radius: 0% / 0%;             /* measured, not omitted */
+  --lynx-tv-l: 2.08%;      /*  21 / 1009 */
+  /* TOP CORRECTED 2026-10-07 (site regress): aperture.py's centre-line walk stops at the
+     dip in the middle of the handheld's top edge (y=30), but the grips either side rise
+     to y=21 (alpha > 200), so the play page cut 9 px off them -- a flat edge across the
+     top of the photograph. The crop now starts at y=12: the opaque top less 9 px, the
+     same order of soft margin the measured box keeps at the sides (13 px) and bottom. */
+  --lynx-tv-t: 2.22%;      /*  12 / 540 */
+  --lynx-tv-w: 95.94%;     /* 968 / 1009 */
+  --lynx-tv-h: 95.74%;     /* 517 / 540 */
+  --lynx-tv-scale: 1.04236;         /* 1009 / 968 */
+  --lynx-art-aspect: 1009 / 540;
+  --lynx-tv-aspect: 968 / 517;
+  --lynx-art-aspect-num: 1.86852;
+  --lynx-tv-aspect-num: 1.87234;
+
+  /* ---- ATARI LYNX, TURNED ON ITS SIDE (2026-10-07) -----------------------
+     AtariLynxConsoleTurned.webp, 540x1009 RGBA: atarilynx.png above turned 90
+     degrees CLOCKWISE by WASM_Source/lynx-turned-artwork/encode.sh -- "turned
+     right", lynx_rotation 2, the turn the play page gives Klax and Gauntlet.
+     It is the one-column portrait tile's photograph (design brief: "taking up one
+     unit instead of two and being tilted"). "Turned left" (lynx_rotation 1)
+     is the same file under a 180-degree transform, so it has its own measured
+     box below rather than a second file.
+     Measured by WASM_Source/atari-artwork/aperture.py on the ARCHIVED WebP
+     (lossless alpha), re-checked by WASM_Source/lynx-turned-artwork/verify.sh:
+       turned right  surface 183 x 292 at (208,363)
+       turned left   surface 183 x 292 at (149,354)   (the file turned 180)
+     -- exactly the landscape 292 x 183 at (363,149) turned each way, which is
+     the cross-check that the detector found the same glass. Glare, tone and
+     corner are the landscape file's: 72/255, #7d8182, 0px.
+     No --lynxr-tv-* / --lynxl-tv-*: the device-body crop is a play-page rule
+     and the play page turns the LANDSCAPE file instead (see its TURNED TITLES
+     block), so nothing would read them. */
+  --lynxr-scr-l: 38.52%;   /* 208 / 540 */
+  --lynxr-scr-t: 35.98%;   /* 363 / 1009 */
+  --lynxr-scr-w: 33.89%;   /* 183 / 540 */
+  --lynxr-scr-h: 28.94%;   /* 292 / 1009 */
+  --lynxl-scr-l: 27.59%;   /* 149 / 540 */
+  --lynxl-scr-t: 35.08%;   /* 354 / 1009 */
+  --lynxl-scr-w: 33.89%;   /* 183 / 540 */
+  --lynxl-scr-h: 28.94%;   /* 292 / 1009 */
+  --lynxt-art-aspect: 540 / 1009;
+  --lynxt-art-aspect-num: 0.53518;
+}
+
+/* ---- THE MAPPING ----------------------------------------------------------
+   Four blocks, and every line in them is a var() REFERENCE. Nothing below this
+   point names a system, and nothing above it names a rule. If a number ever
+   appears in one of these blocks, something has gone wrong: the numbers live in
+   :root and these say only which set is in force for this subtree.
+
+   This is the same relationship index.html's .device-card[data-system="nes"]
+   block has with nes-screen.css, and it is here for the same reason -- it lets
+   the consuming rules be written once for four artworks without any of them
+   knowing a figure.
+   ------------------------------------------------------------------------- */
+[data-system="atari2600"] {
+  --at-scr-l: var(--a2600-scr-l); --at-scr-t: var(--a2600-scr-t);
+  --at-scr-w: var(--a2600-scr-w); --at-scr-h: var(--a2600-scr-h);
+  --at-scr-bg: var(--a2600-scr-bg); --at-scr-radius: var(--a2600-scr-radius);
+  --at-tv-l: var(--a2600-tv-l); --at-tv-t: var(--a2600-tv-t);
+  --at-tv-w: var(--a2600-tv-w); --at-tv-h: var(--a2600-tv-h);
+  --at-tv-scale: var(--a2600-tv-scale);
+  --at-art-aspect: var(--a2600-art-aspect); --at-tv-aspect: var(--a2600-tv-aspect);
+  --at-art-aspect-num: var(--a2600-art-aspect-num);
+  --at-tv-aspect-num: var(--a2600-tv-aspect-num);
+}
+[data-system="atari5200"] {
+  --at-scr-l: var(--a5200-scr-l); --at-scr-t: var(--a5200-scr-t);
+  --at-scr-w: var(--a5200-scr-w); --at-scr-h: var(--a5200-scr-h);
+  --at-scr-bg: var(--a5200-scr-bg); --at-scr-radius: var(--a5200-scr-radius);
+  --at-tv-l: var(--a5200-tv-l); --at-tv-t: var(--a5200-tv-t);
+  --at-tv-w: var(--a5200-tv-w); --at-tv-h: var(--a5200-tv-h);
+  --at-tv-scale: var(--a5200-tv-scale);
+  --at-art-aspect: var(--a5200-art-aspect); --at-tv-aspect: var(--a5200-tv-aspect);
+  --at-art-aspect-num: var(--a5200-art-aspect-num);
+  --at-tv-aspect-num: var(--a5200-tv-aspect-num);
+}
+[data-system="atari7800"] {
+  --at-scr-l: var(--a7800-scr-l); --at-scr-t: var(--a7800-scr-t);
+  --at-scr-w: var(--a7800-scr-w); --at-scr-h: var(--a7800-scr-h);
+  --at-scr-bg: var(--a7800-scr-bg); --at-scr-radius: var(--a7800-scr-radius);
+  --at-tv-l: var(--a7800-tv-l); --at-tv-t: var(--a7800-tv-t);
+  --at-tv-w: var(--a7800-tv-w); --at-tv-h: var(--a7800-tv-h);
+  --at-tv-scale: var(--a7800-tv-scale);
+  --at-art-aspect: var(--a7800-art-aspect); --at-tv-aspect: var(--a7800-tv-aspect);
+  --at-art-aspect-num: var(--a7800-art-aspect-num);
+  --at-tv-aspect-num: var(--a7800-tv-aspect-num);
+}
+[data-system="atarilynx"] {
+  --at-scr-l: var(--lynx-scr-l); --at-scr-t: var(--lynx-scr-t);
+  --at-scr-w: var(--lynx-scr-w); --at-scr-h: var(--lynx-scr-h);
+  --at-scr-bg: var(--lynx-scr-bg); --at-scr-radius: var(--lynx-scr-radius);
+  --at-tv-l: var(--lynx-tv-l); --at-tv-t: var(--lynx-tv-t);
+  --at-tv-w: var(--lynx-tv-w); --at-tv-h: var(--lynx-tv-h);
+  --at-tv-scale: var(--lynx-tv-scale);
+  --at-art-aspect: var(--lynx-art-aspect); --at-tv-aspect: var(--lynx-tv-aspect);
+  --at-art-aspect-num: var(--lynx-art-aspect-num);
+  --at-tv-aspect-num: var(--lynx-tv-aspect-num);
+}
+/* A TURNED LYNX: the card carries data-lynx-turn="1" or "2" (index.html's
+   deviceCardHTML, from the per-hash list in play/atarilynx/turned.js) and shows
+   AtariLynxConsoleTurned.webp. Only the screen box and the artwork's ratio
+   change; --at-tv-* stay the landscape ones (see the note at --lynxr-*). */
+[data-system="atarilynx"][data-lynx-turn="2"] {
+  --at-scr-l: var(--lynxr-scr-l); --at-scr-t: var(--lynxr-scr-t);
+  --at-scr-w: var(--lynxr-scr-w); --at-scr-h: var(--lynxr-scr-h);
+  --at-art-aspect: var(--lynxt-art-aspect);
+  --at-art-aspect-num: var(--lynxt-art-aspect-num);
+}
+[data-system="atarilynx"][data-lynx-turn="1"] {
+  --at-scr-l: var(--lynxl-scr-l); --at-scr-t: var(--lynxl-scr-t);
+  --at-scr-w: var(--lynxl-scr-w); --at-scr-h: var(--lynxl-scr-h);
+  --at-art-aspect: var(--lynxt-art-aspect);
+  --at-art-aspect-num: var(--lynxt-art-aspect-num);
+}
+/* Turned LEFT is the turned-right photograph upside down. The transform is on
+   the picture alone: the frame keeps its box, so the --lynxl-* box above (the
+   measurement of the file turned 180) lands on the glass. The drawer's sheen is
+   masked to the same file, so it turns with it. */
+[data-system="atarilynx"][data-lynx-turn="1"] .atari-art-frame > .atari-art,
+[data-system="atarilynx"][data-lynx-turn="1"] .atari-art-frame > .stage-sheen { transform: rotate(180deg); }
+
+/* ---- THE CROP WINDOW ------------------------------------------------------
+   The play view shows the device only, cutting off the console, controllers and
+   cartridge boxes arranged below it -- the design brief for the NES,
+   which this follows: "just zoom in to the TV and show it only, cutting off the
+   lower part of the image where the console shows."
+
+   THE BOTTOM OF EACH TELEVISION BOX IS RAISED OFF THE CONSOLE, and the first
+   version of this file did not do it. The console in all three television
+   photographs is arranged beside and below the set and OVERLAPS its bounding
+   box, so the box that contains the whole television also contains the top of
+   the console -- which rendered as a strip of wood-grain and joystick along the
+   bottom of the play view. Caught by looking at the finished 2600 page in a
+   browser, not by reading the numbers.
+   aperture.py's device-body measurement now stops at the first row carrying
+   something more than 2px beyond the set's own right edge; the threshold is
+   measured and the two rules that get it wrong are recorded there. The cost is
+   the television's feet: 35 rows on the 2600, 40 on the 5200, 20 on the 7800,
+   and none at all on the Lynx, which has nothing beside it. The APERTURES ARE
+   UNAFFECTED -- they are fractions of the photograph, not of the crop.
+
+   It is deliberately a TRANSFORM ON THE CONTAINER rather than a second set of
+   aperture percentages. The contents keep the photograph's own coordinate
+   frame, so --at-scr-* apply unchanged inside a cropped view and inside an
+   uncropped one. A crop that re-expressed the aperture relative to the device
+   would be the second copy this whole file exists to prevent.
+
+   The window is the device's own box ratio. The photograph inside is widened to
+   --at-tv-scale of the window, which maps the device's width onto one window
+   width, and then translated by its top-left offset as a percentage OF ITSELF
+   -- transform percentages resolve against the transformed element, which is
+   what makes the offset come out in photograph fractions with no further
+   arithmetic.
+   ------------------------------------------------------------------------- */
+.atari-tv-crop {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--at-tv-aspect);
+}
+.atari-tv-crop > .atari-art-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% * var(--at-tv-scale));
+  transform: translate(calc(-1 * var(--at-tv-l)), calc(-1 * var(--at-tv-t)));
+}
+
+/* ---- THE ARTWORK AND THE SURFACE BEHIND IT --------------------------------
+   Stacking order inside .atari-art-frame, bottom to top:
+
+     z1  .atari-screen   the live surface -- canvas or iframe
+     z2  .atari-art      the photograph, glare included
+
+   The photograph is the in-flow box, so it is what gives .atari-art-frame its
+   width and its aspect ratio. That is on purpose: the artwork's own proportions
+   drive the geometry instead of a number written down somewhere that can
+   disagree with the file.
+   ------------------------------------------------------------------------- */
+.atari-art-frame { position: relative; line-height: 0; }
+.atari-art-frame > .atari-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-drag: none;
+  /* Positioned ONLY so it can carry a z-index; it is still in flow. */
+  position: relative;
+  z-index: 2;
+}
+.atari-art-frame > .atari-screen {
+  position: absolute;
+  left: var(--at-scr-l);
+  top: var(--at-scr-t);
+  width: var(--at-scr-w);
+  height: var(--at-scr-h);
+  z-index: 1;                       /* UNDER the photograph -- see above */
+  border: 0;
+  background: var(--at-scr-bg);
+  border-radius: var(--at-scr-radius);
+  /* FILLING IS CORRECT RATHER THAN A STRETCH, and the reason is the same one
+     the NES gives: these framebuffers have non-square pixels and the apertures
+     are the shape the hardware actually produced on a set.
+       2600   160x228 visible, presented two-to-one wide  -> 4:3
+       5200   the same arrangement through ANTIC/GTIA
+       7800   320x242 at the 7800's own pixel aspect      -> 4:3
+       Lynx   160x102 square pixels                       -> 1.5686, and the
+              measured aperture is 1.5956, 1.7% off -- which is the window's
+              own bezel, not a stretch worth correcting.
+     A surface that letterboxed instead would show the glass tone inside the
+     aperture, i.e. a grey band under the glare, which is worse on all four. */
+  object-fit: fill;
+  image-rendering: pixelated;
+  box-shadow: none;
+}
+
+/* ---- THE DRAWER SHOWS THE FULL PHOTOGRAPH (2026-10-22) ----
+   "The new picture on the TILE only": the drawer stage shows the old full photographs again
+   (television, console and accessories), archived beside the tile pictures as
+   Atari2600ConsoleFull.png / Atari5200ConsoleFull.png / Atari7800ConsoleFull.png
+   (images_atari_b64.json), picked by index.html showAtariDeviceStage. The tile and the play window
+   keep the tile pictures and the numbers in :root above. These are the full photographs' measured
+   numbers, unchanged from before the tile pictures (aperture.py: atari2600.png 309x228 at (144,55) of 734x539,
+   atari5200.png 325x245 at (240,70) of 859x564, atari7800.png 338x253 at (148,61) of 761x584);
+   atari-artwork/verify.sh re-measures them. The [data-system] mapping above reads these on the same
+   element, so only the drawer stage changes. */
+#device-stage .stage-card[data-system="atari2600"] {
+  --a2600-scr-l: 19.62%;   /* 144 / 734 */
+  --a2600-scr-t: 10.20%;   /*  55 / 539 */
+  --a2600-scr-w: 42.10%;   /* 309 / 734 */
+  --a2600-scr-h: 42.30%;   /* 228 / 539 */
+  --a2600-tv-l: 14.31%;    /* 105 / 734 */
+  --a2600-tv-t: 3.53%;     /*  19 / 539 */
+  --a2600-tv-w: 64.99%;    /* 477 / 734 */
+  --a2600-tv-h: 55.84%;    /* 301 / 539 */
+  --a2600-tv-scale: 1.53878;
+  --a2600-art-aspect: 734 / 539;
+  --a2600-tv-aspect: 477 / 301;
+  --a2600-art-aspect-num: 1.36178;
+  --a2600-tv-aspect-num: 1.58472;
+}
+#device-stage .stage-card[data-system="atari5200"] {
+  --a5200-scr-l: 27.94%;   /* 240 / 859 */
+  --a5200-scr-t: 12.41%;   /*  70 / 564 */
+  --a5200-scr-w: 37.83%;   /* 325 / 859 */
+  --a5200-scr-h: 43.44%;   /* 245 / 564 */
+  --a5200-tv-l: 24.21%;    /* 208 / 859 */
+  --a5200-tv-t: 3.72%;     /*  21 / 564 */
+  --a5200-tv-w: 55.53%;    /* 477 / 859 */
+  --a5200-tv-h: 57.09%;    /* 322 / 564 */
+  --a5200-tv-scale: 1.80084;
+  --a5200-art-aspect: 859 / 564;
+  --a5200-tv-aspect: 477 / 322;
+  --a5200-art-aspect-num: 1.52305;
+  --a5200-tv-aspect-num: 1.48137;
+}
+#device-stage .stage-card[data-system="atari7800"] {
+  --a7800-scr-l: 19.45%;   /* 148 / 761 */
+  --a7800-scr-t: 10.45%;   /*  61 / 584 */
+  --a7800-scr-w: 44.42%;   /* 338 / 761 */
+  --a7800-scr-h: 43.32%;   /* 253 / 584 */
+  --a7800-tv-l: 14.72%;    /* 112 / 761 */
+  --a7800-tv-t: 3.60%;     /*  21 / 584 */
+  --a7800-tv-w: 66.36%;    /* 505 / 761 */
+  --a7800-tv-h: 56.51%;    /* 330 / 584 */
+  --a7800-tv-scale: 1.50693;
+  --a7800-art-aspect: 761 / 584;
+  --a7800-tv-aspect: 505 / 330;
+  --a7800-art-aspect-num: 1.30308;
+  --a7800-tv-aspect-num: 1.53030;
+}

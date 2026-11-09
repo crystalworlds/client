@@ -5,17 +5,18 @@
  * binding decisions (A1-A14) and they are what this file implements:
  *   A1  the Control Bar IS the existing top bar (Vermin MT-03's pill), the same
  *       place, the same look, standard on every device.
- *   A2  a Settings panel (display choices: skin, palette, zoom, language), opened
+ *   A2  a Settings panel (display choices: palette, zoom, language), opened
  *       with the same shrink-and-grow as Keys (play/play-pill.js).
  *   A3  Reset is instant, no confirmation.
- *   A4  save slots: two rows of four (8); dual-screen games one row of four (4).
+ *   A4  saves: ONE TABLE on every console (8 Nov 2026, play/shared/save-table.js): up to 20 saves
+ *       a game, newest first, the picture first (both screens, both linked consoles, as saved).
  *   A5  .cwsave export and import (CwSave below).
  *   A6  narrow: icons only, less-used items behind More (...).
  *   A7  Record and Cheats are in the source but hidden (ITEMS, `hidden: true`).
  *   A8  OPEN: buttons drawn on the device art are left exactly as they are; the
  *       bar adds nothing for them.
  *   A9  the bar never hides while playing, TV included.
- *   A11 the "Last closed" auto-save tile is at the END of the Saves panel.
+ *   A11 the "Last closed" auto save is PINNED ON TOP of the table, in its own colour (8 Nov 2026).
  *   A13 Full screen: only the game screen, no art; the bar stays, with "< Back".
  *   A14 nothing in the window's title bar but the title and the x: everything a
  *       header used to hold is a bar item or a Settings row.
@@ -83,6 +84,10 @@
  *                                 paper (the Print item opens it again), Save keeps a PNG (printer.png(scale)),
  *                                 Print opens the print dialog (printer.print()), Throw away clears the
  *                                 paper (printer.discard()) and closes the window.
+ *   padSwap: { on(), set(on), does(), seen() }   (caps.padSwap) the Swap A/B item (7 Nov 2026): a controller's A and B,
+ *                                 and X and Y, change places for the game only. does(): pressing them reaches
+ *                                 different controls here (else the item is hidden); seen(): a controller has fed
+ *                                 this window (the host applies the swap, play/host/host.mjs).
  *   speed() / setSpeed(x)         (caps.speed: the choices, e.g. [1, 2, 4]) fast-forward (decision P4,
  *                                 2026-10-14): the Speed item opens a menu of the choices; the item
  *                                 shows the current one. Only the one play host declares it.
@@ -110,12 +115,14 @@
   'use strict';
   if (window.ControlBar) return;
 
-  const BUILD = '20261031-cb49-fit-ui3';
+  const BUILD = '20261108-cb50-saves';
   /* Families whose unified bar is proven and on by default. */
   const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx']); // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
   const framed = window.parent && window.parent !== window;
   /* Screenshot -> phone photo library (play/shared/save-image.js), loaded now so it is ready before the tap. */
-  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.0.0', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
+  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.1.0', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
+  /* The one save table (play/shared/save-table.js, 8 Nov 2026), loaded now; renderSaves waits for it. */
+  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.1.0', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
 
   /* ------------------------------------------------------------------ flag */
   /* One bar for every console, in the one play host (2026-10-15): the ?ui= switch is gone. */
@@ -175,6 +182,7 @@
     reset: S(15, '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v5h5"/>'),
     rewind: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 6 L11 18 L3 12 Z M21 6 L21 18 L13 12 Z"/></svg>',
     saves: S(15, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/>'),
+    swap: S(15, '<path d="M4 8h14M14 4l4 4-4 4"/><path d="M20 16H6M10 12l-4 4 4 4"/>'),
     keys: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="2" width="7" height="7" rx="1.8"/><rect x="1" y="10.5" width="7" height="7" rx="1.8"/><rect x="8.5" y="10.5" width="7" height="7" rx="1.8"/><rect x="16" y="10.5" width="7" height="7" rx="1.8"/></svg>',
     help: S(15, '<circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.5-2.7 4"/><path d="M12 17.4h.01"/>'),
     variant: S(15, '<path d="M12 3 3 7.5 12 12l9-4.5z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>'),
@@ -223,11 +231,11 @@
   const ITEMS = [
     { id: 'pause',   group: 'play',    cap: 'pause',      icon: 'pause',   label: 'Pause',       key: 'Ctrl+P' },
     { id: 'rewind',  group: 'play',    cap: 'rewind',     icon: 'rewind',  label: 'Rewind',      key: 'hold Ctrl+←', hold: true },
-    { id: 'speed',   group: 'play',    cap: 'speed',      icon: 'speed',   label: '1×',          key: 'Ctrl+→', menu: true, more: true },
+    { id: 'speed',   group: 'play',    cap: 'speed',      icon: 'speed',   label: 'Turbo',          key: 'Ctrl+→', menu: true, more: true },
     { id: 'mute',    group: 'play',    cap: 'mute',       icon: 'soundOn', label: 'Mute',        key: 'Ctrl+M' },
     { id: 'full',    group: 'play',    cap: 'fullscreen', icon: 'full',    label: 'Full screen', key: 'Ctrl+Shift+F', iconOnly: true },
     { id: 'reset',   group: 'state',   cap: 'reset',      icon: 'reset',   label: 'Reset' },
-    { id: 'saves',   group: 'state',   cap: 'saves',      icon: 'saves',   label: 'Saves',       key: 'Ctrl+S save · Ctrl+L load · Ctrl+[ ] slot', panel: true },
+    { id: 'saves',   group: 'state',   cap: 'saves',      icon: 'saves',   label: 'Saves',       key: 'Ctrl+S save · Ctrl+L load · Ctrl+[ ] select', panel: true },
     { id: 'shot',    group: 'state',   cap: 'screenshot', icon: 'shot',    label: 'Screenshot',  more: true },
     { id: 'record',  group: 'state',   cap: 'record',     icon: 'record',  label: 'Record',      more: true, hidden: true },
     /* VARIANT AND CHEATS START ROW 2 (31 Oct: "move Variants and Cheats to the start of the second
@@ -244,6 +252,8 @@
     { id: 'console', group: 'console', cap: 'consoleKeys', icon: 'keys',    label: 'Console',     menu: true },
     /* Row 2. Help, Full screen and Settings are universal icons: icon only at every width
        (2026-10-15); the tooltip and the accessible name keep their words. */
+    /* Swap A/B (7 Nov 2026): directly left of Keys. A toggle, lit while on; see sync() and the host. */
+    { id: 'swap',    group: 'window',  row: 2, cap: 'padSwap',   icon: 'swap',    label: 'Swap A/B',    key: 'Ctrl+B', title: 'Swap A with B and X with Y' },
     { id: 'keys',    group: 'window',  row: 2, cap: 'keys',      icon: 'keys',    label: 'Keys',        key: 'Ctrl+/', panel: true },
     { id: 'help',    group: 'window',  row: 2, cap: 'help',      icon: 'help',    label: 'Help',        key: '?', iconOnly: true },
     { id: 'status',  group: 'window',  row: 2, cap: 'statusLog', icon: 'log',     label: 'Log',         title: 'Log: the status line and the messages' },
@@ -382,7 +392,24 @@
   .cb-menu .cb-ch-credit{text-transform:none;letter-spacing:0;max-width:30em;line-height:1.35}
   .cb-menu .cb-ch-credit a{color:inherit;text-decoration:underline}
   .cb-menu .cb-msep{height:1px;margin:4px 6px;background:rgba(255,255,255,.12)}
+  /* A cheat that is on is green (9 Nov 2026), the site's on colour (the accent, green by default): the row
+     tinted, its tick, and "on" as a filled tag in dark ink. The bar is a dark surface in every theme. */
+  .cb-menu button.cb-ch-on{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.16)}
+  .cb-menu button.cb-ch-on:hover,.cb-menu button.cb-ch-on:focus-visible{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.28)}
+  .cb-menu button.cb-ch-on .own{color:#0a0e14;background:var(--cw-bar-accent,#9be15d);font-weight:700;border-radius:999px;padding:2px 8px}
   .cb-menu button.cb-up,.cb-menu button.cb-mmore{color:var(--cw-bar-accent-soft,#c9e7a9)}
+  .cb-menu .cb-vr-find{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;margin:0 0 6px;padding:0 4px 0 9px;box-sizing:border-box;
+    background:var(--cw-bar-menu,rgb(20,23,28));border:1px solid rgba(255,255,255,.28);border-radius:8px}
+  .cb-menu .cb-vr-find:focus-within{outline:3px solid var(--cw-bar-accent,#9be15d);outline-offset:-1px;border-color:var(--cw-bar-accent,#9be15d)}
+  .cb-menu .cb-vr-in{flex:1 1 auto;min-width:0;margin:0;padding:7px 0;background:transparent;border:0;outline:0;box-shadow:none;color:var(--cw-bar-ink,#e6e8ec);font:inherit}
+  .cb-menu .cb-vr-in::placeholder{color:var(--cw-bar-dim,#9aa1ad);opacity:1}
+  .cb-menu button.cb-vr-x{flex:0 0 auto;width:28px;height:28px;padding:0;justify-content:center;color:var(--cw-bar-dim,#9aa1ad);font-size:16px;line-height:1}
+  .cb-menu button.cb-vr-x[hidden]{display:none}
+  .cb-menu .cb-vr-n{margin:0 0 4px;padding:0 10px;font-size:12px;color:var(--cw-bar-dim,#9aa1ad);overflow-wrap:anywhere}
+  .cb-menu .cb-vr-n[hidden],.cb-menu .cb-vr-res[hidden],.cb-menu .cb-vr-main[hidden]{display:none}
+  @media (pointer:coarse),(max-width:860px){.cb-menu .cb-vr-in{font-size:16px;padding:9px 0}.cb-menu button.cb-vr-x{width:36px;height:36px}}
+  body.cb-tv .cb-menu .cb-vr-in{font-size:18px;padding:12px 0}
+  body.cb-tv .cb-menu button.cb-vr-x{width:44px;height:44px;font-size:20px}
   body.cb-tv .cb-menu{font-size:16px}
   /* Panels: one at a time, over the play area, under the collapsed bar. */
   .cb-panel{position:absolute;inset:0;z-index:80;display:none;overflow:auto;box-sizing:border-box;padding:56px 18px 18px;
@@ -407,35 +434,7 @@
   .cb-table td:last-child{text-align:right}
   .cb-kbd{display:inline-block;min-width:1.6em;padding:2px 7px;border:1px solid var(--cw-bar-kbd-line,#2f343d);border-bottom-width:2px;border-radius:6px;background:var(--cw-bar-card,#15181d);color:var(--cw-bar-ink,#e6e8ec);
     font:600 11.5px ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center;margin-left:3px}
-  /* Saves (A4: 2 x 4, dual-screen 1 x 4; A11 Last closed at the end). */
-  .cb-grid{display:grid;grid-template-columns:repeat(var(--cb-cols,4),minmax(0,1fr));gap:10px;width:min(100%,760px)}
-  @media (max-width:520px){.cb-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .cb-slot{border:1px solid var(--cw-bar-line,#2a2e36);border-radius:10px;background:var(--cw-bar-field,#1d2026);display:flex;flex-direction:column;overflow:hidden;min-width:0}
-  .cb-slot.empty{border-style:dashed}
-  .cb-slot.current{box-shadow:0 0 0 2px rgba(var(--cw-bar-accent-rgb,155,225,93),.45)}
-  .cb-slot .shot{aspect-ratio:var(--cb-shot,160/144);border-bottom:1px solid var(--cw-bar-line,#2a2e36);background:var(--cw-bar-shot,#0e1013) center/cover no-repeat;image-rendering:pixelated;
-    display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--cw-bar-dim,#9aa1ad)}
-  .cb-slot.empty .shot{font-size:26px;font-weight:300;color:var(--cw-bar-faint,#5a6270);background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px)}
-  .cb-slot .shot.none{color:var(--cw-bar-warn,#e0a800);background-image:repeating-linear-gradient(135deg,rgba(var(--cw-bar-warn-rgb,224,168,0),.07) 0 8px,transparent 8px 16px)}
-  .cb-slot .meta{display:flex;align-items:baseline;justify-content:space-between;gap:6px;padding:7px 9px 0}
-  .cb-slot .idx{font-size:10px;color:var(--cw-bar-dim,#9aa1ad);letter-spacing:.1em;text-transform:uppercase}
-  .cb-slot .when{font-size:11.5px;text-align:right}
-  .cb-slot.empty .when{color:var(--cw-bar-dim,#9aa1ad)}
-  .cb-slot .acts{margin-top:auto;display:flex;flex-wrap:wrap;gap:5px;padding:7px 9px 9px}
-  .cb-slot .acts button{flex:1 1 auto;background:var(--cw-bar-slot-act,#141619);border:1px solid var(--cw-bar-line,#2a2e36);color:var(--cw-bar-ink,#e6e8ec);border-radius:7px;padding:5px 6px;font:inherit;font-size:11.5px;cursor:pointer;min-width:0}
-  .cb-slot .acts button:hover,.cb-slot .acts button:focus-visible{border-color:var(--cw-bar-accent-edge,#9bbc0f);color:var(--cw-bar-accent-ink,#d8f08a);outline:none}
-  .cb-slot .acts button.minor{flex:0 1 auto;color:var(--cw-bar-dim,#9aa1ad)}
-  .cb-slot .note{padding:5px 9px 0;font-size:11.5px;color:var(--cw-bar-dim,#9aa1ad);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
-  .cb-slot .note-ed{display:flex;gap:5px;padding:6px 9px 0}
-  .cb-slot .note-ed input{flex:1 1 auto;min-width:0;font:inherit;font-size:12px;background:var(--cw-bar-slot-act,#141619);color:var(--cw-bar-ink,#e6e8ec);border:1px solid var(--cw-bar-line,#2a2e36);border-radius:6px;padding:4px 6px}
-  .cb-slot .note-ed input:focus-visible,.cb-slot .note-ed input:focus{border-color:var(--cw-bar-accent-edge,#9bbc0f);outline:none}
-  .cb-slot .note-ed button{background:var(--cw-bar-slot-act,#141619);border:1px solid var(--cw-bar-line,#2a2e36);color:var(--cw-bar-ink,#e6e8ec);border-radius:7px;padding:4px 8px;font:inherit;font-size:11.5px;cursor:pointer}
-  .cb-slot .note-ed button:focus-visible{border-color:var(--cw-bar-accent-edge,#9bbc0f);outline:none}
-  .cb-last{width:min(100%,760px);display:flex;gap:12px;align-items:stretch;border:1px solid var(--cw-bar-line,#2a2e36);border-radius:10px;background:var(--cw-bar-last,#181b20);overflow:hidden}
-  .cb-last .shot{width:150px;flex:0 0 150px;aspect-ratio:var(--cb-shot,160/144);background:var(--cw-bar-shot,#0e1013) center/cover no-repeat;image-rendering:pixelated}
-  .cb-last .body{display:flex;flex-direction:column;justify-content:center;gap:6px;padding:10px 12px 10px 0}
-  .cb-last .idx{font-size:10px;color:var(--cw-bar-dim,#9aa1ad);letter-spacing:.1em;text-transform:uppercase}
-  .cb-older{width:min(100%,760px);color:var(--cw-bar-dim,#9aa1ad);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+  /* Saves: the table's own styles are in play/shared/save-table.js (8 Nov 2026). */
   /* Settings rows. */
   .cb-set{width:min(100%,560px);display:flex;flex-direction:column;gap:14px}
   .cb-set section{border:1px solid var(--cw-bar-line,#2a2e36);border-radius:12px;background:var(--cw-bar-card,#15181d);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -472,7 +471,7 @@
   let menu = null;                // the open menu id
   let opener = null;              // the button that opened the panel or menu (focus returns there)
   let full = false;
-  let slot = 0;                   // the current slot for Ctrl+S / Ctrl+L
+  let slot = null;                // the selected save for Ctrl+S / Ctrl+L: a save's index, 'new', 'auto:last' or null
   let variants = null;            // { list: [{id, label, current, default}] } from the host
   let devOpen = null;             // the peripheral whose menu is open ('camera', 'tilt')
   let undo = null;                // { i, rec, t }
@@ -701,6 +700,16 @@
       el.classList.toggle('dev-off', st === 'off');
       el.classList.toggle('dev-paused', st === 'paused');
     }
+    /* Swap A/B: lit while on. Hidden where it could do nothing: a console with no such pair (every
+       face button is the one Action or Fire), or a touch screen with no controller and no keyboard,
+       the same rule as "Change keys and buttons..." below. */
+    const sw = $b('swap');
+    if (sw) {
+      const on = swapOn();
+      sw.style.display = swapDoes() && (kbWanted() || swapSeen()) ? '' : 'none';
+      sw.classList.toggle('active', on);
+      sw.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
     const pr = $b('print');
     if (pr) {
       let v = false; try { v = !!(C.printer && C.printer.visible()); } catch (_) {}
@@ -716,9 +725,9 @@
     const sp = $b('speed');
     if (sp && C.speed) {
       const x = +C.speed() || 1;
-      sp.querySelector('.cb-lbl').textContent = speedLabel(x);
+      sp.querySelector('.cb-lbl').textContent = x === 1 ? 'Turbo' : speedLabel(x);
       sp.classList.toggle('active', x !== 1);
-      sp.title = 'Speed: ' + speedLabel(x);
+      sp.title = 'Turbo: ' + speedLabel(x);
     }
     const v = $b('variant');
     if (v) {
@@ -829,6 +838,7 @@
       case 'shot': screenshot(); break;
       case 'rotate': try { C.rotate && C.rotate(); } catch (_) {} break;
       case 'mute': C.setMuted(!C.muted()); sync(); break;
+      case 'swap': swapToggle(); break;
       case 'full': setFull(true); break;
       case 'status': try { C.statusLog && C.statusLog(); } catch (_) {} break;
       case 'exit': setFull(false); break;
@@ -903,19 +913,35 @@
      1,000-entry list stays light. Back in a submenu steps up to the releases. It
      closes, the version unchanged, on a tap outside (here, or on the site around
      the frame: the host's 'closeMenu'), Escape or Back (backStep), the phone's
-     back gesture (keys.js historyBack) and the Variant button pressed again. */
+     back gesture (keys.js historyBack) and the Variant button pressed again.
+     A LIST OF MORE THAN 20 VERSIONS HAS A FILTER BOX (7 Nov 2026), the drawer's box (variants.js) with
+     the same states: at rest it is readonly with no on-screen keyboard, so a remote or pad passes
+     through it; A, Enter or a tap starts typing. Enter or Back while typing ends it and keeps the words;
+     Down goes to the first row. At rest Back empties it, and an empty box lets Back close the menu.
+     Back on a filtered row returns to the box. Nothing typed reaches the game. */
   const VR_PAGE = 50;
+  const VR_FIND_OVER = 20;
   const VR_SUBS = [['t', 'Translations'], ['h', 'Hacks'], ['o', 'Other copies']];
   let vrLevel = null, vrShown = 0;
+  let vrHits = [], vrHitsShown = 0, vrHay = null, vrHayOf = null, vrRefocus = false;
+  /* The same folding as variants.js: case, accents; punctuation may also be left out. */
+  const vrFold = s => String(s == null ? '' : s).normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+    .replace(/[\u00df\u00e6\u00f8\u0111\u0142]/g, c => ({ '\u00df': 'ss', '\u00e6': 'ae', '\u00f8': 'o', '\u0111': 'd', '\u0142': 'l' }[c]));
+  const vrLoose = s => s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   const vrFmt = n => Number(n).toLocaleString('en-AU');
   function vrList(c) { return (variants && variants.list || []).filter(x => (x.cls || 'r') === c); }
+  const vrItem = x => `<button type="button" role="menuitemradio" aria-checked="${!!x.current}" data-vr="${esc(x.id)}"><span class="tick">${x.current ? '✓' : ''}</span><span>${esc(x.label)}</span>${x.default ? '<span class="own">default</span>' : ''}</button>`;
   function paintVariant() {
-    const m = menus.variant;
-    const item = x => `<button type="button" role="menuitemradio" aria-checked="${!!x.current}" data-vr="${esc(x.id)}"><span class="tick">${x.current ? '✓' : ''}</span><span>${esc(x.label)}</span>${x.default ? '<span class="own">default</span>' : ''}</button>`;
+    const m = menus.variant, item = vrItem;
+    m.style.minHeight = '';
     if (!vrLevel) {
       const top = vrList('r'), subs = VR_SUBS.map(([c, n]) => [c, n, vrList(c)]).filter(s => s[2].length);
-      m.innerHTML = top.map(item).join('') + (top.length && subs.length ? '<div class="cb-msep" role="separator"></div>' : '') +
-        subs.map(([c, n, l]) => `<button type="button" role="menuitem" data-vr-sub="${c}" aria-label="${esc(n + ', ' + vrFmt(l.length))}"><span class="tick">${l.some(x => x.current) ? '✓' : ''}</span><span>${esc(n)}</span><span class="own">${vrFmt(l.length)} ›</span></button>`).join('');
+      const all = variants && variants.list || [], long = all.length > VR_FIND_OVER;
+      m.innerHTML = (long ? `<div class="cb-vr-find" role="search"><input type="text" class="cb-vr-in" aria-label="Filter versions" placeholder="Filter ${vrFmt(all.length)} versions" readonly inputmode="none" enterkeyhint="done" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">` +
+        `<button type="button" class="cb-vr-x" data-vr-clear aria-label="Clear filter" title="Clear filter" hidden>\u00d7</button></div><p class="cb-vr-n" role="status" hidden></p><div class="cb-vr-res" hidden></div><div class="cb-vr-main">` : '') +
+        top.map(item).join('') + (top.length && subs.length ? '<div class="cb-msep" role="separator"></div>' : '') +
+        subs.map(([c, n, l]) => `<button type="button" role="menuitem" data-vr-sub="${c}" aria-label="${esc(n + ', ' + vrFmt(l.length))}"><span class="tick">${l.some(x => x.current) ? '✓' : ''}</span><span>${esc(n)}</span><span class="own">${vrFmt(l.length)} ›</span></button>`).join('') + (long ? '</div>' : '');
+      if (long) vrFindWire(m.querySelector('.cb-vr-in'));
     } else {
       const l = vrList(vrLevel), left = l.length - vrShown, name = (VR_SUBS.find(s => s[0] === vrLevel) || [])[1] || '';
       m.innerHTML = `<button type="button" role="menuitem" class="cb-up" data-vr-up aria-label="Back to all versions"><span class="tick">‹</span><span>All versions</span></button>` +
@@ -923,6 +949,63 @@
         (left > 0 ? `<button type="button" role="menuitem" class="cb-mmore" data-vr-more><span class="tick">+</span><span>Show ${vrFmt(Math.min(VR_PAGE, left))} more (${vrFmt(left)} left)</span></button>` : '');
     }
     if (menu === 'variant' && !m.hidden) placeMenu(m, opener);
+  }
+  function vrFindHint(inp) { inp.placeholder = inp.readOnly && document.activeElement === inp ? 'Press OK or Enter to type\u2026' : 'Filter ' + vrFmt(variants.list.length) + ' versions'; }
+  function vrFindRest(inp) { inp.readOnly = true; inp.setAttribute('inputmode', 'none'); vrFindHint(inp); }
+  /* Blur and focus again: a phone shows or hides its keyboard on focus, not on an attribute change. */
+  function vrFindRefocus(inp) { vrRefocus = true; try { inp.blur(); inp.focus({ preventScroll: true }); } catch (_) {} vrRefocus = false; }
+  function vrFindEdit(inp, how) {
+    inp.readOnly = false; inp.setAttribute('inputmode', 'search'); vrFindHint(inp);
+    if (how === 'pointer') return;   // the press itself puts the focus and caret there
+    vrFindRefocus(inp);
+    try { const n = inp.value.length; inp.setSelectionRange(n, n); } catch (_) {}
+  }
+  function vrFindLeave(inp) { vrFindRest(inp); if (document.activeElement === inp) vrFindRefocus(inp); vrFindHint(inp); }
+  function vrFindPaint() {
+    const res = menus.variant.querySelector('.cb-vr-res'), names = { r: 'Versions', t: 'Translations', h: 'Hacks', o: 'Other copies' };
+    let html = '', cur = '';
+    for (const x of vrHits.slice(0, vrHitsShown)) {
+      const c = x.cls || 'r';
+      if (c !== cur) { cur = c; html += `<div class="cb-mh" role="presentation">${names[c]} · ${vrFmt(vrHits.filter(h => (h.cls || 'r') === c).length)}</div>`; }
+      html += vrItem(x);
+    }
+    const left = vrHits.length - vrHitsShown;
+    res.innerHTML = html + (left > 0 ? `<button type="button" role="menuitem" class="cb-mmore" data-vr-fmore><span class="tick">+</span><span>Show ${vrFmt(Math.min(VR_PAGE, left))} more (${vrFmt(left)} left)</span></button>` : '');
+  }
+  function vrFindApply(inp) {
+    const m = menus.variant, res = m.querySelector('.cb-vr-res'), main = m.querySelector('.cb-vr-main'), note = m.querySelector('.cb-vr-n'), list = variants.list;
+    m.querySelector('.cb-vr-x').hidden = !inp.value;
+    const q = vrFold(inp.value).trim();
+    if (!q) { vrHits = []; res.hidden = true; res.innerHTML = ''; note.hidden = true; note.textContent = ''; main.hidden = false; m.style.minHeight = ''; placeMenu(m, opener); return; }
+    /* The menu keeps its height while narrowing, so the box does not move under the typing. */
+    if (!m.style.minHeight) m.style.minHeight = m.offsetHeight + 'px';
+    if (vrHayOf !== list) { vrHayOf = list; vrHay = list.map(x => { const f = vrFold(x.label); return f + '\n' + vrLoose(f); }); }
+    const ql = vrLoose(q);
+    vrHits = list.filter((x, i) => vrHay[i].includes(q) || (ql && vrHay[i].includes(ql)));
+    vrHitsShown = VR_PAGE;
+    main.hidden = true; note.hidden = false;
+    note.textContent = vrHits.length ? vrFmt(vrHits.length) + ' of ' + vrFmt(list.length) + ' versions' : 'No versions match "' + inp.value.trim() + '".';
+    res.hidden = !vrHits.length;
+    vrFindPaint();
+  }
+  function vrFindWire(inp) {
+    inp.addEventListener('pointerdown', () => { if (inp.readOnly) vrFindEdit(inp, 'pointer'); });
+    inp.addEventListener('click', () => { if (inp.readOnly) vrFindEdit(inp, 'key'); });   // a pad's A presses what has the focus
+    inp.addEventListener('input', () => vrFindApply(inp));
+    inp.addEventListener('focus', () => vrFindHint(inp));
+    inp.addEventListener('blur', () => { if (vrRefocus) return; vrFindHint(inp); setTimeout(() => { if (inp.isConnected && document.activeElement !== inp) vrFindRest(inp); }, 0); });
+  }
+  function vrFindClear(inp) { inp.value = ''; vrFindApply(inp); vrFindRest(inp); try { inp.focus({ preventScroll: true }); } catch (_) {} vrFindHint(inp); }
+  /* Back on the box or a filtered row, a step at a time; false lets the menu's own Back go on. */
+  function vrFindBack() {
+    const inp = menu === 'variant' && menus.variant.querySelector('.cb-vr-in');
+    if (!inp) return false;
+    const a = document.activeElement;
+    if (a === inp && !inp.readOnly) { vrFindLeave(inp); return true; }
+    if (!inp.value) return false;
+    if (a === inp) { vrFindClear(inp); return true; }
+    vrFindRest(inp); try { inp.focus({ preventScroll: true, focusVisible: true }); } catch (_) {} vrFindHint(inp);
+    return true;
   }
   function vrFocus(el) { if (el) setTimeout(() => { try { el.focus({ preventScroll: false }); } catch (_) {} }, 0); }
   function vrEnter(c) {
@@ -967,11 +1050,11 @@
     if (!chLevel) {
       m.innerHTML = off + (off ? '<div class="cb-msep" role="separator"></div>' : '') + provs.map(p => {
         const n = p.cheats.filter(c => c.on).length;
-        return `<button type="button" role="menuitem" data-ch-sub="${esc(p.id)}" aria-label="${esc(p.name + ', ' + vrFmt(p.cheats.length) + (n ? ', ' + n + ' on' : ''))}"><span class="tick">${n ? '✓' : ''}</span><span>${esc(p.name)}</span><span class="own">${n ? vrFmt(n) + ' on · ' : ''}${vrFmt(p.cheats.length)} ›</span></button>`;
+        return `<button type="button" role="menuitem"${n ? ' class="cb-ch-on"' : ''} data-ch-sub="${esc(p.id)}" aria-label="${esc(p.name + ', ' + vrFmt(p.cheats.length) + (n ? ', ' + n + ' on' : ''))}"><span class="tick">${n ? '✓' : ''}</span><span>${esc(p.name)}</span><span class="own">${n ? vrFmt(n) + ' on · ' : ''}${vrFmt(p.cheats.length)} ›</span></button>`;
       }).join('') + foot;
     } else {
       const p = provs.find(x => x.id === chLevel) || { name: '', cheats: [] }, l = p.cheats, left = l.length - chShown;
-      const item = c => `<button type="button" role="menuitemcheckbox" aria-checked="${c.on}" data-ch="${esc(c.id)}"><span class="tick">${c.on ? '✓' : ''}</span><span class="cb-ch">${esc(c.name)}${c.code ? `<small>${esc(c.code)}</small>` : ''}${c.note ? `<small>${esc(c.note)}</small>` : ''}</span><span class="own">${c.on ? 'on' : 'off'}</span></button>`;
+      const item = c => `<button type="button" role="menuitemcheckbox" aria-checked="${c.on}"${c.on ? ' class="cb-ch-on"' : ''} data-ch="${esc(c.id)}"><span class="tick">${c.on ? '✓' : ''}</span><span class="cb-ch">${esc(c.name)}${c.code ? `<small>${esc(c.code)}</small>` : ''}${c.note ? `<small>${esc(c.note)}</small>` : ''}</span><span class="own">${c.on ? 'on' : 'off'}</span></button>`;
       m.innerHTML = (provs.length > 1 ? `<button type="button" role="menuitem" class="cb-up" data-ch-up aria-label="Back to all cheat types"><span class="tick">‹</span><span>All cheat types</span></button>` : '') + off +
         `<div class="cb-mh" role="presentation">${esc(p.name)} · ${vrFmt(l.length)}</div>` + l.slice(0, chShown).map(item).join('') +
         (left > 0 ? `<button type="button" role="menuitem" class="cb-mmore" data-ch-more><span class="tick">+</span><span>Show ${vrFmt(Math.min(VR_PAGE, left))} more (${vrFmt(left)} left)</span></button>` : '') + foot;
@@ -1036,7 +1119,7 @@
   // A menu open while the screen turns or the window changes size is placed again.
   window.addEventListener('resize', () => { if (menu && menus[menu] && !menus[menu].hidden) { try { placeMenu(menus[menu], opener); } catch (_) {} } });
   /* Speed (fast-forward, decision P4): the choices the core declares in caps.speed. */
-  const speedLabel = x => (x === 1 ? 'Normal speed' : x + '×');
+  const speedLabel = x => (x === 1 ? 'Off' : x + '×');
   function speedChoices() { return Array.isArray(caps.speed) ? caps.speed : (caps.speed ? [1, 2, 4] : []); }
   function toggleMenu(id, b) { if (menu === id) closeMenu(true); else openMenu(id, b); }
   function openMenu(id, b) {
@@ -1063,7 +1146,7 @@
       m.innerHTML = speedChoices().map(x => `<button type="button" role="menuitemradio" data-speed="${x}" aria-checked="${x === cur ? 'true' : 'false'}"><span class="tick">${x === cur ? '✓' : ''}</span><span>${esc(speedLabel(x))}</span>${x > 2 ? '<span class="own">sound off</span>' : ''}</button>`).join('');
     }
     if (id === 'more') m.innerHTML = ITEMS.filter(it => it.more && shown(it)).concat(consoleItems()).map(it =>
-      `<button type="button" role="menuitem" data-more-act="${it.id}"><span class="tick">${ICON[it.icon]}</span><span>${esc(it.id === 'speed' && C && C.speed ? 'Speed: ' + speedLabel(+C.speed() || 1) : it.label)}</span>${it.key ? `<span class="own">${esc(it.key)}</span>` : ''}</button>`).join('');
+      `<button type="button" role="menuitem" data-more-act="${it.id}"><span class="tick">${ICON[it.icon]}</span><span>${esc(it.id === 'speed' && C && C.speed ? 'Turbo: ' + speedLabel(+C.speed() || 1) : it.label)}</span>${it.key ? `<span class="own">${esc(it.key)}</span>` : ''}</button>`).join('');
     if (!m.innerHTML) return;
     m.hidden = false;
     placeMenu(m, b);
@@ -1076,7 +1159,7 @@
   function closeMenu(restoreFocus) {
     if (!menu) return false;
     const m = menus[menu]; m.hidden = true;
-    if (menu === 'variant') vrLevel = null;
+    if (menu === 'variant') { vrLevel = null; vrHits = []; m.style.minHeight = ''; }
     if (menu === 'cheats') chLevel = null;
     const o = opener;
     if (o) o.setAttribute('aria-expanded', 'false');
@@ -1121,6 +1204,8 @@
     if (b.hasAttribute('data-ch-more')) { chMore(); return; }
     if (b.dataset.ch) { chToggle(b.dataset.ch); return; }
     if (b.hasAttribute('data-ch-off')) { Promise.resolve(C.cheats.allOff()).then(() => { sync(); if (menu === 'cheats') paintCheats(); }, () => {}); return; }
+    if (b.hasAttribute('data-vr-clear')) { const i = menus.variant.querySelector('.cb-vr-in'); if (i) vrFindClear(i); return; }
+    if (b.hasAttribute('data-vr-fmore')) { const from = vrHitsShown; vrHitsShown = from + VR_PAGE; vrFindPaint(); vrFocus(menus.variant.querySelectorAll('.cb-vr-res [data-vr]')[from]); return; }
     if (b.dataset.vrSub) { vrEnter(b.dataset.vrSub); return; }
     if (b.hasAttribute('data-vr-up')) { vrUp(); return; }
     if (b.hasAttribute('data-vr-more')) { vrMore(); return; }
@@ -1187,11 +1272,20 @@
      from play-pad.js's table for this system (the same table Settings ->
      Keyboard & controllers edits, so a remap shows here). */
   const WINDOW_KEYS = [
-    ['Pause / resume', 'Ctrl+P'], ['Rewind (hold)', 'Ctrl+←'], ['Fast-forward: Normal, 2×, 4× (where offered)', 'Ctrl+→'], ['Quick save', 'Ctrl+S'], ['Quick load', 'Ctrl+L'],
-    ['Previous / next slot', 'Ctrl+[  Ctrl+]'], ['Keys', 'Ctrl+/'], ['Mute', 'Ctrl+M'], ['Full screen', 'Ctrl+Shift+F'], ['On-screen buttons on / off', 'Ctrl+O'],
+    ['Pause / resume', 'Ctrl+P'], ['Rewind (hold)', 'Ctrl+←'], ['Turbo: off, 2×, 4× (where offered)', 'Ctrl+→'], ['Quick save', 'Ctrl+S'], ['Quick load', 'Ctrl+L'],
+    ['Previous / next save', 'Ctrl+[  Ctrl+]'], ['Keys', 'Ctrl+/'], ['Mute', 'Ctrl+M'], ['Full screen', 'Ctrl+Shift+F'], ['On-screen buttons on / off', 'Ctrl+O'],
     ['Help', '?'], ['Back (close a panel, then the pause menu)', 'Esc'],
   ];
   function kbd(s) { return String(s).split(/\s{2,}/).map(x => `<span class="cb-kbd">${esc(x)}</span>`).join(' '); }
+  /* Swap A/B, through the host (caps.padSwap). */
+  function swapOn() { try { return !!(C && C.padSwap && C.padSwap.on()); } catch (_) { return false; } }
+  function swapDoes() { try { return !!(C && C.padSwap && C.padSwap.does()); } catch (_) { return false; } }
+  function swapSeen() { try { return !!(C && C.padSwap && C.padSwap.seen()); } catch (_) { return false; } }
+  function swapToggle() {
+    try { C.padSwap.set(!C.padSwap.on()); } catch (_) {}
+    sync();
+    if (panels.keys && panel === 'keys') renderPad();
+  }
   function buildKeys() {
     const p = panels.keys;
     p.innerHTML = `<div class="cb-tabs" role="tablist" aria-label="Keys">
@@ -1205,7 +1299,7 @@
     const kb = p.querySelector('[data-tp="kb"]');
     let content = null; try { content = C.keysContent && C.keysContent(); } catch (_) {}
     if (content) kb.appendChild(content);
-    p.querySelector('[data-tp="win"]').innerHTML = `<table class="cb-table">${WINDOW_KEYS.map(([a, k]) => `<tr><td>${esc(a)}</td><td>${kbd(k)}</td></tr>`).join('')}</table>
+    p.querySelector('[data-tp="win"]').innerHTML = `<table class="cb-table">${WINDOW_KEYS.concat(swapDoes() ? [['Swap a controller\'s A with B and X with Y, in the game only', 'Ctrl+B']] : []).map(([a, k]) => `<tr><td>${esc(a)}</td><td>${kbd(k)}</td></tr>`).join('')}</table>
       <div class="cb-sub">The window's keys use Ctrl, which no console here uses as a button, so they never take a game key.</div>`;
     p.querySelector('.cb-tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) keysTab(b.dataset.tab); });
     p.querySelector('[data-keybind]').addEventListener('click', e => post({ cwUi: 'keybind', sys: C.sys, via: viaOf(e) }));
@@ -1220,14 +1314,16 @@
     const el = panels.keys.querySelector('[data-tp="pad"]');
     let T = null; try { T = window.gnwPlayPad && window.gnwPlayPad.table(C.padSys || C.sys); } catch (_) { T = null; }
     if (!T) { el.innerHTML = '<div class="cb-sub">No gamepad table for this console.</div>'; return; }
-    el.innerHTML = `<table class="cb-table">${T.pad.map(r => `<tr><td>${esc(r.label)}</td><td>${r.buttons.length ? r.buttons.map(b => kbd(b)).join(' ') : '<span class="cb-sub">none</span>'}</td></tr>`).join('')}
+    const swapped = swapOn() && swapDoes() ? { A: 'B', B: 'A', X: 'Y', Y: 'X' } : null;   // the table says what each button does now
+    el.innerHTML = `<table class="cb-table">${T.pad.map(r => `<tr><td>${esc(r.label)}</td><td>${r.buttons.length ? r.buttons.map(b => kbd((swapped && swapped[b]) || b)).join(' ') : '<span class="cb-sub">none</span>'}</td></tr>`).join('')}
       <tr><td>Pause menu</td><td>${kbd('Home')} or ${kbd('Select')}+${kbd('Start')}</td></tr><tr><td>Help</td><td>${kbd('R3')}</td></tr>
       ${caps.overlay && !T.pad.some(r => r.buttons.includes('L3')) ? `<tr><td>On-screen buttons on / off</td><td>${kbd('L3')}</td></tr>` : ''}
       ${(() => { /* the shoulders, where the console leaves them free (play/host/host.mjs shoulders, 2026-10-23) */
         const free = b => !T.pad.some(r => r.buttons.includes(b));
         return (caps.rewind && free('LB') ? `<tr><td>Rewind (hold)</td><td>${kbd('LB')}</td></tr>` : '') +
-          (free('RB') ? `<tr><td>Fast-forward 2× (hold)</td><td>${kbd('RB')}</td></tr>` : ''); })()}
+          (free('RB') ? `<tr><td>Turbo 2× (hold)</td><td>${kbd('RB')}</td></tr>` : ''); })()}
       ${(() => { const free = ['LT', 'RT'].filter(b => !T.pad.some(r => r.buttons.includes(b))); return free.length ? `<tr><td>This bar (then ${kbd('LT')} ${kbd('RT')} step along it, ${kbd('B')} back to the game)</td><td>${free.map(b => kbd(b)).join(' or ')}</td></tr>` : ''; })()}</table>
+      ${swapDoes() ? `<div class="cb-sub">Swap A/B on the bar changes A with B and X with Y, in the game only. It is ${swapped ? 'on: this list shows the buttons as they work now' : 'off'}.</div>` : ''}
       ${T.padCustom ? '<div class="cb-sub">Includes your changes from Settings.</div>' : ''}`;
   }
 
@@ -1272,7 +1368,7 @@
   function finePointer() { try { return ['(hover: hover)', '(pointer: fine)', '(any-hover: hover)', '(any-pointer: fine)'].some(q => matchMedia(q).matches); } catch (_) { return true; } }
   function tvMode() { const b = document.body; return !!b && (b.classList.contains('cb-tv') || b.classList.contains('gnw-tv')); }
   function kbWanted() { return finePointer() || tvMode() || padConnected() || keySeen; }
-  function paintKeybind() { const on = kbWanted(); for (const el of Object.values(panels).map(p => p.querySelector('[data-keybind]')).filter(Boolean)) el.hidden = !on; }
+  function paintKeybind() { const on = kbWanted(); for (const el of Object.values(panels).map(p => p.querySelector('[data-keybind]')).filter(Boolean)) el.hidden = !on; if (bar) sync(); }
   addEventListener('keydown', e => {
     if (keySeen || !e.isTrusted || e.__gnwPad || e.__cwOverlay || e.__gnwRemap) return;
     keySeen = true; try { sessionStorage.setItem(KEY_SEEN, '1'); } catch (_) {}
@@ -1281,115 +1377,66 @@
   addEventListener('gamepadconnected', () => paintKeybind());
   addEventListener('gamepaddisconnected', () => paintKeybind());
 
-  /* ------------------------------------------------------------------ Saves */
-  function relTime(ts) {
-    const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
-    if (s < 60) return 'just now';
-    if (s < 3600) return `${Math.round(s / 60)} min ago`;
-    if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-    return new Date(ts).toLocaleDateString();
-  }
-  function paintShot(box, thumb, why) {
-    box.classList.remove('none'); box.textContent = ''; box.removeAttribute('title');
-    if (thumb) { box.style.backgroundImage = `url(${thumb})`; return; }
-    box.style.backgroundImage = ''; box.classList.add('none'); box.textContent = 'no preview';
-    if (why) box.title = why;
-  }
+  /* ------------------------------------------------------------------ Saves
+     ONE TABLE ON EVERY CONSOLE (8 Nov 2026, play/shared/save-table.js): every save of this game on
+     this machine, up to caps.saves.slots (20), newest first, the picture first; the Continue row's
+     "Last closed" save pinned on top as an auto save (A11). The saves stay where they always were
+     (the host's states.*), so every save made before the table shows here and loads. Select a row,
+     then Load or Save; Save on a row that holds a save asks first, and Undo puts the old one back. */
   let lastClosed = null;          // { ts, thumb, rec } for this game, from the host
   let renderSeq = 0;
-  async function renderSaves() {
+  const maxSaves = () => (caps.saves && caps.saves.slots) || 20;
+  const saveName = i => `Save ${i + 1}`;
+  async function readSaves() { try { return (await C.states.list()) || []; } catch (e) { toast('Could not read the saves: ' + e.message, true); return []; } }
+  /* focusWhere: 'row' (the selected row) or 'act' (its first button) takes the focus after the draw. */
+  async function renderSaves(focusWhere, lcKnown) {
     const p = panels.saves; if (!p) return;
     const seq = ++renderSeq;
     const cfg = caps.saves || {};
-    const N = cfg.slots || 8, cols = cfg.cols || 4;
-    let list = [];
-    try { list = (await C.states.list()) || []; } catch (e) { list = []; toast('Could not read the saves: ' + e.message, true); }
-    if (seq !== renderSeq) return;
-    const used = list.filter(Boolean).length;
-    p.style.setProperty('--cb-cols', cols);
-    if (cfg.shot) p.style.setProperty('--cb-shot', cfg.shot);
-    const title = (C.title && C.title()) || '';
-    p.innerHTML = `<h3>Saves</h3><div class="cb-sub">${esc(title)}${title ? ' · ' : ''}${Math.min(used, list.length)} saved · Ctrl+S saves to the highlighted slot, Ctrl+L loads it</div>`;
-    const grid = document.createElement('div'); grid.className = 'cb-grid'; p.appendChild(grid);
-    for (let i = 0; i < N; i++) grid.appendChild(slotEl(i, list[i] || null, true));
-    // Saves an older grid made past slot N are shown, never dropped (doc 8.2 "Lost saves").
-    const extra = [];
-    for (let i = N; i < list.length; i++) if (list[i]) extra.push(i);
-    if (extra.length) {
-      const h = document.createElement('div'); h.className = 'cb-older'; h.textContent = 'Older slots'; p.appendChild(h);
-      const g2 = document.createElement('div'); g2.className = 'cb-grid'; p.appendChild(g2);
-      for (const i of extra) g2.appendChild(slotEl(i, list[i], false));
-    }
-    // A11: the Continue row's auto-save, at the END.
-    if (caps.lastClosed) {
-      const holder = document.createElement('div'); holder.style.display = 'contents'; p.appendChild(holder);
-      askLastClosed().then(lc => { if (seq === renderSeq && lc) holder.appendChild(lastEl(lc)); });
-    }
-  }
-  function slotEl(i, s, canSave) {
-    const el = document.createElement('div');
-    el.className = 'cb-slot' + (s ? '' : ' empty') + (i === slot ? ' current' : '');
-    el.dataset.slot = String(i);
-    el.innerHTML = `<div class="shot"></div><div class="meta"><span class="idx">Slot ${i + 1}</span><span class="when"></span></div><div class="note" hidden></div><div class="acts"></div>`;
-    const shot = el.querySelector('.shot');
-    el.querySelector('.when').textContent = s ? (s.damaged ? 'damaged' : relTime(s.ts) + (s.playSeconds != null ? ' · ' + playedText(s.playSeconds) : '')) : 'empty';
-    if (s) paintShot(shot, s.thumb, s.thumbWhy || ''); else shot.textContent = '+';
-    const acts = el.querySelector('.acts');
-    const add = (label, fn, minor) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (minor) b.className = 'minor'; b.addEventListener('click', fn); acts.appendChild(b); };
-    /* SAVE NOTES (2026-10-19; the old Game & Watch window's "Add a note about this save",
-       now for every console): a short note kept in the save's own metadata section (the common save
-       format's 'notes'), shown on the card, written with Note. */
-    const noteEl = el.querySelector('.note');
-    if (s && s.note) { noteEl.textContent = s.note; noteEl.hidden = false; }
-    if (s) {
-      add('Load', () => loadSlot(i));
-      if (canSave) add('Save', () => saveSlot(i));
-      if (!s.damaged && C.states && typeof C.states.setNote === 'function') add(s.note ? 'Edit note' : 'Note', () => editNote(el, i, s.note || ''), true);
-      if (caps.transfer) add('Export', () => exportSlot(i), true);
-      add('Delete', () => deleteSlot(i), true);
-    } else if (canSave) {
-      add('Save here', () => saveSlot(i));
-      if (caps.transfer) add('Import', () => importSlot(i), true);
-    }
-    return el;
-  }
-  function lastEl(lc) {
-    const el = document.createElement('div'); el.className = 'cb-last';
-    el.innerHTML = `<div class="shot"></div><div class="body"><span class="idx">Last closed · automatic</span><span>${esc(relTime(lc.ts))}</span><div><button type="button" class="cb-act primary">Load</button></div></div>`;
-    const sh = el.querySelector('.shot');
-    if (lc.thumb) sh.style.backgroundImage = `url(${lc.thumb})`;
-    el.querySelector('button').addEventListener('click', async () => {
-      try { await C.continueRestore(lc.rec); closePanel(false); toast('Loaded the save from when you last closed this game'); }
-      catch (e) { toast('Could not load it: ' + e.message, true); }
-    });
-    return el;
-  }
-  function editNote(el, i, was) {
-    if (el.querySelector('.note-ed')) return;
-    const noteEl = el.querySelector('.note');
-    const ed = document.createElement('div'); ed.className = 'note-ed';
-    ed.innerHTML = '<input type="text" class="cb-note-in" maxlength="200" autocomplete="off" enterkeyhint="done"><button type="button">Done</button>';
-    const inp = ed.querySelector('input'), done = ed.querySelector('button');
-    inp.value = was; inp.setAttribute('aria-label', `Note for slot ${i + 1}`); inp.placeholder = 'A note about this save';
-    noteEl.hidden = true; noteEl.after(ed);
-    let finished = false;
-    const close = async keep => {
-      if (finished) return; finished = true;
-      if (keep && inp.value.trim() !== was) {
-        try { await C.states.setNote(i, inp.value); toast(inp.value.trim() ? `Note kept with slot ${i + 1}` : `Note removed from slot ${i + 1}`); }
-        catch (e) { toast('Could not keep the note: ' + e.message, true); }
+    const list = await readSaves();
+    let lc = lcKnown;
+    if (lc === undefined && caps.lastClosed) {
+      const ask = askLastClosed();
+      lc = await Promise.race([ask, new Promise(r => setTimeout(() => r(undefined), 900))]);
+      if (lc === undefined) {       // a slow answer: draw now with what was known, again when it comes
+        lc = lastClosed;
+        ask.then(v => { if (seq === renderSeq && panel === 'saves' && (v ? v.ts : 0) !== (lc ? lc.ts : 0)) renderSaves(p.contains(document.activeElement) ? 'row' : null, v); });
       }
-      await renderSaves();
-      const again = panels.saves && panels.saves.querySelector(`.cb-slot[data-slot="${i}"] .acts button.minor`);
-      if (again) { try { again.focus({ focusVisible: true }); } catch (_) { again.focus(); } }
-    };
-    inp._done = () => close(true); inp._cancel = () => close(false);
-    done.addEventListener('click', () => close(true));
-    try { inp.focus({ focusVisible: true }); } catch (_) { inp.focus(); }
+    }
+    await saveTableReady;
+    if (seq !== renderSeq || !window.CwSaveTable) return;
+    lastClosed = lc || null;
+    const rows = []; list.forEach((s, i) => { if (s) rows.push(Object.assign({ i }, s)); });
+    const N = maxSaves(), title = (C.title && C.title()) || '';
+    p.innerHTML = `<h3>Saves</h3><div class="cb-sub">${esc(title)}${title ? ' · ' : ''}${rows.length} of ${N} saves${lastClosed ? ' · 1 auto save' : ''}</div>` +
+      '<div class="cb-sv-host" style="display:contents"></div>' +
+      '<div class="cb-sv-hint">Select a save, then Load or Save.<span class="kb"> Ctrl+S saves to the selected save, Ctrl+L loads it.</span></div>';
+    const w = parseFloat(String(cfg.shot || '').split('/')[0]) || 0;
+    window.CwSaveTable.render(p.querySelector('.cb-sv-host'), {
+      max: N, shot: cfg.shot, pixelated: w > 0 && w <= 512, rows,
+      autos: lastClosed ? [{ key: 'last', label: 'Last closed', sub: 'Saved by itself when you last closed this game', ts: lastClosed.ts, thumb: lastClosed.thumb }] : [],
+      selected: slot, focus: focusWhere || null,
+      can: { note: !!(C.states && typeof C.states.setNote === 'function'), transfer: !!caps.transfer },
+      on: { select: s => { slot = s; }, load: loadSlot, loadAuto: loadLast, save: saveSlot, del: deleteSlot, note: setNote, exportRow: exportSlot, importRow: importSlot },
+    });
   }
+  async function freeIndex() { const list = await readSaves(), N = maxSaves(); for (let i = 0; i < N; i++) if (!list[i]) return i; return -1; }
+  async function undoIt() {
+    const u = undo; undo = null; if (!u) return;
+    try { await C.states.put(u.i, u.rec); slot = u.i; if (panel === 'saves') renderSaves('act'); toast(`${saveName(u.i)} put back`); }
+    catch (e) { toast('Could not undo: ' + e.message, true); }
+  }
+  /* i: a save's index (writes over it: the table asked first), or null (a new save). */
   async function saveSlot(i) {
-    try { await C.states.save(i); slot = i; toast(`Saved to slot ${i + 1}`); if (panel === 'saves') renderSaves(); }
-    catch (e) { toast('Could not save: ' + e.message, true); }
+    try {
+      let before = null;
+      if (i == null) { i = await freeIndex(); if (i < 0) { toast(`All ${maxSaves()} saves are in use: select one to replace it`, true); return; } }
+      else before = (await readSaves())[i] || null;
+      await C.states.save(i); slot = i;
+      if (before && before.state && !before.damaged) { undo = { i, rec: before }; toast(`Saved over ${saveName(i)}`, false, { label: 'Undo', fn: undoIt }); }
+      else toast(`Saved as ${saveName(i)}`);
+      if (panel === 'saves') renderSaves('act');
+    } catch (e) { toast('Could not save: ' + e.message, true); }
   }
   async function loadSlot(i) {
     try {
@@ -1397,27 +1444,36 @@
       // is cleared), so Rewind can never carry the game back past the load.
       await C.states.load(i); slot = i;
       if (panel) closePanel(false);
-      toast(`Loaded slot ${i + 1}`);
+      toast(`Loaded ${saveName(i)}`);
     } catch (e) { toast('Could not load: ' + e.message, true); }
+  }
+  async function loadLast() {
+    const lc = lastClosed;
+    if (!lc || !C.continueRestore) { toast('There is no auto save for this game', true); return; }
+    try { await C.continueRestore(lc.rec); slot = 'auto:last'; if (panel) closePanel(false); toast('Loaded the auto save from when you last closed this game'); }
+    catch (e) { toast('Could not load it: ' + e.message, true); }
   }
   async function deleteSlot(i) {
     try {
       const rec = await C.states.remove(i);
       undo = { i, rec };
-      renderSaves();
-      toast(`Slot ${i + 1} deleted`, false, { label: 'Undo', fn: async () => { const u = undo; undo = null; if (!u) return; try { await C.states.put(u.i, u.rec); renderSaves(); toast(`Slot ${u.i + 1} restored`); } catch (e) { toast('Could not undo: ' + e.message, true); } } });
+      slot = 'new';
+      if (panel === 'saves') renderSaves('row');
+      toast(`${saveName(i)} deleted`, false, { label: 'Undo', fn: undoIt });
     } catch (e) { toast('Could not delete: ' + e.message, true); }
+  }
+  /* SAVE NOTES (2026-10-19; the old Game & Watch window's "Add a note about this save", now for every
+     console): a short note kept in the save's own metadata section (the common save format's 'notes'). */
+  async function setNote(i, text) {
+    try { await C.states.setNote(i, text); toast(String(text || '').trim() ? `Note kept with ${saveName(i)}` : `Note removed from ${saveName(i)}`); }
+    catch (e) { toast('Could not keep the note: ' + e.message, true); }
+    slot = i;
+    if (panel === 'saves') await renderSaves('act');
   }
   function fileName(title, i, ts) {
     const d = new Date(ts || Date.now()), z = n => String(n).padStart(2, '0');
     const clean = String(title || C.label || 'save').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
     return `${clean} - slot ${i + 1} - ${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}${z(d.getMinutes())}`;
-  }
-  /* A save's play time, from the common save format's metadata (2026-10-18): "3 h 12 min played". */
-  function playedText(sec) {
-    sec = Math.max(0, Math.floor(+sec || 0));
-    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
-    return h ? `${h} h ${m} min played` : m ? `${m} min played` : 'under a minute played';
   }
   function download(blob, name) {
     const a = document.createElement('a');
@@ -1431,9 +1487,10 @@
       const id = C.identity();
       const meta = Object.assign({ sys: id.sys, sysLabel: C.label, game: id.game, title: id.title, gameHash: id.gameHash, core: id.core, device: id.device, ts: Date.now() }, x.meta || {});
       download(new Blob([CwSave.encode(meta, x.bytes)], { type: 'application/octet-stream' }), fileName(id.title, i, meta.ts) + CwSave.EXT);
-      toast(`Slot ${i + 1} exported`);
+      toast(`${saveName(i)} exported`);
     } catch (e) { toast('Could not export: ' + e.message, true); }
   }
+  /* i: a save's index, or null (into a new save). */
   function importSlot(i) {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = CwSave.EXT + ',application/octet-stream';
@@ -1443,22 +1500,34 @@
         const { meta, state } = CwSave.decode(new Uint8Array(await f.arrayBuffer()));
         const why = CwSave.refusal(meta, Object.assign({ label: C.label }, C.identity()));
         if (why) { toast(why, true); return; }
+        if (i == null) { i = await freeIndex(); if (i < 0) { toast(`All ${maxSaves()} saves are in use: delete one first`, true); return; } }
         await C.states.importInto(i, state, meta);
-        slot = i; renderSaves(); toast(`Imported into slot ${i + 1}`);
+        slot = i; renderSaves('act'); toast(`Imported as ${saveName(i)}`);
       } catch (e) { toast(e.message || String(e), true); }
     });
     inp.click();
   }
 
-  /* Quick save / load / slot (Ctrl+S, Ctrl+L, Ctrl+[ ]). */
+  /* Quick save / load / select (Ctrl+S, Ctrl+L, Ctrl+[ ]). Ctrl+[ and Ctrl+] step through the table's
+     own order (New save, then the saves newest first). Ctrl+S saves to the selected save (Undo puts the
+     old one back) or as a new save; Ctrl+L loads the selected save, else the newest. */
   async function quick(kind) {
     if (!caps.saves) return;
-    const N = (caps.saves.slots || 8);
-    if (kind === 'prev' || kind === 'next') { slot = (slot + (kind === 'next' ? 1 : N - 1)) % N; toast(`Slot ${slot + 1}`); if (panel === 'saves') renderSaves(); return; }
-    if (kind === 'save') return saveSlot(slot);
-    let list = []; try { list = await C.states.list(); } catch (_) {}
-    if (!list[slot]) { toast(`Slot ${slot + 1} is empty`, true); return; }
-    return loadSlot(slot);
+    const list = await readSaves(), N = maxSaves();
+    const order = list.map((s, i) => (s ? { i, ts: s.ts || 0 } : null)).filter(Boolean).sort((a, b) => b.ts - a.ts || a.i - b.i).map(x => x.i);
+    if (kind === 'prev' || kind === 'next') {
+      const ring = (order.length < N ? ['new'] : []).concat(order), n = ring.length, at = ring.indexOf(slot);
+      if (!n) return;
+      slot = ring[at < 0 ? (kind === 'next' ? 0 : n - 1) : (at + (kind === 'next' ? 1 : n - 1)) % n];
+      toast(slot === 'new' ? 'New save selected' : `${saveName(slot)} selected`);
+      if (panel === 'saves') renderSaves('row');
+      return;
+    }
+    if (kind === 'save') return saveSlot(typeof slot === 'number' && list[slot] ? slot : null);
+    if (slot === 'auto:last' && caps.lastClosed) { if (!lastClosed) lastClosed = await askLastClosed(); return loadLast(); }
+    const i = typeof slot === 'number' && list[slot] ? slot : order[0];
+    if (i == null) { toast('No saves yet for this game', true); return; }
+    return loadSlot(i);
   }
 
   /* ------------------------------------------------------------------ Last closed */
@@ -1727,6 +1796,21 @@
         if (isBackKey(e)) { e.preventDefault(); e.stopImmediatePropagation(); ne._cancel(); return; }
         if (!/^Arrow(Up|Down)$/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.stopImmediatePropagation(); return; }
       } }
+    // The Variant menu's filter box: what is typed stays in the box, the game never sees it.
+    { const vi = document.activeElement;
+      if (vi && vi.classList && vi.classList.contains('cb-vr-in')) {
+        const down = () => { e.preventDefault(); e.stopImmediatePropagation(); vrFindRest(vi); const l = focusables(menus.variant.querySelector(vi.value ? '.cb-vr-res' : '.cb-vr-main')); if (l[0]) try { l[0].focus({ preventScroll: false, focusVisible: true }); } catch (_) {} };
+        if (vi.readOnly) {
+          if (e.key === 'ArrowDown') { down(); return; }
+          if (padA(e) || ((e.key === 'Enter' || e.key === ' ') && !e.ctrlKey && !e.altKey && !e.metaKey)) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) vrFindEdit(vi, 'key'); return; }
+          if (!isBackKey(e) && !/^Arrow(Up|Left|Right)$/.test(e.key) && e.key !== 'Tab') { e.stopImmediatePropagation(); return; }
+        } else {
+          if (e.key === 'Enter' || isBackKey(e)) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) vrFindLeave(vi); return; }
+          if (e.key === 'ArrowDown') { down(); return; }
+          if (e.key === 'ArrowUp' && vi.selectionStart === 0 && vi.selectionEnd === 0) vrFindRest(vi);
+          else if (e.key !== 'Tab') { e.stopImmediatePropagation(); return; }
+        }
+      } }
     // In-page: Back is taken here, one step at a time (menu, panel, full screen, bar
     // focus); with nothing open it goes on to keys.js, which opens the pause menu.
     if (C.hostPost && isBackKey(e)) {
@@ -1814,6 +1898,7 @@
     else if (k === 'KeyM' && caps.mute) { if (!e.repeat) { C.setMuted(!C.muted()); sync(); } }
     else if (k === 'KeyF' && e.shiftKey && caps.fullscreen) { if (!e.repeat) setFull(!full); }
     else if (k === 'KeyO' && !e.shiftKey && caps.overlay) { if (!e.repeat) overlayToggle(); }
+    else if (k === 'KeyB' && !e.shiftKey && swapDoes()) { if (!e.repeat) { swapToggle(); toast(swapOn() ? 'Swap A/B on' : 'Swap A/B off'); } }
     else done = false;
     if (done) stop();
   }, true);
@@ -1824,6 +1909,9 @@
     if (!C) return false;
     // A save's note being typed: Back (Escape, a remote's Back, a pad's B) leaves it as it was first.
     { const ne = panels.saves && panels.saves.querySelector('.cb-note-in'); if (ne && ne._cancel) { ne._cancel(); return true; } }
+    // A save's "Replace?" question: Back is Cancel (8 Nov 2026).
+    { const ak = panels.saves && panels.saves.querySelector('.cb-sv-ask'); if (ak && ak._cancel) { ak._cancel(); return true; } }
+    if (vrFindBack()) return true;
     if (menu === 'variant' && vrUp()) return true;
     if (menu === 'cheats' && chUp()) return true;
     if (scaleClose(true)) return true;            // the Print window's size list first; the paper stays
@@ -1845,7 +1933,7 @@
     if (C || !core || !core.stage) return false;
     C = core;
     try { caps = Object.assign({}, core.caps ? core.caps() : {}); } catch (_) { caps = {}; }
-    if (caps.saves === true) caps.saves = { slots: 8, cols: 4 };
+    if (caps.saves === true) caps.saves = { slots: 20 };
     document.body.classList.add('cb-on');
     build();
     // The on-screen buttons (overlay.js) live in the same stage, under the panels (z 70).

@@ -311,6 +311,11 @@ Licence  : Expat License, reproduced in full as it appears in SameBoy's
 Note     : sgb.js is copied byte for byte from the Game Boy source tree and
            checked against it, so this notice lives here rather than in that
            file's header.
+Also     : play/cores/gb/colour.mjs, under the same notice: the four colours
+           of the Teal (Game Boy Light) palette, as published in SameBoy,
+           Core/display.c (GB_PALETTE_GBL). Its Colour correction is our own
+           code, written after reading the correction in the same file
+           (GB_convert_rgb15), and contains none of that file's curve numbers.
 
 
 ===========================================================================

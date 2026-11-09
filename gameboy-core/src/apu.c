@@ -1,3 +1,6 @@
+#ifndef SPSW_APU
+#define SPSW_APU 1
+#endif
 /* apu.c — DMG sound controller.
  *
  * Stage 4, clean-room. Behaviour derived from Pan Docs (Audio, Audio
@@ -1194,6 +1197,7 @@ static void apu_power_off(struct APU *a) {
     a->vol_l = a->vol_r = 0; a->route = 0;
     a->div_skip = 0;
     a->power = 0;
+    if (SPSW_APU) a->div_bit &= 1;   /* sound off clears the switch's delay */
 }
 
 static void apu_power_on(struct APU *a) {
@@ -1208,7 +1212,7 @@ static void apu_power_on(struct APU *a) {
     /* Armed only when the bit is ALREADY high: powering on with it low leaves
      * the ordinary detector untouched, which is why the three non-`_10`
      * siblings cannot move. */
-    a->div_skip = APU_POWER_SKIPS_DIV_EVENT ? a->div_bit : 0;
+    a->div_skip = APU_POWER_SKIPS_DIV_EVENT ? (SPSW_APU ? (a->div_bit & 1) : a->div_bit) : 0;
     /* The frame sequencer restarts so the next step is 0, and the duty units
      * restart at the first step of their waveform (Pan Docs). */
     a->seq_step = 7;
@@ -1737,14 +1741,41 @@ static int apu_pull(struct APU *a, short *dst, int frames, int rate) {
  * core's 16-bit DIV counter. The frame sequencer is clocked by the falling
  * edge of DIV bit 4 — bit 12 of that counter — on real hardware, so it is
  * clocked by it here rather than by a divider of the APU's own. */
+/* SPSW_APU (7 Nov 2026), 0 = none of this.  MECHANISM, read in the
+ * AGE emulator and on his spsw-ch2-lc-delay table: the first switch to double
+ * speed delays the frame sequencer by one machine cycle, the next takes the delay
+ * away, and so on; a divider write keeps it; sound off clears it, and with sound
+ * off a switch does not touch it.  Kept in the spare bits of div_bit (bit 0 the
+ * last sampled bit, bit 1 the delay, bit 2 "the divider was just written"), so
+ * the context and old save states keep their size. */
+static void apu_after_speed_switch(struct APU *a, int dbl) {
+    if (SPSW_APU && a->power && dbl) a->div_bit ^= 2;
+}
+static void apu_div_written(struct APU *a) {
+    if (SPSW_APU && (a->div_bit & 2)) a->div_bit |= 4;
+}
+/* The switch's own divider reset: if the clocking bit rose on exactly this
+ * machine cycle there is no immediate step (AGE: "sound STOP glitch"). */
+static void apu_stop_div_glitch(struct APU *a, unsigned int div_counter) {
+    if (!SPSW_APU) return;
+    int shift = (APU_DIV_BIT_SPEED && a->dev_cgb && a->dev_speed) ? 13 : 12;
+    if ((div_counter & ((2u << shift) - 1)) == (1u << shift)) a->div_bit &= ~1;
+}
+
 static void apu_tick4(struct APU *a, unsigned int div_counter) {
     int shift = (APU_DIV_BIT_SPEED && a->dev_cgb && a->dev_speed) ? 13 : 12;
+    if (SPSW_APU && (a->div_bit & 2) && a->dev_speed) {
+        /* The frame sequencer sees the divider one machine cycle late. */
+        if (div_counter >= 4) { a->div_bit &= ~4; div_counter -= 4; }
+        else if (a->div_bit & 4) div_counter = 0;
+        else div_counter = (div_counter - 4) & 0xFFFF;
+    }
     int bit = (div_counter >> shift) & 1;
-    if (a->div_bit && !bit && a->power) {
+    if ((SPSW_APU ? (a->div_bit & 1) : a->div_bit) && !bit && a->power) {
         if (a->div_skip) a->div_skip = 0;   /* the skipped first event */
         else apu_frame_step(a);
     }
-    a->div_bit = bit;
+    a->div_bit = SPSW_APU ? ((a->div_bit & ~1) | bit) : bit;
 
     /* Two ticks per machine cycle at single speed; ONE in CGB double speed,
      * where the machine cycle is half as long in real time. See

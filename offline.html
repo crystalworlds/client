@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Offline · You've landed in the wrong place · CrystalWorlds.Media</title>
+<meta name="theme-color" content="#0a0e14">
+<meta name="robots" content="noindex">
+<!-- Shown by sw.js when a page of the site cannot be reached. It must work with no network: every style is
+     here, and its one picture comes from the worker's cache (below). The look is 404.html's: always dark on a
+     computer; on a small screen (the site's cw-small rule) it follows the light or dark setting. -->
+<script>
+  (function () {
+    var de = document.documentElement;
+    try { var a = localStorage.getItem('gnw.accent'); if (a && a !== 'green') de.setAttribute('data-accent', a); } catch (e) {}
+    function handheld() {
+      try {
+        if (!((navigator.maxTouchPoints || 0) > 0)) return false;
+        var s = window.screen || {}, w = s.width || 0, h = s.height || 0;
+        if (!w || !h || Math.max(w, h) > 1400 || Math.min(w, h) > 1100) return false;
+        var ua = navigator.userAgent || '', uad = navigator.userAgentData;
+        if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (uad && uad.mobile) || (/X11; Linux/i.test(ua) && !/CrOS/i.test(ua))) return true;
+        return matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
+      } catch (e) { return false; }
+    }
+    function fit() {
+      var vv = window.visualViewport, w = vv ? vv.width : window.innerWidth, h = vv ? vv.height : window.innerHeight;
+      var small = w <= 760 || h <= 500 || handheld(), light = false;
+      var oled = false;
+      try { light = small && localStorage.getItem('gnw.theme') === 'light'; oled = small && localStorage.getItem('gnw.theme') === 'oled'; } catch (e) {}
+      de.setAttribute('data-theme', light ? 'light' : 'dark');
+      de.classList.toggle('cw-oled', oled);   /* OLED: dark with a pure black page (the site's rule of 8 Nov 2026) */
+    }
+    fit();
+    window.addEventListener('resize', fit);
+  })();
+</script>
+<style>
+  :root {
+    --bg-0: #0a0e14;
+    --bg-1: #11161f;
+    --bg-2: #1a212e;
+    --line: #2a3242;
+    --text: #e6ebf2;
+    --muted: #8a9196;
+    --accent: #9be15d;
+    --accent-rgb: 155, 225, 93;
+    --on-accent: #0a0e14;
+    color-scheme: dark;
+  }
+  :root[data-accent="red"]     { --accent:#f2685c; --accent-rgb:242,104,92; }
+  :root[data-accent="orange"]  { --accent:#f2913f; --accent-rgb:242,145,63; }
+  :root[data-accent="gold"]    { --accent:#f5c542; --accent-rgb:245,197,66; }
+  :root[data-accent="emerald"] { --accent:#4ad7a5; --accent-rgb:74,215,165; }
+  :root[data-accent="cyan"]    { --accent:#5dc8f0; --accent-rgb:93,200,240; }
+  :root[data-accent="blue"]    { --accent:#6aa8ff; --accent-rgb:106,168,255; }
+  :root[data-accent="violet"]  { --accent:#b07cff; --accent-rgb:176,124,255; }
+  :root[data-accent="pink"]    { --accent:#ef6f9a; --accent-rgb:239,111,154; }
+  :root[data-accent="slate"]   { --accent:#8b97a8; --accent-rgb:139,151,168; }
+  /* Light, small screens only: the site's light tokens and its darkened accents. */
+  :root[data-theme="light"] {
+    --bg-0: #eceef2; --bg-1: #ffffff; --bg-2: #f5f6f9; --line: #d4d9e1; --text: #1b2230; --muted: #58626f;
+    --accent: #4c9829; --accent-rgb: 76, 152, 41;
+    color-scheme: light;
+  }
+  :root[data-theme="light"][data-accent="red"]     { --accent:#d0392e; --accent-rgb:208,57,46;  --on-accent:#ffffff; }
+  :root[data-theme="light"][data-accent="orange"]  { --accent:#c25e14; --accent-rgb:194,94,20; }
+  :root[data-theme="light"][data-accent="gold"]    { --accent:#9a6f14; --accent-rgb:154,111,20; --on-accent:#ffffff; }
+  :root[data-theme="light"][data-accent="emerald"] { --accent:#16996d; --accent-rgb:22,153,109; }
+  :root[data-theme="light"][data-accent="cyan"]    { --accent:#1c8ec2; --accent-rgb:28,142,194; }
+  :root[data-theme="light"][data-accent="blue"]    { --accent:#2f6fd0; --accent-rgb:47,111,208; --on-accent:#ffffff; }
+  :root[data-theme="light"][data-accent="violet"]  { --accent:#6d45cf; --accent-rgb:109,69,207; --on-accent:#ffffff; }
+  :root[data-theme="light"][data-accent="pink"]    { --accent:#c23e6e; --accent-rgb:194,62,110; --on-accent:#ffffff; }
+  :root[data-theme="light"][data-accent="slate"]   { --accent:#5a6577; --accent-rgb:90,101,119; --on-accent:#ffffff; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg-0); }
+  html.cw-oled, html.cw-oled body { background: #000; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(900px 600px at 50% 30%, rgba(var(--accent-rgb),.06), transparent 70%),
+      var(--bg-0);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(32px, env(safe-area-inset-top, 0px)) 16px max(32px, env(safe-area-inset-bottom, 0px));
+  }
+  .card {
+    max-width: 580px;
+    width: 100%;
+    text-align: center;
+    padding: 36px 32px 40px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.7);
+  }
+  :root[data-theme="light"] .card { box-shadow: 0 20px 50px -30px rgba(30,42,64,.22); }
+  .parachute {
+    width: 220px; max-width: 70%; height: auto;
+    aspect-ratio: 412 / 436;
+    display: block;
+    margin: 0 auto 14px;
+    filter: invert(.92) drop-shadow(0 12px 24px rgba(0,0,0,.5));
+    animation: drift 4s ease-in-out infinite;
+    visibility: hidden;
+  }
+  .parachute.ready { visibility: visible; }
+  /* The picture is black on clear: on a light card it stays black. */
+  :root[data-theme="light"] .parachute { filter: drop-shadow(0 12px 18px rgba(30,42,64,.18)); }
+  @keyframes drift {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(8px) rotate(2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .parachute { animation: none; } }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 12px;
+    letter-spacing: -.01em;
+    line-height: 1.2;
+  }
+  p {
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+    margin: 0 auto 22px;
+    max-width: 420px;
+  }
+  button {
+    display: inline-block;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    cursor: pointer;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 1px solid rgba(255,255,255,.3);
+    box-shadow: 0 8px 24px -8px rgba(var(--accent-rgb),.55);
+    transition: transform .15s, box-shadow .15s;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -10px rgba(var(--accent-rgb),.7); }
+  button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+  .trying { margin: 16px 0 0; font-size: 12px; color: var(--muted); min-height: 1.6em; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="parachute" id="pic" alt="Parachute spirit drifting off-course">
+    <div class="eyebrow">Offline · site out of reach</div>
+    <h1>You have landed in the wrong place.</h1>
+    <p>We can't reach CrystalWorlds.Media right now. Check your connection and try again.</p>
+    <button type="button" id="again">Try again</button>
+    <p class="trying" id="trying" aria-live="polite"></p>
+  </div>
+<script>
+  document.getElementById('again').addEventListener('click', function () { location.reload(); });
+  /* Trying by itself (8 Nov): every few seconds, while this page is on screen, ask the site quietly (a HEAD request,
+     to its own address, so it never waits behind a page load still hanging; no page, nothing stored). Any answer means it is back: tell sw.js to give the next page load a longer wait (so a
+     slow but working connection does not land here again), then load it. */
+  (function () {
+    var EVERY_MS = 4000, LIMIT_MS = 8000, timer = null, busy = false, line = document.getElementById('trying');
+    var url = location.href.split('#')[0];
+    function back() {
+      var go = function () { location.reload(); };
+      try {
+        var sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+        if (!sw || !window.MessageChannel) return go();
+        var ch = new MessageChannel(), t = setTimeout(go, 400);
+        ch.port1.onmessage = function () { clearTimeout(t); go(); };
+        sw.postMessage({ cw: 'offline-retry' }, [ch.port2]);
+      } catch (e) { go(); }
+    }
+    function check() {
+      if (busy || document.hidden) return;
+      busy = true;
+      var ac = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ac) ac.abort(); }, LIMIT_MS);
+      fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'cw-check=' + Date.now(), { method: 'HEAD', cache: 'no-store', credentials: 'same-origin', signal: ac ? ac.signal : undefined })
+        .then(function () { clearTimeout(t); stop(); back(); }, function () { clearTimeout(t); busy = false; });
+    }
+    function start() { if (timer || document.hidden) return; line.textContent = 'Trying again...'; timer = setInterval(check, EVERY_MS); check(); }
+    function stop() { if (timer) clearInterval(timer); timer = null; }
+    document.addEventListener('visibilitychange', function () { if (document.hidden) { stop(); line.textContent = ''; } else start(); });
+    window.addEventListener('online', function () { if (!document.hidden) check(); });
+    if (!document.hidden) line.textContent = 'Trying again...';
+    setTimeout(start, 1000);
+  })();
+  /* The picture: from sw.js's cache when there is one (the worker leaves picture requests to the network, which
+     is out of reach here), else from the site (this page opened directly, online). */
+  (function () {
+    var img = document.getElementById('pic');
+    img.onload = function () { img.className = 'parachute ready'; };
+    img.onerror = function () { img.style.display = 'none'; };
+    var direct = function () { img.src = 'images/parachute-spirit.webp'; };
+    try {
+      if (!window.caches) return direct();
+      caches.keys().then(function (names) {
+        names = names.filter(function (n) { return n.indexOf('cw-offline-') === 0; });
+        return names.reduce(function (found, n) {
+          return found.then(function (r) {
+            if (r) return r;
+            return caches.open(n).then(function (c) { return c.keys().then(function (reqs) {
+              for (var i = 0; i < reqs.length; i++) if (/\/images\/parachute-spirit\.webp$/.test(reqs[i].url.split('?')[0])) return c.match(reqs[i]);
+              return null;
+            }); });
+          });
+        }, Promise.resolve(null));
+      }).then(function (r) { return r ? r.blob() : null; })
+        .then(function (b) { if (b) img.src = URL.createObjectURL(b); else direct(); }, direct);
+    } catch (e) { direct(); }
+  })();
+</script>
+</body>
+</html>

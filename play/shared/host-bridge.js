@@ -13,7 +13,7 @@
  *
  *   A14, THE TITLE BAR. An overlay whose window runs the bar gets the class
  *   .cb-unified; its header then shows only the title and the x. The controls
- *   the header used to hold (the Game Boy's Skin / Matrix / Color palette, the
+ *   the header used to hold (the Game Boy's Mono Palette / Matrix / Color palette, the
  *   variant picker) are hidden here and live in the bar and its Settings panel.
  *
  *   THE RELAY, over postMessage { cwUi: ... } from the window's own frame only:
@@ -175,7 +175,7 @@
     const arm = () => { try { window.CwPlayAudio.armGestures(() => hostAny()); } catch (_) {} };
     if (window.CwPlayAudio) { arm(); return; }
     const sc = document.createElement('script');
-    sc.src = 'play/host/cw-audio.js?v=2.0.0';
+    sc.src = 'play/host/cw-audio.js?v=2.1.0';
     sc.onload = arm;
     (document.head || document.documentElement).appendChild(sc);
   }
@@ -233,7 +233,11 @@
       // The site's window, its title and its zoom-in, with no in-page boot (its own prompt is hidden below).
       const r = orig.call(this, gameKey, Object.assign({}, opts || {}, { autoBoot: false }));
       const pr = document.getElementById('play-start-prompt'); if (pr) pr.style.display = 'none';
-      const d = deviceOf(id) || { id, name: gameKey };
+      let d = deviceOf(id) || { id, name: gameKey };
+      /* Another program revision picked in the drawer (8 Nov 2026, index.html openPlay): the frame's
+         game is '<device>~<variant>', so the relay sends that program and its saves are its own. */
+      const v = opts && opts.variant ? String(opts.variant).replace(/[^a-z0-9-]/gi, '') : '';
+      if (v) d = Object.assign({}, d, { id: id + '~' + v });
       openInpage('gnw', d, cont);
       return r;
     });
@@ -320,7 +324,15 @@
   }
   function frameOf(ov) { return ov ? ov.querySelector('iframe') : null; }
   function playingId() { try { return typeof _openPlayDeviceId !== 'undefined' ? _openPlayDeviceId : null; } catch (_) { return null; } }
-  function deviceOf(id) { try { return typeof ALL_DEVICES !== 'undefined' ? ALL_DEVICES.find(d => d.id === id) : null; } catch (_) { return null; } }
+  function deviceOf(id) {
+    try {
+      if (typeof ALL_DEVICES === 'undefined') return null;
+      const d = ALL_DEVICES.find(x => x.id === id);
+      /* '<device>~<variant>': a Game & Watch device's other program revision is that device (8 Nov 2026). */
+      if (d || typeof id !== 'string' || id.indexOf('~') <= 0) return d || null;
+      return ALL_DEVICES.find(x => x.id === id.slice(0, id.indexOf('~'))) || null;
+    } catch (_) { return null; }
+  }
 
   /* Marked as soon as it opens (not when the frame says hello), so the header
      never flashes the controls it is about to lose. */
@@ -393,8 +405,14 @@
   });
 
   /* ------------------------------------------------------------ Last closed (A11) */
-  async function lastClosed() {
-    const CR = window.ContinueRow, id = playingId();
+  /* The title in a window: the Game & Watch window keeps its game key (_openPlayKey), not
+     _openPlayDeviceId, as continuerow.js currentDeviceId reads it (8 Nov 2026: its auto save was never found). */
+  function titleIn(ov) {
+    try { if (ov && ov.id === 'play-overlay' && typeof _openPlayKey !== 'undefined' && _openPlayKey && typeof deviceIdForGameKey === 'function') return deviceIdForGameKey(_openPlayKey) || playingId(); } catch (_) {}
+    return playingId();
+  }
+  async function lastClosed(ov) {
+    const CR = window.ContinueRow, id = titleIn(ov);
     if (!CR || !id) return null;
     let rec = null;
     try { rec = (await CR.list()).find(r => r && r.id === id && !r.hidden && r.state != null) || null; } catch (_) { rec = null; }
@@ -420,7 +438,7 @@
         publish(ov);
         break;
       case 'lastClosed':
-        lastClosed().then(rec => send(ov, { cwUi: 'lastClosed', n: d.n, rec })).catch(() => send(ov, { cwUi: 'lastClosed', n: d.n, rec: null }));
+        lastClosed(ov).then(rec => send(ov, { cwUi: 'lastClosed', n: d.n, rec })).catch(() => send(ov, { cwUi: 'lastClosed', n: d.n, rec: null }));
         break;
       case 'variant':
         if (window.Variants && typeof Variants.switchTo === 'function' && d.id) { try { Variants.switchTo(String(d.id)); } catch (e) { console.warn('[control bar] variant switch failed', e); } }

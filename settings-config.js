@@ -44,6 +44,8 @@
       { id: 'twins', name: 'Show in grid Mario and Zelda', find: () => [twinsCard()] },
       { id: 'anim', name: 'Prefer games with animated demos', find: () => [animCard()] },
       { id: 'hideempty', name: 'Hide systems with no games', find: () => [hideEmptyCard()] },
+      { id: 'autosave', name: 'Auto save on exit', find: () => (window.ContinueRow && window.ContinueRow.setAutoSaveOnExit ? [autoSaveCard()] : []) },   // 9 Nov 2026
+      { id: 'region', name: 'Preferred region', find: () => (window.Variants && window.Variants.setRegion ? [regionCard()] : []) },   // 9 Nov 2026
       { id: 'hzwarn', name: 'Slow screen warning', find: () => (window.cwRefresh ? [window.cwRefresh.card()] : []) },   // notify.js builds the card (28 Oct)
     ] },
     { id: 'play', label: 'Films and series', items: [
@@ -116,6 +118,53 @@
     return c;
   }
 
+  /* AUTO SAVE ON EXIT (9 Nov 2026), built and kept like hideEmptyCard, beside the other game
+     settings. On by default (what the site has always done); continuerow.js stores it (localStorage
+     gnw.autoSaveOnExit) and reads it when a game is left. */
+  let autoEl = null;
+  function autoSaveCard() {
+    const on = !!(window.ContinueRow && window.ContinueRow.autoSaveOnExit && window.ContinueRow.autoSaveOnExit());
+    if (autoEl) { const i = autoEl.querySelector('input'); if (i && i.checked !== on && document.activeElement !== i) i.checked = on; return autoEl; }
+    const c = document.createElement('div');
+    c.className = 'aw-card cfg-own';
+    c.innerHTML = '<div class="aw-head"><span class="aw-name">Auto save on exit</span>' +
+      '<label class="aw-switch"><input type="checkbox" id="cfg-autosave-exit"' + (on ? ' checked' : '') + ' aria-label="Auto save on exit"><span class="aw-slider"></span></label></div>' +
+      '<p class="cfg-note">When you leave a game you have played, the game is saved where you were, so its Continue card ' +
+      'starts from there next time. Off: leaving a game saves nothing, and a Continue card keeps the save it already had. ' +
+      'Saves you make yourself, and the game’s own save on its cartridge, are not changed. Saved only in this browser.</p>';
+    c.querySelector('input').addEventListener('change', e => { try { if (window.ContinueRow && window.ContinueRow.setAutoSaveOnExit) window.ContinueRow.setAutoSaveOnExit(e.target.checked); } catch (_) {} });
+    autoEl = c;
+    return c;
+  }
+
+  /* PREFERRED REGION (9 Nov 2026: the preferred region only changes the order of the Variants
+     list, so a game opens in that region when it has a variant for it), built and
+     kept like autoSaveCard. Four choices, Default first (no preference); variants.js stores the choice
+     (localStorage gnw.region.v1) and does the work. The row's head shows the choice (value(): the checked radio). */
+  let regionEl = null;
+  const REGION_OPTS = [['', 'Default'], ['usa', 'USA'], ['europe', 'Europe'], ['japan', 'Japan']];
+  function regionCard() {
+    const cur = (window.Variants && window.Variants.region && window.Variants.region()) || '';
+    const paint = el => el.querySelectorAll('[data-region-opt]').forEach(b => { const on = b.dataset.regionOpt === cur; b.setAttribute('aria-checked', on ? 'true' : 'false'); b.classList.toggle('active', on); b.tabIndex = 0; });
+    if (regionEl) { paint(regionEl); return regionEl; }
+    const c = document.createElement('div');
+    c.className = 'aw-card cfg-own';
+    c.innerHTML = '<div class="aw-name">Preferred region</div>' +
+      '<div class="cfg-seg" role="radiogroup" aria-label="Preferred region">' +
+      REGION_OPTS.map(([k, n]) => '<button type="button" class="cfg-seg-opt" role="radio" aria-checked="false" data-region-opt="' + k + '">' + n + '</button>').join('') + '</div>' +
+      '<p class="cfg-note">When a game has a version from the region you pick, Play opens that version, and the region’s versions ' +
+      'come first in the game’s Variants list. When it has none, Play opens the version on the tile. Default: Play always opens ' +
+      'the version on the tile. Tiles, search and box art stay the same, and each version keeps its own saves. Saved only in this browser.</p>';
+    c.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('[data-region-opt]'); if (!b) return;
+      try { if (window.Variants && window.Variants.setRegion) window.Variants.setRegion(b.dataset.regionOpt); } catch (_) {}
+      regionCard();
+    });
+    regionEl = c;
+    paint(c);
+    return c;
+  }
+
   /* GRID LAYOUT: STACK THE TILES (31 Oct), built and kept like twinsCard. It was emby.js's switch,
      drawn only while a media server was signed in and switched on, so it sat on Media and content,
      moved here when Jellyfin was switched on and was gone when it was switched off. The choice is
@@ -181,6 +230,12 @@
       #vault-overlay .cfg-own .aw-switch input:checked + .aw-slider::before { transform: translateX(18px); }
       #vault-overlay .cfg-own .aw-switch input:focus-visible + .aw-slider { box-shadow: 0 0 0 2px rgba(var(--accent-rgb),.5); }
       #vault-overlay .cfg-own .cfg-note { margin: 9px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+      /* The Preferred region choices (9 Nov 2026): the Theme buttons' look (index.html .theme-opt). */
+      #vault-overlay .cfg-seg { display: flex; flex-wrap: wrap; gap: 8px; }
+      #vault-overlay .cfg-seg-opt { font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; min-height: 40px; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+      #vault-overlay .cfg-seg-opt:hover, #vault-overlay .cfg-seg-opt:focus-visible { color: var(--text); }
+      #vault-overlay .cfg-seg-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      #vault-overlay .cfg-seg-opt.active { color: var(--text); border-color: rgba(var(--accent-rgb),.5); background: rgba(var(--accent-rgb),.12); }
       @media (prefers-reduced-motion: reduce) { #vault-overlay .cfg-chev { transition: none; } }
     `;
     document.head.appendChild(st);
@@ -323,7 +378,10 @@
     if (!root) {
       root = document.createElement('div');
       root.id = 'wg-root'; root.className = 'cfg-root';
-      root.innerHTML = '<p class="cfg-intro">Live tiles woven through the tiles on the content page: a clock, the weather, trailers, film facts and more. Open one to switch it on or off and set how often it appears. Saved only in this browser.</p><div class="cfg-group" id="wg-list"></div>';
+      root.innerHTML = '<p class="cfg-intro">Live tiles woven through the tiles on the content page: a clock, the weather, trailers, film facts and more. Open one to switch it on or off and set how often it appears. Saved only in this browser.</p>' +
+        /* Widgets belong to their content (9 Nov 2026, emby.js WIDGET_CONTENT): said here in plain words. */
+        '<p class="cfg-intro" id="wg-groups">Each widget goes with what it shows. Trailer playback, Film facts, Collection stats and Cast come from your films and shows, so they show only while Movies is on. Play Time shows only while games are shown. Clock, Weather, Movie quotes and Image show whenever widgets are on.</p>' +
+        '<div class="cfg-group" id="wg-list"></div>';
       wire(root);
     }
     if (root.parentNode !== pg) pg.appendChild(root);

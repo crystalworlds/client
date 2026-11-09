@@ -19,7 +19,16 @@
 <meta name="robots" content="noindex">
 <title>Play</title>
 <script>/* The preview classes before the first paint (host.mjs sets cw-preview again when it starts). */
-(function () { try { var q = new URLSearchParams(location.search); if (q.get('preview') === '1') { var c = document.documentElement.classList; c.add('cw-preview'); if (q.get('art') === '1') c.add('cw-preview-art'); } } catch (_) {} })();</script>
+(function () { try { var q = new URLSearchParams(location.search); if (q.get('preview') === '1') { var c = document.documentElement.classList; c.add('cw-preview'); if (q.get('art') === '1') c.add('cw-preview-art'); } } catch (_) {} })();
+/* OLED (8 Nov 2026): the site's OLED theme (its <html> class cw-oled) before the first paint, and live when it changes;
+   alone (no site around it), the stored choice. Only the ground around the picture changes (the cw-oled line below). */
+(function () { try {
+  var de = document.documentElement, src = null;
+  try { if (window.parent !== window && window.parent.document) src = window.parent.document.documentElement; } catch (_) { src = null; }
+  var apply = function () { var on = src ? src.classList.contains('cw-oled') : localStorage.getItem('gnw.theme') === 'oled'; de.classList.toggle('cw-oled', on); };
+  apply();
+  if (src && typeof MutationObserver === 'function') { var mo = new MutationObserver(apply); mo.observe(src, { attributes: true, attributeFilter: ['class'] }); addEventListener('pagehide', function () { mo.disconnect(); }); }
+} catch (_) {} })();</script>
 <style>
   :root { --bg:var(--cw-bar-panel-to,#0b0c0e); --panel:var(--cw-bar-panel-from,#15171b); --line:var(--cw-bar-line,#2a2e36); --ink:var(--cw-bar-ink,#e6e8ec); --dim:var(--cw-bar-dim,#9aa1ad); --accent:var(--cw-bar-accent-edge,#9bbc0f); }
   /* Colour tokens (themes step 0, 2026-10-14): the page's own names read the Control Bar's
@@ -32,6 +41,7 @@
   #screenBox { flex:1; display:grid; place-items:center; min-height:0; padding:14px; overflow:hidden;
     background:radial-gradient(ellipse at 50% 35%, var(--cw-bar-host-stage,#14161a) 0%, var(--bg) 70%); }
   #screenBox.art-mode { padding:0; }
+  html.cw-oled body, html.cw-oled #screenBox { background:#000; }   /* OLED: the ground around the picture is pure black; the bar and panels keep their colours */
   /* SEAMLESS START (2026-10-15): nothing of the device shows until its artwork has
      decoded and the layout is at its final size; then it is revealed whole and the core starts.
      Hidden with visibility, so the layout is still computed while it waits. A small loader shows
@@ -229,13 +239,13 @@
 <script>/* Every key physically held, seen before any other listener (the Control Bar and play-keys.js take
    the keyboard while a panel is open): the Keys diagram lights from it (input.mjs litSet). Codes only. */
 (function(){var s=window.__cwRawKeys=new Set();addEventListener('keydown',function(e){s.add(e.code);},true);addEventListener('keyup',function(e){s.delete(e.code);},true);addEventListener('blur',function(){s.clear();});})();</script>
-<script src="../../firmware/site/sha.js?v=2.0.0"></script>
-<script src="../../firmware/site/unsupported.js?v=2.0.0"></script>
-<script src="./cw-audio.js?v=2.0.0"></script>
-<script src="../play-keys.js?v=2.0.0"></script>
-<script src="../shared/overlay.js?v=2.0.0"></script>
-<script src="../play-pill.js?v=2.0.0"></script>
-<script src="../shared/control-bar.js?v=2.0.0"></script>
-<script type="module" src="./host.mjs?v=2.0.0"></script>
+<script src="../../firmware/site/sha.js?v=2.1.0"></script>
+<script src="../../firmware/site/unsupported.js?v=2.1.0"></script>
+<script src="./cw-audio.js?v=2.1.0"></script>
+<script src="../play-keys.js?v=2.1.0"></script>
+<script src="../shared/overlay.js?v=2.1.0"></script>
+<script src="../play-pill.js?v=2.1.0"></script>
+<script src="../shared/control-bar.js?v=2.1.0"></script>
+<script type="module" src="./host.mjs?v=2.1.0"></script>
 </body>
 </html>

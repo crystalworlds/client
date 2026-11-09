@@ -37,8 +37,8 @@ var FWMODE = (_params.get('fw') === 'custom') ? 'custom' : 'retail';
 //   twin-cfw.js  — adds custom firmware boot support. It's a
 //                  separate file because that build regresses Zelda's retail boot,
 //                  so retail (both units) stays on twin.js and only custom uses it.
-var TWINV  = 'twin.js?v=2.0.0';
-var CFWV   = 'twin-cfw.js?v=2.0.0';
+var TWINV  = 'twin.js?v=2.1.0';
+var CFWV   = 'twin-cfw.js?v=2.1.0';
 
 var _UNITS = {
   mario: { fw: 'mario/firmware_mario.js', key: 'mario' },
@@ -201,7 +201,8 @@ function queuePump(delayMs){
 function pump(){
   _pumpQueued = false;
   if (paused){ doPendingSave(); queuePump(60); return; }   // paused: idle tick (allows a save), NO emulation, NO clock advance
-  renderTick();                                      // keep the frame moving every scheduler turn
+  if (!cpu) return;                                  // no firmware started yet (custom mode, Saves closed): nothing to run; boot starts the loop
+  renderTick();                                     // keep the frame moving every scheduler turn
   doPendingSave();
   if (!cpu || cpu.halted) return;
   var now = performance.now();
@@ -247,9 +248,11 @@ self.onmessage = function(e){
       queuePump(0);                                   // ensure the loop is running (no-op if already queued)
     }
   } else if (d.save) {                                // request a save-state capture (fulfilled at the next safe boundary)
+    if (!cpu) { self.postMessage({ saveError: 'no firmware is running yet', slot: d.save.slot }); return; }
     _pendingSave = (d.save.slot != null) ? d.save.slot : 0;
     if (paused) doPendingSave();                      // frozen (Saves overlay): capture the at-rest state immediately
   } else if (d.load) {                                // restore a save-state, then re-anchor the clock to the restored cycles
+    if (!cpu) { self.postMessage({ loadError: 'no firmware is running yet', slot: d.load.slot }); return; }
     if (cpu && machine && AT.restore && d.load.snap) {
       var ok = false;
       try { ok = AT.restore(machine, d.load.snap); }
@@ -298,7 +301,7 @@ if (FWMODE === 'custom') {
   // That build exports no save states, so Save did nothing under custom firmware
   // (2026-10-11): take the retail engine's two functions from twin-state.js.
   if (!AT.snapshot || !AT.restore) {
-    importScripts('twin-state.js?v=2.0.0');
+    importScripts('twin-state.js?v=2.1.0');
     AT.snapshot = AT.snapshot || self.TwinState.snapshot;
     AT.restore = AT.restore || self.TwinState.restore;
   }

@@ -10,16 +10,16 @@ function gbMachineEmulationTabHTML(d) {
   return '<div class="gbemu-area" id="gbemu-area-machine">' +
 
   '<section class="gbemu-hero">' +
-    '<div class="gbemu-hero-num"><b>258</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy that is actually correct</h3>' +
+    '<div class="gbemu-hero-num"><b>259</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy that is actually correct</h3>' +
       '<p>This is the research, not the result. Everything below is what this project had to ' +
-      'establish to reach <b>258 passing rows of 264</b> on the public Game Boy Emulator Shootout ' +
+      'establish to reach <b>259 passing rows of 264</b> on the public Game Boy Emulator Shootout ' +
       'board (and zero differing pixels on every mealybug tearoom cartridge) ' +
       'written out so the next person does not have to derive it again. Section&nbsp;21 says ' +
       'exactly what that number is measured on and why published comparisons are not ' +
       'like-for-like; section&nbsp;22 names the rows <em>nobody</em> can win honestly, because a ' +
       'reader chasing those will lose weeks. The proof is at the bottom; the useful part is above it.</p>' +
-      '<p>The figure counts whole rows. Sections 11 and 17 record two closed defects on rows that still fail, ' +
-      'and neither counts toward the board, because <b>118 of 120 pixels is ' +
+      '<p>The figure counts whole rows. Section 17 records a closed defect on a row that still fails, ' +
+      'and it does not count toward the board, because <b>118 of 120 pixels is ' +
       'not 118/120 of a row</b>. Every dependent figure on this page (the suite table, the ' +
       'ceiling ladder, the staged build order in appendix&nbsp;G.4, and the Colour page&rsquo;s ' +
       'equivalents) states the same board, and the ladder&rsquo;s own invariant is that ' +
@@ -372,15 +372,15 @@ function gbMachineEmulationTabHTML(d) {
     'frames counts.</b> A frame is not &ldquo;the next frame&rsquo;s worth of dots&rdquo;. It is cut at a fixed place in ' +
     'the picture, so a program that switches the display off and on does not leave every later frame ' +
     'shifted against the hardware&rsquo;s.</p>' +
-    '<div class="gbemu-rule" id="gbr-1-2"><b>Rule 1/2.</b> A frame step must end as this decision table gives, by what the display does during the step. Every row ends the same way: the step finishes the instruction in progress and then returns. One frame of dots is the frame of Rule 1/1.</div>' +
+    '<div class="gbemu-rule" id="gbr-1-2"><b>Rule 1/2.</b> A frame step must end as this decision table gives, by what the display does during the step. Every row ends the same way: the step finishes the instruction in progress and then returns. One frame of dots is the frame of Rule 1/1. <b>How the rows combine.</b> The step makes these three tests at each instruction boundary (and before every idle machine cycle of a halt or of STOP mode), and any one that holds ends it:<ol class="gbemu-steps"><li>The picture has entered line 144 since the step began.</li><li>The display is off at this boundary and one frame of dots has passed since the step began.</li><li>Two frames of dots have passed since the step began.</li></ol>Each test reads only the state at that boundary and the count from the step&rsquo;s start, never the switches before it, so a display switched on, off and on again inside one step is judged by the same three tests. No test falls between a dispatch and the handler&rsquo;s first instruction.</div>' +
     '<table class="gbemu-table"><thead><tr><th>Display during the step</th><th>Where the step stops (a line and dot of the picture, or a count from the step&rsquo;s own start)</th></tr></thead><tbody>' +
-      '<tr><td><b>On</b></td><td>When the picture enters line 144, that is the wrap from line 143 into line 144, dot 0, when all 144 visible lines are in the frame buffer. That is the same dot on both machines; on the original the vertical-blank request is raised there too, while on the Colour the request and the mode-1 report come three dots later (the Colour tab, section 10), and the step does not wait for them. With the display running, consecutive steps are therefore exactly one frame of dots apart, but they are phased to the picture, not to the start point.</td></tr>' +
-      '<tr><td><b>Off for the whole step</b></td><td>The picture never reaches line 144, so the step runs one frame of dots from its own start, counted in processor T-cycles: the same count of processor T-cycles on the original and at single speed; 140,448 processor T-cycles in double speed on the Colour.</td></tr>' +
+      '<tr><td><b>On</b></td><td>When the picture enters line 144, that is the wrap from line 143 into line 144, dot 0, when all 144 visible lines are in the frame buffer. That is the same dot on both machines; on the original the vertical-blank request is raised there too, while on the Colour the request and the mode-1 report come three dots later (the Colour tab, section 10), and the step does not wait for them. <b>Exactly</b>: the mark is set at the wrap itself, as line 143&rsquo;s dot 455 is processed (Rule E.5/11), before line 144&rsquo;s dot 0 is processed. The step reads the mark before the next boundary pays its owed dots (Rule D.10.1/3, step 1), so a wrap among those dots is read only after that boundary has run its instruction (any dispatch first), and that is the instruction the step finishes. With the display running, consecutive steps are therefore exactly one frame of dots apart, but they are phased to the picture, not to the start point.</td></tr>' +
+      '<tr><td><b>Off for the whole step</b></td><td>The picture never reaches line 144, so the step runs one frame of dots from its own start, counted in processor T-cycles: Rule 1/1&rsquo;s frame count of 140,448 processor T-cycles in double speed on the Colour.</td></tr>' +
       '<tr><td><b>Switched off during the step</b></td><td>Once a frame of dots has passed since the step began, counted on the processor&rsquo;s clock (its T-cycles, halved in double speed), because no dots are processed while the display is off. The test is made at each instruction boundary, so the step ends at the first boundary at or past that count.</td></tr>' +
       '<tr><td><b>Switched on during the step</b></td><td>It runs on until the switch-on frame reaches line 144. Since the power-on line is 451 dots and the frame it starts writes nothing to the buffer (section 14), that step ends after the invisible frame, and the next step draws the first visible one.</td></tr>' +
-      '<tr><td><b>Any</b> (a cap over every row above)</td><td>No step runs past 140,448 dots (two frames), whatever the display does.</td></tr>' +
+      '<tr><td><b>Any</b> (a cap over every row above)</td><td>No step runs past the first instruction boundary at or past 140,448 dots (two frames) from its start, whatever the display does. The count is on the processor&rsquo;s clock (its T-cycles, halved in double speed), because no dots are processed while the display is off.</td></tr>' +
     '</tbody></table>' +
-    '<div class="gbemu-example"><b>Example.</b> The display is off when a step starts, and the cartridge switches it on part-way through. The step does not stop one frame of dots after its start: it is in the row &ldquo;switched on during the step&rdquo;, so it runs through the power-on line and the rest of that frame until the picture enters line 144, then finishes the instruction in progress. That frame wrote nothing to the buffer, so a checkpoint taken after this step shows the buffer section 19 describes for a display just switched on; the step after it is the first to draw a visible frame, and from then on steps are one frame of dots apart (row &ldquo;on&rdquo;). The cap row still applies: neither step runs past 140,448 dots.</div>' +
+    '<div class="gbemu-example"><b>Example.</b> The display is off when a step starts, and the cartridge switches it on part-way through. The step does not stop one frame of dots after its start: it is in the row &ldquo;switched on during the step&rdquo;, so it runs through the power-on line and the rest of that frame until the picture enters line 144, then finishes the instruction in progress. That frame wrote nothing to the buffer, so a checkpoint taken after this step shows the buffer section 19 describes for a display just switched on; the step after it is the first to draw a visible frame, and from then on steps are one frame of dots apart (row &ldquo;on&rdquo;). The cap row still applies: neither step runs past the first boundary at or past 140,448 dots. <b>The end of a step with the display on.</b> A run of <code>NOP</code>s on an original, <code>IE = 0x00</code> so no look is made: a fetch access is on dot 453 of line 143, and the test after it finds no mark. The next boundary pays dots 453 to 455 (the wrap, which sets the mark) and line 144&rsquo;s dot 0, and the next <code>NOP</code> fetches on dot 1 of line 144. The test after it finds the mark, and the step returns with the dot counter at line 144, dot 1 and four dots owed.</div>' +
     '<div class="gbemu-rule" id="gbr-1-3"><b>Rule 1/3.</b> Where counting starts is the harness&rsquo;s choice (for example the first ' +
     'fetch at <code>0100</code>, section 3); the step of Rule 1/2 is the same from any start. A checkpoint taken after N steps is the ' +
     'frame buffer as it stands then (section 19 says what the buffer holds while the display is off or ' +
@@ -472,7 +472,7 @@ function gbMachineEmulationTabHTML(d) {
     '<code>ppu_mode = mode_report = 2</code>. The first read of <code>0x86</code> is INSTRUMENT-MEASURED (the probe <code>test/tabprobe</code>: the flag reads set from the first access dot after the hand-over).</div>' +
     '<div class="gbemu-rule" id="gbr-3-4"><b>Rule 3/4.</b> <b>The interrupt side at the hand-over</b>: the interrupt-logic mode (the second wire of section 14) must be stored as &ldquo;none&rdquo;, not 2, and the status line low. <b>Line 0 then runs on as an ordinary line 0 from dot 1</b>, in these steps (dots of line 0 on appendix E&rsquo;s scale, event scale):' +
     '<ol class="gbemu-steps">' +
-      '<li>Dot 0 is already processed before the first opcode fetch&rsquo;s read (Rule 1/5); with LY and LYC both 0 the comparator sets the coincidence flag on it (Rule 3/3).</li>' +
+      '<li>Dot 0 is already processed before the first opcode fetch&rsquo;s read (Rule 1/5); with LY and LYC both 0 the comparator sets the coincidence flag on it (Rule 3/3). The start-of-line blind window (Rule 14/14) is not running on this dot: only a wrap arms it, and the hand-over is not a wrap.</li>' +
       '<li>Dot 3: the mode-2 source rises. Dot 4: it falls, like every wrap into line 0. Nothing is selected (no STAT source is enabled, Rule 3/3), so nothing is raised.</li>' +
       '<li>From dot 5: the scan takes its slots.</li>' +
       '<li>Dot 84: drawing starts.</li>' +
@@ -485,7 +485,7 @@ function gbMachineEmulationTabHTML(d) {
     '<table class="gbemu-table"><thead><tr><th>Part</th><th>At power-on, with a boot program (hex unless a unit is named)</th></tr></thead><tbody>' +
       '<tr><td>Processor</td><td>A, F, B, C, D, E, H, L, SP and PC all 0; interrupts disabled (IME 0); ' +
       'IE and IF stored as 0. The boot program is mapped over <code>0000</code>-<code>00FF</code> (on the ' +
-      'Colour also <code>0200</code>-<code>08FF</code>) until it writes <code>0xFF50</code>.</td></tr>' +
+      'Colour also <code>0200</code>-<code>08FF</code>) until it writes a value with bit 0 set to <code>0xFF50</code> (Rule A.4/1).</td></tr>' +
       '<tr><td>Divider and timer</td><td>Internal counter 4 (Rule 3/8; section 5 has exactly where); TIMA, TMA and ' +
       'TAC 0.</td></tr>' +
       '<tr><td>Picture</td><td>Display off (LCDC 0), STAT enables 0, mode 0, LY 0, every scroll and window ' +
@@ -603,11 +603,11 @@ function gbMachineEmulationTabHTML(d) {
       '<li><b>Channel 1:</b> its DAC is powered, its duty is 2, its initial volume 15 with an envelope pace of 3, and <b>the channel is running</b>, as the boot program&rsquo;s ' +
       'start-up chime leaves it: its current volume is already 0, so it is silent, its duty position is ' +
       'already clocking (the first-trigger rule of appendix B.16 has been spent), and <code>FF26</code> ' +
-      'reads <code>0xF1</code>. <b>Exactly</b>: the channel&rsquo;s <em>internal</em> period is 0, not the <code>0x700</code> that <code>FF13</code>/<code>FF14</code> show (those are stored bytes; the internal period is loaded only by a later write or trigger), so its period counter starts loaded with (2048 &minus; 0) &times; 4 = 8,192 T; its duty position is 0; its envelope timer is 0 and its current volume 0; its length counter is 0 with length enable clear.</li>' +
-      '<li><b>Every channel&rsquo;s period counter</b> starts loaded with its own period at internal period 0: channel 2 8,192 T, channel 3 4,096 T, the noise channel its divisor for code 0, 8 T (T = T-cycles). The noise channel&rsquo;s down-counter starts loaded at 1.</li>' +
+      'reads <code>0xF1</code>. <b>Exactly</b>: the channel&rsquo;s <em>internal</em> period is 0, not the <code>0x700</code> that <code>FF13</code>/<code>FF14</code> show (those are stored bytes; the internal period is loaded only by a later write or trigger: an NR13 write sets its low eight bits and an NR14 write, with or without the trigger bit, its high three, at the write and from the byte written, and neither reads a stored byte), so its period counter starts loaded with (2048 &minus; 0) &times; 4 = 8,192 T; its duty position is 0; its envelope timer is 0 and its current volume 0; its length counter is 0 with length enable clear.</li>' +
+      '<li><b>Every channel&rsquo;s period counter</b> starts loaded with its own period at internal period 0: channel 2 8,192 T, channel 3 4,096 T, the noise channel its divisor for code 0, 8 T (T = T-cycles). The noise channel&rsquo;s down-counter starts loaded at 1. That channel&rsquo;s 8 T is stored and nothing reads it: its clock is the three stages of Rule 17/13.</li>' +
       '<li>The frame sequencer sits at step 7; the noise shift register is all ones; ' +
       'master volume 7 on both sides and the routing byte <code>F3</code>.</li>' +
-      '<li>Every other internal value is 0.</li>' +
+      '<li>Every other internal value is 0, including those a later write would decode from a stored byte (the sweep fields of <code>FF10</code>, the level of <code>FF1C</code>, every length): the hand-over decodes no stored byte of Rule 3/10 into them.</li>' +
     '</ul></div>' +
     '<div class="gbemu-why"><b>Why.</b> <b>They are our ' +
     'no-boot fallback, and no board row scores them</b>: the board runs the real boot program, which leaves the unit ' +
@@ -624,7 +624,7 @@ function gbMachineEmulationTabHTML(d) {
   /* ---------------------------------------------------------------- M4 */
   '<section class="sect" id="gbe-gaps"><h3 class="sect-h">24. What this page does not cover</h3>' +
     '<p class="hw-readable">Stated plainly, because a build guide that does not draw its own edge is ' +
-    'worse than one that stops sooner. Everything above is what was needed to reach 258 of 264 on ' +
+    'worse than one that stops sooner. Everything above is what was needed to reach 259 of 264 on ' +
     'the board in section 21 and zero differing pixels on every mealybug tearoom cartridge, plus ' +
     'the machine around the picture processor that had to be right first. Two things a build guide ' +
     'might be expected to omit are here rather than absent, because a reader who lacks either ' +
@@ -645,6 +645,12 @@ function gbMachineEmulationTabHTML(d) {
         'scored sound figure on this page is taken from the raw sum before the capacitor, because ' +
         'the block moves the direct-current content of every render and therefore every spectral ' +
         'figure.</li>' +
+      '<li><b>The screen&rsquo;s slow response.</b> A real Game Boy screen changes slowly, so something a game draws only on every other frame looks steady and half see-through, and moving things leave a short trail. ' +
+        '<b>It is on in what you see</b>: the play window, not the core, copies it (Settings, Display, <b>Screen response</b>: &ldquo;As the real screen&rdquo;, the default, or &ldquo;Off (every frame sharp)&rdquo;). ' +
+        'Once for every frame the machine makes, each pixel moves part of the way toward the average of this frame and the one before it, in linear light, so a two-frame blink settles to a steady half-tone and a still picture is shown exactly as the game drew it. ' +
+        'How far a pixel moves each frame is <b>FITTED</b>, not measured, because no published measurement of these screens was found: 0.55 of the way on the original, 0.70 on the Pocket and Light (taken when the Pocket or Teal palette is chosen), 0.80 on the Color. ' +
+        'The Super Game Boy draws on a television, whose glow fades within a few thousandths of a second, so it has none and the setting is not offered there. ' +
+        '<b>It is off in what we measure</b>: every picture figure on this page is taken from the core&rsquo;s own frame, which the setting never changes.</li>' +
       '<li><b>Saving.</b> (The link cable, infrared, the Super Game Boy and the other extra hardware are in appendix A.1.)</li>' +
       '<li><b>The Game Boy Color.</b> A different picture processor with a different priority rule, ' +
         'two banks of video memory, colour palettes and a double-speed mode. Several notes above ' +
@@ -658,6 +664,20 @@ function gbMachineEmulationTabHTML(d) {
     'the console&rsquo;s own boot program by its host (256 bytes for the original, 2,304 for the Colour, ' +
     'mapped as Rule 3/5 says). Without one, section 3&rsquo;s hand-over tables (Rules 3/2 to 3/4, 3/9 to 3/11) are the whole start; ' +
     'Rule 3/5 gives the power-on state the boot program begins from.</div>' +
+    '<div class="gbemu-rule" id="gbr-24-2"><b>Rule 24/2.</b> <b>The functions a host calls.</b> A build for this site&rsquo;s host must export these functions under exactly these names. &ldquo;Context&rdquo; is the address <code>gb_create</code> returned.</div>' +
+    '<table class="gbemu-table"><thead><tr><th>Name</th><th>Arguments</th><th>Returns</th></tr></thead><tbody>' +
+      '<tr><td><code>gb_sizeof_context</code></td><td>none</td><td>the bytes one machine takes</td></tr>' +
+      '<tr><td><code>gb_create</code></td><td>none</td><td>the context of a new machine</td></tr>' +
+      '<tr><td><code>gb_set_cart</code></td><td>context, image address, image length in bytes</td><td>nothing</td></tr>' +
+      '<tr><td><code>gb_reset</code></td><td>context</td><td>nothing</td></tr>' +
+      '<tr><td><code>gb_run_frame</code></td><td>context</td><td>nothing; runs one frame step (section 1)</td></tr>' +
+      '<tr><td><code>gb_frame_ptr</code></td><td>context</td><td>the address of the frame buffer</td></tr>' +
+      '<tr><td><code>gb_frame_format</code></td><td>context</td><td>0 for shade indices, 1 for BGR555</td></tr>' +
+      '<tr><td><code>gb_frame_layout_is</code></td><td>context, pixels, bytes, format</td><td>0 when all three match this machine; otherwise 1 for pixels, 2 for bytes, 3 for format, checked in that order</td></tr>' +
+      '<tr><td><code>gb_cart_min_block</code></td><td>none</td><td>the smallest block the cartridge store hands out, in bytes</td></tr>' +
+      '<tr><td><code>core_version</code></td><td>none</td><td>the interface version, 2</td></tr>' +
+    '</tbody></table>' +
+    '<div class="gbemu-why"><b>Why.</b> These names are our convention, not hardware.</div>' +
     '<p class="hw-readable">The page also names material it ' +
     'does not reproduce: our source file and its constants (named so a reader of our source can find the ' +
     'site; every behaviour this page relies on is stated here in words and numbers, never only by a ' +

@@ -24,9 +24,9 @@
  *
  * The core this page describes (the factbox figures are moved by the install
  * generator from play/nes/CORE-VERSION.json; this comment follows them):
- *   eight source files   1,459,526 bytes over eight files, LF-normalised,
- *                        set hash b3cafee8e510492b...
- *   the module           257,125 bytes, sha256 8bf5958fe848c0c0...
+ *   eight source files   1,588,478 bytes over eight files, LF-normalised,
+ *                        set hash 3fb90593f5f6de1f...
+ *   the module           308,469 bytes, sha256 11bdfbfa1e99156a...
  *
  * NO SCREENSHOTS. There is no NES render bundled in this repository's image
  * payloads, and a broken image is worse than an absent one.
@@ -35,11 +35,11 @@ function nesEmulationTabHTML(d) {
   return '<div class="gbemu nesemu">' +
 
   '<section class="gbemu-hero">' +
-    '<div class="gbemu-hero-num"><b>146</b><span>of 146 on AccuracyCoin</span></div>' +
+    '<div class="gbemu-hero-num"><b>147</b><span>of 147 on AccuracyCoin</span></div>' +
     '<div class="gbemu-hero-txt">' +
       '<h3>How to build a Nintendo Entertainment System, and how much of it anybody can check</h3>' +
       '<p>This is the research for the fifth core on this site, and the number beside it is a ' +
-      'public one: <b>146 of 146</b> on AccuracyCoin, the public NES accuracy test cartridge, ' +
+      'public one: <b>147 of 147</b> on AccuracyCoin, the public NES accuracy test cartridge, ' +
       'judged by the cartridge itself. Anyone can run the same cartridge and read the same ' +
       'verdicts, which is the point of quoting it. Section&nbsp;2 says what it covers and what ' +
       'it does not.</p>' +
@@ -108,24 +108,24 @@ function nesEmulationTabHTML(d) {
     'machine, and its number says nothing about this one.</p>' +
     '<table class="gbemu-table"><tbody>' +
       '<tr><td>Source</td><td>Eight files: ' +
-        '<code>nes.c</code> 273,171, <code>nes_apu.inc</code> 105,099, <code>nes_cpu.inc</code> ' +
-        '49,906, <code>nes_fds.inc</code> 82,540, <code>nes_input.inc</code> 74,202, ' +
-        '<code>nes_mapper.inc</code> 695,532, <code>nes_ppu.inc</code> 142,628, ' +
-        '<code>nes_vs.inc</code> 36,448 bytes. <b>1,459,526 bytes in total</b>, LF-normalised, set ' +
-        'hash <code>b3cafee8e510492b&hellip;</code>. <code>nes.c</code> includes the other seven, ' +
+        '<code>nes.c</code> 281,338, <code>nes_apu.inc</code> 105,812, <code>nes_cpu.inc</code> ' +
+        '49,906, <code>nes_fds.inc</code> 83,987, <code>nes_input.inc</code> 74,202, ' +
+        '<code>nes_mapper.inc</code> 812,129, <code>nes_ppu.inc</code> 144,656, ' +
+        '<code>nes_vs.inc</code> 36,448 bytes. <b>1,588,478 bytes in total</b>, LF-normalised, set ' +
+        'hash <code>3fb90593f5f6de1f&hellip;</code>. <code>nes.c</code> includes the other seven, ' +
         'so all eight are compiled.</td></tr>' +
       '<tr><td>Binary</td><td>The WebAssembly module, sha256 ' +
-        '<code>8bf5958fe848c0c0&hellip;</code>, <b>257,125 bytes</b>, 208 exported functions, ' +
-        '<b>0 imports</b>, ABI version 1, emulator context 157,984 bytes</td></tr>' +
+        '<code>11bdfbfa1e99156a&hellip;</code>, <b>308,469 bytes</b>, 208 exported functions, ' +
+        '<b>0 imports</b>, ABI version 1, emulator context 159,024 bytes</td></tr>' +
       '<tr><td>Build</td><td><code>clang --target=wasm32 -nostdlib -O2 -flto -ffreestanding</code>, ' +
         'no entry point, exports dynamic, 128 KiB stack, undefined symbols allowed. <b>It is ' +
-        'byte-reproducible.</b> The build recipe reproduces 257,125 bytes and that equals the ' +
+        'byte-reproducible.</b> The build recipe reproduces 308,469 bytes and that equals the ' +
         'module this site runs, byte for byte, which is what makes the hash checkable rather than ' +
         'a label.</td></tr>' +
     '</tbody></table>' +
     '<p class="hw-readable"><b>The export surface has grown by 115 and lost none</b> since the core had 93 exported functions: <b>208</b> now, <b>0 removed</b>, so a host written against an older version of this core still links. ' +
     '<b>That is not a claim that the older core is still correct</b>: the module is a different ' +
-    '257,125 bytes with a different hash, and every figure on this page is about the current ' +
+    '308,469 bytes with a different hash, and every figure on this page is about the current ' +
     'one.</p>' +
     '<p class="gbemu-key"><b>What none of this establishes is that the core is correct</b>: ' +
     'only that these bytes are the ones that built the module the site serves. A hash detects ' +
@@ -136,13 +136,13 @@ function nesEmulationTabHTML(d) {
    * figure from the internal regression board appears on this page. The score
    * shown is AccuracyCoin's, judged by the cartridge itself. */
   '<section class="sect" id="nese-2"><h3 class="sect-h">2. The score: AccuracyCoin, a public test cartridge</h3>' +
-    '<p class="gbemu-key"><b>AccuracyCoin: 146 of 146, judged by the cartridge itself.</b> ' +
-    'AccuracyCoin is a public NES accuracy test cartridge. It runs 146 tests of the processor, ' +
+    '<p class="gbemu-key"><b>AccuracyCoin: 147 of 147, judged by the cartridge itself.</b> ' +
+    'AccuracyCoin is a public NES accuracy test cartridge. It runs 147 tests of the processor, ' +
     'the picture unit, the audio unit and the timing between them, and it prints its own verdict ' +
     'for each one on the screen. Nothing outside the cartridge decides whether a test passed, so ' +
     'a pass means the behaviour matches what the cartridge was written against, not merely that ' +
     'it agrees with another emulator.</p>' +
-    '<p class="hw-readable"><b>Measured on 2 November 2026, on the core this site serves, with the cartridge&rsquo;s 20 October 2026 build.</b> ' +
+    '<p class="hw-readable"><b>Measured on 8 November 2026, on the core of this release, with the cartridge&rsquo;s 4 November 2026 build.</b> ' +
     'The last test to pass was the hybrid-addresses test. <b>Why this number and not ' +
     'another:</b> anyone can run the same cartridge and read the same screen, on this site, on ' +
     'another emulator or on a console, and that is what makes a score public.</p>' +
@@ -316,14 +316,14 @@ function nesEmulationTabHTML(d) {
 
   /* ==================================================================== 9 */
   '<section class="sect" id="nese-9"><h3 class="sect-h">9. The mapper chips this core has, and the ones it does not</h3>' +
-    '<p class="gbemu-key"><b>233 mapper numbers are dispatched, and that figure is measured ' +
+    '<p class="gbemu-key"><b>301 mapper numbers are dispatched, and that figure is measured ' +
     'rather than listed.</b> A test builds a machine for each number, sweeps the whole cartridge ' +
     'address space and compares it against an identical mapper-0 control, so the count comes ' +
-    'from running the core (measured 1 November 2026, when mapper 30, the UNROM 512 homebrew board, joined). A hand-written list of what an emulator ' +
+    'from running the core (measured 9 November 2026). A hand-written list of what an emulator ' +
     'supports drifts away from the code; a measured one cannot. Anything undispatched falls ' +
     'through to a default that does nothing, which is the honest behaviour: a cartridge whose ' +
     'chip is absent runs as though it had no banking hardware, and shows it.</p>' +
-    '<p class="hw-readable"><b>The table below details 14 of the 233</b>: the ones with a ' +
+    '<p class="hw-readable"><b>The table below details 14 of the 301</b>: the ones with a ' +
     'failure mode worth naming to anyone re-implementing them. It is not the dispatch list and ' +
     'does not claim to be. <b>The Disk System&rsquo;s mapper 20 is not a mapper chip at all</b> ' +
     '(it is a RAM adapter with its own register window, and it has section&nbsp;11 to itself), ' +

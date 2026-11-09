@@ -38,7 +38,7 @@ function gbCpuEmulationTabHTML(d) {
     'as <i>&ldquo;well documented elsewhere&rdquo;</i>, which is true and useless to a reader who ' +
     'does not have the elsewhere. This appendix lists them. ' +
     'Everything below is read out of this core&rsquo;s decode paths, so <b>the 51 Blargg rows and ' +
-    'the 97 Mooneye rows are what verify it</b>.</p>' +
+    'the 97 Mooneye rows are what verify it</b>. Both are rows of the public board, broken down by group in appendix G.2; D.10.1&rsquo;s denominators count acceptance cartridges only.</p>' +
 
     '<h4 class="gbemu-sub">D.1: How to read the tables</h4>' +
     '<div class="gbemu-rule" id="gbr-D-1-1"><b>Rule D.1/1.</b> Each mnemonic must have the effect this table gives, so a build needs no outside knowledge of the instruction set. Flags are D.5&rsquo;s, cycle counts the grids&rsquo; (D.3, D.4), bus order D.12&rsquo;s. Operands: r is B, C, D, E, H, L or A; rr a register pair; (rr) the byte at the address in rr; n8 / d8 an immediate byte, n16 / a16 an immediate 16-bit value stored low byte first; e8 a signed byte.</div>' +
@@ -342,11 +342,11 @@ function gbCpuEmulationTabHTML(d) {
     '<code>0xEC</code> <code>0xED</code> <code>0xF4</code> <code>0xFC</code> <code>0xFD</code>. ' +
     'There are no others.</div>' +
     '<div class="gbemu-rule" id="gbr-D-7-2"><b>Rule D.7/2.</b> <b>When one executes, the processor must lock ' +
-    'permanently.</b> In this core, from that point every step consumes exactly one machine cycle and does nothing ' +
+    'permanently.</b> The byte&rsquo;s own fetch is an ordinary opcode fetch, one machine cycle that advances PC past it, and the lock takes hold at the end of that fetch; nothing can read PC afterwards, so this is unobservable. In this core, from that point every step consumes exactly one machine cycle and does nothing ' +
     'else: no fetch, no advance of PC, and <b>no interrupt dispatch</b>, because the lock is ' +
     'tested before the pending-interrupt check. The rest of the machine keeps running: the picture ' +
     'processor, the timer, the sound unit and any transfer in flight are all still clocked by those ' +
-    'cycles. Only a reset clears it. <b>Do not implement these as <code>NOP</code></b>.</div>' +
+    'cycles, and a frame step still runs a whole frame of them, so the picture keeps being drawn. Only a reset clears it. On this site a game that locks is stopped, with a message. <b>Do not implement these as <code>NOP</code></b>.</div>' +
     '<div class="gbemu-why"><b>Why: two labels, because they are worth different amounts.</b> ' +
     '<em>That</em> the processor locks up is the documented hardware behaviour and this core follows ' +
     'it: <b>MECHANISM</b>. <em>The granularity</em> (one machine cycle per step, with ' +
@@ -454,31 +454,20 @@ function gbCpuEmulationTabHTML(d) {
     'pending): Rule D.9/5.</div>' +
     '<div class="gbemu-rule" id="gbr-D-9-3"><b>Rule D.9/3.</b> <b>Armed: a Colour performing a speed switch.</b> The machine must run these steps:' +
     '<ol class="gbemu-steps">' +
-      '<li>At the <code>STOP</code>: the speed is toggled, and the actual flip is deferred by a <b>flip counter set to 4</b>: it goes down once per stalled machine cycle while the processor is halted and once per instruction boundary while it runs (the Colour tab, Rule C3/5, has the exact points). ' +
-      '<code>KEY1</code> is cleared to <code>0x00</code>. The divider is reset.</li>' +
-      '<li>If no interrupt is already pending, the processor <b>halts</b> and a countdown starts: <b>32,766 machine cycles on the shipped core</b>, the community figure of 32,770 machine cycles (131,080 T-cycles) less 4, because the Colour runs its own timing and its stall is 4 machine cycles shorter (FITTED; the Colour tab, section 3, has both totals in dots and the measurement). If an interrupt is already pending there is no halt and no countdown.</li>' +
-      '<li><b>The flip completes whether or not the processor halts</b>: the flip counter runs out and the speed changes on both paths. While running, &ldquo;4&rdquo; is four instruction boundaries, which is four machine cycles only when every instruction in between is one machine cycle long.</li>' +
-      '<li>While halted, the divider runs through the stall (so the timer and the sound unit&rsquo;s frame sequencer see its edges).</li>' +
-      '<li>When the countdown expires the halt ends, and the divider is reset again and released at the end of the switch&rsquo;s last machine cycle rather than at its start.</li>' +
-      '<li>An interrupt wakes the halt early: the countdown is cancelled and the second reset of step 5 is skipped.</li>' +
+      '<li>At the end of the <code>STOP</code>&rsquo;s operand fetch: <code>KEY1</code> is cleared to <code>0x00</code> and a step counter starts (the Colour tab, Rule C3/5, has the exact points). The divider is not reset there.</li>' +
+      '<li>If no interrupt is already pending, the processor <b>halts</b> and a countdown starts: <b>32,769 machine cycles on the shipped core</b>, the AGE emulator&rsquo;s pause of 32,768 machine cycles counted one more, because this core&rsquo;s bus accesses land at the end of a machine cycle (the Colour tab, section 3, has both totals in dots). The community figure is 32,770 machine cycles (131,080 T-cycles), which this core does not use. If an interrupt is already pending there is no halt and no countdown.</li>' +
+      '<li><b>The speed changes whether or not the processor halts</b>, counted in machine cycles, never in instructions: at the start of the second machine cycle after the operand fetch, or of the third on revisions B and C when an interrupt was already pending.</li>' +
+      '<li>The divider is reset once, at the end of the machine cycle before the speed changes, and then runs through the stall (so the timer and the sound unit&rsquo;s frame sequencer see its edges).</li>' +
+      '<li>When the countdown expires the halt ends. There is no second reset: the 32,768 machine cycles after the reset are twice the divider&rsquo;s range, so it reads 0 there.</li>' +
+      '<li>An interrupt wakes the halt early: the countdown is cancelled; the speed change and the reset of step 4 still happen.</li>' +
     '</ol>' +
-    'Observable rule: the divider reads as held in reset for the whole interval and <b>comes out of reset when the countdown expires</b>, not when it begins. The halt is a halt (Rule D.8/4), not STOP mode.</div>' +
-    '<div class="gbemu-why"><b>Why the deferral is 4.</b> <b>FITTED, the number is 4, and it is bracketed against a declared table: ' +
-    '0 gives 4 differing samples, 3 gives 1, 4 gives 0 of 224, 5 gives 1. Both neighbours fail.</b> ' +
-    'The same bracket is carried by the Colour page: the Emulation tab of any Game ' +
-    'Boy Color title here, section 3. The bracket does not ' +
-    'make the 4 derived: a unique optimum with both neighbours failing is still a fit, and the ' +
-    'declared table is one test author&rsquo;s, so the ceiling on this evidence is ' +
-    'CARTRIDGE-DECLARED and not silicon. <b>What it does buy is that the value is ' +
-    'falsifiable and the falsifier is cheap:</b> run that cartridge at 3, 4 and 5 and require 1, 0 ' +
-    'and 1 differing samples. <b>What would earn MECHANISM:</b> an account of why the flip lands ' +
-    'four machine cycles into the stall rather than at the <code>STOP</code>. Nobody has one.</div>' +
-    '<div class="gbemu-why"><b>Why step 3.</b> The switch belongs to the clock, not to the halt. A core that counts the deferral only inside ' +
+    'Observable rule: the divider <b>reads 0 when the countdown expires</b>, as if it came out of reset there. The halt is a halt (Rule D.8/4), not STOP mode.</div>' +
+    '<div class="gbemu-why"><b>Why the count is in machine cycles.</b> MECHANISM, read in the AGE emulator (by the author of the AGE tests) and confirmed on his speed-switch tables, verified on CPU CGB B and C; the extra machine cycle on revisions B and C with an interrupt pending is FITTED to <code>spsw-interrupts</code>, its reason NOT ESTABLISHED. ' +
+    '<b>What would show it wrong:</b> a hardware capture of an edge after a switch that disagrees with the constant 149 dots per pair of switches (the Colour tab, Rule C10/43).</div>' +
+    '<div class="gbemu-why"><b>Why step 3.</b> The switch belongs to the clock, not to the halt. A core that counts the change only inside ' +
     'the halt loses the switch on the no-halt path: <code>KEY1</code> is cleared, its speed bit never ' +
     'rises, and a game polling for double speed spins forever.</div>' +
-    '<div class="gbemu-why"><b>Why the divider steps.</b> Nothing can read the divider during the stall, so steps 1, 4 and 5 are what our core does exactly behind the observable rule; the release at the end of the last machine cycle is the AGE test <code>spsw-div</code>&rsquo;s (MECHANISM). MECHANISM, read from our source (<code>STOP_DIV_ORDER</code>). The ordering is a ported ordering choice whose &ldquo;release it before the operand fetch&rdquo; ' +
-    'arm was measured and refuted in the tree it came from, and is kept as a scored negative saying ' +
-    'the release must move later, never earlier.</div>' +
+    '<div class="gbemu-why"><b>Why one reset.</b> 32,768 machine cycles of 4 T-cycles are 131,072, twice the 16-bit divider&rsquo;s range, so it reads 0 after the stall with no second reset; one exception at the reset itself (the Colour tab, Rule C3/7, step 2) is what <code>spsw-tima</code> needs. MECHANISM, read in the AGE emulator; <code>spsw-div</code> and <code>spsw-tima</code> pass. Read from our source (<code>spsw_div_reset</code>).</div>' +
     '<div class="gbemu-why"><b>Why it halts and does not enter STOP mode: the difference is fatal rather than ' +
     'cosmetic.</b> A halted processor wakes on an interrupt or on the countdown. One in STOP mode wakes ' +
     'only on a selected joypad line. A test cartridge in our own tree writes <code>P1 = $30</code> ' +
@@ -499,14 +488,14 @@ function gbCpuEmulationTabHTML(d) {
     '<div class="gbemu-why"><b>Why it is named.</b> Named rather than discovered later. No test we hold reaches it.</div>' +
     '<div class="gbemu-rule" id="gbr-D-9-5"><b>Rule D.9/5.</b> <b>Not armed: original hardware, or a Colour with no switch ' +
     'pending.</b> The machine enters <b>STOP mode</b>: the processor fetches nothing until a <em>selected</em> joypad line reads low. A group must actually be selected in <code>P1</code>; with <code>P1 = $30</code> ' +
-    'nothing can ever wake it, which is the real behaviour and not a bug to route around. The ' +
-    'divider is reset. <b>Time still passes in STOP mode</b>, so the wake can arrive: <b>every machine cycle of STOP mode is an ordinary 4-T tick</b>, so the divider and timer count (and can raise the timer request), the sound unit and its frame sequencer run, an object-memory transfer already running carries on, and the cartridge clock advances. Only the processor stops. The picture runs too, except in the one case of Rule D.9/6.</div>' +
+    'nothing can ever wake it, which is the real behaviour and not a bug to route around. With a Super Game Boy attached only player 1&rsquo;s lines wake it (Rule A.6/7). The ' +
+    'divider is reset at the end of the operand fetch, after that fetch&rsquo;s access, by the same path as a write to <code>FF04</code> (Rule 4/1): a high selected timer bit can increment TIMA, and the sound unit sees a fall of its sequencer bit (Rule 15/2). <b>Time still passes in STOP mode</b>, so the wake can arrive: <b>every machine cycle of STOP mode is an ordinary 4-T tick</b>, so the divider and timer count (and can raise the timer request), the sound unit and its frame sequencer run, an object-memory transfer already running carries on, and the cartridge clock advances. Only the processor stops. The picture runs too, except in the one case of Rule D.9/6. <b>The wake.</b> At the head of each machine cycle of STOP mode, after the picture is paid, the machine tests the pad. When a selected line reads low, STOP mode ends, and that machine cycle still runs as an ordinary 4-T tick with no interrupt test, no look and no fetch; the wake adds no machine cycle of its own. An ordinary instruction boundary follows it (Rules D.10.1/3 and D.10.1/5): the look is decided as at any boundary, and a request that became pending in STOP mode is taken there when IME is set.</div>' +
     '<div class="gbemu-why"><b>Why.</b> Read from our source.</div>' +
-    '<div class="gbemu-rule" id="gbr-D-9-6"><b>Rule D.9/6.</b> <b>The picture is blanked in STOP mode, under one condition: the LCD is on <em>and</em> the reported mode is 1.</b> At the <code>STOP</code>, when both hold:' +
+    '<div class="gbemu-rule" id="gbr-D-9-6"><b>Rule D.9/6.</b> <b>The picture is blanked in STOP mode, under one condition: the LCD is on <em>and</em> the reported mode is 1.</b> At the end of the <code>STOP</code>&rsquo;s operand fetch, read as the picture stands at that fetch&rsquo;s access, when both hold:' +
     '<ol class="gbemu-steps">' +
       '<li>The whole frame buffer is filled once, with shade index 0 on the original and <code>0x0000</code> on the Colour (the Colour tab, section 6).</li>' +
-      '<li>The picture unit stops: no dot is processed (LY, STAT, the comparator and the frame buffer all hold).</li>' +
-      '<li>At the wake, the picture unit resumes where it stopped.</li>' +
+      '<li>The picture unit stops: no dot is processed (LY, STAT, the comparator and the frame buffer all hold). The dots the operand fetch still owes are dropped, not repaid.</li>' +
+      '<li>At the wake, the picture unit resumes where it stopped: the waking machine cycle&rsquo;s own dots are owed as usual and paid at the next instruction boundary.</li>' +
     '</ol>' +
     'A <code>STOP</code> in modes 0, 2 or 3, or with the LCD off, blanks nothing, and the picture keeps running while the processor is in STOP mode. <b>This blanking is required, not optional: a board row depends on it.</b></div>' +
     '<div class="gbemu-why"><b>Why.</b> daid&rsquo;s <code>stop_instr</code> (on the original) has a reference picture that our core matches only with the blanking; built without it, it fails at 55 checkpoints (our core with the blanking switched off fails exactly as an independent build that left it out did). Leaving modes 0 and 2 untouched is ' +
@@ -587,7 +576,7 @@ function gbCpuEmulationTabHTML(d) {
       '<tr><td>3</td><td>Display</td><td>On.</td></tr>' +
       '<tr><td>4</td><td>Sprite-memory transfer</td><td>None running, and none starting.</td></tr>' +
       '<tr><td>5</td><td>Picture level</td><td>No dots owed once step 1 has paid the picture. This holds at every boundary reached after at least one machine cycle has run since the last look, so <b>a look on the previous boundary does not block this one</b>, even after a one-cycle <code>NOP</code>. The only boundary this row excludes is one reached with no machine cycle run since a look (a halted processor&rsquo;s own look; a halted processor never looks anyway, row 2).</td></tr>' +
-      '<tr><td>6</td><td>Worth the look</td><td>The vertical-blank or the status interrupt, either or both, is enabled in IE while its bit is clear in IF: <code>IE &amp; 0x03 &amp; ~IF</code> is not 0.</td></tr>' +
+      '<tr><td>6</td><td>Worth the look</td><td>The vertical-blank or the status interrupt, either or both, is enabled in IE while its bit is clear in IF: <code>IE &amp; 0x03 &amp; ~IF</code> is not 0. IF here is the stored byte: a status bit that is set and still held out of the test (Rule 14/11) counts as set.</td></tr>' +
       '<tr><td>7</td><td>Near a rising request</td><td>At least one of: S is 452 or more (the end of a line, the power-on line included); S is 12 or less (the start of a line); the line is drawing (internal mode 3, the live mode that drives memory blocking, or interrupt-logic mode 3) and the output position (the count of pixels popped so far on the line, the glossary&rsquo;s sense; not the pixels that have reached the screen, which lag the pops by one dot) is 140 or more. <code>RUN_IRQ_LOOK_EDGES</code> switches these windows: it is a pair of on/off bits, 1 for the line start (the first two windows) and 2 for the end of drawing, so 3 is both. It is not a count of dots. These are the dots where a picture request can rise: the start of a line (the first two windows: mode 2, coincidence and vertical blank) and the end of drawing (the third).</td></tr>' +
       '<tr><td>8</td><td>The next instruction</td><td>Its second machine cycle is not a memory access through (HL), (BC), (DE), (C) or the stack. Read off the opcode at PC (peeked: no machine cycle and no dot is spent on it), the look is <b>not</b> made before: <code>LD (BC),A</code>, <code>LD (DE),A</code>, <code>LD (HL+),A</code>, <code>LD (HL-),A</code> and the four loads of A from the same places; <code>INC (HL)</code>, <code>DEC (HL)</code>; every <code>LD r,(HL)</code> and <code>LD (HL),r</code>; the eight A-with-(HL) arithmetic and logic opcodes; <code>LDH (C),A</code> and <code>LDH A,(C)</code>; the four <code>POP</code>s, <code>RET</code> and <code>RETI</code>. As bytes: <code>0x02 0x12 0x22 0x32 0x0A 0x1A 0x2A 0x3A 0x34 0x35 0x46 0x4E 0x56 0x5E 0x66 0x6E 0x7E 0x70</code>&ndash;<code>0x75 0x77 0x86 0x8E 0x96 0x9E 0xA6 0xAE 0xB6 0xBE 0xE2 0xF2 0xC1 0xD1 0xE1 0xF1 0xC9 0xD9</code>. Every other opcode allows it (its second cycle is an operand fetch, an internal cycle or a second opcode byte), <code>0xCB</code> included.</td></tr>' +
     '</tbody></table></div>' +

@@ -118,7 +118,12 @@
          or pointer is on (else the chosen page) shows under the row, and each button is still named
          by its text for a screen reader. Left / Right move along the row (nav.js reads a one-row
          list that way), Down goes into the page. The desk keeps its text tabs down the left. */
-      #vault-overlay .settings-tab > .st-ic { display: none; }
+      /* THE DESK SHOWS THE SAME ICONS (8 Nov 2026): each page's phone icon, left of its name,
+         in the name's own colour (so the chosen page's is the accent, in every theme). */
+      #vault-overlay .settings-tab > .st-ic { display: block; flex: 0 0 auto; width: 16px; height: 16px; margin-right: 8px; }
+      /* The column is wider by just the icon's room (16 + 8 px), so every name keeps the line breaks it had. */
+      #vault-overlay:not(.st-full) .settings-tabs { flex-basis: 192px; }
+      #vault-overlay.st-full .settings-tabs > .settings-tab > .st-ic { width: 22px; height: 22px; margin-right: 0; }
       #vault-overlay .settings-tabs > .st-cap { display: none; }
       #vault-overlay.st-full .settings-tabs {
         position: sticky; top: 0; z-index: 2;
@@ -245,7 +250,7 @@
         b.type = 'button'; b.className = 'settings-tab'; b.dataset.st = pg.id; b.dataset.tab = pg.id;
         b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', 'false');
         b.id = 'st-tab-' + pg.id; b.setAttribute('aria-controls', 'st-page-' + pg.id);
-        // An icon (shown on a small screen only) and the name (the desk's tab text; on a small
+        // An icon (left of the name on the desk since 8 Nov 2026; alone on a small screen) and the name (the desk's tab text; on a small
         // screen it is read out and shown under the row, see cap()).
         b.innerHTML = '<svg class="st-ic" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + pg.ic + '</svg><span class="st-lbl"></span>';
         b.querySelector('.st-lbl').textContent = pg.label;

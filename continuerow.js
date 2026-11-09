@@ -123,6 +123,13 @@
   const REWIND_CAP_BYTES = 4 * 1024 * 1024;
   const REWIND_TOTAL_BYTES = 48 * 1024 * 1024;
   const RDB = 'gnw-continue-rewind', RSTORE = 'rewind';
+  /* AUTO SAVE ON EXIT (9 Nov 2026: a setting, on by default, today's behaviour). Off: leaving
+     a game writes no save here (a card it already has keeps the save it had). The game's own battery
+     save is still kept, and the saves the player makes are not touched. The switch is in Settings,
+     Configurations (settings-config.js). Kept only in this browser. */
+  const AUTOSAVE_KEY = 'gnw.autoSaveOnExit';
+  function autoSaveOnExit() { try { return localStorage.getItem(AUTOSAVE_KEY) !== '0'; } catch (e) { return true; } }
+  function setAutoSaveOnExit(on) { try { if (on) localStorage.removeItem(AUTOSAVE_KEY); else localStorage.setItem(AUTOSAVE_KEY, '0'); } catch (e) {} }
 
   /* ------------------------------------------------------------ storage */
   let _dbp = null;
@@ -636,6 +643,125 @@
     } catch (e) { return null; }
   }
 
+  /* ---------------------------------------------------- the record of play
+     GAME SESSIONS ARE RECORDED (7 Nov 2026: "Yes add the history of games recording in this
+     version"). One record for each session of 30 seconds or more of real play, in a database of
+     its own, so nothing that looks after Continue touches it: not Remove, not the 40-game cap, not
+     the orphan sweep, not deleting saves. NOTHING PRUNES IT, and there is no way to clear it.
+       { sid, id, sha256, title, sys, version, machine, started, played, v: 1 }
+     played is ms of real play: the Continue clock's time, less anything after a cheat came on (play
+     time's rule of 26 Oct, index.html). Device, address, inputs, cheats and game bytes are never in it.
+     THE RECORD IS WRITTEN WHILE THE GAME IS OPEN: at 30 s, each minute after, on a hidden page and
+     on close. One session keeps one sid, so these writes are one record whose played grows; a sid is
+     never reused. An IndexedDB write still open as a page goes away is not kept (play/host/saves.mjs),
+     so each record goes first to a small localStorage note, taken off once the database has it and
+     read back on the next load. A failure is silent: no storage, no record, and the game never waits.
+     Films and shows are not here: Emby and Jellyfin hold those. */
+  const HDB = 'cw-play-history', HSTORE = 'sessions';
+  const HNOTE = 'cw.playHistory.pending.';
+  const HISTORY_EVERY_MS = 60000;
+  let _hdbp = null;
+  function hdb() {
+    if (_hdbp) return _hdbp;
+    _hdbp = new Promise((res, rej) => {
+      let r;
+      try { r = indexedDB.open(HDB, 1); } catch (e) { rej(e); return; }
+      r.onupgradeneeded = () => { try { r.result.createObjectStore(HSTORE, { keyPath: 'sid' }).createIndex('started', 'started'); } catch (e) {} };
+      r.onsuccess = () => { const db = r.result; db.onclose = () => { _hdbp = null; }; res(db); };
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('blocked'));
+    }).catch(e => { _hdbp = null; throw e; });
+    return _hdbp;
+  }
+  function newSid() {
+    try {
+      const a = new Uint8Array(16);
+      crypto.getRandomValues(a);     // not randomUUID: that needs HTTPS, and the TV may be on plain HTTP
+      return Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { return Date.now().toString(16) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2); }
+  }
+  /* The larger played wins, so an old note read back late never shortens a record. */
+  async function historyPut(rec) {
+    const db = await hdb();
+    return new Promise((res, rej) => {
+      const t = db.transaction(HSTORE, 'readwrite'), st = t.objectStore(HSTORE), g = st.get(rec.sid);
+      g.onsuccess = () => { if (!g.result || !(g.result.played > rec.played)) st.put(rec); };
+      t.oncomplete = () => res();
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error);
+    });
+  }
+  function historyNoteDone(key, text) {
+    try { if (localStorage.getItem(key) === text) localStorage.removeItem(key); } catch (e) {}
+  }
+  function historyKeep(rec) {
+    const key = HNOTE + rec.sid, text = JSON.stringify(rec);
+    try { localStorage.setItem(key, text); } catch (e) {}
+    historyPut(rec).then(() => historyNoteDone(key, text), () => {});
+  }
+  /* Notes a page left behind go into the database. A read does this first, so it sees everything. */
+  function historyDrain() {
+    const jobs = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || key.indexOf(HNOTE) !== 0) continue;
+        const text = localStorage.getItem(key);
+        let rec = null;
+        try { rec = JSON.parse(text); } catch (e) {}
+        if (rec && rec.sid && rec.v) jobs.push(historyPut(rec).then(() => historyNoteDone(key, text), () => {}));
+        else jobs.push(Promise.resolve().then(() => historyNoteDone(key, text)));
+      }
+    } catch (e) {}
+    return Promise.all(jobs);
+  }
+  /* What the window holds, read once, as soon as its game is running: the frame is the right one
+     then and may be gone by the time the session ends. Cheap, and no save routine. */
+  function historyLook(overlayId, s) {
+    try {
+      const win = frameWin(SYSTEMS[overlayId].frame), H = win && win.__cwHost;
+      if (!H || H.state !== 'running') return;   // a page still loading counts as open, before it has a game
+      s.looked = true;
+      if (typeof H.sha256 === 'string') s.sha256 = H.sha256;
+      // The machine it really ran on: a Game Boy game can play on the Color.
+      if (SYSTEMS[overlayId].id === 'gb' && H.model) s.machine = H.model === 'cgb' ? 'Game Boy Color' : 'Game Boy';
+    } catch (e) {}
+  }
+  function historySave(overlayId, s) {
+    try {
+      if (!s || s.real < MIN_PLAY_MS || s.real === s.kept) return;
+      // A file opened from this computer has no id here, as with Continue and play time (play-file.js).
+      const id = overlayId === 'play-overlay' && typeof deviceIdForGameKey === 'function' ? deviceIdForGameKey(s.dev) : s.dev;
+      if (!id) return;
+      const sysId = SYSTEMS[overlayId].id, d = deviceOf(id);
+      let version = null;
+      try { version = (window.Variants && window.Variants.cardLabel(id)) || null; } catch (e) {}
+      s.kept = s.real;
+      historyKeep({ sid: s.sid, id, sha256: s.sha256 || null, title: (d && d.name) || String(id), sys: sysId, version,
+        machine: s.machine || systemLabel({ sys: sysId }, d), started: s.started, played: Math.round(s.real), v: 1 });
+    } catch (e) {}
+  }
+  function historySaveOpen() {
+    for (const overlayId of Object.keys(_sess)) historySave(overlayId, _sess[overlayId]);
+  }
+  /* For the panel and the sync that come later; nothing on screen reads these yet. Oldest first. */
+  async function historyRead(ask, none) {
+    try {
+      await historyDrain();
+      const db = await hdb();
+      return await new Promise((res, rej) => {
+        const r = ask(db.transaction(HSTORE, 'readonly').objectStore(HSTORE));
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    } catch (e) { return none; }
+  }
+  window.CwPlayHistory = {
+    all: () => historyRead(st => st.index('started').getAll(), []),
+    since: startedAfterMs => historyRead(st => st.index('started').getAll(IDBKeyRange.lowerBound(+startedAfterMs || 0, true)), []),
+    count: () => historyRead(st => st.count(), 0),
+  };
+
   /* ---------------------------------------------------------- play clock
      How long each open play window has really been PLAYED this session (the
      30-second rule above). Sampled every SAMPLE_MS and on every visibility
@@ -689,13 +815,22 @@
     const t = _clock();
     for (const overlayId of Object.keys(SYSTEMS)) {
       const ov = document.getElementById(overlayId);
-      if (!ov || !ov.classList.contains('open')) { delete _sess[overlayId]; continue; }
+      if (!ov || !ov.classList.contains('open')) { historySave(overlayId, _sess[overlayId]); delete _sess[overlayId]; continue; }
       const dev = sessionKey(overlayId);
       let s = _sess[overlayId];
-      if (!s || s.dev !== dev) s = _sess[overlayId] = { dev, ms: 0, last: t, on: false, origin: originOf(overlayId) };
-      if (s.on) s.ms += Math.max(0, Math.min(t - s.last, MAX_STEP_MS));
+      if (!s || s.dev !== dev) {
+        historySave(overlayId, s);
+        s = _sess[overlayId] = { dev, ms: 0, last: t, on: false, origin: originOf(overlayId), sid: newSid(), started: Date.now(), real: 0, kept: 0 };
+      }
+      if (s.on) {
+        const step = Math.max(0, Math.min(t - s.last, MAX_STEP_MS));
+        s.ms += step;
+        if (ov.dataset.cheated !== '1') s.real += step;
+      }
       s.last = t;
       s.on = playingNow(overlayId);
+      if (s.on && !s.looked) historyLook(overlayId, s);
+      if (s.real >= MIN_PLAY_MS && (!s.kept || s.real - s.kept >= HISTORY_EVERY_MS)) historySave(overlayId, s);
     }
   }
   /* WHERE THIS SESSION CAME FROM (decided 2026-10-07, see MIN_PLAY_MS):
@@ -715,6 +850,9 @@
   }
   setInterval(samplePlay, SAMPLE_MS);
   document.addEventListener('visibilitychange', samplePlay);
+  /* The record of play: a hidden page may never come back. The same two moments as play time. */
+  document.addEventListener('visibilitychange', () => { if (document.hidden) historySaveOpen(); });
+  window.addEventListener('pagehide', () => { samplePlay(); historySaveOpen(); });
 
   function onPlayClose(overlayId, deviceId) {
     try {
@@ -741,6 +879,7 @@
          that is the cartridge, not this row. */
       const played = playedMs(overlayId);
       const sess = _sess[overlayId];
+      historySave(overlayId, sess);
       delete _sess[overlayId];
       const long = played >= MIN_PLAY_MS;
       const prior = _known.get(deviceId) || null;
@@ -763,6 +902,7 @@
           if (a && typeof a.started === 'function' && !a.started()) skip = 'no-game-started';
         } catch (e) {}
       }
+      if (!autoSaveOnExit()) skip = 'auto-save-off';   // Settings: Auto save on exit is off (9 Nov 2026)
       if (skip) {
         window.__continueLastClose = { id: deviceId, origin, playedMs: Math.round(played), saved: false, reason: skip, at: Date.now() };
         if (sys.frame) {
@@ -1042,6 +1182,7 @@
     try { sys.open(rec.id); } catch (e) { console.warn('[continue] could not open', rec.id, e); return; }
     if (rec.state == null) return;                 // relaunch only
     const relaunch = _relaunch = (_pmResume && _relaunch && _relaunch.id === rec.id) ? _relaunch : { id: rec.id, ov: ovId, restored: false };
+    historySave(ovId, _sess[ovId]);
     delete _sess[ovId];                            // the session starts again, as a 'card' one (originOf)
     const token = ++_restoring;
     const api = restoreApi(rec);
@@ -1681,6 +1822,8 @@
   window.ContinueRow = {
     mount, refresh, enabled, setEnabled,
     onPlayClose, frameHold,
+    /* Settings, Auto save on exit (9 Nov 2026): read and set. */
+    autoSaveOnExit, setAutoSaveOnExit,
     /* Is this play window being genuinely played right now (open, visible, not
        paused, not loading, past any attract demo)? index.html's play-time
        total counts only while this is true. */
@@ -1714,7 +1857,7 @@
   };
 
   // The orphan sweep first, then the list, so a hidden record from an older version is never drawn.
-  const start = () => { ensureStyles(); watchPlayer(); sweepOrphans().then(listGames, listGames).catch(() => {}); if (document.getElementById('video-continue')) mount(); };
+  const start = () => { historyDrain().catch(() => {}); ensureStyles(); watchPlayer(); sweepOrphans().then(listGames, listGames).catch(() => {}); if (document.getElementById('video-continue')) mount(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })();

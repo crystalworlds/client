@@ -31,7 +31,7 @@
   var LICENCE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/';
   var ART_MISS_KEY = 'gnw.meta.artMiss.v1';
   // Bumped with every pack rebuild so a cached index.json or shard is never mixed with new ones.
-  var DATA_TAG = '?v=2.0.0-p4g';   // 4 Nov: LaunchBox descriptions where no other source has one; one game, one group (p4g)
+  var DATA_TAG = '?v=2.1.0';   // 4 Nov: LaunchBox descriptions where no other source has one; one game, one group
   // LaunchBox user ratings. Turned off 2026-10-14 when testing found the links opened wrong games; back on after the audit (every scored record: name, platform, rating, votes and linked page match). false hides them.
   var SHOW_LB = true;
 

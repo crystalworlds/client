@@ -5,7 +5,8 @@
  * a long list of features reads best broken into those blocks. Nothing else is taken from it:
  * no text, no logo, no artwork, no colours. Every colour here is one of the site's own tokens,
  * so the window follows the theme and the accent the visitor picked (the window's screen keeps
- * the dark palette in light mode, like Home, Timeline and About: index.html .about-pop).
+ * the dark palette in light mode, like Home, Timeline and About: index.html .about-pop; on a small
+ * screen, no frame, it follows the theme: small-light.css).
  * All classes start with ft- so nothing here touches any other part of the page.
  */
 .ft-page { --ft-gap: clamp(14px, 2vw, 20px); color: var(--text); min-width: 0; max-width: 100%;
@@ -96,7 +97,7 @@
 .ft-table td { color: var(--muted); }
 .ft-table tr:last-child th, .ft-table tr:last-child td { border-bottom: 0; }
 .ft-yes { color: var(--accent); font-weight: 800; }
-.ft-no { color: var(--muted); opacity: .7; }
+.ft-no { color: var(--muted); }
 /* Checked by rebuilding (1 Nov 2026): drawn on the Home window by checked-rebuilding.js (this file
    is loaded on every page). A real table at every size, no sideways scroll; see the 760 px rules. */
 .ft-crwrap { overflow-x: visible; }

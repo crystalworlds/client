@@ -1,11 +1,12 @@
 /* compat.css -- the compatibility list window (2026-10-21; compat.js has the why).
    It sits in the Game & Watch frame of the About and Timeline windows, on the black screen, so it
-   always uses the dark palette that .about-pop declares in both themes. Status colours are the home
+   uses the dark palette that .about-pop declares in both themes (on a small screen, no frame:
+   small-light.css). Status colours are the home
    cards' (emulators-table.js ladderCSS); every status is also written, never colour alone. */
 #video-about.video-about > .about-pop.cl-pop { max-width: 1640px; }
 html body .about-pop.cl-pop .gw-frame-bezel { grid-template-columns: 1fr; }
 html body .about-pop.cl-pop .gw-frame-screen { padding: 22px 22px 26px; }
-.cl-root { --lad-plays: #5eead4; --lad-boots: #7b8491; --lad-nothing: #4a515b; --lad-untested: #d4a64a; --lad-track: rgba(255,255,255,.06);
+.cl-root { --lad-plays: #5eead4; --lad-boots: #5f6875; --lad-nothing: #4a515b; --lad-untested: #d4a64a; --lad-track: rgba(255,255,255,.06);
   margin: 0; padding: 0; color: var(--text); font-variant-numeric: tabular-nums; }
 .cl-root .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .cl-sweep { margin: 0 0 4px; font-size: 13px; color: var(--muted); }
@@ -88,7 +89,7 @@ html body .about-pop.cl-pop .gw-frame-screen { padding: 22px 22px 26px; }
 .cl-root .lad-notfound { background: transparent; box-shadow: inset 0 0 0 1.5px #8fa3b8; } .cl-st.lad-notfound { color: #c9d6e3; }
 .cl-why { display: block; margin-top: 3px; font-size: 11.5px; line-height: 1.25; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cl-c-hash code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); }
-.cl-none { color: rgba(255,255,255,.25); }
+.cl-none { color: rgba(255,255,255,.5); }
 .cl-empty { margin: 18px 0; color: var(--muted); }
 
 /* medium: no clip, kind or date column (the clip plays over the cover) */

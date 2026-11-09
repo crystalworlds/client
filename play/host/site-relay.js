@@ -240,6 +240,15 @@
   function gnwPick(files, key) {
     /* `rom` is the key a gnw_games.json built before 24 Oct 2026 used; read it too. */
     const prog = x => x && (x.program || x.rom);
+    /* ANOTHER PROGRAM REVISION OF A DEVICE (8 Nov 2026): 'helmet~cn07' is Helmet's CN-07 program,
+       picked in the drawer. Its own file only (never the usual program in its place); the unit,
+       its artwork and its controls stay the device's, so the container names the device's key. */
+    const vi = String(key).indexOf('~');
+    if (vi > 0) {
+      const v = files && files[key];
+      if (!prog(v)) return null;
+      return btoa(JSON.stringify({ format: 'cw-gnw/1', key: String(key).slice(0, vi), program: prog(v), melody: v.melody || null }));
+    }
     const e = files && (prog(files[key]) ? files[key] : (GNW_TWIN[key] && files[GNW_TWIN[key]]));
     if (!prog(e)) return null;
     return btoa(JSON.stringify({ format: 'cw-gnw/1', key, program: prog(e), melody: e.melody || null }));
@@ -247,7 +256,9 @@
   SOURCES.gnw = {
     key: (kind, id) => {
       if (kind !== 'game') return null;
-      try { const e = typeof GNW_EMULATED_GAMES !== 'undefined' && GNW_EMULATED_GAMES[id]; return e ? e.key : null; } catch (_) { return null; }
+      /* '<device>~<variant>' (8 Nov 2026): that device's other program revision, asked for as '<key>~<variant>'. */
+      const s = String(id), vi = s.indexOf('~'), dev = vi > 0 ? s.slice(0, vi) : s, v = vi > 0 ? s.slice(vi + 1) : '';
+      try { const e = typeof GNW_EMULATED_GAMES !== 'undefined' && GNW_EMULATED_GAMES[dev]; return e ? (v ? e.key + '~' + v : e.key) : null; } catch (_) { return null; }
     },
     pack: what => { const P = window.__GNW_PACK; const r = P && typeof P.programs === 'function' ? P.programs() : null; return gnwPick(r, what); },
     site: what => {

@@ -25,7 +25,9 @@
  *                      has its own tile and drawer of a game, never another's copies.
  *   the drawer         a "Variants" list (label, Default) under Facts; Play Now
  *                      plays the representative, the game on the box. Each row
- *                      plays its own variant, only when it is picked.
+ *                      plays its own variant, only when it is picked. Each list
+ *                      runs A to Z after the default; a list of more than 20
+ *                      versions has a filter box across all its groups.
  *   the play window    a "Variant" control in the header, only when 2+
  *                      variants are loaded; keyboard, remote and pad (also a
  *                      "Change variant" item in the Back pause menu). Switching
@@ -57,7 +59,7 @@
   })();
   const LS = 'gnw.variants.v1';
   /* The tables' own cache tag: bump it whenever build_variants.mjs is re-run. */
-  const TABLES = '2.0.0';
+  const TABLES = '2.1.0';
   const T = {};           // sys -> { by12: Map(sha12 -> row), ids: {}, groups: [] }
   const loading = {};     // sys -> Promise
   let version = 0;        // bumps when a table lands
@@ -473,11 +475,93 @@
   /** A group's id that survives a rebuild while its representative stays: the
       table's 4th group field (the representative's sha256, 16 hex), else null. */
   function groupId(d) { const e = info(d); if (!e) return null; const g = T[e.sys] && T[e.sys].groups[e.g]; return g && g[3] ? e.sys + ':' + g[3] : null; }
-  /** What Play means for a group: the game on the box, its representative. */
+  /** What Play means for a group: the game on the box, its representative; with a preferred
+      region set (9 Nov 2026), that region's release when the game has one here (regionPick). */
   function preferred(id) {
     const ms = members(id);
     if (ms.length < 2) return id;
-    return ms[0].id;
+    const r = region ? regionPick(ms) : null;
+    return (r || ms[0]).id;
+  }
+
+  /* ---------------------------------------------------------------- preferred region
+     9 Nov 2026: "the preferred version just changes the order of the Variants list. Basically opens the
+     default or specific region file if its available as a variant." Settings > Screen and tiles sets it:
+     Default (no preference), USA, Europe or Japan, kept in this browser (gnw.region.v1). With a region set,
+     that region's versions come first in every Variants list (split, so the drawer, the play window's
+     Variant menu and the Control Bar alike), then the rest in the usual order; Play opens that region's
+     release when the game has one, else the game on the box. Tiles, search, box art and where hacks and
+     translations sit do not change, and saves stay per file. Nothing is remembered about what was played.
+     A VERSION'S REGION is read from its label in the table, the part build_variants.mjs writes from the
+     file's No-Intro or GoodTools region tags ("USA", "USA, Europe", "Japan", "Germany"); a label with no
+     such part falls back to the table's region field, which reads an untagged Atari file as the NTSC
+     original (USA). "World" names no one region, so it counts for none. A country counts for its region
+     after the region's own name (Canada for USA; the European countries and Australia for Europe).
+     Play takes a release only: never a translation, hack, changed or bad copy, pirate, prototype or demo,
+     or an arcade board's file. */
+  const LS_REGION = 'gnw.region.v1';
+  const REGION_KEYS = ['usa', 'europe', 'japan'];
+  let region = '';
+  try { const r = localStorage.getItem(LS_REGION); if (REGION_KEYS.indexOf(r) >= 0) region = r; } catch (e) {}
+  const REGION_WORDS = new Set(['japan', 'usa', 'europe', 'world', 'australia', 'brazil', 'china', 'taiwan', 'hong kong', 'korea', 'russia',
+    'france', 'germany', 'spain', 'italy', 'sweden', 'netherlands', 'uk', 'canada', 'asia', 'denmark', 'norway', 'finland', 'portugal', 'greece', 'poland', 'scandinavia']);
+  const REGION_OWN = { usa: ['usa'], europe: ['europe'], japan: ['japan'] };
+  const REGION_ALSO = { usa: ['canada'], europe: ['france', 'germany', 'spain', 'italy', 'sweden', 'netherlands', 'uk', 'denmark', 'norway', 'finland', 'portugal', 'greece', 'poland', 'scandinavia', 'australia'], japan: [] };
+  const RANK_WORD = { 1: 'usa', 2: 'europe', 3: 'japan' };   // the table's region field: 0 World, 1 USA, 2 Europe/Australia/PAL, 3 Japan
+  /** The region words of a title's version ('usa', 'europe', ...), or null when none can be read. */
+  function regionWords(d) {
+    const e = info(d); if (!e) return null;
+    for (const seg of String(e.label || '').split(' · ')) {
+      const ps = seg.split(/\s*,\s*/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      if (ps.length && ps.every(p => REGION_WORDS.has(p))) return ps;
+    }
+    const t = T[e.sys], f = t && t.by12.get(e.sha.slice(0, 12)), w = f && RANK_WORD[f.row[4]];
+    return w ? [w] : null;
+  }
+  /** 1 the version names the preferred region, 2 one of its countries, 0 neither (or no region set). */
+  function regionTier(d) {
+    if (!region) return 0;
+    const w = regionWords(d); if (!w) return 0;
+    if (w.some(x => REGION_OWN[region].indexOf(x) >= 0)) return 1;
+    if (w.some(x => REGION_ALSO[region].indexOf(x) >= 0)) return 2;
+    return 0;
+  }
+  /** The release Play opens for the preferred region, from a members() list (best first), or null. */
+  function regionPick(ms) {
+    let best = null, bt = 9;
+    for (const x of ms) {
+      const k = classOf(x); if (k.c !== 'r' || k.bad) continue;
+      const e = info(x); if (e && /[pdAx]/.test(String(e.flags || ''))) continue;
+      const t = regionTier(x);
+      if (t && t < bt) { best = x; bt = t; }
+    }
+    return best;
+  }
+  function getRegion() { return region; }
+  function setRegion(r) {
+    region = REGION_KEYS.indexOf(r) >= 0 ? r : '';
+    try { if (region) localStorage.setItem(LS_REGION, region); else localStorage.removeItem(LS_REGION); } catch (e) {}
+    /* An open drawer and play window list their versions again in the new order. */
+    try { const dm = document.getElementById('device-modal'), s = dm && dm.querySelector('.vr-sect'); if (s) { s.remove(); decorateDrawer(); } } catch (e) {}
+    try { PLAY_OVS.forEach(renderPicker); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('gnw-region', { detail: { region } })); } catch (e) {}
+    return region;
+  }
+
+  /* ---------------------------------------------------------------- files no table knows
+     9 Nov 2026: a game file whose fingerprint is in no table is shown as homebrew, with a notice asking for
+     what it is and where it was found (drawer-unified.js fillUnknown; emby.js gameTypeKey). True only for a
+     content-addressed id (<prefix>-x<12 hex>) whose system's table has landed and holds no such file; a
+     table still loading, or missing, answers false (nothing is claimed about a file not yet looked up).
+     The site's types table is asked by emby.js (cwUnknownGame) as well. */
+  const ID_SYS = { nes: 'nes', gb: 'gb', pm: 'pm', a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx' };
+  function unknown(x) {
+    const id = typeof x === 'string' ? x : x && x.id;
+    const m = /^([a-z0-9]+)-x([0-9a-f]{12})$/.exec(id || '');
+    const sys = m && ID_SYS[m[1]]; if (!sys) return false;
+    const t = T[sys];
+    if (t === undefined) { load(sys); return false; }
+    return !!t && !t.by12.has(m[2]);
   }
   function labelOf(d) { const e = info(d); return (e && e.label) || (d && (d.fullName || d.name)) || ''; }
   function cardLabel(id) { const d = find(id); return d && members(d).length > 1 ? labelOf(d) : ''; }
@@ -518,17 +602,56 @@
       Hacks open on the NAMED hacks (decided 2026-10-13): a release's trainer,
       fixed or modified-dump copy ([t1], [f1], [h1], classOf's `mod`) comes
       after them, then the bad dumps as before. Order within each part is the
-      list's own. */
-  function split(list) {
+      list's own. Counts use this one: every tile asks, and a count needs no order. */
+  function splitAsListed(list) {
     const p = { r: [], t: [], h: [], o: [] }, late = { r: [], t: [], h: [], o: [] }, mods = [];
     for (const x of list || []) { const k = classOf(x); if (k.mod) mods.push(x); else (k.bad ? late : p)[k.c].push(x); }
     p.h = p.h.concat(mods);
     for (const c of 'rtho') p[c] = p[c].concat(late[c]);
     return p;
   }
+  /* A TO Z (7 Nov 2026). The sort looks past case, accents, the "Hack:" every named hack's label
+     opens with, and leading punctuation or an English article; the labels themselves are not
+     changed. Numbers run in number order (Bros. 2 before Bros. 10). */
+  const fold = s => String(s == null ? '' : s).normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+    .replace(/[\u00df\u00e6\u00f8\u0111\u0142]/g, c => ({ '\u00df': 'ss', '\u00e6': 'ae', '\u00f8': 'o', '\u0111': 'd', '\u0142': 'l' }[c]));
+  const shownName = x => labelOf(x) || x.fullName || x.name || '';
+  const sortKeys = new WeakMap();
+  function sortKey(x) {
+    const c = sortKeys.get(x);
+    if (c && c.v === version) return c.k;
+    const whole = fold(shownName(x));
+    let k = whole, was;
+    do { was = k; k = k.replace(/^[^\p{L}\p{N}]+/u, '').replace(/^hack\s*:\s*/, '').replace(/^(?:the|an?)\s+/, ''); } while (k !== was);
+    k = k || whole;
+    sortKeys.set(x, { v: version, k });
+    return k;
+  }
+  const collate = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+  /** The menus' split: each run of a part A to Z, the same parts and runs as splitAsListed
+      (named hacks, then changed copies, then bad dumps: the rulings above). `list` is a
+      members() list, so list[0] is the default, and it stays first in its part. */
+  function split(list) {
+    if (!Array.isArray(list) || !list.length) return splitAsListed(list);
+    const def = list[0];
+    const rest = list.slice(1).map(x => ({ x, k: sortKey(x) })).sort((a, b) => collate.compare(a.k, b.k)).map(a => a.x);
+    let order = [def].concat(rest), lead = def;
+    /* A PREFERRED REGION (9 Nov 2026): its versions first, the region's own name before its countries, each in the
+       usual order, the release Play opens leading; then the rest as before. */
+    if (region) {
+      const t = new Map(order.map(x => [x, regionTier(x)]));
+      if (order.some(x => t.get(x))) {
+        order = order.filter(x => t.get(x) === 1).concat(order.filter(x => t.get(x) === 2), order.filter(x => !t.get(x)));
+        lead = regionPick(list);   // null: no release of the region to lead; its other versions still come first
+      }
+    }
+    const p = splitAsListed(order);
+    if (lead) { const part = p[classOf(lead).c], at = part.indexOf(lead); if (at > 0) { part.splice(at, 1); part.unshift(lead); } }
+    return p;
+  }
   /** { versions, translations, hacks, other, total } for a title's loaded variants. */
   function counts(idOrDev) {
-    const ms = members(idOrDev), p = split(ms);
+    const ms = members(idOrDev), p = splitAsListed(ms);
     return { versions: p.r.length, translations: p.t.length, hacks: p.h.length, other: p.o.length, total: ms.length };
   }
   const fmt = n => Number(n).toLocaleString('en-AU');
@@ -548,6 +671,8 @@
   /* A submenu shows this many at a time, then "Show more": a 1,000-entry list
      stays light for a phone and short for a remote. */
   const PAGE = 50;
+  /* The drawer's list has a filter box above this many versions, counting every group. */
+  const FIND_OVER = 20;
 
   /* ---------------------------------------------------------------- play */
   const OVERLAYS = { 'nes': 'nes-play-overlay', 'game-boy': 'gb-play-overlay', 'pokemon-mini': 'pm-play-overlay' };
@@ -616,6 +741,25 @@
       .vr-item.vr-disc[aria-expanded="true"] .vr-arrow { transform:rotate(90deg); }
       .vr-list.vr-subl { padding-left:12px; }
       .vr-list.vr-subl[hidden] { display:none; }
+      .vr-sect .vr-list[hidden] { display:none; }
+      .vr-find { display:flex; align-items:center; gap:6px; margin:0 0 8px; padding:0 4px 0 9px; box-sizing:border-box;
+        background:rgba(127,127,127,.08); border:1px solid var(--line,rgba(127,127,127,.35)); border-radius:8px; }
+      .vr-find:focus-within { outline:var(--focus-width,2px) solid var(--focus-ring,var(--accent,#9be15d)); outline-offset:var(--focus-offset,2px); border-color:var(--focus-ring,var(--accent,#9be15d)); }
+      .vr-find-in { flex:1 1 auto; min-width:0; margin:0; padding:7px 0; background:transparent; border:0; outline:0; box-shadow:none;
+        color:var(--text,#e7ecf2); font:inherit; font-size:13px; }
+      .vr-find-in::placeholder { color:var(--muted,#9aa4b2); opacity:1; }
+      .vr-find-x { flex:0 0 auto; width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+        background:transparent; border:0; border-radius:6px; color:var(--muted,#9aa4b2); font:inherit; font-size:16px; line-height:1; }
+      .vr-find-x[hidden] { display:none; }
+      .vr-find-x:hover, .vr-find-x:focus-visible { color:var(--text,#e7ecf2); background:rgba(127,127,127,.18); outline:none; box-shadow:inset 0 0 0 2px var(--focus-ring,var(--accent,#9be15d)); }
+      .vr-find-n { margin:0 0 8px; font-size:12px; color:var(--muted,#9aa4b2); overflow-wrap:anywhere; }
+      .vr-find-n[hidden] { display:none; }
+      .vr-gh { margin:6px 0 0; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted,#9aa4b2); }
+      .vr-gh:first-child { margin-top:0; }
+      /* 16 px on a touch screen: a phone zooms the page into a smaller box. */
+      @media (pointer:coarse), (max-width:860px) { .vr-find-in { font-size:16px; padding:9px 0; } .vr-find-x { width:36px; height:36px; } }
+      body.gnw-tv .vr-find-in { font-size:18px; padding:12px 0; }
+      body.gnw-tv .vr-find-x { width:44px; height:44px; font-size:20px; }
     `;
     document.head.appendChild(s);
   }
@@ -644,11 +788,13 @@
     const parts = split(ms), cp = countParts(counts(d));
     const row = (x) => `<button type="button" class="vr-item" data-vr-play="${esc(x.id)}" title="${esc('Play ' + (x.fullName || x.name))}">${PLAY_SVG}` +
         `<span class="vr-l">${esc(labelOf(x) || x.fullName || x.name)}</span>` +
-        (x === ms[0] ? '<span class="vr-b">Default</span>' : '') + (x.id === last ? '<span class="vr-b">Last played</span>' : '') + '</button>';
+        (x === ms[0] ? '<span class="vr-b">Default</span>' : '') + (x.id === pref && x !== ms[0] ? '<span class="vr-b">Preferred</span>' : '') + (x.id === last ? '<span class="vr-b">Last played</span>' : '') + '</button>';
     const more = (left) => `<button type="button" class="vr-item vr-more-d" data-vr-dmore><span class="vr-l">Show ${fmt(Math.min(PAGE, left))} more (${fmt(left)} left)</span></button>`;
+    const long = ms.length > FIND_OVER;
     sec.innerHTML = `<h3 class="sect-h">Variants <span class="vr-count">${esc(cp.versions)}</span></h3>` +
       (cp.rest ? `<p class="vr-sum">${esc(cp.rest)}</p>` : '') +
-      `<div class="vr-list">` + parts.r.map(row).join('') +
+      (long ? findHTML(ms.length) : '') +
+      `<div class="vr-list vr-main">` + parts.r.map(row).join('') +
       SUBS.filter(([c]) => parts[c].length).map(([c, name]) => {
         const hasLast = parts[c].some(x => x.id === last);
         return `<button type="button" class="vr-item vr-disc" data-vr-disc="${c}" aria-expanded="false" aria-controls="vr-subl-${c}">` +
@@ -678,7 +824,9 @@
       shownN[c] = from + PAGE; fill(c);
       const nb = box.querySelectorAll('.vr-item')[from]; if (nb) nb.focus({ preventScroll: false });
     });
+    if (long) wireFind(sec, id, parts, row);
     host.insertBefore(sec, host.firstChild);
+    if (long) restoreFind(sec, id);
     // Play Now plays the representative, the game on the box.
     const pn = dm.querySelector('.play-now');
     if (pn) {
@@ -688,6 +836,122 @@
       const pd = find(pref);
       pn.title = 'Play ' + (labelOf(pd) || 'this game');
     }
+  }
+
+  /* THE FILTER BOX, on a list of more than FIND_OVER versions. It narrows across all the groups, whatever
+     is opened or closed below it, and shows at most PAGE rows at a time so a 1,000-entry list stays light.
+     It has the two states of the search bar (emby.js, "PASSING THE SEARCH BOX IS NOT TYPING IN IT"):
+       AT REST: readonly + inputmode none, so a remote or pad passes through it like a button and no
+       on-screen keyboard opens. TYPING: by Enter or a pad's A, or a tap or click.
+     Enter or Back while typing ends it and keeps the words, with the list still narrowed; Down goes on
+     to the first row. At rest, Back empties the box, and an empty box lets Back through to close the
+     drawer. Back on a filtered row returns to the box. findKeys below takes these keys. */
+  function findHTML(n) {
+    return `<div class="vr-find" role="search"><input type="text" class="vr-find-in" aria-label="Filter versions" placeholder="Filter ${esc(fmt(n))} versions"` +
+      ` readonly inputmode="none" enterkeyhint="done" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">` +
+      `<button type="button" class="vr-find-x" aria-label="Clear filter" title="Clear filter" hidden>\u00d7</button></div>` +
+      `<p class="vr-find-n" role="status" hidden></p><div class="vr-list vr-res" hidden></div>`;
+  }
+  /* What was typed stays when the drawer repaints itself (a content probe re-opens an open drawer); closing it forgets. */
+  let findMemo = null;   // { id, q, focus: null | 'rest' | 'typing' }
+  const loose = s => s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();   // "bros 2" also finds "Bros. 2"; "[t1]" finds "[t1]"
+  function wireFind(sec, id, parts, row) {
+    const inp = sec.querySelector('.vr-find-in'), clr = sec.querySelector('.vr-find-x'), note = sec.querySelector('.vr-find-n'),
+          res = sec.querySelector('.vr-res'), main = sec.querySelector('.vr-main');
+    const GROUPS = [['r', 'Versions']].concat(SUBS), all = [];
+    for (const [c] of GROUPS) for (const x of parts[c]) all.push({ x, c });
+    const base = inp.placeholder;
+    let hay = null, hits = [], shown = 0, refocusing = false;
+    /* Only while the drawer is open: the box loses its focus just after a close, and must not write the words back. */
+    const memo = () => { const o = document.getElementById('device-overlay'); if (!o || !o.classList.contains('open')) return; findMemo = { id, q: inp.value, focus: document.activeElement === inp ? (inp.readOnly ? 'rest' : 'typing') : null }; };
+    const hint = () => { inp.placeholder = inp.readOnly && document.activeElement === inp ? 'Press OK or Enter to type\u2026' : base; };
+    const paint = () => {
+      let html = '', cur = '';
+      for (const h of hits.slice(0, shown)) {
+        if (h.c !== cur) { cur = h.c; const g = GROUPS.find(([c]) => c === cur); html += `<div class="vr-gh">${esc(g[1])} \u00b7 ${fmt(hits.filter(a => a.c === cur).length)}</div>`; }
+        html += row(h.x);
+      }
+      const left = hits.length - shown;
+      res.innerHTML = html + (left > 0 ? `<button type="button" class="vr-item vr-more-d" data-vr-fmore><span class="vr-l">Show ${fmt(Math.min(PAGE, left))} more (${fmt(left)} left)</span></button>` : '');
+    };
+    const apply = () => {
+      clr.hidden = !inp.value;
+      const q = fold(inp.value).trim();
+      if (!q) { hits = []; res.hidden = true; res.innerHTML = ''; note.hidden = true; note.textContent = ''; main.hidden = false; return; }
+      if (!hay) hay = all.map(a => { const f = fold(shownName(a.x)); return f + '\n' + loose(f); });
+      const ql = loose(q);
+      hits = all.filter((a, i) => hay[i].includes(q) || (ql && hay[i].includes(ql)));
+      shown = PAGE;
+      main.hidden = true;
+      note.hidden = false;
+      note.textContent = hits.length ? fmt(hits.length) + ' of ' + fmt(all.length) + ' versions' : 'No versions match "' + inp.value.trim() + '".';
+      res.hidden = !hits.length;
+      paint();
+    };
+    const rest = () => { inp.readOnly = true; inp.setAttribute('inputmode', 'none'); hint(); };
+    /* Blur and focus again: a phone shows or hides its keyboard on focus, not on an attribute change. */
+    const refocus = () => { refocusing = true; try { inp.blur(); inp.focus({ preventScroll: true }); } catch (e) {} refocusing = false; };
+    const edit = how => {
+      inp.readOnly = false; inp.setAttribute('inputmode', 'search'); hint();
+      if (how === 'pointer') return;      // the press itself puts the focus and caret there
+      refocus();
+      try { const n = inp.value.length; inp.setSelectionRange(n, n); } catch (e) {}
+    };
+    const leave = () => { rest(); if (document.activeElement === inp) refocus(); hint(); memo(); };
+    const clear = () => { inp.value = ''; apply(); rest(); try { inp.focus({ preventScroll: true }); } catch (e) {} hint(); memo(); };
+    inp.addEventListener('pointerdown', () => { if (inp.readOnly) edit('pointer'); });
+    inp.addEventListener('input', () => { apply(); memo(); });
+    inp.addEventListener('focus', () => { hint(); memo(); });
+    inp.addEventListener('blur', () => {
+      if (refocusing) return;
+      hint();
+      /* Later: a repaint removing the box must not forget that it was being typed in. */
+      setTimeout(() => { if (inp.isConnected && document.activeElement !== inp) { rest(); hint(); memo(); } }, 0);
+    });
+    clr.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); clear(); });
+    sec.addEventListener('click', e => {
+      const b = e.target.closest('[data-vr-fmore]'); if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      const from = shown;
+      shown = from + PAGE; paint();
+      const nb = res.querySelectorAll('.vr-item')[from]; if (nb) nb.focus({ preventScroll: false });
+    });
+    sec.__vrFind = { inp, leave, edit, clear, rest, apply };
+  }
+  function restoreFind(sec, id) {
+    const F = sec.__vrFind, m = findMemo;
+    if (!F || !m || m.id !== id || (!m.q && !m.focus)) return;
+    F.inp.value = m.q; F.apply();
+    if (m.focus === 'typing') F.edit('key');
+    else if (m.focus === 'rest') { try { F.inp.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  /* ON WINDOW IN THE CAPTURE PHASE AT LOAD, ahead of keys.js, nav.js and shortcuts.js, so that nothing typed
+     here reaches them. A key the box does not use still does what it does in any text box (no preventDefault). */
+  function findKeys(e) {
+    const t = e.target, sec = t && t.closest && t.closest('.vr-sect'), F = sec && sec.__vrFind;
+    if (!F) return;
+    const back = (BACKS.has(e.key) && e.key !== 'Backspace') || e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 4;
+    const take = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+    if (t !== F.inp) {
+      /* A filtered row: Back returns to the box. A pad and a remote keep the rows otherwise. */
+      if (back && t.closest('.vr-res')) { take(); if (!e.repeat) { F.rest(); try { F.inp.focus({ preventScroll: false }); } catch (x) {} } }
+      return;
+    }
+    const nav = dir => { const N = window.GnwNav; return !!(N && N.move && N.move(dir)); };
+    if (F.inp.readOnly) {             // at rest
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.key === 'Enter' || e.key === ' ') { take(); if (!e.repeat) F.edit('key'); return; }
+      if (back) { if (F.inp.value) { take(); if (!e.repeat) F.clear(); } return; }   // an empty box: Back closes the drawer
+      const dir = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[e.key];
+      if (dir) { take(); nav(dir); }
+      return;
+    }
+    if (e.key === 'Tab') return;      // typing: Tab moves on as it does from any box
+    if (e.key === 'Enter' || back) { take(); if (!e.repeat) F.leave(); return; }
+    if (e.key === 'ArrowDown' || (e.key === 'ArrowUp' && F.inp.selectionStart === 0 && F.inp.selectionEnd === 0)) {
+      take(); F.rest(); nav(e.key === 'ArrowDown' ? 'down' : 'up'); return;
+    }
+    e.stopImmediatePropagation();     // the letter goes in the box; no shortcut hears it
   }
 
   /* ---------------------------------------------------------------- play window picker */
@@ -851,6 +1115,7 @@
     else if (e.key === 'ArrowLeft' && wrap.__vr && wrap.__vr.level) { stop(); leaveSub(wrap); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') stop();
   }, true);
+  window.addEventListener('keydown', findKeys, true);
   /* A tap or click outside closes it, the version unchanged. Touch included:
      pointerdown fires for a finger too, and this listens on window in the
      capture phase, ahead of anything that stops a touch on its way down. */
@@ -905,6 +1170,8 @@
   function wire() {
     const dm = document.getElementById('device-modal');
     if (dm) new MutationObserver(() => decorateDrawer()).observe(dm, { childList: true });
+    const dov = document.getElementById('device-overlay');
+    if (dov) new MutationObserver(() => { if (!dov.classList.contains('open')) findMemo = null; }).observe(dov, { attributes: true, attributeFilter: ['class'] });
     for (const id of PLAY_OVS) {
       const ov = document.getElementById(id);
       if (ov) new MutationObserver(() => onPlayOverlay(id)).observe(ov, { attributes: true, attributeFilter: ['class'] });
@@ -921,9 +1188,11 @@
   });
 
   window.Variants = {
+    titleOf: d => { const e = info(d), t = e && T[e.sys], g = t && t.groups[e.g]; return (g && g[0]) || ''; },   // the group's title in the table
     collapse, members, searchCollapse, searchName, searchAka, settled, keyOf, info, repOf, repRow, sha1Of, preferred, lastUsed, remember, labelOf, cardLabel,
     groupId, classOf, split, counts, countParts, countText, closeMenu: () => closeMenu(true), menuOpen: () => !!document.querySelector(".vr-menu:not([hidden])"),
     play, playId, switchTo, load, ready: sys => load(sys), get version() { return version; },
+    region: getRegion, setRegion, regionOf: d => regionWords(typeof d === 'string' ? find(d) : d), unknown,   // 9 Nov 2026: preferred region; files no table knows
     keepIndexWith: fn => { keepKeyOf = typeof fn === 'function' ? fn : null; },   // emby.js: its search's shelf look-up (see catIndex)
   };
 })();

@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   if (window.CwEmuCards) return;
-  const IMG = k => 'images/consoles/' + k + '.webp?v=2.0.0';
+  const IMG = k => 'images/consoles/' + k + '.webp?v=2.1.0';
   const P = (img, name) => ({ img, name });
   const N = name => ({ name });
 
@@ -91,36 +91,47 @@
   const SITE_VERSION = (() => {
     const el = document.querySelector('#vault-overlay .modal-title');
     const m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.0.0';
+    return m ? m[1] : '2.1.0';
   })();
   const COMPARE = {
     /* GB versions (2026-10-18): the board (gbdev.io/GBEmulatorShootout, run 'Updated On Thu, 04 Jun 2026')
        prints none; its emulators/*.py fetch the latest GitHub release at run time. GitHub releases on that
        date: LIJI32/SameBoy v1.0.3 (2026-03-04; v1.0.4 2026-10-09), Docheinstein/docboy 1.2 (2026-03-22;
        1.3 2026-06-20). Emulicious downloads from emulicious.net with no version history: not stated.
+       2026-11-07: SameBoy 1.0.5 and DocBoy 1.3 run by us with the board's own tool, rows and judge: the same answers as the
+       4 June run on all 261 shared rows. Ours 256 / 259 on the 261 from core 37c1741215a4 (8 Nov 2026), and the same on core ca5a2a32f97e (9 Nov 2026, every row byte-identical).
        mGBA added 2026-10-30: the board's own cells for the mGBA column, counted from the page
        read 30 Oct 2026, same run: 145 PASS + 3 INFO on the shared 261 (147 / 150 on all 264, the page's
        "mGBA (150/264)"); mgba-emu/mgba newest release on that date 0.10.5 (2025-03-09), still the newest. */
     gb: { test: 'The public Game Boy accuracy board (264 rows), on the 261 rows every column was run on. Score: PASS only, then PASS plus INFO.',
       rows: [
-        ['Ours', SITE_VERSION, '255 / 258', '4 Oct 2026'],
-        ['DocBoy', '1.2', '255 / 258', '4 Jun 2026'],
+        ['Ours', SITE_VERSION, '256 / 259', '9 Nov 2026'],
+        ['DocBoy', '1.3', '255 / 258', '7 Nov 2026'],
         ['Emulicious', 'not stated', '251 / 254', '4 Jun 2026'],
-        ['SameBoy', '1.0.3', '249 / 252', '4 Jun 2026'],
+        ['SameBoy', '1.0.5', '249 / 252', '7 Nov 2026'],
         ['mGBA', '0.10.5', '145 / 148', '4 Jun 2026'],
       ],
-      note: 'Level with DocBoy, not ahead of it. The other emulators’ scores are the board’s own published run of 4 June 2026; we have not re-run them. In that run the board left three Super Game Boy tests blank for DocBoy and Emulicious (they were not tested, rather than failed), so this table compares the 261 tests every emulator was run on. Across all 264 tests, including those three, we score 258. The board does not print versions; it downloads each emulator’s newest release when it runs, so the versions shown are the newest releases on 4 June 2026 (SameBoy 1.0.4 and DocBoy 1.3 came out since; mGBA 0.10.5 is still its newest). Emulicious publishes no release history.' },
-    nes: { test: 'AccuracyCoin, its 20 October 2026 build (146 scored tests, NTSC), each emulator on its default settings, judged by the cartridge itself.',
+      note: 'On the 261 tests every emulator was run on, we pass 256 and DocBoy 1.3 passes 255. We ran SameBoy 1.0.5 and DocBoy 1.3 ourselves on 7 November 2026 with the board’s own tool and judge: on these 261 tests they gave the same answers as the board’s published run of 4 June 2026. Emulicious and mGBA are the board’s own run of 4 June 2026; we have not re-run them. In that run the board left three Super Game Boy tests blank for DocBoy and Emulicious (they were not tested, rather than failed), so this table compares the 261 tests every emulator was run on. Across all 264 tests, including those three, we score 259. mGBA 0.10.5 is still its newest release. Emulicious publishes no release history.' },
+    /* 8 Nov 2026 (AccuracyCoin 66e8711, 4 Nov 2026, 147 scored tests): every emulator its newest release, each
+       from its project's own release page, run by script (Mesen and FCEUX read from RAM, Nestopia UE
+       and puNES from the picture, every reading equal to the cartridge's own tally). Ours: 147 / 147 at alignments
+       0, 1 and 2 on the release core.
+       9 Nov 2026 (same cartridge): NintendulatorNRS 202611061000 (its author's page, read from the picture)
+       and FCEUmm libretro e0f3086 (the official libretro buildbot build, read from RAM by our own libretro runner); run 2 of
+       every arm agrees with run 1 on every pass and fail. */
+    nes: { test: 'AccuracyCoin, its 4 November 2026 build (147 scored tests, NTSC), each emulator on its default settings, judged by the cartridge itself.',
       rows: [
-        ['Ours', SITE_VERSION, '146 / 146', '26 Oct 2026'],
-        ['Nestopia UE', '2.0.0', '144 / 146', '21 Oct 2026'],
-        ['MesenCE', '2.2.1', '140 / 146', '21 Oct 2026'],
-        ['MesenCE', '2.2.0', '140 / 146', '22 Oct 2026'],
-        ['Mesen2', '2.1.1', '127 / 146', '21 Oct 2026'],
-        ['puNES', '0.111', 'did not finish', '22 Oct 2026'],
-        ['FCEUX', '2.7.0', 'did not finish', '21 Oct 2026'],
+        ['Ours', SITE_VERSION, '147 / 147', '8 Nov 2026'],
+        ['Nestopia UE', '2.0.0', '145 / 147', '8 Nov 2026'],
+        ['MesenCE', '2.2.1', '141 / 147', '8 Nov 2026'],
+        ['MesenCE', '2.2.0', '141 / 147', '8 Nov 2026'],
+        ['NintendulatorNRS', '6 Nov 2026 build', '132 / 147', '9 Nov 2026'],
+        ['Mesen2', '2.1.1', '128 / 147', '8 Nov 2026'],
+        ['puNES', '0.111', '102 / 147', '8 Nov 2026'],
+        ['FCEUX', '2.7.0', '84 / 147', '8 Nov 2026'],
+        ['FCEUmm (libretro)', '2 Nov 2026 build', '84 / 147', '9 Nov 2026'],
       ],
-      note: 'We pass all 146; no other emulator measured here does. Nestopia UE 2.0.0 passes 144: it fails DMA Landing on Write and DMC Reload Timing, a test new in this build that every other emulator measured here also fails. FCEUX 2.7.0 stops partway through the sprite tests, so 18 tests never run (with its New PPU option too), and puNES 0.111 shows a broken picture where the results should be; neither gets a score. With every documented accuracy option on, MesenCE 2.2.1 scores 136. Every emulator was run twice, with the same result on every test.' },
+      note: 'We pass all 147; no other emulator measured here does. Nestopia UE 2.0.0 passes 145: it fails DMA Landing on Write and DMC Reload Timing, and every other emulator measured here fails DMC Reload Timing too. The newest test in this build, DMC Playback Rate, is passed by Nestopia UE, NintendulatorNRS and every Mesen release, and failed by puNES, FCEUX and FCEUmm. On its defaults FCEUX 2.7.0 scores 84, with 3 tests skipped by the cartridge; with its New PPU option on it scores 89. FCEUmm, the libretro core, passes the same 84 tests as FCEUX on its defaults, with the same 3 skipped. With every documented accuracy option on, MesenCE 2.2.1 scores 137. Each emulator is its newest release (FCEUmm has no releases, so it is the newest official libretro build), run by us on 8 and 9 November 2026. Every emulator was run twice, with the same pass or fail on every test.' },
     /* 7800 (2026-10-18: #1 with a scoreboard saying why): the Atari ranking of
        18 Oct 2026: scoreboard of 7 Oct 2026 (ours 27, A7800 11 with 1 fail and 15 unable to run,
        ProSystem 1; common set 12 vs 11), library run of 23 Oct 2026 (A7800 refuses 98 of
@@ -229,7 +240,7 @@
       score: { big: 'Real firmware', text: 'boots each unit’s own encrypted firmware. No public test suite exists for these units, so there is no public score yet, but we are building one', date: '' },
       proof: { fn: 'tftEmulationTabHTML', args: [{ id: 'reissue-super-mario-bros', model: 'HXA-001' }], anchor: '', title: 'Game & Watch colour: the ARM digital twin' } },
 
-    { name: 'Game Boy', count: 1, rank: ['#1', 'Level with', 'DocBoy'], lib: 'gb', sub: 'One core for all three machines',
+    { name: 'Game Boy', count: 1, rank: ['#1'], lib: 'gb', sub: 'One core for all three machines',
       plays: [P('gb', 'Game Boy'), P('gbc', 'Game Boy Color'), P('sgb', 'Super Game Boy')],
       key: ['Sharp SM83 CPU', 'DMG and Color picture units', 'Super Game Boy (ICD2 and the Super NES side)', '{chips.gb.licensed} licensed and {chips.gb.unlicensed} unlicensed cartridge chips'],
       chips: [
@@ -241,7 +252,7 @@
         ['Cartridges', '{chips.gb.licensed} licensed: MBC1, MBC2, MBC3 with its clock, MBC5, MBC6, MBC7 (tilt), HuC1, HuC3, MMM01, M161, TAMA5, Pocket Camera (a real webcam), Pocket Sonar. {chips.gb.unlicensed} unlicensed: Sintax, Vast Fame, Sachen MMC1 and MMC2, Wisdom Tree, Rocket Games, Li Cheng, Hitek, BBD, Makon, NT, PKJD, GGB-81, Story of Lasama, Chongwu, New GB Color HK0701 and HK0819, Gowin'],
         ['Accessories', '{chips.gb.accessories}'],
       ],
-      score: { big: '258 of 264', text: 'on the public Game Boy accuracy board, with mealybug 24 of 24, Mooneye 97 of 97 and Blargg 51 of 51 on its rows; Game Boy Color mealybug 27 of 27. Two newer Game Boy Color suites, cgb-acid-hell and the AGE tests, built from their published source: 32 of 50 on the machines we model, ahead of SameBoy 0.16.2’s 25 (every result is on the Game Boy Color tab). {games} games tested ({files} files). {play}.', date: '1 Nov 2026 (tests and Color suites); games 31 Oct 2026' },
+      score: { big: '259 of 264', text: 'on the public Game Boy accuracy board, with mealybug 24 of 24, Mooneye 97 of 97 and Blargg 51 of 51 on its rows; Game Boy Color mealybug 27 of 27. Two newer Game Boy Color suites, cgb-acid-hell and the AGE tests, built from their published source: 49 of 50 on the machines we model, against SameBoy 1.0.5’s 39 on the same 50 (every result is on the Game Boy Color tab). {games} games tested ({files} files). {play}.', date: '9 Nov 2026 (tests, Color suites and games)' },
       proof: { fn: 'gbEmulationTabHTML', args: [{ system: 'gb' }], anchor: 'gbe-score', title: 'Game Boy: the score' } },
 
     { name: 'NES', count: 1, rank: ['#1'], lib: 'nes', sub: 'NES, Famicom and the Disk System',
@@ -255,7 +266,7 @@
         ['Cartridges', '{chips.nes.mappers} mapper numbers plus the Disk System: MMC1, MMC2, MMC3, MMC4, MMC5, MMC6, FME-7, Konami VRC1 to VRC7, Namco 163, Tengen RAMBO-1, Bandai FCG, Irem G-101, the Study Box, homebrew boards such as Action 53 and GTROM, and many more'],
         ['Accessories', '{chips.nes.accessories}'],
       ],
-      score: { big: '146 of 146', text: 'on AccuracyCoin (its 20 October 2026 build), the public NES accuracy test cartridge, judged by the cartridge itself. R.O.B. is built in too: a 3D R.O.B. stands beside the game, reads its screen flashes and plays Gyromite and Stack-Up, with no add-on to install. {games} games tested ({files} files). {play}.', date: '26 Oct 2026 (tests), 25, 26 and 30 Oct and 1 Nov 2026 (games), 2 Nov 2026 (core)' },
+      score: { big: '147 of 147', text: 'on AccuracyCoin (its 4 November 2026 build), the public NES accuracy test cartridge, judged by the cartridge itself. R.O.B. is built in too: a 3D R.O.B. stands beside the game, reads its screen flashes and plays Gyromite and Stack-Up, with no add-on to install. {games} games tested ({files} files). {play}.', date: '8 Nov 2026 (tests), 25, 26 and 30 Oct, 1 Nov and 8 Nov 2026 (games), 8 Nov 2026 (core)' },
       proof: { fn: 'nesEmulationTabHTML', args: [{ id: 'nes-proof', system: 'nes', catalogue: 'nes' }], anchor: 'nese-2', title: 'NES: the score, AccuracyCoin' } },
 
     { name: 'Pokémon mini', count: 1, rank: ['#1'], lib: 'pm', sub: '',

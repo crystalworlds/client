@@ -240,7 +240,7 @@ function gbAcceptanceEmulationTabHTML(d) {
       ' wait for one.</td></tr>' +
 
       '<tr><td>Mooneye</td><td>At the <code>LD B,B</code> breakpoint (opcode <code>0x40</code>): ' +
-      '<code>B C D E H L</code> = 3, 5, 8, 13, 21, 34 is a pass; all six <code>0x42</code> is a fail</td>' +
+      '<code>B C D E H L</code> = 3, 5, 8, 13, 21, 34 is a pass; all six <code>0x42</code> is a fail; any other values are neither. The board&rsquo;s verdict for the row is Rule G.1/2&rsquo;s, from the screenshot</td>' +
       '<td>The first <code>LD B,B</code></td></tr>' +
       '<tr><td>mealybug tearoom, dmg-acid2</td><td>A picture, compared with the reference image; shades mapped and differing pixels counted by Rule 19/5, steps 4 and 5</td>' +
       '<td>The frame buffer as it stands when the cartridge first executes <code>LD B,B</code>, taken by Rule 19/5, steps 1 to 3</td></tr>' +
@@ -255,7 +255,7 @@ function gbAcceptanceEmulationTabHTML(d) {
         'instruction boundary right after it. At that point the picture has been paid up to the start of the ' +
         'instruction&rsquo;s machine cycle: it has processed every dot up to the access of the ' +
         '<code>LD B,B</code>&rsquo;s opcode fetch, so the frame buffer is what an access made at that fetch would ' +
-        'see on section 14&rsquo;s access scale. The four dots after that access, which D.10.1&rsquo;s boundary ' +
+        'see on section 14&rsquo;s access scale. When a look was made at the boundary before the <code>LD B,B</code>, its two dots are among those processed: they run before the fetch, whose access is on dot S + 2 (Rule D.10.1/6, step 3). The four dots after that access (two after a look, Rule D.10.1/6, step 4), which D.10.1&rsquo;s boundary ' +
         'rule would run before the next instruction&rsquo;s interrupt test, are not run.</li>' +
       '<li>Read the frame buffer (Rule 19/6) as it stands at that point, without running on to the end of the ' +
         'frame. Nothing waits for a frame to count as completed.</li>' +
@@ -267,8 +267,8 @@ function gbAcceptanceEmulationTabHTML(d) {
       'picture of Rule 19/5 is read from a frame buffer with these properties, and a build scored by that rule ' +
       'must keep the same: (a) there is <b>one</b> frame buffer, written pixel by pixel as each line is drawn, with ' +
       'no separate copy of the last completed frame; (b) the frame a switch-on starts writes nothing to the buffer, ' +
-      'so its lines keep what the buffer last held (shade 0 everywhere if nothing has been drawn since reset); (c) ' +
-      'switching the display off does not clear the buffer.</div>' +
+      'so its lines keep what the buffer last held (shade 0 everywhere if nothing has been drawn since reset, or, on the original, since the display was switched off); (c) ' +
+      'switching the display off clears the buffer to shade 0 on the original with no Super Game Boy (Rule 14/3) and does not touch it on the Colour or the Super Game Boy.</div>' +
     '<div class="gbemu-example"><b>Example.</b> The first <code>LD B,B</code>&rsquo;s opcode-fetch access falls on ' +
       'line 100 after 40 of that line&rsquo;s pixels have been written to the buffer. The picture then shows the ' +
       'frame in progress on lines 0 to 99 and on columns 0 to 39 of line 100, and the previous frame on columns ' +
@@ -611,7 +611,7 @@ function gbAcceptanceEmulationTabHTML(d) {
     'from one core. A <b>row</b> is one test cartridge (or one cartridge on one machine) with its verdict: ' +
     'PASS, FAIL, ERROR, or INFO for a row that ships no reference and so cannot be scored.</p>' +
     '<div class="factbox" style="margin-bottom:18px">' +
-      '<div class="row"><span class="k">Board of record</span><span class="v">258 PASS &middot; 3 FAIL &middot; 0 ERROR &middot; 3 INFO, of 264</span></div>' +
+      '<div class="row"><span class="k">Board of record</span><span class="v">259 PASS &middot; 2 FAIL &middot; 0 ERROR &middot; 3 INFO, of 264</span></div>' +
       '<div class="row"><span class="k">Basis</span><span class="v">PASS only, all 264 rows, 0 unjoined</span></div>' +
       '<div class="row"><span class="k">Conditions</span><span class="v">Board machine, both boot programs supplied, on a committed tree (Rule 21/3); the served core is the core measured (below)</span></div>' +
       '<div class="row"><span class="k">How measured</span><span class="v">Rule 21/2</span></div>' +
@@ -623,19 +623,19 @@ function gbAcceptanceEmulationTabHTML(d) {
       'The structures that a measured tree carries on top of a committed one can also be stated on the page so that the tree can be rebuilt: for this board they are the scan ' +
       'latch and grip lag in section 5, the removed window increment in section 11 and the counter model in section 17.</div>' +
     '<p class="hw-readable"><b>This is the core this site runs, and the board figure is measured on it.</b> ' +
-    'The served core&rsquo;s sha256 begins <code>5bd7320427e1</code>: the footer prints it, ' +
+    'The served core&rsquo;s sha256 begins <code>ca5a2a32f97e</code>: the footer prints it, ' +
     '<code>play/gameboy/CORE-VERSION.json</code> names it, and the browser can recompute it from ' +
-    '<code>build/gb.wasm</code>. <b>The whole 264-row board was last re-run on this core: every row byte-identical to the run before it, 258 PASS, 3 FAIL, 3 INFO.</b> ' +
+    '<code>build/gb.wasm</code>. <b>The whole 264-row board was last re-run on this core: 259 PASS, 2 FAIL, 3 INFO.</b> ' +
     'The served core includes the unlicensed boards of appendix H.11, the interrupt-hold rule of section 14 and the extra hardware of appendix A.1 (the Super Game Boy, the link cable and infrared between two machines, rumble, the HuC3 tone, the Barcode Boy and the Pocket Sonar), all of that hardware off unless used.</p>' +
     '<div class="gbemu-rule" id="gbr-21-4"><b>Rule 21/4.</b> A documentation page and the core it documents are one deliverable and are published together. Before relying on any claim of this page, check that the core you run is the served core: compare its sha256 with the one above.</div>' +
     '<div class="gbemu-why"><b>Why.</b> A page and its artifact drift apart silently. ' +
       'For example, an artifact that carries no <code>OBJ_M0_LEAD</code>, <code>OAM_GRIP_LAG</code> or <code>OAM_SCAN_LATCH</code> (the object row&rsquo;s report lead, the grip phase and the scan latch) ' +
       'leaves three of this page&rsquo;s claims with no site-side referent.</div>' +
-    '<h4 class="gbemu-sub">The whole board, by suite, so the three failures can be found</h4>' +
+    '<h4 class="gbemu-sub">The whole board, by suite, so the two failures can be found</h4>' +
     '<p class="hw-readable">A headline figure that cannot be resolved into named rows is not a ' +
-    'result, it is a mood. Every one of the three is named in section 22. Every count in this table is a number of rows of the board.</p>' +
+    'result, it is a mood. Both are named in section 22. Every count in this table is a number of rows of the board.</p>' +
     '<table class="gbemu-table"><thead><tr><th>Suite</th><th>PASS (rows)</th><th>FAIL (rows)</th><th>ERROR (rows)</th><th>INFO (rows)</th></tr></thead><tbody>' +
-      '<tr><td>acid</td><td>2</td><td>1</td><td>0</td><td>2</td></tr>' +
+      '<tr><td>acid</td><td>3</td><td>0</td><td>0</td><td>2</td></tr>' +
       '<tr><td>ashiepaws</td><td>3</td><td>0</td><td>0</td><td>0</td></tr>' +
       '<tr><td>ax6</td><td>3</td><td>0</td><td>0</td><td>0</td></tr>' +
       '<tr><td>blargg</td><td>51</td><td>0</td><td>0</td><td>0</td></tr>' +
@@ -644,33 +644,32 @@ function gbAcceptanceEmulationTabHTML(d) {
       '<tr><td>mealybug tearoom</td><td>24</td><td>0</td><td>0</td><td>0</td></tr>' +
       '<tr><td>Mooneye</td><td>97</td><td>0</td><td>0</td><td>0</td></tr>' +
       '<tr><td>SameSuite</td><td>67</td><td>1</td><td>0</td><td>0</td></tr>' +
-      '<tr><td><b>Total</b></td><td><b>258</b></td><td><b>3</b></td><td><b>0</b></td><td><b>3</b></td></tr>' +
+      '<tr><td><b>Total</b></td><td><b>259</b></td><td><b>2</b></td><td><b>0</b></td><td><b>3</b></td></tr>' +
     '</tbody></table>' +
     '<h4 class="gbemu-sub">Published comparisons are not like-for-like, and the error is worth three rows</h4>' +
     '<div class="gbemu-rule" id="gbr-21-5"><b>Rule 21/5.</b> Every board figure, ours or a rival&rsquo;s, must name its basis: which verdicts it counts (PASS only, or PASS + INFO) and over which row set (every row of the board, or the shared 261, the rows on which all four emulators below were run). Two figures on different bases must not be compared. This page holds to one basis, the first row of the table below, and every figure quoted on this page is on it unless it names another.</div>' +
     '<div class="gbemu-why"><b>Why.</b> <b>Totals in circulation count <code>INFO</code> rows: rows that ' +
     'ship no reference, which nobody can score, including the emulator being credited with ' +
     'them.</b> And two of the comparison emulators <b>were never run on 3 of these 264 rows at ' +
-    'all</b>, all three of which this core passes. Those two errors point the same way and they are ' +
+    'all</b> (one of them cannot run them), all three of which this core passes. Those two errors point the same way and they are ' +
     'why a single headline figure is meaningless without its basis.</div>' +
     '<p class="hw-readable">In the table below every count is a number of rows; the first column names the basis (Rule 21/5).</p>' +
-    '<table class="gbemu-table"><thead><tr><th>Basis (verdicts counted, row set)</th><th>Ours (rows)</th><th>SameBoy (rows)</th><th>Emulicious (rows)</th><th>DocBoy (rows)</th></tr></thead><tbody>' +
-      '<tr><td><b>PASS only, all 264</b></td><td><b>258</b></td><td>250</td><td>never run</td><td>never run</td></tr>' +
-      '<tr><td>PASS + INFO, all 264</td><td><b>261</b></td><td>253</td><td>never run</td><td>never run</td></tr>' +
-      '<tr><td>PASS only, shared 261</td><td><b>255</b></td><td>249</td><td>251</td><td>255</td></tr>' +
-      '<tr><td>PASS + INFO, shared 261</td><td><b>258</b></td><td>252</td><td>254</td><td>258</td></tr>' +
+    '<table class="gbemu-table"><thead><tr><th>Basis (verdicts counted, row set)</th><th>Ours (rows)</th><th>SameBoy 1.0.5 (rows)</th><th>Emulicious (rows)</th><th>DocBoy 1.3 (rows)</th></tr></thead><tbody>' +
+      '<tr><td><b>PASS only, all 264</b></td><td><b>259</b></td><td>252</td><td>never run</td><td>cannot run 3</td></tr>' +
+      '<tr><td>PASS + INFO, all 264</td><td><b>262</b></td><td>255</td><td>never run</td><td>cannot run 3</td></tr>' +
+      '<tr><td>PASS only, shared 261</td><td><b>256</b></td><td>249</td><td>251</td><td>255</td></tr>' +
+      '<tr><td>PASS + INFO, shared 261</td><td><b>259</b></td><td>252</td><td>254</td><td>258</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-example"><b>Example.</b> How our column follows from the board of record. Table row 1 is the board of record itself. Table row 2 adds the 3 INFO rows to it. Table row 3 takes away from row 1 the 3 rows outside the shared set: all three of them PASS on this core, so row 3 is row 1 minus 3. Table row 4 adds the 3 INFO rows to row 3; the INFO rows lie inside the shared set. So our four figures are b, b + 3, b &minus; 3 and b, where b is the board of record. Rows 2 to 4 follow from row 1 by this arithmetic.</div>' +
     '<div class="gbemu-why"><b>Why the arithmetic holds.</b> <b>The step that row 3 depends on is that the rows outside the shared set are rows this core passes, and it is stated ' +
-    'rather than assumed:</b> the three rows outside that set are three rows this core passes. The rival ' +
-    'columns were not re-taken: <b>they are the figures as published, and a ' +
+    'rather than assumed:</b> the three rows outside that set are three rows this core passes. The SameBoy and DocBoy ' +
+    'columns were taken by us on 7 Nov 2026, with the board&rsquo;s own tool, rows, timing and judge (SameBoy 1.0.5, the official program; DocBoy 1.3): on the shared 261 both give the same answer on every row as the board&rsquo;s published run of 4 June 2026, and SameBoy 1.0.5 also passes two Super Game Boy rows outside that set; DocBoy 1.3 cannot run the three Super Game Boy rows. The Emulicious column is the board&rsquo;s published run of 4 June 2026, not re-taken: <b>a ' +
     'rival that has moved since is a rival this table is stale about.</b></div>' +
     '<p class="hw-readable"><b>The ordering, base by base.</b> ' +
-    '<b>On the two bases where DocBoy was run at all, the shared 261, it ' +
-    'is a tie: 255 and 255, 258 and 258.</b> A tie is not a lead and this page will not report ' +
-    'it as one; <b>on the two all-264 bases the comparison is against SameBoy alone</b>: ' +
-    'Emulicious and DocBoy were never run on three of those rows, so their columns read ' +
-    '&ldquo;never run&rdquo; and no ordering against them exists there. <b>That is not the same as ' +
+    '<b>On the two bases where DocBoy runs every row, the shared 261, this core passes one row more than DocBoy 1.3: ' +
+    '256 and 255, 259 and 258.</b> The rows differ in five places: this core passes <code>cgb-acid-hell</code>, <code>channel_1_sweep_restart_2</code> and <code>latch-rtc-test</code>, which DocBoy 1.3 fails, and DocBoy 1.3 passes the Color half of <code>ppu_scanline_bgp</code> and <code>channel_4_freq_change</code>, which this core fails; <b>on the two all-264 bases the comparison is against SameBoy alone</b>: ' +
+    'Emulicious was never run on three of those rows and DocBoy 1.3 cannot run them, so their columns read ' +
+    '&ldquo;never run&rdquo; and &ldquo;cannot run&rdquo;, and no ordering against them exists there. <b>That is not the same as ' +
     'saying the comparison does not exist</b> ' +
     ': one of the three rivals <em>was</em> run on all four bases and its figures are in the ' +
     'SameBoy column of the table above. The basis this page holds to is the first ' +
@@ -691,17 +690,16 @@ function gbAcceptanceEmulationTabHTML(d) {
       '<tr><td><code>264</code></td><td>the board</td></tr>' +
       '<tr><td><code>&minus;3</code></td><td>ship no reference at all: <b>every</b> emulator reports INFO on these three. <b>261 is the ceiling for anybody</b>, this core included</td></tr>' +
       '<tr><td><code>&minus;1</code></td><td><b>partially</b> derivable from this corpus: <code>channel_4_freq_change</code>. 14 of its 18 wrong cells are won and <b>4 remain</b>, missing in opposite directions so that no constant closes both (section 22). The row still fails and the deduction stands</td></tr>' +
-      '<tr><td><code>&minus;1</code></td><td>unreachable: <code>cgb-acid-hell</code>. A site exists: 118 of the 120 pixels are closed at zero cost (section 11) and <b>2 remain unattributed</b>. The deduction stands</td></tr>' +
       '<tr><td><code>&minus;1</code></td><td>declined permanently, on the hardware revision this project claims: <code>ppu_scanline_bgp</code>, the Color half</td></tr>' +
-      '<tr><td><b><code>258</code></b></td><td><b>the ceiling under the decisions as they stand</b></td></tr>' +
-      '<tr><td><b><code>258</code></b></td><td><b>the board today.</b> <b>No row sits between it and the ceiling</b>: the board and the ceiling are the same number, which is what a ceiling met looks like</td></tr>' +
+      '<tr><td><b><code>259</code></b></td><td><b>the ceiling under the decisions as they stand</b></td></tr>' +
+      '<tr><td><b><code>259</code></b></td><td><b>the board today.</b> <b>No row sits between it and the ceiling</b>: the board and the ceiling are the same number, which is what a ceiling met looks like</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-rule" id="gbr-21-8"><b>Rule 21/8.</b> Every time the ceiling table is changed, check two things: the ceiling line must equal the top line minus every deduction, and the bottom line (the board today) must equal the board of record at the top of this section. If either disagrees, a row has been counted in the wrong class.</div>' +
-    '<div class="gbemu-why"><b>Why.</b> <b>Read the two 258s carefully, because they are not the same claim.</b> ' +
+    '<div class="gbemu-why"><b>Why.</b> <b>Read the two 259s carefully, because they are not the same claim.</b> ' +
     'The upper one is <em>264 minus the rows this project has decided against</em>; the lower is ' +
     '<em>what the scorer printed</em>. They coincide because nothing is open. <b>That is not a ' +
-    'stopping condition.</b> A ceiling is only ever a ceiling given a set of decisions (Rule 21/7), and three of ' +
-    'the four deductions above carry a reopen condition that is stated in section 22 (Rule 22/1). ' +
+    'stopping condition.</b> A ceiling is only ever a ceiling given a set of decisions (Rule 21/7), and two of ' +
+    'the three deductions above carry a reopen condition that is stated in section 22 (Rule 22/1). ' +
     'A ceiling can move on a day when no row moves, because a ceiling is the board plus the rows that are ' +
     'still open, so a row decided against is not among them.</div>' +
     '<div class="gbemu-rule" id="gbr-21-9"><b>Rule 21/9.</b> A decline must carry a reopen condition. This holds for every decline, including a &ldquo;forced fork&rdquo; (a claim that no structure can satisfy two authorities at once).</div>' +
@@ -721,24 +719,23 @@ function gbAcceptanceEmulationTabHTML(d) {
     '<p class="hw-readable">Every board has some, and no board says which. This section exists ' +
     'because a reader who does not know will spend weeks on them, and because two of them ' +
     'are unwinnable for reasons that are genuinely interesting about the hardware.</p>' +
-    '<p class="gbemu-key"><b>Three rows on this board are not passing, and all three are named.</b> ' +
+    '<p class="gbemu-key"><b>Two rows on this board are not passing, and all two are named.</b> ' +
     'A ceiling that does not resolve into rows with names is not a ceiling, it is an excuse, so ' +
-    'here they are before the arguments, in the table of Rule 22/1. The three that ship no reference are on top of those three ' +
-    'and belong to everyone. <b>Three subsections below record rows that read as unwinnable and ' +
-    'are won</b> (the sweep-restart row, the two fork rows, and <code>ashiepaws/strikethrough.gb</code>), and they ' +
+    'here they are before the arguments, in the table of Rule 22/1. The three that ship no reference are on top of those two ' +
+    'and belong to everyone. <b>Four subsections below record rows that read as unwinnable and ' +
+    'are won</b> (the sweep-restart row, the two fork rows, the Color acid row and <code>ashiepaws/strikethrough.gb</code>), and they ' +
     'are kept because the reason each looked unwinnable is reusable.</p>' +
     '<div class="gbemu-rule" id="gbr-22-1"><b>Rule 22/1.</b> The rows that are not passing, their class and the condition that reopens each, are these. A row in this table must not be closed by any means its reopen column excludes.</div>' +
     '<table class="gbemu-table"><thead><tr><th>Row</th><th>Verdict and residue (suite&rsquo;s own comparator)</th><th>Class</th><th>Reopen condition</th></tr></thead><tbody>' +
-      '<tr><td><code>acid/cgb-acid-hell.gbc</code></td><td>FAIL, <b>2 px</b> differ</td><td>unreachable: a site exists (section 11) and the 2 px are unattributed</td><td>what would establish the cause of the 2 px: the probe cartridge described under &ldquo;The Color acid row&rdquo; below</td></tr>' +
       '<tr><td><code>daid/ppu_scanline_bgp.gb</code> on the Color</td><td>FAIL</td><td>declined permanently, by design, on consistency</td><td>only a change to the ruling about which Color revision this project claims (Rule 22/4)</td></tr>' +
       '<tr><td><code>samesuite/apu/channel_4/channel_4_freq_change.gb</code></td><td>FAIL, wrong in <b>4 cells of 64</b></td><td>partially derivable</td><td>a structural account of the reload boundary, or a stimulus that separates the two directions; not a constant (Rule 22/5)</td></tr>' +
       '<tr><td>the three rows that ship no reference</td><td>INFO for every emulator</td><td>unscoreable</td><td>none: the gap is in the board</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-rule" id="gbr-22-2"><b>Rule 22/2.</b> A row counts only when it passes under the suite&rsquo;s own comparator. <b>A defect ' +
     'closed is not a row won, and 118 of 120 pixels is not 118/120 of a row.</b> A failing row contributes <b>zero rows</b> to the board, however much of it is right.</div>' +
-    '<div class="gbemu-example"><b>Example.</b> <code>cgb-acid-hell</code> differs on 2 px of a frame and <code>channel_4_freq_change</code> is right on 60 of its 64 cells. Both are FAIL under the suite&rsquo;s own comparator, and each contributes 0 rows, not a fraction of one.</div>' +
+    '<div class="gbemu-example"><b>Example.</b> <code>channel_4_freq_change</code> is right on 60 of its 64 cells. It is FAIL under the suite&rsquo;s own comparator, and it contributes 0 rows, not a fraction of one. On a core without the Colour tab&rsquo;s Rule C10/25, <code>cgb-acid-hell</code> differs on 2 px of a frame and contributes 0 rows in the same way; with it, the row passes and contributes one.</div>' +
     '<div class="gbemu-why"><b>Why.</b> This is the distinction that governs this whole section, stated once ' +
-    'because two of the three remaining rows depend on it. ' +
+    'because both remaining rows depend on it. ' +
     'If you take one ' +
     'sentence from this section, take that one: a board is a count of rows, and partial credit on a ' +
     'row is a number you tell yourself.</div>' +
@@ -939,7 +936,7 @@ function gbAcceptanceEmulationTabHTML(d) {
     'core&rsquo;s own interrupt-dispatch lag at every lag tried (42 builds, every dot from 0 ' +
     'to 13 at each of three lags), because four dots is the processor&rsquo;s ' +
     'dispatch-sample quantum, so any rise inside one machine cycle is seen at the same sample. ' +
-    'A running processor sees line-start requests one machine cycle sooner than it would without the look of appendix D.10.1, the line-0 lag is 3, and ' +
+    'A running processor sees line-start requests one machine cycle sooner than it would without the look of appendix D.10.1 (while its row 6 holds), the line-0 lag is 3, and ' +
     'the source ships the literal dot 6, which the AGE <code>stat-int</code> hardware table asks for and ' +
     'at which this row passes (FITTED; appendix E.6).</div>' +
     '<p class="hw-readable"><b>And the method note, which is the part worth taking away.</b> Both ' +
@@ -950,15 +947,15 @@ function gbAcceptanceEmulationTabHTML(d) {
     'pass while <em>either</em> authority says no reports both satisfied, with the sprite ' +
     'law&rsquo;s own alignment row unchanged.</p>' +
 
-    '<h4 class="gbemu-sub">The Color acid row (<code>cgb-acid-hell</code>: a site does exist, and the row still fails at 2 px)</h4>' +
+    '<h4 class="gbemu-sub">The Color acid row (<code>cgb-acid-hell</code>): WON, and the null that hid its first site</h4>' +
     '<p class="gbemu-key"><b>The site is one increment in our own output path, and 118 of the 120 ' +
     'pixels close at zero measured cost.</b> The tempting conclusion is the opposite one: ' +
     'that the Color acid test is blocked because <em>no site exists</em> ' +
     'for an answer, on the evidence of 375 measurement arms moving zero pixels. That null is real ' +
     'and the conclusion drawn from it is not, which is the transferable part of this entry and the ' +
     'subject of appendix G.6. ' +
-    '<b>The row still FAILS, at 2 px</b>, and contributes zero rows to the board (Rule 22/2). Section 11 carries ' +
-    'the mechanism, the gate and the cost; what follows is the measurement underneath the ' +
+    'With that increment alone 118 of the 120 pixels are closed at zero cost (section 11) and 2 remain; <b>the Colour tab&rsquo;s Rule C10/25 closes the 2</b> (a drawing-register write on the Color lands inside its own machine cycle), and with both the row passes. Section 11 carries ' +
+    'the first mechanism, the gate and the cost; what follows is the measurement underneath the ' +
     'diagnosis.</p>' +
     '<p class="hw-readable"><b>What the 120 px decomposes into, measured without section 11&rsquo;s ' +
     'increment.</b> Rows 136, 137 and 138 account for <b>118</b> of it, and on all three our row is ' +
@@ -976,22 +973,13 @@ function gbAcceptanceEmulationTabHTML(d) {
     'the two that are still open. <b>INSTRUMENT-MEASURED</b> against the suite&rsquo;s own ' +
     'reference. <b>Falsifier:</b> any residual outside those five rows, or a shift other than 4 ' +
     'fitting the three.</p>' +
-    '<p class="hw-readable"><b>The two survivors are characterised and deliberately NOT ' +
-    'attributed.</b> Both lie in the background tile fetched at <code>fetch_x = 10</code>, whose ' +
+    '<p class="hw-readable"><b>The two survivors, and what closed them.</b> Both lie in the background tile fetched at <code>fetch_x = 10</code>, whose ' +
     'eight pixels cover screen x 76&ndash;83; the low plane is identical to the reference on both ' +
-    'rows, and the whole delta is <b>one bit of the high plane, bit 3</b>, on each row. On both rows ' +
-    'the reference&rsquo;s implied high byte is numerically equal to the tile number for that fetch ' +
-    '(<code>$55</code> and <code>$55</code>, <code>$49</code> and <code>$49</code>): <b>stated ' +
-    'as a coincidence of two measured values and not asserted as its cause.</b> That fetch is the ' +
+    'rows, and the whole delta is <b>one bit of the high plane, bit 3</b>, on each row. That fetch is the ' +
     'one on the line whose high-byte step landed on a dot where LCDC bit 4 had just been cleared; ' +
-    'its two neighbours ran with the bit set. <b>NOT ESTABLISHED.</b> Two candidate structures ' +
-    'differ only in <em>direction</em> (a glitch on the 1&rarr;0 write versus the 0&rarr;1 ' +
-    'write) and this cartridge toggles the bit both ways every eight dots, so it is ' +
-    'compatible with both. <b>What would establish it:</b> a probe cartridge holding LCDC bit 4 at ' +
-    'one value across several tiles and making a <em>single</em> transition in a chosen direction, ' +
-    'aligned to a chosen fetcher step, with a known tile number in the map. <b>One convenient ' +
+    'its two neighbours ran with the bit set. <b>The cause is where that LCDC write lands:</b> on a Color placed by its lead alone it lands one machine cycle before the hardware&rsquo;s, so the bit-4 change meets that one fetch step early; with the Colour tab&rsquo;s Rule C10/25 the write lands inside its own machine cycle and both pixels match the reference. MECHANISM, and the same placement passes the AGE <code>m3-bg-lcdc</code> tables. <b>One convenient ' +
     'non-candidate is measured out rather than argued away:</b> turning on the tile-select glitch ' +
-    'this core carries leaves the row at 2 px, the same two pixels, unmoved.</p>' +
+    'this core carries does not move those two pixels.</p>' +
     '<p class="hw-readable">The measurement underneath it: without section 11&rsquo;s increment the Color acid test differs on ' +
     '<b>120 pixels</b>, and the interesting ' +
     'thing about it is the shape of the negative result. <b>375 arms were built and scored against ' +
@@ -1007,7 +995,7 @@ function gbAcceptanceEmulationTabHTML(d) {
     'cartridge on this board that stresses mid-line LCDC writes on a Color is the one cartridge ' +
     'that family cannot reach</b>, which is not a coincidence about the row; it is what that guard ' +
     'means, stated for once in terms of a board row.</p>' +
-    '<p class="hw-readable"><b>The shipped core differs from the core the 375 arms were measured on.</b> On the core this site ships the settling family is <b>live</b> on a Color: the original&rsquo;s widths pass through the unresolved guard, and the Color carries its own widths for the window&rsquo;s data reads (10 low, 12 high) and its map read (92). The Colour tab&rsquo;s section 10 gives them with the tile-data select rules they serve. The zero-pixel result above belongs to the core it was taken on and has not been re-taken; the row&rsquo;s current figure is the 2&nbsp;px stated above.</p>' +
+    '<p class="hw-readable"><b>The shipped core differs from the core the 375 arms were measured on.</b> On the core this site ships the settling family is <b>live</b> on a Color: the original&rsquo;s widths pass through the unresolved guard, and the Color carries its own widths for the window&rsquo;s data reads (10 low, 12 high) and its map read (92). The Colour tab&rsquo;s section 10 gives them with the tile-data select rules they serve. The zero-pixel result above belongs to the core it was taken on and has not been re-taken; on the shipped core the row passes.</p>' +
     '<p class="hw-readable">Keep the three apart, because they collapse back into &ldquo;declined&rdquo; ' +
     'the moment you stop writing them out. <b>It is not declined on price</b>: nothing was ' +
     'priced and nothing could be. <b>It is not unwinnable in principle</b>: the picture is ' +
@@ -1142,11 +1130,11 @@ function gbAcceptanceEmulationTabHTML(d) {
       '<div class="row"><span class="k">Runs as</span><span class="v">WebAssembly, in your browser, on its own worker thread</span></div>' +
       '<div class="row"><span class="k">Timing</span><span class="v">Dot-level: the pipeline is modelled per dot, not per scanline</span></div>' +
       '<div class="row"><span class="k">Screen</span><span class="v">160 &times; 144, four shades, integer-scaled only</span></div>' +
-      '<div class="row"><span class="k">Also passes</span><span class="v">dmg-acid2 pixel-perfect; Blargg; Mooneye; 258 of 264 board rows: section 21</span></div>' +
+      '<div class="row"><span class="k">Also passes</span><span class="v">dmg-acid2 pixel-perfect; Blargg; Mooneye; 259 of 264 board rows: section 21</span></div>' +
     '</div>' +
-    '<p class="hw-readable" style="margin-top:12px">The palette selector above the screen is a ' +
+    '<p class="hw-readable" style="margin-top:12px">The Mono Palette setting in the play window is a ' +
     'display choice and nothing more. The core emits shade <em>indices</em>; every figure on this ' +
-    'page is scored on those indices, so changing the skin cannot move a single number here.</p>' +
+    'page is scored on those indices, so changing the palette cannot move a single number here.</p>' +
   '</section>' +
 
   '<section class="sect" id="gbe-labels"><h3 class="sect-h">Appendix F. Labels, flexibility, and what is not established</h3>' +
@@ -1418,7 +1406,7 @@ function gbAcceptanceEmulationTabHTML(d) {
       '<tr><td>19: commercial games &ldquo;deliberately avoid&rdquo; the timing</td><td>the observation is INSTRUMENT-MEASURED; <b>the &ldquo;deliberately&rdquo; is NOT ESTABLISHED</b></td><td>We can show a core passing commercial titles while failing mealybug. <b>We have no evidence about what commercial developers intended.</b> The measurable form is the observation alone.</td></tr>' +
       '<tr><td>19: prefer a declared table to a picture</td><td>MECHANISM, with a measured case cited</td><td>Correct as written; section 23 carries the instance.</td></tr>' +
       '<tr><td>19: write one instrument carrying no absolute constant</td><td>method rule</td><td>The most transferable paragraph in the section.</td></tr>' +
-      '<tr><td>20: 254 PASS and 237 PASS with the constant knocked out</td><td>INSTRUMENT-MEASURED <b>snapshot</b>, correctly pinned</td><td>Pinned at its own earlier commit and correct there. <b>The board of record is 258 at a later tree</b>, and the page says so beside the pair so a reader meeting 254 here and 258 in section 21 does not think one is stale.</td></tr>' +
+      '<tr><td>20: 254 PASS and 237 PASS with the constant knocked out</td><td>INSTRUMENT-MEASURED <b>snapshot</b>, correctly pinned</td><td>Pinned at its own earlier commit and correct there. <b>The board of record is 259 at a later tree</b>, and the page says so beside the pair so a reader meeting 254 here and 259 in section 21 does not think one is stale.</td></tr>' +
       '<tr><td>20: +17 fixed / &minus;0 broken, decomposed into named rows</td><td>INSTRUMENT-MEASURED snapshot</td><td>Resolved into named rows, which is what makes it quotable. Keep the commit attached.</td></tr>' +
       '<tr><td>20: &ldquo;it was board-neutral on the day it landed&rdquo;</td><td>INSTRUMENT-MEASURED <b>historical fact</b></td><td>The page states the distinction correctly. It does not date and must not be re-measured.</td></tr>' +
       '<tr><td>20: a tree that passes 2 of 68 sound rows no matter what</td><td>INSTRUMENT-MEASURED, with denominator</td><td>The model form for a null: the tree is named and the blindness is quantified.</td></tr>' +
@@ -1538,7 +1526,7 @@ function gbAcceptanceEmulationTabHTML(d) {
     '</tbody></table>' +
     '<p class="hw-readable"><b>The shape of that table is the finding, not any row in it.</b> <b>Three ' +
     'of the fifteen are NOT ESTABLISHED</b>, three are measured on our own instrument and presented as ' +
-    'such, and <b>one is a hardware observation.</b></p> <p ' +
+    'such (the three rows whose Label column carries <code>INSTRUMENT-MEASURED</code>; the divider row&rsquo;s bare <code>MEASURED</code> is not one of them, Rule F.9/2), and <b>one is a hardware observation.</b></p> <p ' +
     'class="hw-readable"><b>The comparison, plainly. Sections 1 to 4 and 6 are not better established ' +
     'than the rest of the page.</b> On these counts they carry a <em>higher</em> proportion of NOT ' +
     'ESTABLISHED than the sections F.2 swept, and also a <em>higher</em> proportion of hardware observation: ' +
@@ -1566,7 +1554,7 @@ function gbAcceptanceEmulationTabHTML(d) {
     '<p class="hw-readable">Everything above tells you what to build. <b>This tells you how you will ' +
     'know whether you built it</b>, and, just as importantly, how a verification run can come ' +
     'back green while measuring nothing at all. The board of record and the ceiling are section 21; ' +
-    'the arguments about the three failing rows are section 22. What follows is the machinery under ' +
+    'the arguments about the two failing rows are section 22. What follows is the machinery under ' +
     'both.</p>' +
 
     '<h4 class="gbemu-sub">G.1: How a row is scored, before anything else</h4>' +
@@ -1614,7 +1602,7 @@ function gbAcceptanceEmulationTabHTML(d) {
       '<tr><td><b>samesuite</b><br>68 rows</td><td>channel 1 &times;17, channel 2 &times;14, channel 3 &times;13, channel 4 &times;12, common 5, dma 4, ppu 1, sgb 2</td><td>Almost entirely sound, on Colour. Most rows read the channel output back through the Colour&rsquo;s <code>PCM12</code>/<code>PCM34</code> registers, so <b>they are scored on the actual sample a channel is emitting at a named moment</b>, not on anything audible; without those registers most of the suite cannot score at all. <b>They are described on the Colour tab, section 13 and its appendix A</b>, not in appendix B here, because the original Game Boy does not have them; appendix B says so too. Channels 1 and 2 fall out together once the frame sequencer is right; channel 3&rsquo;s wave-memory window and channel 4&rsquo;s shift-register schedule are each a job of their own. The label sections 15 to 17 and appendix B carry for this block is <b>covered, verified implementable, with four named omissions</b> (the evidence is in the explanation under this table). <b>Ours: 67 / 1 / 0.</b></td></tr>' +
       '<tr><td><b>mealybug tearoom</b><br>24 rows</td><td>mid-mode-3 writes to BGP, OBP0, SCX, SCY, individual LCDC bits, the window registers and the map selection</td><td>These are the cells that tell you whether your pipeline is a pipeline or a scanline renderer wearing one. <b>Progress here is measured in pixels, not rows</b>: start recording <em>which</em> pixels are wrong, not how many. The suite also ships Colour revision-C and revision-D reference sets which this board does not score; that separate colour board is where several of section 22&rsquo;s prices are denominated. <b>Ours: 24 / 0 / 0.</b></td></tr>' +
       '<tr><td><b>daid</b><br>9 rows</td><td><code>ppu_scanline_bgp</code> &times;2, <code>stop_instr</code> &times;3, <code>speed_switch_timing</code> &times;3, <code>rom_and_ram</code> (no reference)</td><td><code>ppu_scanline_bgp</code> writes the background palette <b>ten times per scanline</b>, four machine cycles apart, from a handler exactly one scanline long, so the rendered image <em>is</em> a picture of when a palette write takes effect. The <code>STOP</code> rows are winnable and are a good check on appendix D.9: <code>STOP</code> blanks the original&rsquo;s screen but makes a Colour screen go black, unless the <code>STOP</code> lands during mode 3, in which case the picture freezes as it stands. <b>Ours: 7 / 1 / 1.</b></td></tr>' +
-      '<tr><td><b>acid</b><br>5 rows</td><td><code>dmg-acid2</code>, <code>cgb-acid2</code>, <code>cgb-acid-hell</code>, <code>which.gb</code> &times;2 (no reference)</td><td><code>dmg-acid2</code> is the best-designed diagnostic on the board: one frame in which about a dozen separate behaviours each produce a visibly distinct, individually nameable defect. <b>It is the single best return on effort in the whole pipeline stage.</b> <code>cgb-acid-hell</code> is not; section 22 says why. <b>Ours: 2 / 1 / 2.</b></td></tr>' +
+      '<tr><td><b>acid</b><br>5 rows</td><td><code>dmg-acid2</code>, <code>cgb-acid2</code>, <code>cgb-acid-hell</code>, <code>which.gb</code> &times;2 (no reference)</td><td><code>dmg-acid2</code> is the best-designed diagnostic on the board: one frame in which about a dozen separate behaviours each produce a visibly distinct, individually nameable defect. <b>It is the single best return on effort in the whole pipeline stage.</b> <code>cgb-acid-hell</code> is not; section 22 says why, and how it was won. <b>Ours: 3 / 0 / 2.</b></td></tr>' +
       '<tr><td><b>cpp</b><br>4 rows</td><td>MBC3 RAM-gate width, RTC latching by a single write, invalid RTC bank, one Super Game Boy packet stress test</td><td>Three are mapper detail work; the fourth cannot be passed without genuinely implementing the Super Game Boy packet protocol, <b>which appendix A.6 describes register by register.</b> <b>Ours: 4 / 0 / 0.</b></td></tr>' +
       '<tr><td><b>ax6</b><br>3 rows</td><td><code>rtc3test</code> parts 1&ndash;3, on Colour</td><td>The MBC3 real-time clock: registers, latching, rollover, invalid values. Up to 20 seconds of emulated time each, so they are among the slowest rows you will run, and they are pure mapper work with no picture or sound involvement. <b>Ours: 3 / 0 / 0.</b></td></tr>' +
       '<tr><td><b>ashiepaws</b><br>3 rows</td><td><code>bully</code> on both machines, <code>strikethrough</code></td><td><code>bully</code> is a broad self-reporting battery and is ordinary work: it is also what pins the bus-conflict rule in section 5. <code>strikethrough</code> is not derivable from any document and the rule it needs is not the rule its name suggests: section 5 carries the whole account, and it is <b>two</b> separable rules rather than one. <b>Ours: 3 / 0 / 0.</b></td></tr>' +
@@ -1679,15 +1667,15 @@ function gbAcceptanceEmulationTabHTML(d) {
       '<tr><td><b>0. Enough picture to read a verdict</b></td><td>the background layer drawing tiles through BGP, and the screen on. No window, no objects, no mid-line anything</td><td><b>0 rows, and skipping it costs you every row.</b> Take the serial shortcut anyway while bootstrapping</td></tr>' +
       '<tr><td><b>1. The processor</b></td><td><code>blargg/cpu_instrs</code> 01&ndash;11 (11), <code>instr_timing</code> (1), <code>halt_bug</code> (1), <code>mooneye/acceptance/instr/daa</code> (1). <b>Appendix D is this stage.</b></td><td><b>14. Cumulative 14.</b> Do not move on until <code>cpu_instrs</code> is 11 of 11: every opcode error you leave behind resurfaces later disguised as a picture bug or a sound bug, at ten times the cost to diagnose</td></tr>' +
       '<tr><td><b>2. The memory map, the mappers, and the boot program</b></td><td>mbc1 (13), mbc5 (8), mbc2 (7), <code>mem_timing</code> + <code>-2</code> (6), <code>rtc3test</code> (3), cpp MBC3/RTC (3), <code>acceptance/bits</code> (3), boot state: <code>boot_regs</code>, <code>boot_div</code>, <code>boot_hwio</code> (3)</td><td><b>46. Cumulative 60.</b> Overlay the real 256-byte boot image, start at <code>PC = 0</code> with everything zeroed, and unmap on a write to <code>0xFF50</code>. <b>A hand-written table passes <code>boot_regs</code>, and passes <code>boot_div</code> too provided it tabulates the <em>internal 16-bit counter</em> and not just the visible byte</b>: section 3 supplies that value and records the row passing on it. <b><code>boot_hwio</code> does not need the image</b>: with section 3&rsquo;s hand-over tables and <code>FF26</code> = <code>0xF1</code> it passes with no boot program (measured on a scratch copy of our core, and on an independent build).</td></tr>' +
-      '<tr><td><b>3. Timer, interrupts, sprite-memory transfer</b></td><td><code>acceptance/timer</code> (13), <code>acceptance</code> instruction and interrupt timing (~29), <code>oam_dma</code> (3), <code>interrupts</code> (1), <code>blargg/interrupt_time</code> (1, Colour only; an original-only build counts ~46 here)</td><td><b>~47. Cumulative ~107.</b> Where sub-instruction accuracy becomes mandatory. <b>The timer overflow is two events at different cycles</b>: the interrupt request is the counter&rsquo;s carry-out and fires <em>at</em> the overflow, while the reload is delayed 4 T-cycles after it. Model them as one and you fail <code>rapid_toggle</code> by exactly one glitch increment and spend days searching for a write-ordering bug that is not there</td></tr>' +
-      '<tr><td><b>4. The pixel pipeline, against acid2</b></td><td>the two acid2 rows (2), <code>acceptance/ppu</code> (12), daid <code>STOP</code> and speed-switch (6), <code>bully</code> &times;2 (2), <code>strikethrough</code> (1), samesuite dma + ppu (5), <code>oam_bug</code> (7). <b>Sections 7 to 14 and appendix E are this stage.</b></td><td><b>~35. Cumulative ~142.</b> Get <code>dmg-acid2</code> pixel-perfect before starting on anything harder. <b><code>strikethrough</code> belongs in this stage</b>: it needs the scan-latch rule <em>and</em> the grip phase of section 5, and the first without the second buys the row while leaving a 35-cartridge corpus 11 short</td></tr>' +
-      '<tr><td><b>5. mealybug&rsquo;s per-pixel cells</b></td><td>mealybug (24), <code>ppu_scanline_bgp</code> on the original (1)</td><td><b>25. Cumulative ~167.</b> Change how you measure here: rows are too coarse, because a cell can go from 370 wrong pixels to 34 and read FAIL the whole way</td></tr>' +
-      '<tr><td><b>6. The sound unit</b></td><td><code>dmg_sound</code> (12), <code>cgb_sound</code> (12), <code>samesuite/apu</code> (61). <b>Sections 15 to 17 and appendix B are this stage.</b></td><td><b>85. Cumulative ~252</b>: 84 winnable and one that is not. The largest single block on the board and the one most often left undone, which is exactly why it is worth doing</td></tr>' +
-      '<tr><td><b>7. The remainder that can be climbed</b></td><td>mooneye misc / manual-only / serial (4), a Super Game Boy model (3): <b>appendix A.6</b></td><td><b>7, and here is the only place a row comes off.</b> 252 + 7 = 259 counted as if everything were winnable; <b>one of stage 6&rsquo;s 85 sound rows is not</b>, so the honest cumulative is <b>258, which is the board</b>. The ladder stops here because there is nothing above it to climb</td></tr>' +
-      '<tr><td><em>Not a stage: the six rows nobody climbs</em></td><td>the three rows that ship no reference (3); the three failing rows of section 22: one of which sits inside stage 6&rsquo;s sound block and is not added again (3)</td><td><b>No rows.</b> 258 + 3 + 3 = 264, which is the manifest total. <b>It is not a target and this table must never be read as a route to it</b></td></tr>' +
+      '<tr><td><b>3. Timer, interrupts, sprite-memory transfer</b></td><td><code>acceptance/timer</code> (13), <code>acceptance</code> instruction and interrupt timing (~29), <code>oam_dma</code> (3), <code>interrupts</code> (1), <code>blargg/interrupt_time</code> (1, Colour only; the Worth column counts a build of both machines, and an original-only build counts ~46 here)</td><td><b>~47. Cumulative ~107.</b> Where sub-instruction accuracy becomes mandatory. <b>The timer overflow is two events at different cycles</b>: the interrupt request is the counter&rsquo;s carry-out and fires <em>at</em> the overflow, while the reload is delayed 4 T-cycles after it. Model them as one and you fail <code>rapid_toggle</code> by exactly one glitch increment and spend days searching for a write-ordering bug that is not there</td></tr>' +
+      '<tr><td><b>4. The pixel pipeline, against acid2</b></td><td>the three acid rows: <code>dmg-acid2</code>, <code>cgb-acid2</code> and <code>cgb-acid-hell</code> (3), <code>acceptance/ppu</code> (12), daid <code>STOP</code> and speed-switch (6), <code>bully</code> &times;2 (2), <code>strikethrough</code> (1), samesuite dma + ppu (5), <code>oam_bug</code> (7). <b>Sections 7 to 14 and appendix E are this stage.</b></td><td><b>~36. Cumulative ~143.</b> Get <code>dmg-acid2</code> pixel-perfect before starting on anything harder. <b><code>strikethrough</code> belongs in this stage</b>: it needs the scan-latch rule <em>and</em> the grip phase of section 5, and the first without the second buys the row while leaving a 35-cartridge corpus 11 short</td></tr>' +
+      '<tr><td><b>5. mealybug&rsquo;s per-pixel cells</b></td><td>mealybug (24), <code>ppu_scanline_bgp</code> on the original (1)</td><td><b>25. Cumulative ~168.</b> Change how you measure here: rows are too coarse, because a cell can go from 370 wrong pixels to 34 and read FAIL the whole way</td></tr>' +
+      '<tr><td><b>6. The sound unit</b></td><td><code>dmg_sound</code> (12), <code>cgb_sound</code> (12), <code>samesuite/apu</code> (61). <b>Sections 15 to 17 and appendix B are this stage.</b></td><td><b>85. Cumulative ~253</b>: 84 winnable and one that is not. The largest single block on the board and the one most often left undone, which is exactly why it is worth doing</td></tr>' +
+      '<tr><td><b>7. The remainder that can be climbed</b></td><td>mooneye misc / manual-only / serial (4), a Super Game Boy model (3): <b>appendix A.6</b></td><td><b>7, and here is the only place a row comes off.</b> 253 + 7 = 260 counted as if everything were winnable; <b>one of stage 6&rsquo;s 85 sound rows is not</b>, so the honest cumulative is <b>259, which is the board</b>. The ladder stops here because there is nothing above it to climb</td></tr>' +
+      '<tr><td><em>Not a stage: the five rows nobody climbs</em></td><td>the three rows that ship no reference (3); the two failing rows of section 22: one of which sits inside stage 6&rsquo;s sound block and is not added again (2)</td><td><b>No rows.</b> 259 + 3 + 2 = 264, which is the manifest total. <b>It is not a target and this table must never be read as a route to it</b></td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-why"><b>Why the ladder stops short of the manifest.</b> The three ' +
-    'no-reference rows and the three remaining failures are not stages to climb: they are the ' +
+    'no-reference rows and the two remaining failures are not stages to climb: they are the ' +
     'rows section 21 subtracts and section 22 argues, and <b>nobody ' +
     'has them</b>. The three no-reference rows are INFO for every emulator alive, this core ' +
     'included, and the remaining failures are named and open. A cumulative column that ran on to ' +
@@ -1695,8 +1683,8 @@ function gbAcceptanceEmulationTabHTML(d) {
     'the page exists to refuse. The unwinnable rows sit below the line, on the not-a-stage row, where ' +
     'they belong.</div>' +
     '<div class="gbemu-rule" id="gbr-G-4-2"><b>Rule G.4/2.</b> The ladder&rsquo;s bottom line must ' +
-    'equal the board of record in section 21, checked the way section 21 checks its own: <b>0 + 14 + 46 + ~47 + ~35 + 25 + 85 + 7 = 259 rows counted as ' +
-    'if every one were winnable, minus the one unwinnable sound row inside stage 6 = 258</b>, which ' +
+    'equal the board of record in section 21, checked the way section 21 checks its own: <b>0 + 14 + 46 + ~47 + ~36 + 25 + 85 + 7 = 260 rows counted as ' +
+    'if every one were winnable, minus the one unwinnable sound row inside stage 6 = 259</b>, which ' +
     'is the board of record in section 21. <b>This table cannot be edited one cell at a time:</b> when the board moves, stage 4, stage 7, the ' +
     'not-a-stage row and this sum all move together.</div>' +
     '<div class="gbemu-why"><b>Why.</b> That is the invariant. A ladder whose bottom no longer ' +
@@ -1951,8 +1939,8 @@ function gbAcceptanceEmulationTabHTML(d) {
     '<div class="gbemu-why"><b>Why.</b> <b>A gate ' +
     'that has ' +
     'only ever been seen to pass has not been shown to be a gate</b>: that is trap 5 in G.3 (Rule G.3/5), ' +
-    'and it applies to this file as much as to anything it checks. <b>Every check is mutation-proven before it is kept, and the tree is ' +
-    'clean at 99 of 99 afterwards.</b></div>' +
+    'and it applies to this file as much as to anything it checks. <b>A check is kept once a mutation has been seen to fail it, and the tree is ' +
+    'clean at 99 of 99 afterwards.</b> Two of the NES tab&rsquo;s twenty-four (below) have no mutation of their own on record, so for those two this is not shown.</div>' +
     '<p class="gbemu-key"><b>Three ways a check can be worse than no check, all three of them ' +
     'defects in the checker rather than on the page:</b> Rules G.7/7, G.7/8 and G.7/9.</p>' +
     '<div class="gbemu-rule" id="gbr-G-7-7"><b>Rule G.7/7 (a check can enforce an error).</b> <b><em>A relation ' +

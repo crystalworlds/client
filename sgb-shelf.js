@@ -40,7 +40,7 @@
      television's screen is a translucent glass layer (mean alpha 95/255) at 309,42 333x248 in
      the crop, measured from the file's own alpha; the CSS in index.html (.sgb-emu) holds the
      same rectangle as percentages. */
-  const DRAW = 'images/consoles/sgb-draw.webp?v=2.0.0';
+  const DRAW = 'images/consoles/sgb-draw.webp?v=2.1.0';
   const drawUrl = () => { try { return new URL(DRAW, document.baseURI).href; } catch (e) { return DRAW; } };
 
   const isSgb = d => !!(d && d.sgb && d.catalogue === 'game-boy');

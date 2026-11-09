@@ -7,6 +7,8 @@
  * site must also open from disk over file://, where fetch is blocked.
  * Defines its builder as a top-level function declaration, exactly as before,
  * so it remains a window global and index.html calls it unchanged.
+ *
+ * Document reference: CWM-GBC-4cjqujlfkionxchvczpubmsj
  * =========================================================================== */
 
 /* === Game Boy Color Emulation tab =========================================

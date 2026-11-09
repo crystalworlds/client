@@ -93,36 +93,36 @@
   },
   "nes": {
    "rungs": {
-    "plays": 4348,
+    "plays": 4440,
     "ingame": 0,
     "menus": 1,
     "boots": 72,
-    "nothing": 109
+    "nothing": 17
    },
    "untested": 0,
    "byCat": {
     "commercial": [
-     2105,
+     2109,
      0,
      0,
      16,
-     6,
+     2,
      0
     ],
     "unl": [
-     916,
+     963,
      0,
      1,
      4,
-     55,
+     8,
      0
     ],
     "homebrew": [
-     864,
+     905,
      0,
      0,
      26,
-     47,
+     6,
      0
     ],
     "hack": [
@@ -363,7 +363,7 @@
   },
   "pm": {
    "rungs": {
-    "plays": 17,
+    "plays": 12,
     "ingame": 0,
     "menus": 0,
     "boots": 0,
@@ -372,7 +372,15 @@
    "untested": 0,
    "byCat": {
     "commercial": [
-     17,
+     11,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "demo": [
+     1,
      0,
      0,
      0,
@@ -424,7 +432,7 @@
  },
  "chips": {
   "nes": {
-   "mappers": 233,
+   "mappers": 301,
    "accessories": "Zapper, Arkanoid paddle, Power Pad, Family Trainer, Four Score, Famicom 4-player adapter, R.O.B. (Gyromite and Stack-Up), Bandai Hyper Shot (light gun), Konami Hyper Shot (run and jump buttons), Party Tap (six quiz buzzers), Pachinko controller (dial), Exciting Boxing punching bag, Jissen Mahjong controller, Oeka Kids drawing tablet, Barcode World reader, Pokkun Moguraa mat (whack-a-mole), Top Rider bike, Subor keyboard, Subor keyboard and mouse, Miracle Piano keyboard, Turbo File (save box), Battle Box (save box), Family BASIC keyboard, Famicom Data Recorder (tapes in and out), Famicom microphone (your own microphone), Datach barcode reader, Study Box tape deck"
   },
   "a7800": {

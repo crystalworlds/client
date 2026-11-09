@@ -130,7 +130,7 @@ export const DEVICE_FAMILY_KEYBOARD = 0x23;
  * documented RAM size, so every dump of a TQROM or Waixing mixed board -- not
  * only the CRCs the table has rows for -- has the part the core routes to.
  * MECHANISM (NESdev wiki, each mapper's page).  enabled = false turns it off. */
-export const CHR_MIX_DEFAULT = { enabled: true, size: { 119: 8192, 74: 2048, 191: 2048, 194: 2048, 192: 4096, 195: 4096 } };
+export const CHR_MIX_DEFAULT = { enabled: true, size: { 119: 8192, 74: 2048, 191: 2048, 194: 2048, 192: 4096, 195: 4096, 544: 2048, 547: 8192 } };
 
 /* NES 2.0 exponent-multiplier sizes decoded; false restores the old reading. */
 export const NES2_EXPONENT_SIZES = true;
@@ -323,6 +323,9 @@ export function parseINES(bytes) {
   }
   if (!nes2 && prgRamSize < 8192) prgRamSize = 8192;
   if (mapper === 5 && !nes2 && prgRamSize < 0x10000) prgRamSize = 0x10000;
+  /* Mapper 535 (LH53): the wiki gives the board 8 KB of RAM at $B800-$D7FF; the
+   * one known NES 2.0 file declares none, a wrong header, not a smaller board. */
+  if (mapper === 535 && prgRamSize < 8192) prgRamSize = 8192;
   /* A TRAINER NEEDS $7000-$71FF TO EXIST -- see loadCartridge(). */
   if (trainer && prgRamSize < 8192) prgRamSize = 8192;
   /* The table's work+save RAM, raised and never lowered, iNES 1.0 only. */

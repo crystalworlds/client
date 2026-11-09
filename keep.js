@@ -34,10 +34,8 @@
         recover.
      5. Keeps a diagnostic record (key NAMES and sizes, persisted yes/no,
         origin, first-seen and last-seen times, events). Shown by ?diag=1,
-        ?diag=storage, or Settings, Access Code, Storage check. A copy of the
-        non-secret summary is sent to the local site server (/__keep-diag),
-        which appends it to the site log storage-diag.jsonl, so the
-        record survives even when the browser wipes everything.
+        ?diag=storage, or Settings, Access Code, Storage check. It stays in
+        this browser; nothing is sent anywhere.
    Plain ES5 on purpose: it also runs on the TV's older engine.
    ======================================================================== */
 (function () {
@@ -284,7 +282,8 @@
      The file is only asked for when the page came from the site's own server
      (index.html's first script sets __cwPaths), and only from this page's own
      address, so a copy on any other web server makes no extra request and
-     nobody waits on another host.
+     nobody waits on another host. The public address has no such file and is
+     never asked (it would only print a "not found" in the browser's console).
      SAFE BY CONSTRUCTION: it moves only after that address has answered
      /__canon as this site within 1.5 s; no answer means it stays, silently.
      Never moved: plain HTTP, other ports, a framed page, and any session that
@@ -312,6 +311,7 @@
     if (/[?&]stay=1(&|$)/.test(q)) ss(SS_STAY, '1');
     startAt = { path: location.pathname, search: location.search, hash: location.hash };   // before the page's router changes it
     if (location.protocol !== 'https:' || !window.__cwPaths) return;
+    if (/^(www\.)?crystalworlds\.media$/i.test(String(location.hostname || '').replace(/\.$/, ''))) return;
     try { if (window.top !== window) return; } catch (e) { return; }
     if (ss(SS_STAY) === '1') { canon.state = 'stay'; return; }
     if (typeof fetch !== 'function') return;
@@ -439,7 +439,6 @@
       return askPersist();
     }).then(function () { return snapshot(); }).then(function () {
       rememberHere();
-      beacon();
       if (/[?&]diag=(1|storage)(&|$)/.test(location.search)) CWKeep.showReport();
     });
   });
@@ -464,12 +463,6 @@
       first: diag.first, firstFromBackup: diag.firstFromBackup || 0, prevLast: diag.prevLast, last: diag.last, loads: diag.loads,
       cookieOrigins: cookieOrigins()
     };
-  }
-  function beacon() {
-    try {
-      var body = JSON.stringify(summary());
-      if (typeof fetch === 'function') fetch('/__keep-diag', { method: 'POST', body: body, headers: { 'Content-Type': 'application/json' }, keepalive: true, credentials: 'omit' }).catch(function () {});
-    } catch (e) {}
   }
   function ts(t) { if (!t) return '-'; var d = new Date(t); return d.toLocaleString(); }
   function reportText() {

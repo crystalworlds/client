@@ -40,6 +40,38 @@
   } catch (e) {}
 })();
 </script>
+<!-- STORIES (7 Nov 2026): loads stories.js only for a browser with a sign-in, or on the way back from
+     GitHub, whose sign-in code leaves the address here, before anything else on the page can see it.
+     A visitor who never signed in loads nothing and sends nothing to GitHub. Plain ES5. -->
+<script>
+(function () {
+  var q = [], started = 0, back = null;
+  window.cwStoriesLoad = function (cb) {
+    if (window.CwStories) { if (cb) cb(window.CwStories); return; }
+    if (cb) q.push(cb);
+    if (started) return;
+    started = 1;
+    var s = document.createElement('script');
+    s.src = 'stories.js?v=2.1.0';
+    s.onload = function () { while (q.length) { try { q.shift()(window.CwStories); } catch (e) {} } };
+    s.onerror = function () { started = 0; q = []; };
+    document.head.appendChild(s);
+  };
+  try {
+    var u = location.search, st = /[?&]state=(cwst-[A-Za-z0-9_-]+)/.exec(u);
+    if (st) {
+      var c = /[?&]code=([^&#]*)/.exec(u), e = /[?&]error=([^&#]*)/.exec(u);
+      back = { state: st[1], code: c ? decodeURIComponent(c[1]) : '', error: e ? decodeURIComponent(e[1]) : '' };
+      history.replaceState(history.state, '', location.pathname + location.hash);
+      window.__cwStoriesReturn = back;
+      window.__cwStoriesBack = true;   // deeplinks.js: Home does not open over the result
+    }
+  } catch (err) {}
+  var had = false;
+  try { had = !!localStorage.getItem('cw-stories-auth'); } catch (err) {}
+  if ((back || had) && !window.__cwOffsite) window.cwStoriesLoad();
+})();
+</script>
 <!-- HARDWARE AND EMULATION ONLY ON OUR OWN ADDRESS (4 Nov 2026): the Hardware and Emulation tabs,
      their pages and every way to them show only on crystalworlds.media (that name or any name under
      it). Anywhere else html gets cw-nodocs and window.__cwNoDocs is
@@ -156,9 +188,9 @@
      sign-ins from being lost, says so when they were, and records a storage
      check (?diag=1, ?diag=storage, Settings). Loaded first so it sees the
      storage before anything writes to it. -->
-<script src="keep.js?v=2.0.0"></script>
+<script src="keep.js?v=2.1.0"></script>
 <!-- Links anyone can paste (#/compatibility, #/media/about, #/<system>/hardware ...): deeplinks.js, 2026-10-21. In the head so the first applyHashRoute can ask it. -->
-<script src="deeplinks.js?v=2.0.0"></script>
+<script src="deeplinks.js?v=2.1.0"></script>
 <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report anything at
      all. Without it the platform letterboxes the page into the safe area and
      the insets come back as 0, so the TV overscan rules (body.gnw-tv, in the
@@ -180,6 +212,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0e14">
+<!-- Text and data mining is reserved (licenses/LICENSE, section 3E; .well-known/tdmrep.json). Search engines are unaffected. -->
+<meta name="tdm-reservation" content="1">
+<meta name="robots" content="noai, noimageai">
 <!-- Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord previews) -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="./">
@@ -214,7 +249,9 @@
 <script>
   // Apply the saved colour theme before CSS paints (avoids a flash of the wrong
   // theme). Dark is the default; light is opt-in via Settings -> Appearance.
-  (function(){ try { var t = localStorage.getItem('gnw.theme'); document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark'); } catch(e){ document.documentElement.setAttribute('data-theme', 'dark'); } })();
+  // OLED (8 Nov 2026) is the dark theme plus the class cw-oled: every dark rule applies, and only
+  // the page and the ground around a game's picture go pure black (the OLED block in the style).
+  (function(){ try { var t = localStorage.getItem('gnw.theme'); document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark'); if (t === 'oled') { document.documentElement.classList.add('cw-oled'); var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', '#000000'); } } catch(e){ document.documentElement.setAttribute('data-theme', 'dark'); } })();
   // Apply the chosen accent colour before paint too (green = default = no attribute).
   // A NEW VAULT CODE GETS A RANDOM ACCENT (1 Nov 2026): no vault code yet means this load makes
   // one (getOrCreateVaultCode), so its default accent is picked at random from the site's accents
@@ -313,12 +350,12 @@
      The measurement record and the reasoning are in the file. See the block
      headed "THE SCREEN APERTURE, DECLARED ONCE" below for the mechanism this
      plugs into, and WASM_Source/nes-artwork/verify.sh for what re-checks it. -->
-<link rel="stylesheet" href="nes-screen.css?v=2.0.0">
+<link rel="stylesheet" href="nes-screen.css?v=2.1.0">
 <!-- Which of the three NES-family consoles (NES / Famicom / Disk System) a title
      is shown on. Tiny and synchronous, because the NES catalogue reads it as it
      adopts titles and content_pack.js reads it while it still has the bytes. -->
-<script src="nes-console-hash.js?v=2.0.0"></script>
-<script src="nes-console.js?v=2.0.0"></script>
+<script src="nes-console-hash.js?v=2.1.0"></script>
+<script src="nes-console.js?v=2.1.0"></script>
 <!-- The four Atari apertures, on exactly the same footing and for exactly the
      same reason: play/atari2600/index.html and its three siblings are separate
      documents putting a picture on the same glass. One file rather than four
@@ -328,14 +365,16 @@
      properties. A mapping is a reference, not a copy.
      Re-checked by WASM_Source/atari-artwork/verify.sh, which also runs the
      detector against nes.png as a control. -->
-<link rel="stylesheet" href="atari-screen.css?v=2.0.0">
-<link rel="stylesheet" href="page-audio.css?v=2.0.0">
+<link rel="stylesheet" href="atari-screen.css?v=2.1.0">
+<link rel="stylesheet" href="page-audio.css?v=2.1.0">
 <!-- The Features window (31 Oct): features.js draws it, emby.js opens it from the button right of Home. -->
-<link rel="stylesheet" href="features.css?v=2.0.0">
+<link rel="stylesheet" href="features.css?v=2.1.0">
+<!-- On a small screen there is no red frame, so every window follows the light theme (7 Nov 2026). -->
+<link rel="stylesheet" href="small-light.css?v=2.1.0">
 <!-- Which Lynx cartridges are held on their side (2026-10-07): one per-hash list,
      read here for the one-column turned tile and by play/atarilynx/app.js for
      the play window's turn. -->
-<script src="play/atarilynx/turned.js?v=2.0.0"></script>
+<script src="play/atarilynx/turned.js?v=2.1.0"></script>
 <style>
   :root {
     --cover-inset: 8%;   /* box-art border, the Game & Watch tiles' measured median; see "CARTRIDGE BOXES" */
@@ -466,6 +505,16 @@
       linear-gradient(rgba(30,45,70,.04) 1px, transparent 1px),
       linear-gradient(90deg, rgba(30,45,70,.04) 1px, transparent 1px);
   }
+  /* ===== OLED theme (8 Nov 2026) =============================================
+     <html data-theme="dark" class="cw-oled">: the dark theme, so every dark rule
+     applies, with only the page background pure black (no corner glows, no grid)
+     and the ground around a game's picture in the play windows (play/host/index.html
+     has its own line). Panels, cards, menus, drawers, Settings, tiles, borders,
+     shadows and text keep the dark colours. Inside the red frame nothing changes. */
+  html.cw-oled body { background: #000; }
+  html.cw-oled body::before { display: none; }
+  html.cw-oled #loading-overlay { background: #000; }
+  html.cw-oled :is(#gb-play-frame, #nes-play-frame, #atari-play-frame, #tft-play-frame, #tj-play-frame) { background: #000 !important; }
   :root[data-theme="light"] .overlay { background: rgba(28, 36, 50, .38); }
   :root[data-theme="light"] .device-card:not([data-series="special"]) .img { background: linear-gradient(#ffffff, #eef0f4); }
   /* Pokémon Mini and Game Boy tiles used to force `background: transparent` here
@@ -520,7 +569,8 @@
      renders exactly like dark mode, while everything OUTSIDE the screen (page
      background, header, footer text) still flips to light. Collection is
      intentionally excluded — its grid has its own light styling and its Tile
-     view breaks out of the black screen onto the light page. */
+     view breaks out of the black screen onto the light page.
+     On a small screen there is no frame, so small-light.css gives these the light theme. */
   :root[data-theme="light"] #view-home,
   :root[data-theme="light"] #view-series,
   :root[data-theme="light"] #view-about,
@@ -5151,6 +5201,9 @@
   .credits-roll .credits-track .cr-special-line + .cr-special-line { margin-top: 10px; }
   .credits-roll.cr-narrow .credits-track .cr-special-head { font-size: 18px; letter-spacing: .14em; }
   .credits-roll.cr-narrow .credits-track .cr-special-line { font-size: 23px; }
+  /* Supporters: current public sponsors by GitHub handle, added by aboutCredits below when the list has names. */
+  .credits-roll .cr-supporters { margin-top: 48px; display: grid; gap: 6px; overflow-wrap: anywhere; }
+  .credits-roll .credits-track .cr-supporters .cr-sub { margin-bottom: 16px; }
   /* The closing dedication */
   .credits-roll .cr-outro { margin-top: 120px; padding-top: 72px; border-top: 1px solid var(--cr-line); }
   .credits-roll .credits-track .cr-close { max-width: 26em; margin: 0 auto; font-family: var(--cr-serif); font-weight: 500; font-size: 21px; line-height: 1.6; letter-spacing: .03em; color: #e5e7eb; }
@@ -5473,7 +5526,7 @@
      a 256 px tile over the same flat colour, which still shows if the picture fails to load. */
   .gw-frame-bezel,
   html body .about-pop .gw-frame-bezel {
-    background-image: url('./frame/linen.png?v=2.0.0');
+    background-image: url('./frame/linen.png?v=2.1.0');
     background-size: 256px 256px;
     background-repeat: repeat;
   }
@@ -5833,12 +5886,12 @@
      backgrounds get white text for AA contrast. */
   .rarity-common                { background: #b8c0cb; }
   .rarity-uncommon              { background: #9bc6e8; }
-  .rarity-sought-after          { background: #6fa3d8; color: #fff; }
-  .rarity-very-sought-after     { background: #4fa5a5; color: #fff; }
+  .rarity-sought-after          { background: #6fa3d8; color: #0a0e14; }
+  .rarity-very-sought-after     { background: #4fa5a5; color: #0a0e14; }
   .rarity-highly-collectible    { background: #9ed27a; }
   .rarity-extremely-collectible { background: #e8c34a; }
-  .rarity-super-rare            { background: #e8884a; color: #fff; }
-  .rarity-ultra-rare            { background: #d35a72; color: #fff; }
+  .rarity-super-rare            { background: #e8884a; color: #0a0e14; }
+  .rarity-ultra-rare            { background: #d35a72; color: #0a0e14; }
 
   .code-row {
     display: flex; gap: 8px; align-items: stretch;
@@ -6242,13 +6295,62 @@
      their series or accent colour; the boxed dark fact panels keep their own. */
   :root[data-theme="light"] #device-modal .sect-h:not(.factbox .sect-h) { color: color-mix(in srgb, var(--c, var(--accent)) 60%, #000); }
   /* Picture numbers on the gallery thumbnails: solid white on a darker tag. */
-  :root[data-theme="light"] .gallery-thumb .thumb-idx { color: #ffffff; background: rgba(0,0,0,.72); }
+  :root[data-theme="light"] .gallery-thumb .thumb-idx { color: #ffffff; background: #000000; }
   /* Play time: the unit words (days, hrs...) and the time itself. */
   :root[data-theme="light"] .drawer-playtime .dpt-units { color: var(--muted-ink); opacity: 1; }
   :root[data-theme="light"] .drawer-playtime.has-time .dpt-value { color: var(--accent-ink); }
   /* Paragraphs in Settings took the About page's pale grey (.article p, #c8d0dc), made
      for a dark ground. Same weight as the .article p rule, so classed notes still win. */
   :where(:root[data-theme="light"] #vault-overlay) .article p { color: #3d4655; }
+
+  /* THE CONTRAST SWEEP (7 Nov 2026, tools/contrast-sweep.mjs measures every page; run it after any colour
+     change). The dark theme's gold and sky blue had no light values, so everything in them washed out. */
+  :root[data-theme="light"] { --accent-2: #8a6410; --accent-3: #1a6f9c; }
+  /* The picture viewer and the manual keep their dark ground in both themes. */
+  :root[data-theme="light"] :is(#lightbox-overlay, .manual-window) { --accent-2: #f5c542; --accent-3: #5dc8f0; }
+  /* The danger reds were made for a dark ground. */
+  :root[data-theme="light"] #vault-overlay .btn-tiny[style*="ff8a8a"],
+  :root[data-theme="light"] #vault-overlay .vault-danger-head span,
+  :root[data-theme="light"] #vault-overlay .settings-zone-rule span { color: #a82020 !important; }
+  /* Words in the accent colour on a light ground: its deep version, as the Settings values have. */
+  :root[data-theme="light"] .game-item .badge-g,
+  :root[data-theme="light"] #vault-overlay .src-steps a,
+  :root[data-theme="light"] #vault-overlay .cws-state,
+  :root[data-theme="light"] #emby-creds-toggle { color: var(--accent-ink) !important; }
+  :root[data-theme="light"] #confirm-overlay .btn-tiny { color: color-mix(in srgb, var(--c, var(--accent)) 60%, #000); }
+  /* A drawer's lit tab takes the title's series colour: a deeper shade, like the section headings. */
+  :root[data-theme="light"] #device-modal .drawer-tab.active { color: color-mix(in srgb, var(--c, var(--accent)) 60%, #000); }
+  /* These stay dark panels in light mode, so their words stay light. */
+  :root[data-theme="light"] .hw-table th { color: #c8d0dc; }
+  :root[data-theme="light"] .vc-cover.noimg { color: #c8d0dc; }
+  /* The series chip on a tile sits on a dark glass: white reads on every series, in both themes. */
+  .device-card .img .tag:not(.tag-gbc) { color: #ffffff; }
+  :root[data-theme="light"] .device-card .meta .star { color: #8a6210; }
+  :root[data-theme="light"] .manual-btn { --accent-2: #f5c542; }
+  :root[data-theme="light"] :is(.factbox, .vw-stats-main) { --accent-2: #f5c542; --muted: #a3adbd; }
+  :root[data-theme="light"] .video-unplayed.vr-n { color: #ffffff; }
+  /* Dark theme: some systems' colours are too deep for the small headings, so a lighter shade; the
+     documents' code and table heads sit on a lifted panel, so a lighter grey. */
+  :root:not([data-theme="light"]) #device-modal :is(.sect-h:not(.factbox .sect-h), .drawer-tab.active, .pill.series-pill) { color: color-mix(in srgb, var(--c, var(--accent)) 70%, #fff); }
+  :root:not([data-theme="light"]) .gbemu :is(code, th, .gbemu-hero-txt p, .gbemu-hero-txt b, .gbemu-hero-txt .gbemu-why, .gbemu-hw) { color: #a3adbd; opacity: 1; }
+  :root:not([data-theme="light"]) #video-body .vgtile :is(i, .vgcnt, .vg-count),
+  :root:not([data-theme="light"]) #video-body .vgames-hint { color: #d3d9e3; }
+  :root:not([data-theme="light"]) #vault-overlay .src-state-text small { color: #c7cfdb; }
+  .gbemu-ops td.pm-trapcell { opacity: 1; }
+  .drawer-playtime .dpt-units { opacity: 1; }
+  .gallery-thumb .thumb-idx { color: #ffffff; background: #000000; }
+  @media (max-width: 860px) { .gallery-thumb .thumb-idx { font-size: 12px; } }
+  .rarity-common, .rarity-uncommon, .rarity-highly-collectible, .rarity-extremely-collectible { color: #0a0e14; }
+  /* A film with no picture: its name on a dark chip, whatever colour its tile drew. */
+  #video-grid .video-card .video-noart { color: #e7ecf2; text-shadow: none; background: rgba(10,14,20,.78); border-radius: 8px; }
+  /* Small words in the documents' grey panels. */
+  :root[data-theme="light"] :is(.gbemu-toc b, .gbemu-toc b span, .gbemu-what, .gbemu-hw, .gbemu-diff) { color: #2f3642; opacity: 1; }
+  :root[data-theme="light"] .gbemu-ops td.pm-trapcell { color: var(--muted-ink); opacity: 1; }
+  /* Both themes. Links in the About and Home copies had no colour and fell to the browser's dark blue on black. */
+  .about-licences a, .emu-lib-note a { color: var(--accent); }
+  /* The sky behind the weather widget's words, darkened a little so white reads on the brightest sky. */
+  .vw-weather-main .wx-content { background: rgba(0,0,0,.34); }
+  .wx-content .wx-temp .wx-unit, .wx-content .wx-cond, .wx-content .wx-city { opacity: 1 !important; }
 </style>
 </head>
 <body>
@@ -6456,20 +6558,20 @@
             <ul class="sys-logos" aria-label="Movies, shows and the 14 consoles and handhelds you can play here">
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="2.5" y1="8" x2="7" y2="8"/><line x1="2.5" y1="16" x2="7" y2="16"/><line x1="17" y1="8" x2="21.5" y2="8"/><line x1="17" y1="16" x2="21.5" y2="16"/></svg><span>Movies</span></li>
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-3)" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><polyline points="7.5 3 12 7 16.5 3"/></svg><span>Shows</span></li>
-              <li><img src="images/consoles/gameandwatch.webp?v=2.0.0" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
-              <li><img src="images/consoles/tft_mario.webp?v=2.0.0" alt="" loading="lazy"><span>Mario Bros.</span></li>
-              <li><img src="images/consoles/tft_zelda.webp?v=2.0.0" alt="" loading="lazy"><span>Legend of Zelda</span></li>
-              <li><img src="images/consoles/tetrisjr.webp?v=2.0.0" alt="" loading="lazy"><span>Tetris Jr.</span></li>
-              <li><img src="images/consoles/gb.webp?v=2.0.0" alt="" loading="lazy"><span>Game Boy</span></li>
-              <li><img src="images/consoles/gbc.webp?v=2.0.0" alt="" loading="lazy"><span>Game Boy Color</span></li>
-              <li><img src="images/consoles/pokemini.webp?v=2.0.0" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
-              <li><img src="images/consoles/nes.webp?v=2.0.0" alt="" loading="lazy"><span>NES</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.0.0" alt="" loading="lazy"><span>Famicom</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.0.0" alt="" loading="lazy"><span>Disk System</span></li>
-              <li><img src="images/consoles/atari2600.webp?v=2.0.0" alt="" loading="lazy"><span>Atari 2600</span></li>
-              <li><img src="images/consoles/atari5200.webp?v=2.0.0" alt="" loading="lazy"><span>Atari 5200</span></li>
-              <li><img src="images/consoles/atari7800.webp?v=2.0.0" alt="" loading="lazy"><span>Atari 7800</span></li>
-              <li><img src="images/consoles/atarilynx.webp?v=2.0.0" alt="" loading="lazy"><span>Atari Lynx</span></li>
+              <li><img src="images/consoles/gameandwatch.webp?v=2.1.0" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
+              <li><img src="images/consoles/tft_mario.webp?v=2.1.0" alt="" loading="lazy"><span>Mario Bros.</span></li>
+              <li><img src="images/consoles/tft_zelda.webp?v=2.1.0" alt="" loading="lazy"><span>Legend of Zelda</span></li>
+              <li><img src="images/consoles/tetrisjr.webp?v=2.1.0" alt="" loading="lazy"><span>Tetris Jr.</span></li>
+              <li><img src="images/consoles/gb.webp?v=2.1.0" alt="" loading="lazy"><span>Game Boy</span></li>
+              <li><img src="images/consoles/gbc.webp?v=2.1.0" alt="" loading="lazy"><span>Game Boy Color</span></li>
+              <li><img src="images/consoles/pokemini.webp?v=2.1.0" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
+              <li><img src="images/consoles/nes.webp?v=2.1.0" alt="" loading="lazy"><span>NES</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.1.0" alt="" loading="lazy"><span>Famicom</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.1.0" alt="" loading="lazy"><span>Disk System</span></li>
+              <li><img src="images/consoles/atari2600.webp?v=2.1.0" alt="" loading="lazy"><span>Atari 2600</span></li>
+              <li><img src="images/consoles/atari5200.webp?v=2.1.0" alt="" loading="lazy"><span>Atari 5200</span></li>
+              <li><img src="images/consoles/atari7800.webp?v=2.1.0" alt="" loading="lazy"><span>Atari 7800</span></li>
+              <li><img src="images/consoles/atarilynx.webp?v=2.1.0" alt="" loading="lazy"><span>Atari Lynx</span></li>
             </ul>
           </div>
         </div>
@@ -6930,7 +7032,7 @@
                   <div class="cr-row"><p class="cr-role">Test cartridges</p><div class="cr-who"><p class="cr-name">Docheinstein</p><p class="cr-for">for the docboy test cartridges</p></div></div>
                   <div class="cr-row"><p class="cr-role">Test programs</p><div class="cr-who"><p class="cr-name">aappleby</p><p class="cr-for">for gbmicrotest</p></div></div>
                   <div class="cr-row"><p class="cr-role">Test programs</p><div class="cr-who"><p class="cr-name">Christoph Sprenger</p><p class="cr-for">for his Game Boy and Game Boy Color test programs</p></div></div>
-                  <div class="cr-row"><p class="cr-role">Test suite</p><div class="cr-who"><p class="cr-name">Lior Halphon (LIJI32)</p><p class="cr-for">for SameSuite</p></div></div>
+                  <div class="cr-row"><p class="cr-role">Test suite</p><div class="cr-who"><p class="cr-name">Lior Halphon (LIJI32)</p><p class="cr-for">for SameSuite, and for SameBoy's Game Boy Light colours and its Game Boy Color colour correction, which showed us how ours should work</p></div></div>
                   <div class="cr-row"><p class="cr-role">Test shootout and tests</p><div class="cr-who"><p class="cr-name">daid</p><p class="cr-for">for the Game Boy test shootout and his own tests</p></div></div>
                   <div class="cr-row"><p class="cr-role">Test programs</p><div class="cr-who"><p class="cr-name">Ashiepaws</p><p class="cr-for">for Bully and Strikethrough</p></div></div>
                   <div class="cr-row"><p class="cr-role">Cartridge clock and Super Game Boy tests</p><div class="cr-who"><p class="cr-name">CasualPokePlayer</p><p class="cr-for">for the cartridge clock and Super Game Boy tests</p></div></div>
@@ -7068,6 +7170,45 @@
     var SPEED = 40, HOLD = 4000, IDLE = 2500, NARROW = 560;
     var ICON_PAUSE = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
     var ICON_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8.5 5.2v13.6a.6.6 0 0 0 .92.5l10.2-6.8a.6.6 0 0 0 0-1L9.42 4.7a.6.6 0 0 0-.92.5z"/></svg>';
+    /* Supporters: the sponsor bot's public list, asked for once per page. Handles only, written with
+       textContent. No list, an empty list or any failure leaves the roll exactly as it is. */
+    var SUPPORTERS_URL = 'https://xagjczzdqdezvrjbpbkt.supabase.co/functions/v1/sponsorbot/supporters';
+    var supportersAsked = null;
+    function supportersList() {
+      if (!supportersAsked) {
+        supportersAsked = /PROJECT_REF/.test(SUPPORTERS_URL) || !window.fetch ? Promise.resolve([])
+          : window.fetch(SUPPORTERS_URL, { credentials: 'omit', referrerPolicy: 'no-referrer' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+              return d && Array.isArray(d.supporters) ? d.supporters.filter(function (n) {
+                return typeof n === 'string' && /^[A-Za-z0-9-]{1,39}$/.test(n);
+              }) : [];
+            })
+            .catch(function () { return []; });
+      }
+      return supportersAsked;
+    }
+    /* Added inside the special thanks card. The roll measures its height every frame, so a late arrival
+       is simply rolled through. The Media page's copy may already carry the group from the original. */
+    function addSupporters(root) {
+      supportersList().then(function (names) {
+        var card = root.querySelector('.cr-special');
+        if (!names.length || !card || root.querySelector('.cr-supporters')) return;
+        var box = document.createElement('div');
+        box.className = 'cr-supporters';
+        var head = document.createElement('p');
+        head.className = 'cr-sub';
+        head.textContent = 'Supporters';
+        box.appendChild(head);
+        names.forEach(function (n) {
+          var p = document.createElement('p');
+          p.className = 'cr-name';
+          p.textContent = n;
+          box.appendChild(p);
+        });
+        card.appendChild(box);
+      });
+    }
     function wire(root) {
       if (root.__crWired) return;
       root.__crWired = true;
@@ -7162,10 +7303,13 @@
         if (smooth) N.scrollBox(win, to); else win.scrollTop = to;
         e.preventDefault(); e.stopPropagation();
       });
+      /* The supporters list is asked for only once the roll comes on screen, not on every page load. */
+      var asked = false;
+      function askOnce() { if (!asked) { asked = true; addSupporters(root); } }
       document.addEventListener('visibilitychange', run);
       if ('IntersectionObserver' in window) {
-        new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; run(); }).observe(win);
-      } else { onScreen = true; }
+        new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; if (onScreen) askOnce(); run(); }).observe(win);
+      } else { onScreen = true; askOnce(); }
       label(); run();
     }
     function attach(scope) {
@@ -7278,7 +7422,7 @@
     <div class="modal-head">
       <div>
         <div class="modal-sub">Settings</div>
-        <div class="modal-title">Version 2.0.0</div>
+        <div class="modal-title">Version 2.1.0</div>
       </div>
       <button class="modal-close" onclick="closeOverlay('vault-overlay')" aria-label="Close">×</button>
     </div>
@@ -7289,7 +7433,7 @@
           <div>
             <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:.01em;">No passwords. No accounts. Just a vault code.</div>
             <p style="color:var(--muted); font-size:12.5px; line-height:1.55; margin:0;">
-              This site doesn't use logins or sign-ups. Instead, this browser holds a single random <strong style="color:var(--text); font-weight:700;">vault code</strong> (a UUID). The vault itself keeps only that code and, if you add one, a recovery email. Your play time, saves and settings stay in this browser, not in the vault. Anyone who knows the code can change or delete the vault; nobody else can. Save it in a password manager. If you lose the code and saved no recovery email, it cannot be found again: there's no password reset, because there's no password.
+              This site doesn't use logins or sign-ups. Instead, this browser holds a single random <strong style="color:var(--text); font-weight:700;">vault code</strong> (a UUID). The vault itself keeps only that code and, if you add one, a recovery email. Your play time, saves and settings stay in this browser, not in the vault. Anyone who knows the code can change or delete the vault; nobody else can. Save it in a password manager. If you lose the code and saved no recovery email, it cannot be found again: there's no password reset, because there's no password. Sponsors can choose to sign in with GitHub to read the Stories; nothing else here needs it.
             </p>
           </div>
         </div>
@@ -7309,7 +7453,7 @@
             <section class="vault-section">
               <label style="display:block; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Theme</label>
               <p style="color:var(--muted); font-size:12.5px; margin:0 0 12px; line-height:1.55;">
-                Choose how the site looks. <strong style="color:var(--text); font-weight:700;">Dark</strong> is the default: it's like viewing the units in a dim room. <strong style="color:var(--text); font-weight:700;">Light</strong> brightens everything, and gives the see-through Crystal Screen units their proper light look. Your choice is remembered on this device.
+                Choose how the site looks. <strong style="color:var(--text); font-weight:700;">Dark</strong> is the default: it's like viewing the units in a dim room. <strong style="color:var(--text); font-weight:700;">Light</strong> brightens everything, and gives the see-through Crystal Screen units their proper light look. <strong style="color:var(--text); font-weight:700;">OLED</strong> is Dark with a pure black page and a black ground around the game picture, for screens that show true black. Your choice is remembered on this device.
               </p>
               <div class="theme-toggle" role="radiogroup" aria-label="Colour theme">
                 <button type="button" class="theme-opt" data-theme-opt="dark" role="radio" aria-checked="true" onclick="gnwSetTheme('dark')">
@@ -7319,6 +7463,10 @@
                 <button type="button" class="theme-opt" data-theme-opt="light" role="radio" aria-checked="false" onclick="gnwSetTheme('light')">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
                   Light
+                </button>
+                <button type="button" class="theme-opt" data-theme-opt="oled" role="radio" aria-checked="false" onclick="gnwSetTheme('oled')">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2" fill="currentColor"/><path d="M8 21h8M12 17v4"/></svg>
+                  OLED
                 </button>
               </div>
             </section>
@@ -7657,7 +7805,7 @@
              here — the play page owns what a skin is and publishes its list up
              over postMessage (see the gbPalettes branch of the message
              listener); this is only where the control lives. -->
-        <select id="gb-play-skin" class="pm-lang-select" aria-label="Skin" title="Skin: panel colours"
+        <select id="gb-play-skin" class="pm-lang-select" aria-label="Mono Palette" title="Mono Palette: panel colours"
                 style="display:none" onchange="gbSetSkin(this.value)"></select>
         <!-- MATRIX MODE, on the same terms as the Skin picker beside it: a
              display choice about the PANEL, so it sits in the same header, and
@@ -8202,57 +8350,57 @@
      its builder as a window global; the call sites below are unchanged.
      Placed BEFORE the main script purely so they are defined before
      anything can run; they are only ever CALLED from a drawer render. -->
-<script src="emulation-tab.js?v=2.0.0"></script>
-<script src="emulation-links.js?v=2.0.0"></script>
-<script src="tft-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-machine-emulation-tab.js?v=2.0.0"></script>
-<script src="emu-score-box.js?v=2.0.0"></script>
-<script src="gb-cpu-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-memory-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-ppu-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-apu-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-mappers-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-sgb-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-acceptance-emulation-tab.js?v=2.0.0"></script>
-<script src="gbc-emulation-tab.js?v=2.0.0"></script>
-<script src="gbc-machine-emulation-tab.js?v=2.0.0"></script>
-<script src="gbc-timing-emulation-tab.js?v=2.0.0"></script>
-<script src="gbc-ppu-emulation-tab.js?v=2.0.0"></script>
-<script src="gbc-apu-emulation-tab.js?v=2.0.0"></script>
-<script src="pm-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-machine-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-cpu-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-ppu-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-apu-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-mappers-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-fds-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-peripherals-emulation-tab.js?v=2.0.0"></script>
-<script src="nes-acceptance-emulation-tab.js?v=2.0.0"></script>
-<script src="gb-hardware-tab.js?v=2.0.0"></script>
-<script src="hw-diagram.js?v=2.0.0"></script>
-<script src="nes-hardware-tab.js?v=2.0.0"></script>
-<script src="nes-emulation-index-tab.js?v=2.0.0"></script>
+<script src="emulation-tab.js?v=2.1.0"></script>
+<script src="emulation-links.js?v=2.1.0"></script>
+<script src="tft-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-machine-emulation-tab.js?v=2.1.0"></script>
+<script src="emu-score-box.js?v=2.1.0"></script>
+<script src="gb-cpu-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-memory-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-ppu-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-apu-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-mappers-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-sgb-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-acceptance-emulation-tab.js?v=2.1.0"></script>
+<script src="gbc-emulation-tab.js?v=2.1.0"></script>
+<script src="gbc-machine-emulation-tab.js?v=2.1.0"></script>
+<script src="gbc-timing-emulation-tab.js?v=2.1.0"></script>
+<script src="gbc-ppu-emulation-tab.js?v=2.1.0"></script>
+<script src="gbc-apu-emulation-tab.js?v=2.1.0"></script>
+<script src="pm-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-machine-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-cpu-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-ppu-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-apu-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-mappers-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-fds-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-peripherals-emulation-tab.js?v=2.1.0"></script>
+<script src="nes-acceptance-emulation-tab.js?v=2.1.0"></script>
+<script src="gb-hardware-tab.js?v=2.1.0"></script>
+<script src="hw-diagram.js?v=2.1.0"></script>
+<script src="nes-hardware-tab.js?v=2.1.0"></script>
+<script src="nes-emulation-index-tab.js?v=2.1.0"></script>
 <!-- The four Atari build guides (2026-10-18): generated in the Atari emulator's source tree by
      tools/build_emulation_tabs.mjs from docs/emulation*, copied unchanged (--check green
      2026-10-18, tab_name_check green). The dispatcher composes each drawer from its own guide plus the
      chapters it borrows from another Atari guide, so all five files load together. -->
-<script src="atari2600-emulation-tab.js?v=2.0.0"></script>
-<script src="atari5200-emulation-tab.js?v=2.0.0"></script>
-<script src="atari7800-emulation-tab.js?v=2.0.0"></script>
-<script src="atarilynx-emulation-tab.js?v=2.0.0"></script>
-<script src="atari-emulation-index-tab.js?v=2.0.0"></script>
-<script src="gnw-emulation-shared-tab.js?v=2.0.0"></script>
-<script src="gnw-sm510-emulation-tab.js?v=2.0.0"></script>
-<script src="gnw-sm5a-emulation-tab.js?v=2.0.0"></script>
-<script src="gnw-sm511-emulation-tab.js?v=2.0.0"></script>
-<script src="atari-hardware-tab.js?v=2.0.0"></script>
-<script src="gamemeta.js?v=2.0.0"></script>
+<script src="atari2600-emulation-tab.js?v=2.1.0"></script>
+<script src="atari5200-emulation-tab.js?v=2.1.0"></script>
+<script src="atari7800-emulation-tab.js?v=2.1.0"></script>
+<script src="atarilynx-emulation-tab.js?v=2.1.0"></script>
+<script src="atari-emulation-index-tab.js?v=2.1.0"></script>
+<script src="gnw-emulation-shared-tab.js?v=2.1.0"></script>
+<script src="gnw-sm510-emulation-tab.js?v=2.1.0"></script>
+<script src="gnw-sm5a-emulation-tab.js?v=2.1.0"></script>
+<script src="gnw-sm511-emulation-tab.js?v=2.1.0"></script>
+<script src="atari-hardware-tab.js?v=2.1.0"></script>
+<script src="gamemeta.js?v=2.1.0"></script>
 <!-- Home-page narration (2026-10-12): recorded narration on R2 (site-audio bucket),
      per-word timings generated offline; see page-audio.js. -->
-<script src="page-audio-timings.js?v=2.0.0"></script>
-<script src="page-audio.js?v=2.0.0"></script>
+<script src="page-audio-timings.js?v=2.1.0"></script>
+<script src="page-audio.js?v=2.1.0"></script>
 
 <script>
 /* === Image data === Since 2026-10-24 device pictures are single files under
@@ -10364,8 +10512,12 @@ const SOURCE_FIRMWARE_HASHES = [
   { key: 'flagman',   title: 'Flagman',                subtitle: 'FL-02 · 1980', cpu: 'sm5a',  bytes: 2048, sha256: '1133249dd040be9a857b787a80ab824c5d732f0197b39a27ec97dd1793488791' },
   { key: 'gcliff',    title: 'Gold Cliff',             subtitle: 'MV-64 · 1988', cpu: 'sm512', bytes: 4096, sha256: '426a433e046ab437aec35283181992952e6db99cf06b4eb8d33e28e7366c6e6d' },
   { key: 'ghouse',    title: 'Green House',            subtitle: 'GH-54 · 1982', cpu: 'sm510', bytes: 4096, sha256: 'd0b1756bdced26372e0524230a9cb72b882c566396ee0069386cd6b65c7247f0' },
-  { key: 'helmet',    title: 'Helmet',                 subtitle: 'CN-07 · 1981', cpu: 'sm5a',  bytes: 2048, sha256: 'c199ab3b7fe414cfbc4370b2ec3279287054603c20ff91c572d7866b9fb44bb0' },
+  { key: 'helmet',    title: 'Helmet',                 subtitle: 'CN-17 · 1981', cpu: 'sm5a',  bytes: 2048, sha256: 'c199ab3b7fe414cfbc4370b2ec3279287054603c20ff91c572d7866b9fb44bb0' },
   { key: 'judge',     title: 'Judge',                  subtitle: 'IP-05 · 1980', cpu: 'sm5a',  bytes: 2048, sha256: '5fe4fdd84b9582fe7301f05bfd67164f9ec0b59b403f62ba3f889fef9ed09de7' },
+  // Other program revisions of a device (8 Nov 2026), key '<device key>~<variant>': picked in the
+  // device's drawer (VARIANTS 'play'), never a tile. Hashes of the No-Intro files themselves.
+  { key: 'helmet~cn07', title: 'Helmet',               subtitle: 'CN-07 · 1981', cpu: 'sm5a',  bytes: 1856, sha256: 'cd1160e842e83226269dfc72c51335cabfbd2e4333317c5ba2f184f6b0df321e' },
+  { key: 'judge~ip15',  title: 'Judge',                subtitle: 'IP-15', cpu: 'sm5a',  bytes: 1856, sha256: '7a6a931445c1af0d84e2edd100a8efdbe4d7d5f7da484de6a1ea54fad3ea3c74' },
   { key: 'lboat',     title: 'Life Boat',              subtitle: 'TC-58 · 1983', cpu: 'sm510', bytes: 4096, sha256: 'c5fc5f8c8b5fa21f0aa8a6448d57c961d6e53b8afa723efe3172e2c98141f194' },
   { key: 'lion',      title: 'Lion',                   subtitle: 'LN-08 · 1981', cpu: 'sm5a',  bytes: 2048, sha256: 'f8f1b8c8cd621b9fac4846748c1d700166b109d583901b463ed4eae676edbc6a' },
   { key: 'manhole',   title: 'Manhole',                subtitle: 'MH-06 · 1981', cpu: 'sm5a',  bytes: 2048, sha256: '1287e5464504b22cac08c35c7d7ccfbe5b40a56a379ac78e2a0b575c885b109d' },
@@ -12076,6 +12228,14 @@ const VARIANTS = {
     { id: '',       label: 'Green (international)' },
     { id: 'purple', label: 'Purple (JP first run)',
       rarity: { tier: 'Super Rare', pct: 81 } },
+    // `play` (8 Nov 2026): another program revision of the unit. Picking it makes Play Now run
+    // that program (index.html openPlay, SOURCE_FIRMWARE_HASHES '<key>~<play>'); it is listed
+    // only when its file is on a connected game server or in a content pack.
+    { id: 'ip-15',  label: 'IP-15 (revised program)', play: 'ip15' },
+  ],
+  'gold-helmet': [
+    { id: '',       label: 'CN-17 (revised program)' },
+    { id: 'cn-07',  label: 'CN-07 (original program)', play: 'cn07' },
   ],
   'widescreen-octopus': [
     { id: '',       label: 'Japan' },
@@ -12172,7 +12332,7 @@ const DEVICES = [
     games:[{name:'Game A',desc:'Standard pace.'},{name:'Game B',desc:'More pedestrians, faster crossings.'}],
     facts:{ Released:'29 January 1981', Designer:'Gunpei Yokoi', Developer:'Nintendo R&D1', Players:'1', 'Game Modes':'Game A, Game B', Display:'Single LCD with clock', Power:'2× LR43 watch cells' } },
 
-  { id:'gold-helmet', name:'Helmet', series:'gold', model:'CN-07', released:'1981-02-21', img:'gnwart-gold-helmet.webp',
+  { id:'gold-helmet', name:'Helmet', series:'gold', model:'CN-17', released:'1981-02-21', img:'gnwart-gold-helmet.webp',
     overview:`A construction worker sprints between two on-site huts while a hail of spanners and bolts rains down from above. Helmet shipped a month after Manhole, in February 1981, and is the most kinetic of the three Gold-series units: the screen has more moving parts than any Silver predecessor.`,
     gameplay:`Two buttons walk the worker between four positions on the street. Time each step to dodge the falling tools. Get hit and a life is lost. The worker only has a helmet for protection, and the timing windows tighten as the score increases. Game B opens with the higher difficulty already engaged.`,
     legacy:`Helmet's vertically-falling-hazard mechanic became a recurring theme across LCD gaming for the next decade and inspired countless cheap clones in the 1980s arcades-on-keychains market. The Gold-finished unit is rarer than its Silver predecessors and tends to fetch a premium in collector listings.`,
@@ -13118,22 +13278,87 @@ function _pmOneFileOneId(gameFiles) {
 }
 /* A 'pm-x<sha12>' file becomes a device of its own, a copy of its game's
    catalogue entry (art, facts, console colour) under its own id, once the
-   variant table says which game it is. A file the table does not place has no
-   catalogue entry to copy and is left out, as before. */
+   variant table says which game it is.
+     A FILE WITH NO GAME AT ALL GETS ITS OWN TILE (7 Nov 2026, Bad Apple in
+   the demos folder: "the server finds a file there and adds it to the list of
+   games"). The list's name is all this site knows, so it is built as a Game Boy
+   or NES file from a server is: the name tidied, no date, no facts, the generic
+   box last. Variants.collapse makes a group one tile (a test suite, a game's
+   regions) and never lets a translation or hack be one.
+     A VARIANT IS NEVER A TILE (7 Nov 2026: "I dont want varients appearing as
+   tiles ever"). A file named after one of the ten, or as a part of one ("Pichu
+   Bros. Mini - Skateboard", "Pokemon Party Mini - Rocket Start"), belongs to
+   that game whatever the table's groups say, so it gets no tile of its own. */
+const _pmFold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+function _pmBelongsToAGame(name) {
+  const n = _pmFold(String(name || '').replace(/\s*[([].*$/, ''));
+  return POKEMON_MINI.some(d => {
+    if (/^pm-x/.test(d.id)) return false;
+    const names = [d.name, Variants.titleOf(d)].concat(Variants.searchAka(d) || []).map(_pmFold).filter(Boolean);
+    return names.some(c => n === c || n.startsWith(c + ' '));
+  });
+}
+const _PM_KIND_TAGS = [
+  ['test', t => /test program/i.test(t)],
+  ['demo', t => /^(?:demo|sample|kiosk(?: demo)?|promo|promotion card|trade demo|rolling demo)(?: \d+)?$/i.test(t)],
+  ['proto', t => /^(?:proto(?:type)?|beta|alpha|pre-release|debug)(?: \d+)?$/i.test(t) || /\b(?:prototype|beta)\b/i.test(t)],
+  ['hack', t => /^(?:h(?:\d|[A-Z ]|$)|T[+-])/.test(t) || /\b(?:hack|translated|translation)\b/i.test(t)],
+  ['homebrew', t => /^(?:aftermarket|homebrew|pd|public domain)$/i.test(t)],
+  ['unl', t => /^(?:unl|unlicensed|pirate)$/i.test(t) || /^p\d*$/.test(t)],
+];
+/* The kind a file's name shows, or ''. tools/categories.mjs special(), the name rule of the site's
+   type boxes; a translation's "(Translated En)" counts as a hack here, as it does in the variants table. */
+function _pmFileKind(name) {
+  const n = String(name || ''), cut = n.search(/[([]/), title = cut >= 0 ? n.slice(0, cut) : n;
+  const tags = [...n.matchAll(/[([]([^)\]]*)[)\]]/g)].map(m => m[1].trim());
+  if (tags.some(_PM_KIND_TAGS[0][1]) || /\b(?:test|tests|tester|diagnostics?)\b/i.test(title)) return 'test';
+  if (tags.some(_PM_KIND_TAGS[1][1]) || /\bdemo\b/i.test(title)) return 'demo';
+  for (const [kind, f] of _PM_KIND_TAGS.slice(2)) if (tags.some(f)) return kind;
+  return '';
+}
+/* The device for a file with no catalogue game, or null. x is the server list's {n, z}.
+   THE TYPE BOX: the site's types table answers first (emby.js gameTypeKey). Below it, pmOwnType: the
+   name's kind; else (10 Nov 2026) a file the table does not know is Unknown (emby.js gameTypeKey), as on every
+   other system; it was homebrew, because every commercial Pokemon mini release is in that table.
+   A TRANSLATION OR HACK THE TABLE DOES NOT KNOW has no original to go under, so it stays hidden (3 Nov). */
+function _pmOwnFileDevice(id, x) {
+  if (!x) return null;
+  const e = Variants.info({ id, catalogue: 'pokemon-mini' });
+  const kind = _pmFileKind(x.n);
+  if (!e && kind === 'hack') return null;
+  if (_pmBelongsToAGame(x.n)) return null;
+  return {
+    id, catalogue: 'pokemon-mini', series: 'pokemon-mini', img: 'PokemonMiniConsole.png',
+    name: _gbDisplayTitle(x.n), fullName: x.n,
+    developer: '-', genre: '-', players: '-',
+    cartridge: x.z ? `${Math.round((x.z * 8) / 1024)} Kbit` : '-',
+    released: '', features: [], regions: [],
+    description: '', additional: '', promo: '', fromPack: true,
+    pmOwnType: kind,
+  };
+}
 function _pmAdoptVariantFiles(gameFiles) {
-  const extra = gameFiles ? Object.keys(gameFiles).filter(k => /^pm-x[0-9a-f]{12}$/.test(k) && !ALL_DEVICES.some(d => d.id === k)) : [];
+  /* The server's list names its files. A built payload is every title there is and needs no list. */
+  const listed = (_pmFileAvailable !== true && window.CWS && CWS.mergeManifest && CWS.mergeManifest('pm', null)) || {};
+  const extra = Object.keys(Object.assign({}, gameFiles || {}, listed)).filter(k => /^pm-x[0-9a-f]{12}$/.test(k) && !ALL_DEVICES.some(d => d.id === k));
   if (!extra.length || !window.Variants) return;
-  Variants.load('pm').then(() => {
+  return Variants.load('pm').then(() => {
     let added = 0;
+    const own = [];
     for (const id of extra) {
       if (ALL_DEVICES.some(d => d.id === id)) continue;
+      /* gbReloadContent takes every list-built title out of ALL_DEVICES: this one comes back as it was. */
+      const kept = POKEMON_MINI.find(d => d.id === id);
+      if (kept) { ALL_DEVICES.push(kept); added++; continue; }
       const k = Variants.keyOf({ id, catalogue: 'pokemon-mini' });
-      const base = k && POKEMON_MINI.find(d => !d.pmVariantOf && Variants.keyOf(d) === k);
-      if (!base) continue;
-      const d = Object.assign({}, base, { id, pmVariantOf: base.id });
+      const base = k && POKEMON_MINI.find(d => !/^pm-x/.test(d.id) && Variants.keyOf(d) === k);   // a catalogue game, never another file's tile
+      const d = base ? Object.assign({}, base, { id, pmVariantOf: base.id }) : _pmOwnFileDevice(id, listed[id]);
+      if (!d) continue;
+      if (!base) own.push(d);
       POKEMON_MINI.push(d); ALL_DEVICES.push(d); added++;
     }
-    if (added) notifyMediaGameContent();
+    if (own.length && window.CWS) CWS.decorate(own);
+    if (added) { notifyMediaGameContent(); try { _retryDeepDevice(); } catch (e) {} }
   }).catch(() => {});
 }
 
@@ -13223,6 +13448,8 @@ function pmProbeAvailability() {
     const pm = window.__GNW_PACK && window.__GNW_PACK.pokemini();
     if (pm) _pmPackContent = pm;
     else if (window.CWS && CWS.pmAvailability()) _pmPackContent = CWS.pmAvailability();   // game servers: {id:true, bios:true}
+    /* From the list alone, no game file is read: a file with no catalogue game has its tile before anything is played. */
+    return _pmAdoptVariantFiles(_pmPackContent);
   }).catch(() => {});
   // Retried on 5xx / network error only (see pmFetchWithRetry): a 404 still
   // means "not deployed" and answers immediately, exactly as before. The body is
@@ -14537,9 +14764,53 @@ function rarityDrawerBadgeHTML(d, override) {
 // The first VARIANTS[d.id] entry is the catalog-default and gets
 // selected automatically (since it's the first <option>). No
 // "Undefined" placeholder — every option is a real, named variant.
+/* The program revision picked in an open drawer, by device id (8 Nov 2026). A new drawer
+   starts on the device's usual program: Play runs the game on the box unless one is picked. */
+const _gnwVariantPlay = {};
+let _gnwServerFiles = null;   // the game servers' {key: {program}} map, as cws.js gnwPrograms() last answered
+/* Is a revision's own program here (a content pack, or a game server's device zips)? Only then is
+   it offered: a picked revision never runs the usual program in its place. */
+function _gnwVariantFilesHere(d, v) {
+  if (!v.play) return true;
+  const g = typeof GNW_EMULATED_GAMES !== 'undefined' && GNW_EMULATED_GAMES[d.id];
+  if (!g) return false;
+  const k = g.key + '~' + v.play, has = m => !!(m && m[k] && m[k].program);
+  try {
+    const P = window.__GNW_PACK;
+    if (P && typeof P.programs === 'function' && has(P.programs())) return true;
+    _gnwPrimeServerFiles();
+    return has(_gnwServerFiles);
+  } catch (e) { return false; }
+}
+/* cws.js caches gnwPrograms(); the map is read here once it answers (and again when a server's
+   library changes). A drawer opened before it answered gets its list as soon as it does. */
+function _gnwPrimeServerFiles() {
+  try {
+    if (!window.CWS || typeof CWS.gnwPrograms !== 'function') return;
+    Promise.resolve(CWS.gnwPrograms()).then(r => {
+      const was = _gnwServerFiles; _gnwServerFiles = r || null;
+      if (r && r !== was) _gnwRefreshVariantSelect();
+    }, () => {});
+  } catch (e) {}
+}
+addEventListener('cws:library-changed', () => _gnwPrimeServerFiles());
+function _gnwRefreshVariantSelect() {
+  const ov = document.getElementById('device-overlay');
+  if (!ov || !ov.classList.contains('open') || !_openDeviceId || document.getElementById('variant-select')) return;
+  const d = DEVICES.find(x => x.id === _openDeviceId);
+  const html = d && VARIANTS[d.id] && VARIANTS[d.id].some(v => v.play) ? variantDropdownHTML(d) : '';
+  if (!html) return;
+  let host = ov.querySelector('.drawer-title-extras');
+  if (!host) {
+    const row = ov.querySelector('.drawer-title-row'); if (!row) return;
+    host = document.createElement('div'); host.className = 'drawer-title-extras'; row.appendChild(host);
+  }
+  host.insertAdjacentHTML('afterbegin', html);
+}
 function variantDropdownHTML(d) {
-  const vs = VARIANTS[d.id];
-  if (!vs || !vs.length) return '';
+  _gnwVariantPlay[d.id] = null;
+  const vs = (VARIANTS[d.id] || []).filter(v => _gnwVariantFilesHere(d, v));
+  if (vs.length < 2) return '';
   const opts = vs.map(v => `<option value="${v.id}">${v.label}</option>`);
   return `<select class="variant-select" id="variant-select" aria-label="Variant"
     onchange="onVariantChange('${d.id}', this.value)">${opts.join('')}</select>`;
@@ -14560,6 +14831,8 @@ function applyVariantToDrawer(d, variantId) {
 function onVariantChange(deviceId, variantId) {
   const d = DEVICES.find(x => x.id === deviceId);
   if (!d) return;
+  const v = (VARIANTS[d.id] || []).find(x => x.id === variantId);
+  _gnwVariantPlay[deviceId] = (v && v.play) || null;   // Play Now runs this program (openPlay)
   applyVariantToDrawer(d, variantId);
 }
 
@@ -15011,7 +15284,7 @@ function deviceCardHTML(d) {
    * supplied. The set's own comment already says tile shape is a property of
    * the DEVICE; for these it is a property of the catalogue, so read it from
    * there and it cannot drift again. */
-  if (!tallClass && (TALL_MULTISCREEN_IDS.has(_artId(d)) || d.catalogue === 'game-boy' || d.catalogue === 'nes' || d.catalogue === 'atari2600' || d.catalogue === 'atari5200' || d.catalogue === 'atari7800')) tallClass = ' tile-tall';   // the home consoles: 2026-10-22   // a PM variant is as tall as its game (_artId)
+  if (!tallClass && (TALL_MULTISCREEN_IDS.has(_artId(d)) || d.catalogue === 'pokemon-mini' || d.catalogue === 'game-boy' || d.catalogue === 'nes' || d.catalogue === 'atari2600' || d.catalogue === 'atari5200' || d.catalogue === 'atari7800')) tallClass = ' tile-tall';   // the home consoles: 2026-10-22   // a PM variant is as tall as its game (_artId)
   /* A TILE IS A BUTTON, AND NOW SAYS SO.
      This markup is shared by four catalogues (Game & Watch, Pokémon Mini,
      Game Boy) AND by the Media grid's game tiles, so until it carried
@@ -19107,7 +19380,7 @@ function _tftInjectScript(src) {
 }
 function _tftLoadEngine() {
   if (window.ArmTwin) return Promise.resolve();
-  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.0.0');
+  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.1.0');
   return _tftEnginePromise;
 }
 function _tftLoadFirmware(unit) {
@@ -19613,7 +19886,7 @@ let _pmPreviewLastError = null;
 function _pmPreviewLoad() {
   if (_pmPreviewLoadPromise) return _pmPreviewLoadPromise;
   if (!_pmWasmModulePromise) {
-    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.0.0')
+    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.1.0')
       .then(r => { if (!r.ok) throw new Error('pokemini.wasm HTTP ' + r.status); return r.arrayBuffer(); })
       .then(b => WebAssembly.compile(b))
       .then(m => { _pmWasmModule = m; return m; });
@@ -20691,7 +20964,7 @@ const _gbCartBytes = new Map();   // slot -> Uint8Array, held in memory this vis
 // The ONE place the served Game Boy core's URL and ?v= tag live. gbrec.js reads
 // window.GB_WASM_URL for its build stamp, so a core install bumps this line only
 // and the stamp follows it (22 Oct 2026).
-var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.0.0';
+var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.1.0';
 
 // Lazy: nothing below is fetched until a Game Boy tile actually needs it, so a
 // visitor who never opens the catalogue pays nothing.
@@ -23181,7 +23454,7 @@ function renderTimeline() {
       : "routeToMediaSeries('" + t.series + "')";
     // A row may name its own device picture (`ic`, 2026-10-18): Tetris Jr. and the
     // two colour units show their own unit, switched off, not the Game & Watch one.
-    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.0.0' : (iconSrc ? iconSrc(keys[0]) : '');
+    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.1.0' : (iconSrc ? iconSrc(keys[0]) : '');
     // Decorative: the series name beside it already says which system it is.
     const ic = src ? `<img class="tl-ic" src="${src}" alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" data-tl-sys="${keys[0]}">` : '';
     return `<div class="tl-item clickable" style="--c:${s.color}" onclick="${go}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${go}}">
@@ -23262,16 +23535,19 @@ function switchSettingsTab(tab) {
 // ---- Colour theme (Settings -> Appearance) --------------------------------
 // The theme is applied to <html data-theme> before paint by the inline script
 // in <head>; this just flips it live and persists the choice.
+// OLED (8 Nov 2026) is stored as 'oled' and shown as data-theme="dark" plus the class cw-oled.
 function gnwSetTheme(theme) {
-  theme = (theme === 'light') ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', theme);
+  theme = (theme === 'light' || theme === 'oled') ? theme : 'dark';
+  document.documentElement.classList.toggle('cw-oled', theme === 'oled');
+  document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
   try { localStorage.setItem('gnw.theme', theme); } catch (e) {}
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'light' ? '#eceef2' : '#0a0e14');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#eceef2' : theme === 'oled' ? '#000000' : '#0a0e14');
   gnwSyncThemeUI();
 }
 function gnwSyncThemeUI() {
-  const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const de = document.documentElement;
+  const cur = de.getAttribute('data-theme') === 'light' ? 'light' : de.classList.contains('cw-oled') ? 'oled' : 'dark';
   document.querySelectorAll('.theme-opt').forEach(b => {
     const on = b.dataset.themeOpt === cur;
     b.classList.toggle('active', on);
@@ -24294,10 +24570,14 @@ function openPlay(deviceId, event) {
   if (TFT_TWIN_UNITS[deviceId]) { openTftPlay(deviceId); return; }
   if (deviceId === 'prototype-tetris-jr') { openTjPlay(deviceId); return; }   // clean-room JS recreation (iframe, no dump or firmware)
   const emuGame = GNW_EMULATED_GAMES[deviceId];
+  /* A program revision picked in this device's open drawer (8 Nov 2026; VARIANTS 'play').
+     From a tile, a deep link or a closed drawer: the usual program. */
+  const drawerOpen = !!(document.getElementById('device-overlay') || { classList: { contains: () => false } }).classList.contains('open');
+  const playV = emuGame && drawerOpen ? (_gnwVariantPlay[deviceId] || null) : null;
   /* The unsupported list: a Game & Watch title is checked by its program's
      SHA-256 (SOURCE_FIRMWARE_HASHES), the same hash the list is keyed by. */
   if (emuGame && window.CWSUnsupported) {
-    const h = SOURCE_FIRMWARE_HASHES.find(r => r.key === emuGame.key);
+    const h = SOURCE_FIRMWARE_HASHES.find(r => r.key === (playV ? emuGame.key + '~' + playV : emuGame.key));
     const dev = (typeof DEVICES !== 'undefined' && DEVICES.find(x => x.id === deviceId)) || { id: deviceId, name: emuGame.key };
     if (h && _refuseUnsupportedDev(Object.assign({}, dev, { __unsupSha: h.sha256 }))) return;
   }
@@ -24313,7 +24593,7 @@ function openPlay(deviceId, event) {
       // pushState, not location.hash = ... -- see openDevice's matching
       // comment; same reasoning, same fix, same reason it matters here too.
       if (cwRouteNow() !== '/play/' + emuGame.key) history.pushState({ cwLayer: 1 }, '', cwRouteHref('/play/' + emuGame.key));   // the page's own entry
-      window.openPlayModal(emuGame.key); // adds .open -> CSS play-window-zoom-in reveal
+      window.openPlayModal(emuGame.key, playV ? { variant: playV } : undefined); // adds .open -> CSS play-window-zoom-in reveal
     };
     // Close the device drawer as the game starts -- that also tears down the
     // big left-side reveal (closeOverlay('device-overlay') calls
@@ -25213,7 +25493,7 @@ function bootApp() {
      Built by WASM_Source/art-files/build.py (BUILD.md, "Device pictures as single files");
      ?v= is the index's own hash, and art-files/verify.sh fails if it is not. It must load
      before the script below, whose init() boots the page (imgSrc reads it at first use). -->
-<script src="images/art/art-index.js?v=2.0.0"></script>
+<script src="images/art/art-index.js?v=2.1.0"></script>
 <script>
 /* THE PICTURE ARCHIVES ARE RETIRED (2026-10-24).
    Until today eleven files (images_b64.json ... images_gbc_shells_b64.json, 59.9 MB on 23 Oct,
@@ -25406,45 +25686,46 @@ function _hideLoadingOverlay() {
      caching can serve a stale copy for up to Cache-Control's max-age after
      a deploy. -->
 <!-- Data sources switched off in Settings, kept set up (28 Oct): read by content_pack.js, cws.js and emby.js. -->
-<script src="source-switch.js?v=2.0.0"></script>
-<script src="firmware/site/sha.js?v=2.0.0"></script>
+<script src="source-switch.js?v=2.1.0"></script>
+<script src="firmware/site/sha.js?v=2.1.0"></script>
 <!-- The unsupported list (2026-10-05): hashes of games and firmware that are refused
      at load, with a reason each. Read by every play window, the tiles (variants.js),
      the Continue row and Settings; generated by tools/unsupported/build.mjs. -->
-<script src="firmware/site/unsupported.js?v=2.0.0"></script>
-<script src="firmware/site/content_pack.js?v=2.0.0"></script>
-<script src="firmware/site/cloud_storage.js?v=2.0.0"></script>
-<script src="keys-diagram.js?v=2.0.0"></script>
-<script src="play/gnw/gwc-core.js?v=2.0.0"></script>
-<script src="play/gnw/gwc-saves.js?v=2.0.0"></script>
-<script src="play/play-pill.js?v=2.0.0"></script>
-<script src="play/gnw/gnw-host.js?v=2.0.0"></script>
+<script src="firmware/site/unsupported.js?v=2.1.0"></script>
+<script src="firmware/site/content_pack.js?v=2.1.0"></script>
+<script src="firmware/site/cloud_storage.js?v=2.1.0"></script>
+<script src="keys-diagram.js?v=2.1.0"></script>
+<script src="play/gnw/gwc-core.js?v=2.1.0"></script>
+<script src="play/gnw/gwc-saves.js?v=2.1.0"></script>
+<script src="play/play-pill.js?v=2.1.0"></script>
+<script src="play/gnw/gnw-host.js?v=2.1.0"></script>
 <!-- Subtitles: the player's own subtitle engine (subs.js) loads before emby.js so the
      Settings panel emby.js draws at load can include its section. subsync.js is
      lazy-loaded by subs.js on the first Auto-sync. -->
-<script src="subs.js?v=2.0.0"></script>
+<script src="subs.js?v=2.1.0"></script>
 <!-- Server conversion (Emby A): Emby's transcoder for files the browser can't play, picture
      subtitles burned in, and /Sessions/Playing reports. After subs.js (it registers the
      picture-subtitle handler there), before emby.js (its Settings section draws at load).
      Loads hls.js from vendor/hls.js-1.6.13/ only when a conversion actually starts. -->
-<script src="embytranscode.js?v=2.0.0"></script>
+<script src="embytranscode.js?v=2.1.0"></script>
 <!-- Player add-ons (Emby B): seek bar with preview thumbnails and chapters, and Up Next.
      Before emby.js so its Settings panel can include the Up Next card at load. -->
-<script src="embytrick.js?v=2.0.0"></script>
-<script src="embyupnext.js?v=2.0.0"></script>
-<script src="embytitle.js?v=2.0.0"></script>
+<script src="embytrick.js?v=2.1.0"></script>
+<script src="embyupnext.js?v=2.1.0"></script>
+<script src="embytitle.js?v=2.1.0"></script>
 <!-- variants.js: one tile per game, variants grouped by file hash (firmware/variants/). Before emby.js, which collapses its pools through it. -->
-<script src="variants.js?v=2.0.0"></script>
+<script src="variants.js?v=2.1.0"></script>
 <!-- drawer-unified.js: ONE game drawer for every system, the default since 2026-10-14; ?drawer=default (or old) brings back the old drawers (docs/UNIFIED-BUILD-PLAN.md phase 7). Before keys.js, so its B-in-a-version-submenu key comes first. -->
-<script src="emulation-test-carts.js?v=2.0.0"></script>
-<script src="drawer-unified.js?v=2.0.0"></script>
-<script src="emby.js?v=2.0.0"></script>
-<script src="features.js?v=2.0.0"></script>
-<script src="checked-rebuilding.js?v=2.0.0"></script>
+<script src="emulation-test-carts.js?v=2.1.0"></script>
+<script src="drawer-unified.js?v=2.1.0"></script>
+<script src="widgets-extra.js?v=2.1.0"></script>
+<script src="emby.js?v=2.1.0"></script>
+<script src="features.js?v=2.1.0"></script>
+<script src="checked-rebuilding.js?v=2.1.0"></script>
 <!-- R.O.B.: the Play Time tile, his drawer and window (rob-shelf.js, 2026-10-21); his Systems menu entry is emby.js ROB_SYSTEM (22 Oct). -->
-<script src="rob-shelf.js?v=2.0.0"></script>
+<script src="rob-shelf.js?v=2.1.0"></script>
 <!-- The compatibility list window (compat.js, 2026-10-21): opened by the toolbar button left of Timeline. Before keys.js and nav.js, so its row keys come first. -->
-<script src="compat.js?v=2.0.0"></script>
+<script src="compat.js?v=2.1.0"></script>
 <!-- In-browser Game Boy recorder for the Video page. TURNED OFF 2026-09-24
      (GBREC.ENABLED = false): clips are being published for the whole
      library, so the wall plays those and boots the real machine for titles that
@@ -25456,7 +25737,7 @@ function _hideLoadingOverlay() {
      run before this file simply reads no GBREC and builds `data-gb` tiles,
      which is today's behaviour anyway — so re-enabling the recorder takes a
      re-render (any route change) or a reload, as gbrec.js's setEnabled says. -->
-<script src="gbrec.js?v=2.0.0"></script>
+<script src="gbrec.js?v=2.1.0"></script>
 <!-- Published Game Boy clips, served from R2 and keyed by cartridge SHA-1. It
      owns `.gb-emu[data-gb]`, which since 2026-09-24 means the MEDIA WALL as
      well as the catalogue grids: a claimed tile never builds a core at all (see
@@ -25464,31 +25745,31 @@ function _hideLoadingOverlay() {
      gbrec.js above owns `#video-grid .gb-emu[data-gbrec]` and is turned off, so
      that selector matches nothing. Same load position and for the same reasons
      — after emby.js, after the inline script. -->
-<script src="gbvideo.js?v=2.0.0"></script>
+<script src="gbvideo.js?v=2.1.0"></script>
 <!-- Recorded NES / Famicom / FDS tiles (`.nes-emu[data-nes]`), the NES
      counterpart of gbvideo.js. OFF until its LIST_URL names a published clip
      list (NES_Capture tools/clip_list.mjs); until then it claims nothing and
      every NES tile is live or a photograph exactly as before. Always muted. -->
-<script src="nesvideo.js?v=2.0.0"></script>
+<script src="nesvideo.js?v=2.1.0"></script>
 <!-- Recorded Atari 2600 / 5200 / 7800 / Lynx tiles (`.atari-emu[data-atari]`), the
      Atari counterpart of nesvideo.js: one R2 bucket per machine, `<id>.webm`, no
      list; a 404 hands the tile back to the live sweep. Always muted. -->
-<script src="atarivideo.js?v=2.0.0"></script>
+<script src="atarivideo.js?v=2.1.0"></script>
 <!-- The Media page's Continue row: Emby resume + Up Next + the games closed here,
      one save per game in this browser's IndexedDB. After emby.js (it reads window.Emby)
      and after the inline script (it wraps closePlayModal / closePmPlay and is called
      from closeOverlay). Silent: its cards are still pictures. -->
-<script src="play/host/save-purge.js?v=2.0.0"></script>
-<script src="continuerow.js?v=2.0.0"></script>
+<script src="play/host/save-purge.js?v=2.1.0"></script>
+<script src="continuerow.js?v=2.1.0"></script>
 <!-- The Control Bar's host side (play/shared/host-bridge.js, docs/UNIFIED-PLAY-INTERFACE.md):
      the ?ui=unified flag, the title bar with only the title and x (A14), Last closed,
      the Variant item, full screen (A13). After continuerow.js and variants.js. Silent. -->
-<script src="play/shared/host-bridge.js?v=2.0.0"></script>
+<script src="play/shared/host-bridge.js?v=2.1.0"></script>
 <!-- The one game-file relay for the play host (play/host/site-relay.js, 2026-10-14): {cwNeed} from a host frame, answered from the content pack, the site files, then a game server. -->
-<script src="play/host/site-relay.js?v=2.0.0"></script>
+<script src="play/host/site-relay.js?v=2.1.0"></script>
 <!-- Settings > Play a file: a game file from this device, played from memory (28 Oct). -->
-<script src="loadbar.js?v=2.0.0"></script>
-<script src="play-file.js?v=2.0.0"></script>
+<script src="loadbar.js?v=2.1.0"></script>
+<script src="play-file.js?v=2.1.0"></script>
 <!-- Keyboard first, phase 1 (docs/tv-controller-support.md): one Back, focus into and
      out of every overlay, the pause menu in play windows, the Play key, the player's
      keys and Media Session, Settings -> Display -> TV mode. After emby.js. -->
@@ -25496,50 +25777,50 @@ function _hideLoadingOverlay() {
      that keys.js, nav.js and shortcuts.js dispatch through. Before keys.js. -->
 <!-- The System Switcher (30 Oct 2026): the carousel panel for LB / RB and [ ] , . over the wall.
      Before actions.js and keys.js: its keys are caught first, only while it is open. -->
-<script src="system-switcher.js?v=2.0.0"></script>
-<script src="actions.js?v=2.0.0"></script>
-<script src="keys.js?v=2.0.0"></script>
+<script src="system-switcher.js?v=2.1.0"></script>
+<script src="actions.js?v=2.1.0"></script>
+<script src="keys.js?v=2.1.0"></script>
 <!-- Keyboard first, phase 2 (docs/tv-controller-support.md): arrow keys everywhere -- zones,
      nearest-by-position movement, one Tab stop per row, Settings as a tablist; the TV tile
      lift. After keys.js. -->
-<script src="nav.js?v=2.0.0"></script>
+<script src="nav.js?v=2.1.0"></script>
 <!-- Keyboard first, phase 3: quick jump (/ or Ctrl+K), the ? key list, g-then-letter jumps,
      focus mode, [ and ] (also , and .) through libraries and systems. After nav.js. Silent. -->
-<script src="shortcuts.js?v=2.0.0"></script>
+<script src="shortcuts.js?v=2.1.0"></script>
 <!-- Keyboard first, phase 4: gamepads site-wide (pad buttons are keys of registry actions) and TV
      remote keys; play/play-pad.js is the play windows' pad layer (in-page G&W and Pokemon mini). -->
-<script src="play/play-pad.js?v=2.0.0"></script>
-<script src="gamepad.js?v=2.0.0"></script>
+<script src="play/play-pad.js?v=2.1.0"></script>
+<script src="gamepad.js?v=2.1.0"></script>
 <!-- Keyboard first, phase 5: Settings -> Keyboard & controllers -- rebind the site's keys and pad
      buttons and each system's game controls, saved per viewer (actions.js applies the saved keys
      as it loads). After gamepad.js. Silent. -->
-<script src="keybind.js?v=2.0.0"></script>
+<script src="keybind.js?v=2.1.0"></script>
 <!-- Settings, reorganised into four pages and a phone sheet (docs/SETTINGS-REDESIGN.md).
      After keybind.js: it gathers the panels the other files mount. -->
-<script src="settings-ui.js?v=2.0.0"></script>
+<script src="settings-ui.js?v=2.1.0"></script>
 <!-- Settings > Media and content: a tile per source (media server, game server, content pack)
      and one shared set-up / change panel (2026-10-24; docs/SETTINGS-REDESIGN.md 9). -->
-<script src="settings-sources.js?v=2.0.0"></script>
-<script src="settings-config.js?v=2.0.0"></script>
+<script src="settings-sources.js?v=2.1.0"></script>
+<script src="settings-config.js?v=2.1.0"></script>
 <!-- Settings > Look and feel > Home screen: phones only (2026-10-17). -->
-<script src="install-app.js?v=2.0.0"></script>
-<script src="notify.js?v=2.0.0"></script>
+<script src="install-app.js?v=2.1.0"></script>
+<script src="notify.js?v=2.1.0"></script>
 <!-- Home: the 11 emulators, chip by chip (2026-10-18). -->
-<script src="emulators-table.js?v=2.0.0"></script>
-<script src="docterms.js?v=2.0.0"></script>
+<script src="emulators-table.js?v=2.1.0"></script>
+<script src="docterms.js?v=2.1.0"></script>
 <!-- The Control Bar in the site's own document (2026-10-11), for the Pokemon mini window,
      which plays in this page rather than in a frame: the on-screen buttons, the bar, and
      the Pokemon mini's adapter (docs/UNIFIED-PLAY-INTERFACE.md). After keys.js, shortcuts.js
      and play-pad.js, so their Back, help and pad listeners keep their order. ?ui=legacy
      keeps the old window. Silent. -->
-<script src="play/shared/overlay.js?v=2.0.0"></script>
-<script src="play/shared/control-bar.js?v=2.0.0"></script>
+<script src="play/shared/overlay.js?v=2.1.0"></script>
+<script src="play/shared/control-bar.js?v=2.1.0"></script>
 <!-- Crystal Worlds Game Server client: discovery, pairing, PIN, merged library
      and verified downloads from the player's own servers. After the inline
      script (it wraps logoutVault/importVaultCode/rotateVaultCode and reads
      vaultCode) and after content_pack.js (identify()). -->
-<script src="cws.js?v=2.0.0"></script>
-<script src="sgb-shelf.js?v=2.0.0"></script>
+<script src="cws.js?v=2.1.0"></script>
+<script src="sgb-shelf.js?v=2.1.0"></script>
 <script>
 /* Settings → Content: open/clear a content pack (.zip). Talks to window.__GNW_PACK
    (firmware/site/content_pack.js); the emulators pick it up on the next reload. */
@@ -25757,9 +26038,12 @@ function _hideLoadingOverlay() {
 </script>
 <!-- Same manual-cache-buster convention as gnw.js above -- bump whenever
      manual_booklet.js changes. -->
-<script src="manual_booklet.js?v=2.0.0"></script>
+<script src="manual_booklet.js?v=2.1.0"></script>
 <!-- The recording director (director.js, not part of the public copy): fetched only with ?director=1
      in the address or the local setting cw.director=1; a normal visit never loads it. -->
-<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.0.0'; document.body.appendChild(s); } catch (e) {} })();</script>
+<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.1.0'; document.body.appendChild(s); } catch (e) {} })();</script>
+<!-- The offline page for the installed app (sw.js, offline.html): registered once the page has loaded, never
+     on file:, silent if the browser refuses. sw.js handles top-level page loads only. -->
+<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.1.0', { scope: './' }).catch(function () {}); } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
 </body>
 </html>

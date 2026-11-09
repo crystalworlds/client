@@ -14,7 +14,7 @@
       var path = location.pathname.replace(/\/+$/, ''), p = path.toLowerCase();
       var sys = /^(gb|gbc|nes|famicom|fds|pokemon-mini|atari2600|atari5200|atari7800|atarilynx|gameboy|pm|pokemini|lynx|a2600|a5200|a7800|2600|5200|7800|gnw|[a-z0-9]+(-[a-z0-9]+)+)$/;
       var m = /^\/([a-z0-9-]+)\/(hardware|emulation)$/.exec(p);
-      var ok = /^\/(home|about|timeline|series|features|compatibility|media(\/(home|about|timeline|features))?)$/.test(p)
+      var ok = /^\/(home|about|timeline|series|features|stories|compatibility|media(\/(home|about|timeline|features))?)$/.test(p)
         || /^\/(device|play)\/[^\/.]+(\/(hardware|emulation|source))?$/.test(p)
         || (m && m[1] !== 'device' && m[1] !== 'play' && sys.test(m[1]));
       if (!ok) return;
@@ -144,7 +144,6 @@
     font-size: 11px;
     letter-spacing: .25em;
     color: var(--muted);
-    opacity: .65;
   }
 </style>
 <script>
@@ -163,7 +162,6 @@
       <a class="btn btn-primary" href="./">Back to home</a>
       <a class="btn btn-ghost" href="./#/series">Browse series</a>
     </div>
-    <div class="code">ERROR · PARACHUTE · PR-21</div>
   </div>
 </body>
 </html>

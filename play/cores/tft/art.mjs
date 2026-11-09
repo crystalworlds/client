@@ -8,7 +8,7 @@
  * twin.json) are measured against. The whole device shows; the 320 x 240 panel sits in the
  * rectangle in front of the photograph, as on the old page.
  */
-import { loadEngine, engineDiagram } from '../keys-engine.mjs?v=2.0.0';
+import { loadEngine, engineDiagram } from '../keys-engine.mjs?v=2.1.0';
 const ART = {
   mario: { file: '../../mario/device.jpg', w: 1500, h: 898 },
   zelda: { file: '../../zelda/device.png', w: 619, h: 370 },

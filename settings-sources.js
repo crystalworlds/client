@@ -44,13 +44,14 @@
     emby: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 5 2.5-5 2.5z"/></svg>',
     jellyfin: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M12 7.5 8.5 13.5h7z"/></svg>',
     cws:  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/><path d="M7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6"/></svg>',
+    stories: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.2 5 7.2 4.5 3.5 5v13.5c3.7-.5 6.7 0 8.5 1.5 1.8-1.5 4.8-2 8.5-1.5V5c-3.7-.5-6.7 0-8.5 1.5z"/><path d="M12 6.5V20"/></svg>',
     pack: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M10 9h1M10 12h1M10 15h1M10 18h1"/></svg>',
     file: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m10 11.5 5 3-5 3z"/></svg>',
     host: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10M12 16v4"/><path d="m9 8-2 2 2 2M15 8l2 2-2 2"/></svg>',
   };
   /* The site's source on GitHub, for "Host it yourself" (28 Oct). README names no
      address yet: fill it in here and the step links to it. Empty, the step reads without a link. */
-  const HOST_REPO = 'https://github.com/Psghetti/crystalworlds';
+  const HOST_REPO = 'https://github.com/crystalworlds/client';
   const SOURCES = [
     { id: 'emby', name: 'Media server', kind: 'Emby', content: 'Films and series', where: 'Server',
       provides: 'Your own films and series from your Emby server, shown on the content page and played in the site\'s player.' },
@@ -62,6 +63,9 @@
       provides: 'Your own games from a Crystal Worlds Game Server.' },
     { id: 'pack', name: 'Content pack', kind: '.zip file', content: 'Games, firmware and artwork', where: 'File',
       provides: 'One .zip of your own firmware, game files, segment artwork and colour-unit flash, opened from this device. The site identifies everything by its content. It is kept in this browser.' },
+    /* Stories (7 Nov): for 16-Bit sponsors, read from GitHub with their own sign-in (stories.js). This tile holds no story content. */
+    { id: 'stories', name: 'Stories', kind: 'Sign in with GitHub', content: 'Stories', where: 'GitHub',
+      provides: 'Stories for 16-Bit sponsors, to read and listen to here. They stay on GitHub, and this site reads them with your own sign-in.' },
     /* 28 Oct ("bridging the gap between what we support and what's in the
        interface"): a game file played at once from memory (play-file.js), and how to run a copy
        of the site with the firmware folder (instructions only, from README "Setting it up"). */
@@ -346,6 +350,7 @@
           '</form>' +
         '</div>' +
         '<div class="src-body" data-for="pack" hidden></div>' +
+        '<div class="src-body" data-for="stories" hidden><p class="src-note">Stories are for <a href="https://github.com/sponsors/crystalworlds" target="_blank" rel="noopener noreferrer">16-Bit sponsors</a>.</p></div>' +
         '<div class="src-body" data-for="file" hidden>' + fileBodyHTML() + '</div>' +
         '<div class="src-body" data-for="host" hidden>' + hostBodyHTML() + '</div>' +
         '<div class="src-foot">' +
@@ -453,6 +458,7 @@
       const off = on && !switchOn('pack');
       return { on, off, detail: off ? 'Switched off' : on ? 'Open' : '' };
     }
+    if (id === 'stories') return window.CwStories ? window.CwStories.tileState() : { on: false, detail: '' };
     // Nothing to set up on these two: they say what they are instead.
     if (id === 'file') return { on: false, text: (window.CwPlayFile && window.CwPlayFile.playing()) ? 'Playing' : 'Ready' };
     if (id === 'host') return { on: false, text: 'Steps to follow' };
@@ -530,6 +536,7 @@
       if (isMedia(openId)) { const b = document.getElementById('emby-submit'); label = b ? b.textContent.trim() : 'Sign in'; disabled = !b || b.disabled; }
       else if (openId === 'cws') { label = cwsBusy ? 'Connecting…' : 'Connect'; disabled = cwsBusy; }
       else if (openId === 'pack') { const b = document.getElementById('content-pack-btn'); label = b ? b.textContent.trim() : 'Open content pack (.zip)…'; disabled = !window.__GNW_PACK; }
+      else if (openId === 'stories') label = 'Sign in with GitHub';
     }
     if (prim) {
       // The other media server's tile while one is signed in shows its own Sign out, no form.
@@ -576,6 +583,7 @@
     if (!build()) return;
     openId = id;
     if (id !== 'cws') cwsBusy = false;
+    if (id === 'stories' && window.cwStoriesLoad) window.cwStoriesLoad(m => m.drawPanel());
     gather();
     render();
     if (id === 'pack' && window.__GNW_PACK && typeof window.gnwRenderContentStatus === 'function') { try { window.gnwRenderContentStatus(); } catch (_) {} }
@@ -608,6 +616,7 @@
       return;
     }
     if (openId === 'pack') { if (typeof window.gnwContentPackToggle === 'function') window.gnwContentPackToggle(); return; }
+    if (openId === 'stories') { if (window.cwStoriesLoad) window.cwStoriesLoad(m => m.signIn()); return; }
     if (openId === 'cws') {
       const inp = document.getElementById('src-cws-addr'), msg = document.getElementById('src-cws-msg');
       if (!window.CWS || typeof window.CWS.directConnect !== 'function') { msg.textContent = 'The game server part of the site has not loaded. Reload the page and try again.'; msg.style.color = '#f08a5d'; return; }

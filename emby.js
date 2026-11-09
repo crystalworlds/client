@@ -272,10 +272,37 @@
      tools/localserver/embyproxy.go); it forwards only to the servers listed in
      localserver.local.json. Plain-HTTP pages (8080, the TV) and https://
      servers go direct, exactly as before. */
-  const viaProxy = () => location.protocol === 'https:' && /^http:\/\//i.test(session.server);
-  function serverRoot() {
+  /* DIRECT FIRST (9 Nov). A browser can be told to allow a site's insecure content (Chrome: Site
+     settings > Insecure content > Allow); it then reaches an http:// server from an https page with
+     nothing relayed, which is the only way an https page with no local site server behind it (the
+     public site) can reach one. So an http:// server on an https page is asked DIRECT first; a blocked
+     ask throws at once (the browser never sends it), and the relay is used after. The way that worked
+     is kept for this tab (sessionStorage), so artwork, video and subtitles, all built from
+     serverRoot(), go the same way as the requests. Unknown = the relay, as before. */
+  const mixedFor = s => location.protocol === 'https:' && /^http:\/\//i.test(String(s || ''));
+  const ROUTE_KEY = 'gnw.emby.route';
+  const routeKey = s => String(s || '').replace(/\/+$/, '').toLowerCase();
+  function routeFor(s) { try { return (JSON.parse(sessionStorage.getItem(ROUTE_KEY) || '{}') || {})[routeKey(s)] || ''; } catch { return ''; } }
+  function setRoute(s, how) {
+    try {
+      const all = JSON.parse(sessionStorage.getItem(ROUTE_KEY) || '{}') || {};
+      if (how) all[routeKey(s)] = how; else delete all[routeKey(s)];
+      sessionStorage.setItem(ROUTE_KEY, JSON.stringify(all));
+    } catch { /* no storage: asked direct first each time */ }
+  }
+  const viaProxy = () => mixedFor(session.server) && routeFor(session.server) !== 'direct';
+  /* Is there a local site server relay behind this page? Asked once: the relay answers any
+     /emby-proxy/ address with its X-GW-Emby-Proxy header (an address it is not given is refused,
+     never forwarded); a plain web host (the public site) answers a 404 without it. */
+  let _relayCheck = null;
+  function relayPresent() {
+    if (!_relayCheck) _relayCheck = fetch(location.origin + '/emby-proxy/http/relay-check.invalid:1/', { cache: 'no-store' })
+      .then(r => !!r.headers.get('X-GW-Emby-Proxy'), () => false);
+    return _relayCheck;
+  }
+  function serverRoot(relay) {
     const raw = session.server.replace(/\/+$/, '');
-    if (!viaProxy()) return raw;
+    if (!(relay == null ? viaProxy() : relay && mixedFor(raw))) return raw;
     try {
       const u = new URL(raw);
       return location.origin + '/emby-proxy/http/' + u.host + u.pathname.replace(/\/+$/, '');
@@ -331,6 +358,8 @@
   // genuinely cold start.
   const RETRY_DELAYS = [400, 900, 1800, 3200]; // ms before retries 1..4
   const REQUEST_TIMEOUT = 12000;               // abort a hung request after this
+  const DIRECT_TRY_MS = 5000;                  // an http:// server on an https page, asked direct first (see DIRECT FIRST)
+  const GUESS_MS = 6000;                       // each https:// address guessed for a server typed without one (see serverCandidates)
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   /* opts.timeout / opts.retries (28 Oct): a background read on a SLOW server (the
@@ -348,7 +377,7 @@
       try { return await attemptRequest(method, path, opts); }
       catch (e) {
         lastError = e;
-        if (!(e instanceof ApiError) || !RETRY_STATUSES.has(e.status)) throw e;
+        if (!(e instanceof ApiError) || !RETRY_STATUSES.has(e.status) || (e.blocked && attempt >= 1)) throw e;
         if (attempt < tries)
           console.warn(`[Emby] ${method} ${path} failed (status ${e.status}); retry ${attempt + 1}/${RETRY_DELAYS.length} in ${RETRY_DELAYS[attempt]}ms`);
       }
@@ -358,7 +387,10 @@
 
   async function attemptRequest(method, path, { params, body, anonymous = false, identify = false, timeout = REQUEST_TIMEOUT } = {}) {
     [path, params] = jellyfinRoute(path, params);
+    const tail = serverType().prefix + path + qs(params);
     const url = base() + path + qs(params);
+    const asked = session.server;   // the address this ask is for (another ask may swap in its own)
+    const route = mixedFor(asked) ? routeFor(asked) : 'plain';
     const headers = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 
@@ -381,9 +413,32 @@
     // REQUEST_TIMEOUT turns that into a status-0 failure, which the retry loop handles.
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeout);
+    const init = () => ({ method, headers, signal: ctrl.signal, body: body === undefined ? undefined : JSON.stringify(body) });
     try {
-      res = await fetch(url, { method, headers, signal: ctrl.signal, body: body === undefined ? undefined : JSON.stringify(body) });
-    } catch {
+      if (route === '') {
+        /* An http:// server on an https page, way not yet known: direct first (see DIRECT FIRST). */
+        const direct = new AbortController(), quick = setTimeout(() => direct.abort(), Math.min(timeout, DIRECT_TRY_MS));
+        const stop = () => direct.abort();
+        ctrl.signal.addEventListener('abort', stop);
+        try {
+          res = await fetch(asked.replace(/\/+$/, '') + tail, Object.assign(init(), { signal: direct.signal }));
+          setRoute(asked, 'direct');
+        } catch { /* blocked, or not answering on http */ }
+        finally { clearTimeout(quick); ctrl.signal.removeEventListener('abort', stop); }
+        if (!res && !(await relayPresent())) {
+          /* No relay behind this page (the public site): nothing else to try. Asked again once
+             only (a cold server can drop its first ask), not the four times. */
+          const e = new ApiError(`Cannot reach ${asked}: this page is secure (https) and it is an http address.`, 0, path);
+          e.blocked = true;
+          throw e;
+        }
+        if (!res) { setRoute(asked, 'relay'); res = await fetch(url, init()); }
+      } else {
+        try { res = await fetch(url, init()); }
+        catch (e) { if (route === 'direct') setRoute(asked, ''); throw e; }   // no longer allowed? ask both ways again on the retry
+      }
+    } catch (e) {
+      if (e && e.blocked) throw e;
       throw new ApiError(
         `Cannot reach ${session.server || 'the server'}. It may be down, timed out, or blocking cross-origin requests (CORS).`,
         0, path);
@@ -394,7 +449,7 @@
     if (!res.ok) {
       if (res.status === 401) throw new ApiError('Wrong username or password.', 401, path);
       // The local server's forwarder answered, not the media server (see viaProxy).
-      const px = viaProxy() && res.headers.get('X-GW-Emby-Proxy');
+      const px = mixedFor(asked) && routeFor(asked) !== 'direct' && res.headers.get('X-GW-Emby-Proxy');
       if (px === 'not-allowed' || px === 'off')
         throw new ApiError(`This page is HTTPS, so it reaches ${session.server} through the local site server, ` +
           `which only forwards to servers listed under "emby_proxy" in localserver.local.json. ` +
@@ -446,18 +501,20 @@
 
   /* ---------------------------------------------------------------- auth */
 
-  /* ADDRESS WITHOUT A PROTOCOL OR PORT (2026-10-14). The connect form
+  /* ADDRESS WITHOUT A PROTOCOL OR PORT (2026-10-14; 9 Nov). The connect form
      takes "myserver", "myserver:8920", "http://myserver" and so on, and fills
      in ONLY what was left out:
-       - no port      -> 8096 (Emby's default HTTP port);
-       - no protocol  -> https first, then http if https does not answer.
+       - no protocol  -> https first, then http if https does not answer;
+       - no port      -> for https: the standard port, 8920 (the secure port
+                         Emby and Jellyfin both default to) and 8096; for
+                         http: 8096 (the plain port both default to).
      An explicit protocol or port is used exactly as given. The port is read
      from the TYPED text, not from URL.port, because URL drops a default port
      ("http://x:80" has port ''), and that must not be mistaken for "omitted".
-     On an HTTPS page an http:// candidate goes through the local site
-     server's /emby-proxy/ (viaProxy above), which only forwards to the
-     servers listed in localserver.local.json; an https:// candidate is
-     fetched directly. Returns { candidates } or { error }. */
+     On an HTTPS page an http:// candidate is asked direct first and then
+     through the local site server's /emby-proxy/ (DIRECT FIRST, viaProxy
+     above); an https:// candidate is fetched directly. Returns { candidates }
+     or { error }. */
   function serverCandidates(raw) {
     let s = String(raw || '').trim();
     if (!s) return { error: 'Enter your server address.' };
@@ -477,10 +534,14 @@
     const hasPort = /^\[[^\]]*\]:\d+$/.test(hostport) || /^[^:\[\]]+:\d+$/.test(hostport);
     const out = [];
     for (const sc of schemes) {
-      let u;
-      try { u = new URL(sc + '://' + auth + (hasPort ? '' : ':8096') + rest); }
-      catch { return { error: `"${String(raw).trim()}" is not a server address this page can use.` }; }
-      out.push((u.origin + u.pathname).replace(/\/+$/, ''));
+      const ports = hasPort ? [''] : sc === 'https' ? ['', ':8920', ':8096'] : [':8096'];
+      for (const port of ports) {
+        let u;
+        try { u = new URL(sc + '://' + auth + port + rest); }
+        catch { return { error: `"${String(raw).trim()}" is not a server address this page can use.` }; }
+        const v = (u.origin + u.pathname).replace(/\/+$/, '');
+        if (!out.includes(v)) out.push(v);
+      }
     }
     return { candidates: out };
   }
@@ -508,6 +569,26 @@
     }
   }
 
+  /* The same ask for an https:// address, with the address and type passed in rather than
+     swapped in (9 Nov), so the guessed https addresses can all be asked AT ONCE: a dead one then
+     costs one short wait, not one each. An answer of 502-504 (a cold server) is asked twice more. */
+  async function probeAt(server, typeId, timeout) {
+    const P = '/System/Info/Public', T = SERVER_TYPES[typeId] || SERVER_TYPES.emby;
+    for (let attempt = 0; ; attempt++) {
+      const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeout);
+      let res, text;
+      try { res = await fetch(server.replace(/\/+$/, '') + T.prefix + P, { signal: ctrl.signal }); text = res.ok ? await res.text() : ''; }
+      catch { throw new ApiError(`Cannot reach ${server}.`, 0, P); }
+      finally { clearTimeout(timer); }
+      if (res.ok) {
+        if (!text) return null;
+        try { return JSON.parse(text); } catch { throw new ApiError('Server returned a non-JSON body.', res.status, P); }
+      }
+      if (res.status >= 502 && res.status <= 504 && attempt < 2) { await sleep(RETRY_DELAYS[attempt]); continue; }
+      throw new ApiError(`${res.status} ${res.statusText}`, res.status, P);
+    }
+  }
+
   /* The server that answered is the kind the form is for (26 Oct). Jellyfin
      names itself in ProductName ("Jellyfin Server"); Emby's public answer does not. */
   function wrongTypeMessage(info) {
@@ -521,46 +602,80 @@
   /* -> { server, info } for the first candidate that answers, else throws an
      ApiError with a plain message naming every address tried. The last
      answer is kept so the sign-in right after the form's own probe does not
-     ask again. */
+     ask again. The https:// candidates are asked together and taken in
+     order; the http:// ones after, one at a time.
+     HONEST MESSAGE (9 Nov). On an https page with no relay behind it (the
+     public site) and a browser that blocks insecure content, an http://
+     address is never sent at all. That used to be reported as the media
+     server answering "404" (the web host's answer for /emby-proxy/); it is
+     now said as it is. A browser does not tell a page why an https address
+     failed, so the message names no cause for that. */
   let _resolved = null;   // { raw, server, info, at }
   async function resolveServer(raw) {
     const key = String(raw || '').trim();
     const type = SERVER_TYPES[_formType] ? _formType : 'emby';
     if (_resolved && _resolved.raw === key && _resolved.type === type && Date.now() - _resolved.at < 60000) return _resolved;
     const c = serverCandidates(key);
-    if (c.error) throw new ApiError(c.error, 0, '/System/Info/Public');
+    const P = '/System/Info/Public';
+    if (c.error) throw new ApiError(c.error, 0, P);
+    const list = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+    const https = c.candidates.filter(s => /^https:/i.test(s)), http = c.candidates.filter(s => /^http:/i.test(s));
     let answered = null;   // the last failure that came from a server, not the network
-    for (let i = 0; i < c.candidates.length; i++) {
-      const server = c.candidates[i];
-      let info;
-      try {
-        info = await probeCandidate(server, i === c.candidates.length - 1);
-      } catch (e) {
-        if (e instanceof ApiError && e.status) answered = { server, e };
-        /* The Emby form given a Jellyfin server: Jellyfin answers 404 under /emby, so ask its
-           root once, and if it is Jellyfin say which tile to use. */
-        if (type === 'emby' && e instanceof ApiError && e.status === 404) {
-          const savedForm = _formType;
-          let jf = null;
-          _formType = 'jellyfin';
-          try { jf = await probeCandidate(server, false); } catch { jf = null; } finally { _formType = savedForm; }
-          if (jf && /jellyfin/i.test(String(jf.ProductName || ''))) throw new ApiError('This is a Jellyfin server. Set it up with the Jellyfin tile.', 0, '/System/Info/Public');
-        }
-        continue;
-      }
+    let blocked = null;    // an http:// address this page could not send at all
+    const done = (server, info) => {
       const wrong = wrongTypeMessage(info);
-      if (wrong) throw new ApiError(wrong, 0, '/System/Info/Public');
+      if (wrong) throw new ApiError(wrong, 0, P);
       _resolved = { raw: key, type, server, info, at: Date.now() };
       return _resolved;
+    };
+    const failed = async (server, e) => {
+      if (e instanceof ApiError && e.status) answered = { server, e };
+      /* The Emby form given a Jellyfin server: Jellyfin answers 404 under /emby, so ask its
+         root once, and if it is Jellyfin say which tile to use. */
+      if (type === 'emby' && e instanceof ApiError && e.status === 404) {
+        let jf = null;
+        if (/^https:/i.test(server)) { try { jf = await probeAt(server, 'jellyfin', GUESS_MS); } catch { jf = null; } }
+        else {
+          const savedForm = _formType;
+          _formType = 'jellyfin';
+          try { jf = await probeCandidate(server, false); } catch { jf = null; } finally { _formType = savedForm; }
+        }
+        if (jf && /jellyfin/i.test(String(jf.ProductName || ''))) throw new ApiError('This is a Jellyfin server. Set it up with the Jellyfin tile.', 0, P);
+      }
+    };
+    /* One typed https:// address: the normal retries, as before. Several: all at once. */
+    const asks = (https.length === 1 && !http.length)
+      ? [probeCandidate(https[0], true).then(info => ({ info }), e => ({ e }))]
+      : https.map(s => probeAt(s, type, GUESS_MS).then(info => ({ info }), e => ({ e })));
+    for (let i = 0; i < https.length; i++) {
+      const r = await asks[i];
+      if (!r.e) return done(https[i], r.info);
+      await failed(https[i], r.e);
     }
-    const tried = c.candidates.join(' and ');
+    for (let i = 0; i < http.length; i++) {
+      const server = http[i];
+      let info;
+      try {
+        info = await probeCandidate(server, i === http.length - 1);
+      } catch (e) {
+        if (e instanceof ApiError && e.blocked) { blocked = server; continue; }
+        await failed(server, e);
+        continue;
+      }
+      return done(server, info);
+    }
+    const tried = list(c.candidates);
+    if (blocked)
+      throw new ApiError((https.length ? `Could not reach a secure (https) address for this server.\nTried ${list(https)}.\n` : '') +
+        `This site is secure (https), so it cannot use an http address such as ${blocked}. ` +
+        `If the server only answers on http, ask its owner for its https address.`, 0, P);
     if (answered && /local site server/.test(answered.e.message))
       throw new ApiError((c.candidates.length > 1 ? `Could not connect to ${tried}. ` : '') + answered.e.message,
-        answered.e.status, '/System/Info/Public');
+        answered.e.status, P);
     if (answered)
-      throw new ApiError(`Could not connect. ${answered.server} answered, but not as a media server (${answered.e.message}).` +
-        (c.candidates.length > 1 ? ` Tried ${tried}.` : ''), answered.e.status, '/System/Info/Public');
-    throw new ApiError(`Could not connect to ${tried}. Check the address, and that the server is switched on.`, 0, '/System/Info/Public');
+      throw new ApiError(`Could not connect. ${answered.server} answered, but not as a media server (${answered.e.message.trim()}).` +
+        (c.candidates.length > 1 ? `\nTried ${tried}.` : ''), answered.e.status, P);
+    throw new ApiError(`Could not connect to ${tried}. Check the address, and that the server is switched on.`, 0, P);
   }
 
   async function getPublicServerInfo(server) {
@@ -911,7 +1026,7 @@
           <div>
             <label style="${lbl}">Server</label>
             <input id="emby-server" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" style="${inp}" placeholder="your-server, or http://your-server:8096" required>
-            <div id="emby-server-info" style="margin-top:6px; font-size:11.5px; color:var(--muted); font-family:ui-monospace,Consolas,monospace; min-height:1em;"></div>
+            <div id="emby-server-info" style="margin-top:6px; font-size:11.5px; color:var(--muted); font-family:ui-monospace,Consolas,monospace; min-height:1em; white-space:pre-line; overflow-wrap:anywhere;"></div>
           </div>
           <div id="emby-users" hidden>
             <label style="${lbl}">Who is watching?</label>
@@ -940,7 +1055,7 @@
           </div>
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <button type="submit" id="emby-submit" style="${btnPrimary}">Sign in</button>
-            <span id="emby-error" style="font-size:12.5px; color:#f2685c; line-height:1.5;"></span>
+            <span id="emby-error" class="emby-bad" style="font-size:12.5px; line-height:1.5; white-space:pre-line; overflow-wrap:anywhere;"></span>
           </div>
         </form>
       </section>`;
@@ -960,21 +1075,21 @@
       const s = r.info || {};
       const name = `${(s.ServerName || 'SERVER').toUpperCase()} · v${s.Version || ''}`.replace(/· v$/, '').trim();
       info.textContent = `Connected to ${r.server} · ${name}`;
-      info.style.color = 'var(--muted)';
+      info.style.color = 'var(--muted)'; info.classList.remove('emby-bad');
     }
     async function probe() {
       const info = $('emby-server-info');
       const seq = ++probeSeq;
       if (!serverInput.value.trim()) { info.textContent = ''; return; }
       info.textContent = 'Connecting…';
-      info.style.color = 'var(--muted)';
+      info.style.color = 'var(--muted)'; info.classList.remove('emby-bad');
       try {
         const r = await resolveServer(serverInput.value.trim());
         if (seq === probeSeq) showConnected(r);
       } catch (ex) {
         if (seq !== probeSeq) return;
         info.textContent = (ex && ex.message) || 'Could not connect.';
-        info.style.color = '#f2685c';
+        info.style.color = ''; info.classList.add('emby-bad');
       }
     }
 
@@ -1023,6 +1138,8 @@
       .emby-user .ava { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:rgba(var(--accent-rgb),.18); color:var(--accent); font-size:20px; font-weight:800; overflow:hidden; }
       .emby-user .ava img { width:100%; height:100%; object-fit:cover; }
       .emby-user .nm { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .emby-bad { color:#f2685c; }
+      :root[data-theme="light"] .emby-bad { color:#b3261e; }   /* 9 Nov: #f2685c is about 3:1 on the light panel */
       .emby-linkbtn { background:none; border:0; padding:6px 0 0; font:inherit; font-size:12px; color:var(--accent); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
       .emby-pinpad { display:grid; grid-template-columns:repeat(3, 56px); gap:8px; margin-top:10px; }
       .emby-pinkey { height:44px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--text); font:inherit; font-size:17px; font-weight:700; cursor:pointer; }
@@ -1284,6 +1401,16 @@
       .aw-chips { display:flex; flex-wrap:wrap; gap:7px; }
       .aw-chip { display:inline-flex; align-items:center; padding:5px 11px; border-radius:20px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:11.5px; color:var(--muted); cursor:pointer; user-select:none; transition:background .15s ease, border-color .15s ease, color .15s ease; }
       .aw-chip input { position:absolute; opacity:0; width:0; height:0; }
+      /* The drag handle at the end of each Settings, Widgets row (8 Nov 2026). */
+      #wg-list > .cfg-item.wg-orderable { position:relative; }
+      #wg-list > .cfg-item.wg-orderable > .cfg-head { width:calc(100% - 52px); }   /* the handle sits beside the row's head, not over it, so Right reaches it */
+      #wg-list .wg-grip { position:absolute; top:4px; right:6px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; color:var(--muted); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; z-index:1; }
+      #wg-list .wg-grip:hover { color:var(--text); background:rgba(127,127,127,.12); }
+      #wg-list .wg-grip:focus-visible { outline:2px solid var(--accent); outline-offset:1px; color:var(--text); }
+      #wg-list > .cfg-item { transition:transform .16s ease; }
+      #wg-list > .cfg-item.wg-dragging { transition:none; z-index:5; box-shadow:0 12px 28px rgba(0,0,0,.35); }
+      #wg-list > .cfg-item.wg-dragging .wg-grip { cursor:grabbing; }
+      body.gnw-tv #wg-list .wg-grip { width:48px; height:48px; top:2px; }
       .aw-chip:has(input:checked) { background:rgba(var(--accent-rgb),.16); border-color:rgba(var(--accent-rgb),.5); color:var(--text); }`;
     document.head.appendChild(s);
   }
@@ -1411,7 +1538,7 @@
                 <div class="aw-chips">${STAT_DEFS.map(d => { const on = !cfg.stats.types || cfg.stats.types.includes(d.id); return `<label class="aw-chip"><input type="checkbox" data-stat="${d.id}" ${on ? 'checked' : ''}><span>${esc(d.label)}</span></label>`; }).join('')}</div>
               </div>
             </div>
-          </div>
+          </div>${(() => { const X = extraW(); if (!X) return ''; try { return X.settingsHTML(JSON.parse(localStorage.getItem(WIDGET_KEY) || '{}') || {}); } catch { return X.settingsHTML({}); } })()}
         </div>
       </section>`;
   }
@@ -1469,6 +1596,8 @@
       const ids = [...mount.querySelectorAll('input[data-stat]')].filter(x => x.checked).map(x => x.dataset.stat);
       saveWidgetCfg({ stats: { types: ids } });
     }));
+    try { const X = extraW(); if (X) X.wire(mount); } catch (e) { console.warn('[Emby] Image / Play time settings:', e); }   // 8 Nov 2026
+    wireWidgetOrder(mount);
 
     const custom = $('w-loc-custom'), status = $('w-loc-status'), locInput = $('w-loc-input'), locSet = $('w-loc-set');
     mount.querySelectorAll('input[name="w-loc"]').forEach(r => r.addEventListener('change', () => {
@@ -1492,6 +1621,132 @@
     };
     if (locSet) locSet.addEventListener('click', resolve);
     if (locInput) locInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); resolve(); } });
+  }
+
+  /* THE ORDER BY DRAGGING (8 Nov 2026: Move up / Move down buttons are poor
+     design for a list). Each row of Settings, Widgets gets a drag handle at its end. Mouse and touch
+     drag from the handle only, so a finger on the rest of the list still scrolls it; the row follows
+     the pointer and the others slide to make room. Keys, a controller and a TV remote: the handle is
+     a stop of its own, and with it focused Up and Down move the row one place (its name says so).
+     The order is saved as before (gnw.widgets order) and does what widgetPlaceOrder says. */
+  const WIDGET_SWITCH = { clock: 'w-clock-on', weather: 'w-weather-on', trailer: 'w-trailer-on', facts: 'w-facts-on', quotes: 'w-quotes-on', games: 'w-games-on', cast: 'w-cast-on', stats: 'w-stats-on', image: 'w-image-on', playtime: 'w-playtime-on' };
+  const keyOfSwitch = id => Object.keys(WIDGET_SWITCH).find(k => WIDGET_SWITCH[k] === id) || '';
+  const GRIP_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>';
+  function widgetRowName(it) { const n = it.querySelector('.cfg-name'); return (n && n.textContent.trim()) || 'This widget'; }
+  function gripLabel(it, i, n) { return 'Reorder ' + widgetRowName(it) + ': ' + (i + 1) + ' of ' + n + '. Press Up or Down to move it, or drag.'; }
+  function orderWidgetRows(scope) {
+    const L = widgetListOrder();
+    const sortIn = (parent, sel, idOf) => {
+      if (!parent) return;
+      const kids = [...parent.querySelectorAll(sel)];
+      kids.sort((a, b) => L.indexOf(idOf(a)) - L.indexOf(idOf(b)));
+      for (const k of kids) if (idOf(k) && parent.lastElementChild !== k) parent.appendChild(k);
+    };
+    const cardKey = c => { const i = c.querySelector('.aw-head input[type="checkbox"]'); return i ? keyOfSwitch(i.id) : ''; };
+    sortIn(scope && scope.querySelector && scope.querySelector('.aw-scroll'), ':scope > .aw-card', cardKey);
+    const list = document.getElementById('wg-list');
+    if (!list) return;
+    /* Keep the focused handle focused while its row is moved (appendChild of a row holding the focus drops it). */
+    const had = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('wg-grip') ? document.activeElement : null;
+    sortIn(list, ':scope > .cfg-item', it => keyOfSwitch(it.dataset.cfg));
+    if (had && document.activeElement !== had && had.isConnected) had.focus({ preventScroll: true });
+    const rows = [...list.querySelectorAll(':scope > .cfg-item')].filter(it => keyOfSwitch(it.dataset.cfg));
+    rows.forEach(it => {
+      let g = it.querySelector(':scope > .wg-grip');
+      if (!g) {
+        g = document.createElement('span');
+        g.className = 'wg-grip'; g.setAttribute('role', 'button'); g.tabIndex = 0; g.innerHTML = GRIP_SVG;
+        it.classList.add('wg-orderable');
+        it.appendChild(g);
+        wireGrip(g, it);
+      }
+      const i = L.indexOf(keyOfSwitch(it.dataset.cfg));
+      g.setAttribute('aria-label', gripLabel(it, i, L.length));
+      g.title = 'Drag to reorder, or press Up or Down';
+    });
+  }
+  function moveWidgetTo(key, j) {
+    const L = widgetListOrder(), i = L.indexOf(key);
+    if (i < 0 || j < 0 || j >= L.length || i === j) return false;
+    L.splice(i, 1); L.splice(j, 0, key);
+    saveWidgetCfg({ order: { list: L } });
+    orderWidgetRows(document.getElementById('vault-overlay'));
+    return true;
+  }
+  /* The order counted over the rows shown; a hidden row (signed out) keeps its place among them. */
+  function wireGrip(g, it) {
+    const key = () => keyOfSwitch(it.dataset.cfg);
+    let live = document.getElementById('wg-order-live');
+    if (!live) { live = document.createElement('span'); live.id = 'wg-order-live'; live.setAttribute('aria-live', 'polite'); live.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;'; document.body.appendChild(live); }
+    g.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault(); e.stopPropagation();
+      const L = widgetListOrder(), i = L.indexOf(key());
+      if (moveWidgetTo(key(), i + (e.key === 'ArrowUp' ? -1 : 1))) {
+        g.focus({ preventScroll: true });
+        try { it.scrollIntoView({ block: 'nearest' }); } catch {}
+        const n = widgetListOrder().indexOf(key()) + 1;
+        live.textContent = widgetRowName(it) + ', ' + n + ' of ' + L.length;
+      }
+    });
+    g.addEventListener('click', e => { e.stopPropagation(); });
+    g.addEventListener('pointerdown', e => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      e.preventDefault();
+      const list = it.parentElement, rows = [...list.querySelectorAll(':scope > .cfg-item:not([hidden])')];
+      const from = rows.indexOf(it); if (from < 0) return;
+      const rects = rows.map(r => r.getBoundingClientRect());
+      const step = rows.length > 1 ? rects[1].top - rects[0].top : rects[0].height;
+      const y0 = e.clientY;
+      let scroller = list.parentElement;   // the nearest box that scrolls (the Settings window's own, desk or phone)
+      while (scroller && scroller !== document.body && !(/(auto|scroll)/.test(getComputedStyle(scroller).overflowY) && scroller.scrollHeight > scroller.clientHeight)) scroller = scroller.parentElement;
+      if (!scroller || scroller === document.body) scroller = document.scrollingElement;
+      const sTop0 = scroller ? scroller.scrollTop : 0;
+      let to = from, raf = 0, lastY = y0;
+      try { g.setPointerCapture(e.pointerId); } catch {}
+      it.classList.add('wg-dragging'); list.classList.add('wg-sorting');
+      const place = () => {
+        raf = 0;
+        const dy = lastY - y0 + ((scroller ? scroller.scrollTop : 0) - sTop0);
+        it.style.transform = 'translateY(' + dy + 'px)';
+        const mid = rects[from].top + rects[from].height / 2 + dy;
+        to = from;
+        for (let k = 0; k < rows.length; k++) { const m = rects[k].top + rects[k].height / 2; if (k < from && mid < m) { to = k; break; } }
+        for (let k = rows.length - 1; k > from; k--) { const m = rects[k].top + rects[k].height / 2; if (mid > m) { to = k; break; } }
+        rows.forEach((r, k) => {
+          if (r === it) return;
+          const shift = (from < to && k > from && k <= to) ? -step : (from > to && k >= to && k < from) ? step : 0;
+          r.style.transform = shift ? 'translateY(' + shift + 'px)' : '';
+        });
+        /* Near the top or bottom of the Settings window, it scrolls. */
+        if (scroller) { const sr = scroller === document.scrollingElement ? { top: 0, bottom: innerHeight } : scroller.getBoundingClientRect(); if (lastY < sr.top + 40) scroller.scrollTop -= 12; else if (lastY > sr.bottom - 40) scroller.scrollTop += 12; }
+      };
+      const move = ev => { lastY = ev.clientY; if (!raf) raf = requestAnimationFrame(place); };
+      const end = () => {
+        g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', end); g.removeEventListener('pointercancel', end);
+        if (raf) cancelAnimationFrame(raf);
+        rows.forEach(r => { r.style.transform = ''; });
+        it.classList.remove('wg-dragging'); list.classList.remove('wg-sorting');
+        if (to !== from) {
+          /* The rows shown map onto the saved order: put the dragged one before (or after) the row now in its place. */
+          const L = widgetListOrder(), target = keyOfSwitch(rows[to].dataset.cfg);
+          moveWidgetTo(key(), L.indexOf(target));
+        }
+      };
+      g.addEventListener('pointermove', move); g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+    });
+  }
+  function wireWidgetOrder(mount) {
+    orderWidgetRows(mount);
+    setTimeout(() => orderWidgetRows(mount), 120);    // after settings-config.js has made its rows
+    setTimeout(() => orderWidgetRows(mount), 1000);
+    if (!wireWidgetOrder._obs) {
+      /* settings-config.js makes a row when it first meets a card: give each new row its handle. */
+      wireWidgetOrder._obs = true;
+      let t = 0;
+      new MutationObserver(() => { if (t) return; t = setTimeout(() => { t = 0; const l = document.getElementById('wg-list'); if (l && [...l.children].some(it => !it.querySelector(':scope > .wg-grip') && keyOfSwitch(it.dataset.cfg))) orderWidgetRows(document.getElementById('vault-overlay')); }, 60); })
+        .observe(document.getElementById('vault-overlay') || document.body, { childList: true, subtree: true });
+    }
   }
 
   /* The Media nav item is PUBLIC now -- it used to be hidden until you signed
@@ -1550,6 +1805,10 @@
     year:   { def: 'desc' },
     rating: { def: 'desc' },
     played: { def: 'desc' },
+    /* MOST PLAYED (8 Nov 2026): total real play from the play history (widgets-extra.js totalsNow),
+       most first; never played after, in the Shuffle order. A new key on purpose: 'played' (Recently
+       played) left the menu on 19 Oct and a saved one still falls back to Shuffle (loadVideoPrefs). */
+    most:   { def: 'desc' },
   };
 
   const videoState = {
@@ -1767,7 +2026,7 @@
         videoState.sort = p.sort;
         videoState.sortDir = (p.sortDir === 'asc' || p.sortDir === 'desc') ? p.sortDir : SORTS[videoState.sort].def;
       }
-      if (GAME_SORTS[p.gameSort] && p.gameSort !== 'played') videoState.gameSort = p.gameSort;   // Recently played left the menu (19 Oct)
+      if (GAME_SORTS[p.gameSort] && p.gameSort !== 'played') videoState.gameSort = p.gameSort;   // 'most' (Most played, 8 Nov 2026) is kept   // Recently played left the menu (19 Oct)
       videoState.gameSortDir = (p.gameSortDir === 'asc' || p.gameSortDir === 'desc') ? p.gameSortDir : GAME_SORTS[videoState.gameSort].def;
       /* p.display is deliberately NOT read. Cover Flow was removed on
          2026-10-02 and the grid is the only layout, so a stored 'cover' (or
@@ -2485,6 +2744,12 @@
         transition:background .15s, border-color .15s, color .15s;
       }
       #video-body .vgtype svg { width:18px; height:18px; }
+      #video-body .vgtype[hidden] { display:none; }
+      /* With the Unknown box too (10 Nov), Display, Sort and the six buttons on the right need about 440 px: a narrower
+         phone puts the right group on its own line under Display and Sort, as a 344 px fold does with five. */
+      @media (max-width: 440px) {
+        #video-body .vgames-menu.vg-full .vgames-head:has(.vgtype[data-vg-type="unknown"]:not([hidden])) { grid-template-areas:"coll coll close" "mid mid mid" "end end end"; row-gap:6px; }
+      }
       #video-body .vgtype:hover { background:rgba(var(--accent-rgb),.10); }
       #video-body .vgtype:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(var(--accent-rgb),.35); }
       #video-body .vgtype.active { color:var(--accent); border-color:var(--accent); background:rgba(var(--accent-rgb),.16); }
@@ -2638,7 +2903,9 @@
       #video-body .vtb .view-mode-row > .vgames-wrap { display:contents; }   /* nothing of it stays in the bar's row */
       /* OFF OUR OWN ADDRESS (28 Oct): no page buttons on the bar (index.html sets html.cw-offsite). */
       html.cw-offsite #video-home-btn, html.cw-offsite #video-compat-btn,
-      html.cw-offsite #video-timeline-btn, html.cw-offsite #video-about-btn, html.cw-offsite #video-features-btn { display:none !important; }
+      html.cw-offsite #video-timeline-btn, html.cw-offsite #video-about-btn, html.cw-offsite #video-features-btn, html.cw-offsite #video-stories-btn { display:none !important; }
+      /* STORIES (7 Nov): only for a reader signed in with something to read (stories.js sets the class). */
+      html:not(.cw-stories-on) #video-stories-btn { display:none !important; }
       /* Home, Compatibility, Timeline and About fill the window on a narrow screen (28 Oct:
          no Game & Watch frame there; index.html drops the frame at the same rule). */
       @media (max-width: 760px), (max-height: 500px) {
@@ -2657,8 +2924,8 @@
       /* A CLOSE X ON A SMALL DEVICE (2 Nov: on a phone Home opens full screen and it was not
          clear how to close it). A black strip across the window's top, just under the search bar, with
          the X at its right; the window's own scroll starts under the strip, so the X never covers the
-         window's content and stays in place while it scrolls. The ground is black in both themes, so the
-         colours are fixed. The desk and the TV never show it (no html.cw-small there).
+         window's content and stays in place while it scrolls. Colours for the dark ground; small-light.css
+         has the light theme's. The desk and the TV never show it (no html.cw-small there).
          THE X FLOATS (4 Nov: "the page close X floats over the page (no black strip for it), so the page
          gets the room", and no gap between the search bar and the page): no strip; the window starts right
          under the search bar and the X sits over its top right corner, fixed while the page scrolls under
@@ -3581,6 +3848,7 @@
     played: '<path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><polyline points="20.5 3.5 20.5 8 16 8"/><polygon points="10 8.6 15.2 12 10 15.4"/>',
     timeline: '<line x1="12" y1="2.5" x2="12" y2="21.5"/><circle cx="12" cy="6" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="18" r="2.2"/><line x1="19" y1="6" x2="14.2" y2="6"/><line x1="19" y1="18" x2="14.2" y2="18"/><line x1="9.8" y1="12" x2="5" y2="12"/>',   /* vertical (21 Oct: turned 90 degrees) */
     home:  '<path d="M3.5 11.5 12 4.5l8.5 7"/><path d="M6 9.8V20h12V9.8"/><path d="M10 20v-5.5h4V20"/>',   /* the Home window (22 Oct) */
+    stories: '<path d="M12 6.5C10.2 5 7.2 4.5 3.5 5v13.5c3.7-.5 6.7 0 8.5 1.5 1.8-1.5 4.8-2 8.5-1.5V5c-3.7-.5-6.7 0-8.5 1.5z"/><path d="M12 6.5V20"/>',   /* the Stories window (7 Nov) */
     features: '<path d="M10 3.5l1.9 5.1 5.1 1.9-5.1 1.9L10 17.5l-1.9-5.1L3 10.5l5.1-1.9z"/><path d="M18 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/>',   /* the Features window (31 Oct) */
     keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="7" y1="14" x2="17" y2="14"/>',
     info:  '<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/>',
@@ -3657,6 +3925,7 @@
                 ${gBtn('name',   IC.az,     'Name')}
                 ${gBtn('rating', IC.star,   'Rating')}
                 ${gBtn('random', IC.rand,   'Shuffle')}
+                ${gBtn('most',   IC_MOST,   'Most played')}
               </div>
             </div>
           </span>`;
@@ -3671,6 +3940,8 @@
           <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-home-btn" title="Home" aria-label="Home" aria-pressed="${aboutOpen && aboutKind === 'home'}" aria-controls="video-about">${svg(IC.home)}</button>
           <!-- FEATURES (31 Oct): right of Home, the same window (features.js draws it). -->
           <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-features-btn" title="Features" aria-label="Features" aria-pressed="${aboutOpen && aboutKind === 'features'}" aria-controls="video-about">${svg(IC.features)}</button>
+          <!-- STORIES (7 Nov): right of Features, the same window (stories.js draws it). Hidden unless signed in. -->
+          <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-stories-btn" title="Stories" aria-label="Stories" aria-pressed="${aboutOpen && aboutKind === 'stories'}" aria-controls="video-about">${svg(IC.stories)}</button>
           </span>
           <!-- DISPLAY AND SORT LIVE IN THE SYSTEMS STRIP NOW (28 Oct): vtbDD below,
                drawn in the strip's top row by gamesMenuHTML. They stay inside this row's DOM (the strip is in
@@ -3748,11 +4019,13 @@
       <div id="video-status"></div>`;
   }
 
-  const SORT_TITLES = { name: 'Name', year: 'Release date', added: 'Date added', rating: 'Rating', random: 'Shuffle', played: 'Recently played' };
+  const SORT_TITLES = { name: 'Name', year: 'Release date', added: 'Date added', rating: 'Rating', random: 'Shuffle', played: 'Recently played', most: 'Most played' };
   /* The words beside a sort in the Sorting menu: [ascending, descending]. The
      checked one shows its current direction (choosing it again reverses it);
      the others show the direction they start in. */
-  const SORT_HINTS = { name: ['A–Z', 'Z–A'], year: ['Oldest', 'Newest'], added: ['Oldest', 'Newest'], rating: ['Lowest', 'Highest'], played: ['Longest ago', 'Latest'] };
+  const SORT_HINTS = { name: ['A–Z', 'Z–A'], year: ['Oldest', 'Newest'], added: ['Oldest', 'Newest'], rating: ['Lowest', 'Highest'], played: ['Longest ago', 'Latest'], most: ['Least', 'Most'] };
+  /* Most played's icon: three bars (8 Nov 2026). */
+  const IC_MOST = '<line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/>';
   function updateSortButtons(scope) {
     scope = scope || document;
     const paint = (b, key, active, dirNow, defs) => {
@@ -3792,7 +4065,7 @@
   function aboutHTML(kind) {
     if (kind === 'compat') return window.CompatList ? window.CompatList.html() : '';   // compat.js draws its own frame
     if (kind === 'timeline' && typeof window.renderTimeline === 'function' && !document.querySelector('#timeline-list .tl-item')) { try { window.renderTimeline(); } catch {} }
-    const src = kind === 'home' || kind === 'features' ? null : document.querySelector(kind === 'timeline' ? '#view-series .section' : '#view-about .section');
+    const src = kind === 'home' || kind === 'features' || kind === 'stories' ? null : document.querySelector(kind === 'timeline' ? '#view-series .section' : '#view-about .section');
     let inner = '';
     if (src) {
       const c = src.cloneNode(true);
@@ -3809,6 +4082,7 @@
     if (kind === 'features') {   // the Features window (31 Oct): features.js draws it, a fresh copy each time
       try { inner = window.CwFeatures ? window.CwFeatures.html() : ''; } catch (e) { console.warn('[features]', e); }
     }
+    if (kind === 'stories') inner = '<div id="cw-stories-page"></div>';   // stories.js draws it (7 Nov)
     /* KEYBOARD SHORTCUTS AS A PAGE ON A SMALL SCREEN (4 Nov): shortcuts.js draws it and opens this
        kind only where the window has no frame (html.cw-small); the desk keeps its own window. */
     if (kind === 'keys') {
@@ -3820,7 +4094,7 @@
       + '<img class="gw-mascot" src="./images/ball-spirit.webp" alt="Ball Spirit">'
       + '<img class="gw-mascot" src="./images/fire-spirit.webp" alt="Fire Spirit">'
       // The Timeline and Home are long, so they keep all seven figures, as on their own pages; About shows three.
-      + (kind === 'timeline' || kind === 'home' || kind === 'features' ? '<img class="gw-mascot" src="./images/fire-attack-spirit.webp" alt="Fire Attack Spirit">'
+      + (kind === 'timeline' || kind === 'home' || kind === 'features' || kind === 'stories' ? '<img class="gw-mascot" src="./images/fire-attack-spirit.webp" alt="Fire Attack Spirit">'
         + '<img class="gw-mascot" src="./images/chef-spirit.webp" alt="Chef Spirit">'
         + '<img class="gw-mascot" src="./images/lion-spirit.webp" alt="Lion Spirit">'
         + '<img class="gw-mascot" src="./images/judge-spirit.webp" alt="Judge Spirit">' : '')
@@ -3858,7 +4132,7 @@
     let p = document.getElementById('video-about');
     if (!p && aboutOpen) { p = document.createElement('div'); p.id = 'video-about'; p.className = 'video-about'; p.hidden = true; document.body.appendChild(p); }
     if (aboutOpen) aboutReveal();
-    for (const [id, k] of [['video-about-btn', 'about'], ['video-timeline-btn', 'timeline'], ['video-compat-btn', 'compat'], ['video-home-btn', 'home'], ['video-features-btn', 'features']]) {
+    for (const [id, k] of [['video-about-btn', 'about'], ['video-timeline-btn', 'timeline'], ['video-compat-btn', 'compat'], ['video-home-btn', 'home'], ['video-features-btn', 'features'], ['video-stories-btn', 'stories']]) {
       const b = document.getElementById(id); if (b) b.setAttribute('aria-pressed', String(aboutOpen && aboutKind === k));
     }
     if (!p) return;
@@ -3878,6 +4152,7 @@
     }
     const was = p.hidden;
     p.hidden = !aboutOpen;
+    if (aboutOpen && aboutKind === 'stories' && window.cwStoriesLoad) window.cwStoriesLoad(m => m.mount(p));   // draws the page and checks access (7 Nov)
     document.documentElement.classList.toggle('cw-about-open', !p.hidden);   // the page held still (CSS, was html:has)
     aboutFit();
     if (aboutOpen && (was || p.dataset.shown !== aboutKind)) { p.scrollTop = 0; p.dataset.shown = aboutKind; }
@@ -4003,7 +4278,7 @@
       ev.preventDefault(); ev.stopPropagation();
       const k = aboutKind;
       aboutSet(false);
-      const b = document.getElementById(k === 'timeline' ? 'video-timeline-btn' : k === 'compat' ? 'video-compat-btn' : k === 'home' ? 'video-home-btn' : k === 'features' ? 'video-features-btn' : k === 'keys' ? 'video-keys-btn' : 'video-about-btn'); if (b) { try { b.focus({ preventScroll: true }); } catch {} }
+      const b = document.getElementById(k === 'timeline' ? 'video-timeline-btn' : k === 'compat' ? 'video-compat-btn' : k === 'home' ? 'video-home-btn' : k === 'features' ? 'video-features-btn' : k === 'stories' ? 'video-stories-btn' : k === 'keys' ? 'video-keys-btn' : 'video-about-btn'); if (b) { try { b.focus({ preventScroll: true }); } catch {} }
       return;
     }
     if (t.closest('#video-about .about-xbar')) return;
@@ -4059,7 +4334,7 @@
     if (ev.target && ev.target.closest && ev.target.closest('#cw-notify-host, .toast-host')) return;
     ev.preventDefault(); ev.stopPropagation();
     aboutSet(false);
-    const b = document.getElementById(aboutKind === 'timeline' ? 'video-timeline-btn' : aboutKind === 'compat' ? 'video-compat-btn' : aboutKind === 'home' ? 'video-home-btn' : aboutKind === 'features' ? 'video-features-btn' : aboutKind === 'keys' ? 'video-keys-btn' : 'video-about-btn'); if (b) { try { b.focus({ preventScroll: true }); } catch {} }
+    const b = document.getElementById(aboutKind === 'timeline' ? 'video-timeline-btn' : aboutKind === 'compat' ? 'video-compat-btn' : aboutKind === 'home' ? 'video-home-btn' : aboutKind === 'features' ? 'video-features-btn' : aboutKind === 'stories' ? 'video-stories-btn' : aboutKind === 'keys' ? 'video-keys-btn' : 'video-about-btn'); if (b) { try { b.focus({ preventScroll: true }); } catch {} }
   }, true);
   /* THE SEARCH BOX CLOSES THE WINDOW (2 Nov: "Clicking, tapping or focusing the wall's
      search bar must close whatever window is open on top of the content page, so the search results
@@ -4068,9 +4343,14 @@
      Timeline, About or Compatibility by the same close as Escape and Back (aboutSet: the address bar
      and its history entry follow), but the focus, the caret and any typed words stay in the box.
      Settings, a drawer and a play window are layers: the page behind them is inert, so the box cannot
-     get the focus while one is open, and nothing here closes them. */
+     get the focus while one is open, and nothing here closes them.
+     MOVING ONTO THE BOX IS NOT ASKING TO SEARCH (7 Nov 2026, hand test 7: "I open features and push
+     down and up and it closes. It shouldnt close when i have gone from the page to the search bar").
+     The arrows, the pad and Tab bring the focus to the box at rest (readonly): the window stays open.
+     It closes when the box starts its typing state (vsEdit: a click or tap, Enter or the pad's A, the
+     search keys). */
   document.addEventListener('focusin', (ev) => {
-    if (!aboutOpen || !ev.target || ev.target.id !== 'video-search') return;
+    if (!aboutOpen || !ev.target || ev.target.id !== 'video-search' || ev.target.readOnly) return;
     aboutSet(false);
   }, true);
   /* The toolbar menus, found without walking the wall (28 Oct): the search went
@@ -4199,11 +4479,11 @@
   })();
   document.addEventListener('click', (ev) => {
     const t = ev.target; if (!t || !t.closest) return;
-    const winBtn = t.closest('#video-about-btn, #video-timeline-btn, #video-compat-btn, #video-home-btn, #video-features-btn');
+    const winBtn = t.closest('#video-about-btn, #video-timeline-btn, #video-compat-btn, #video-home-btn, #video-features-btn, #video-stories-btn');
     if (winBtn) {
       vtbClose(false);
       try { vgCloseMenu(); } catch {}
-      const k = winBtn.id === 'video-timeline-btn' ? 'timeline' : winBtn.id === 'video-compat-btn' ? 'compat' : winBtn.id === 'video-home-btn' ? 'home' : winBtn.id === 'video-features-btn' ? 'features' : 'about';
+      const k = winBtn.id === 'video-timeline-btn' ? 'timeline' : winBtn.id === 'video-compat-btn' ? 'compat' : winBtn.id === 'video-home-btn' ? 'home' : winBtn.id === 'video-features-btn' ? 'features' : winBtn.id === 'video-stories-btn' ? 'stories' : 'about';
       aboutSet(!(aboutOpen && aboutKind === k), k);
       return;
     }
@@ -4755,7 +5035,7 @@
     // A trailer tile is an ambient widget too, so the Displays widget toggle
     // hides it along with the clock/weather/facts tiles. Settings still owns
     // whether trailers exist at all (cfg.trailer.on, below).
-    if (!widgetsShown()) return false;
+    if (!widgetsShown() || !widgetContentShown('trailer')) return false;   // a Films widget (9 Nov 2026)
     /* A trailer is the most expensive moving thing on this page -- a YouTube
        iframe, up to cfg.trailer.max of them at once -- so it answers to the TV
        gate before anything else. Asked HERE, at the point a tile is decided,
@@ -5517,6 +5797,7 @@
     _quotesSeed  = Math.floor(Math.random() * 1e6);
     _statsSeed   = Math.floor(Math.random() * 1e6);
     _castSeed    = Math.floor(Math.random() * 1e6);
+    try { if (window.CwWidgetsExtra) CwWidgetsExtra.reseed(); } catch {}   // Image and Play time (8 Nov 2026)
     TRAILER_SEED = (Math.random() * 0x7fffffff) >>> 0;
     videoState.gamesByCell = null;
     _widgetOffsets    = null;   // recomputed from the new widget seeds
@@ -5555,6 +5836,11 @@
       // looked like, and a layout is a preference rather than a fix.
       layout:  { stacked: (c.layout || {}).stacked === true },
     };
+    /* The order of importance set in Settings, Widgets (8 Nov 2026); null: never set. */
+    _wcfg.order = (c.order && Array.isArray(c.order.list) && c.order.list.length) ? c.order.list.filter(k => typeof k === 'string') : null;
+    /* Image and Play time (8 Nov 2026): off by default, each with a size (widgets-extra.js). */
+    { const X = extraW(); const e = X ? X.readCfg(c) : { image: { on: false, list: [] }, playtime: { on: false, every: 30, size: '1', games: [] } };
+      _wcfg.image = e.image; _wcfg.playtime = e.playtime; }
     /* R.O.B. IS A SYSTEM NOW (22 Oct; see ROB_SYSTEM). The old filter stored him as the
        series 'rob' over the NES and Famicom shelves; a choice saved that way is read as the system. */
     { const g = _wcfg.games;
@@ -5566,6 +5852,22 @@
     return _wcfg;
   }
   const invalidateWidgetCfg = () => { _wcfg = null; _widgetOffsets = null; };
+  /* THE IMAGE AND PLAY TIME WIDGETS (8 Nov 2026) live in widgets-extra.js; this hands it what it
+     needs from here once. Null when that file is missing: then they simply do not exist. */
+  function extraW() {
+    const X = window.CwWidgetsExtra;
+    if (X && !X.__on) {
+      X.__on = true;
+      X.attach({
+        esc, styles: { lbl, inp, btnPrimary },
+        raw: () => { try { return JSON.parse(localStorage.getItem(WIDGET_KEY) || '{}') || {}; } catch { return {}; } },
+        save: (patch) => saveWidgetCfg(patch),
+        redraw: () => redrawWallFromTop(),
+        mostOn: () => videoState.gameSort === 'most',
+      });
+    }
+    return X || null;
+  }
   /* Where inside its own cycle a widget sits — a seeded draw over the WHOLE cycle,
    * so a widget set to "every 80" is as likely at slot 71 as at slot 3.
    * (This used to clamp the draw to `Math.min(every - 1, 18)`, which is why every
@@ -5585,6 +5887,10 @@
       ['facts', cfg.facts, _factsSeed], ['quotes', cfg.quotes, _quotesSeed], ['stats', cfg.stats, _statsSeed],
       ['cast', cfg.cast, _castSeed],
     ];
+    /* Image and Play time after the six, so the six keep exactly the places they had (8 Nov 2026). */
+    { const X = extraW(); if (X) defs.push(...X.defs(cfg)); }
+    /* In the order set in Settings, when there is one: the higher widget keeps its own place. */
+    if (cfg.order) { const L = widgetPlaceOrder(cfg); defs.sort((a, b) => L.indexOf(a[0]) - L.indexOf(b[0])); }
     const usedByEvery = {}, out = {};
     for (const [k, c, seed] of defs) {
       if (!c.on) continue;
@@ -5620,18 +5926,75 @@
     const h = widgetTileHTMLAt(gi);
     return h ? h.replace('<div class="vgrid-widget', '<div data-wgi="' + gi + '" class="vgrid-widget') : h;
   }
+  /* THE ORDER OF IMPORTANCE (8 Nov 2026: move each widget up and down in Settings, Widgets).
+     What order decides on the board: when two widgets are due on the same cell, the higher one gets
+     it and the lower one waits for its next turn; the higher one also keeps its own place in its
+     cycle when two share a frequency (getWidgetOffsets); Games, once ordered, takes a cell from a
+     widget below it (a game tile is otherwise always the one that waits); and a wall with no films
+     lists the widgets in that order. Trailer playback is a film playing its trailer, not a cell of
+     its own, so its place changes nothing on the board. With no order saved, everything is placed
+     exactly as before: clock, weather, facts, quotes, stats, cast, then Image and Play Time. */
+  const WIDGET_LIST_ORDER = ['clock', 'weather', 'trailer', 'facts', 'quotes', 'games', 'cast', 'stats', 'image', 'playtime'];
+  const widgetGroupOf = k => (String(k).indexOf('img:') === 0 ? 'image' : k);
+  function widgetListOrder() {
+    const o = getWidgetCfg().order;
+    const out = (o || []).filter(k => WIDGET_LIST_ORDER.includes(k));
+    for (const k of WIDGET_LIST_ORDER) if (!out.includes(k)) out.push(k);
+    return out;
+  }
+  const widgetRank = k => { const o = getWidgetCfg().order; if (!o) return null; return widgetListOrder().indexOf(widgetGroupOf(k)); };
+  /* The placement keys in the order they are asked: the old fixed order, or the one set in Settings. */
+  function widgetPlaceOrder(cfg) {
+    const X = extraW();
+    const keys = ['clock', 'weather', 'facts', 'quotes', 'stats', 'cast'].concat(X ? X.defs(cfg).map(d => d[0]) : []);
+    if (!cfg.order) return keys;
+    const L = widgetListOrder();
+    return keys.map((k, i) => [k, i]).sort((a, b) => (L.indexOf(widgetGroupOf(a[0])) - L.indexOf(widgetGroupOf(b[0]))) || (a[1] - b[1])).map(x => x[0]);
+  }
+  /* WIDGETS BELONG TO THEIR CONTENT (9 Nov 2026: every widget is in one group by where its
+     data comes from, and is hidden whenever that group's content is hidden, back when it is shown).
+     General, no content source: Clock, Weather, Movie quotes (a list kept in this file), Image.
+     Games: Play Time (the games played in this browser). Films, fed by the media server: Trailer
+     playback, Film facts (its On This Day lines are the library's), Collection stats, Cast. The
+     Widgets switch and each widget's own switch still apply on top. Places in the cycle are not
+     moved (getWidgetOffsets), so a widget comes back where it was. */
+  const WIDGET_CONTENT = { clock: 'general', weather: 'general', quotes: 'general', image: 'general', playtime: 'games', trailer: 'films', facts: 'films', stats: 'films', cast: 'films' };
+  const widgetContentGroup = k => WIDGET_CONTENT[widgetGroupOf(k)] || 'general';
+  function widgetContentShown(k) {
+    const g = widgetContentGroup(k);
+    if (g === 'films') return mediaShown();
+    if (g === 'games') return gamesShown() && getWidgetCfg().games.on;
+    return true;
+  }
+  function widgetAt(k, gi, cfg, off) {
+    if (!widgetContentShown(k)) return '';
+    switch (k) {
+      case 'clock':   return cfg.clock.on && gi % cfg.clock.every === off.clock ? clockTileHTML() : '';
+      case 'weather': return cfg.weather.on && gi % cfg.weather.every === off.weather ? weatherTileHTML() : '';
+      case 'facts':   return cfg.facts.on && gi % cfg.facts.every === off.facts ? factsTileHTML() : '';
+      case 'quotes':  return cfg.quotes.on && gi % cfg.quotes.every === off.quotes ? quotesTileHTML() : '';
+      case 'stats':   return cfg.stats.on && gi % cfg.stats.every === off.stats ? statsTileHTML() : '';
+      /* Signed-in only: the pool is built from the user's own library, so with
+         no server there is nothing to rank and the tile would be a spinner. */
+      case 'cast':    return cfg.cast.on && session.token && gi % cfg.cast.every === off.cast ? castTileHTML() : '';
+    }
+    const X = extraW();
+    if (X) for (const [dk, c] of X.defs(cfg)) if (dk === k && gi % c.every === off[k]) return X.tileHTML(k, cfg);
+    return '';
+  }
+  let _lastWidgetKey = null;   // which widget widgetTileHTMLAt last placed (the Games-versus-widget order)
   function widgetTileHTMLAt(gi) {
+    _lastWidgetKey = null;
     if (gi <= 0) return '';
     const cfg = getWidgetCfg(), off = getWidgetOffsets();
-    if (cfg.clock.on && gi % cfg.clock.every === off.clock) return clockTileHTML();
-    if (cfg.weather.on && gi % cfg.weather.every === off.weather) return weatherTileHTML();
-    if (cfg.facts.on && gi % cfg.facts.every === off.facts) return factsTileHTML();
-    if (cfg.quotes.on && gi % cfg.quotes.every === off.quotes) return quotesTileHTML();
-    if (cfg.stats.on && gi % cfg.stats.every === off.stats) return statsTileHTML();
-    /* Signed-in only: the pool is built from the user's own library, so with
-       no server there is nothing to rank and the tile would be a spinner. */
-    if (cfg.cast.on && session.token && gi % cfg.cast.every === off.cast) return castTileHTML();
+    for (const k of widgetPlaceOrder(cfg)) { const h = widgetAt(k, gi, cfg, off); if (h) { _lastWidgetKey = k; return h; } }
     return '';
+  }
+  /* Games set above the widget due on this cell: the game takes it and the widget waits. */
+  function gameOutranks(gi) {
+    const cfg = getWidgetCfg();
+    if (!cfg.order || !_lastWidgetKey || !cfg.games.on || gi <= 0 || gi % cfg.games.every !== widgetOffset(_gamesSeed, cfg.games.every)) return false;
+    return widgetRank('games') < widgetRank(_lastWidgetKey);
   }
   /* Games enabled for the CURRENT VIEW. Deliberately not gridWidgetsEnabled():
    * games answer to their own Displays button, so hiding widgets leaves them
@@ -6068,6 +6431,10 @@
     { key: 'homebrew',   label: 'Homebrew',   cats: ['homebrew', 'unl', 'proto'], def: false, tip: 'Homebrew, unlicensed, prototypes and unreleased games' },
     { key: 'demo',       label: 'Demos',      cats: ['demo'], def: false, tip: 'Demos, samples and kiosk versions' },
     { key: 'test',       label: 'Diagnostic', cats: ['test'], def: false, tip: 'Test and diagnostic cartridges' },
+    /* UNKNOWN (10 Nov 2026: games no table knows are listed as Unknown, not as homebrew. The
+       Unknown type shows only when such a game is added, and is on by default). A file no table
+       knows (gameTypeKey). Its box shows only while such a game is on the wall (vgUnknownOnWall), ticked by default. */
+    { key: 'unknown',    label: 'Unknown',    cats: ['unknown'], def: true, tip: 'Games we have not tested yet' },
   ];
   /* The type buttons' icons (24 Oct): a cartridge for Commercial, a beaker for Homebrew (28 Oct; was a house),
      a play triangle for Demos, a pulse line for Diagnostic. */
@@ -6077,13 +6444,14 @@
     homebrew:   '<path d="M9 3h6"/><path d="M10 3v6.5L4.8 18.4A1.8 1.8 0 0 0 6.4 21h11.2a1.8 1.8 0 0 0 1.6-2.6L14 9.5V3"/><path d="M7.2 15h9.6"/><circle cx="11" cy="18" r=".6"/><circle cx="13.6" cy="17" r=".5"/>',
     demo:       '<circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z"/>',
     test:       '<polyline points="3 12 7 12 10 5 14 19 17 12 21 12"/>',
+    unknown:    '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6"/>',
   };
   const GAME_TYPE_DEFAULT = GAME_TYPES.filter(t => t.def).map(t => t.key);
   const _gtLetter = { u: 'unl', h: 'homebrew', p: 'proto', k: 'hack', d: 'demo', t: 'test' };
   let _gameTypeOf = null;   // first 10 hex of the SHA-256 -> category; null until the table lands
   (function loadGameTypes() {
     if (typeof fetch !== 'function' || typeof DecompressionStream !== 'function') return;
-    fetch('firmware/compat/types.json.gz?v=2.0.0').then(r => {
+    fetch('firmware/compat/types.json.gz?v=2.1.0').then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();
     }).then(doc => {
@@ -6102,7 +6470,11 @@
      one (a Game & Watch unit, a named Game Boy title) is a commercial release. */
   function gameTypeKey(d) {
     const m = /-x([0-9a-f]{10})/i.exec((d && d.id) || '');
-    let c = (m && _gameTypeOf && _gameTypeOf.get(m[1].toLowerCase())) || 'commercial';
+    /* pmOwnType: a Pokemon mini file with no catalogue game says its own kind (index.html _pmOwnFileDevice). */
+    /* A FILE NO TABLE KNOWS IS UNKNOWN (9 Nov 2026 Homebrew; 10 Nov Unknown, its own type): its fingerprint is in no
+       version table and not in the types table, so it is no known release (variants.js unknown; drawer-unified.js
+       shows its notice). */
+    let c = (m && _gameTypeOf && _gameTypeOf.get(m[1].toLowerCase())) || (d && d.pmOwnType) || (m && window.Variants && Variants.unknown && Variants.unknown(d.id) ? 'unknown' : 'commercial');
     /* A BAD OR OVERDUMPED COPY TAKES ITS GAME'S BOX (1 Nov 2026). The box comes from the file's own
        folder, so a bad copy of an unlicensed game kept in the hacks folder (Shinobi (Tengen) [o1],
        After Burner (Tengen) [o1], about 120 NES games) made that game a Commercial tile, drawn from
@@ -6118,7 +6490,22 @@
     const t = GAME_TYPES.find(x => x.cats.includes(c));
     return t ? t.key : 'commercial';
   }
-  const gameTypesOn = () => { const t = getWidgetCfg().games.types; return t || GAME_TYPE_DEFAULT; };
+  /* A SAVED LIST FROM BEFORE UNKNOWN (10 Nov 2026) does not name it, so Unknown reads as on: a list saved before the
+     type existed never hides the first game we have not tested. Turning Unknown off is kept as '!unknown'. */
+  const gameTypesOn = () => { const t = getWidgetCfg().games.types; if (!t) return GAME_TYPE_DEFAULT;
+    return t.includes('!unknown') ? t.filter(x => x !== '!unknown' && x !== 'unknown') : (t.includes('unknown') ? t : t.concat('unknown')); };
+  /* Is a game we have not tested on the wall: in a system asked for, whatever the type boxes say (so the box that brings
+     it back stays in reach while it is turned off). Only a -x file the types table does not hold is asked further. */
+  function vgUnknownOnWall() {
+    if (!_gameTypeOf) return false;
+    const want = getWidgetCfg().games.systems;
+    for (const s of GAME_SYSTEMS) {
+      if (want && !want.includes(s.id)) continue;
+      let pool = []; try { pool = s.pool() || []; } catch (e) {}
+      for (const d of pool) { const m = d && /-x([0-9a-f]{10})[0-9a-f]{2}$/i.exec(d.id || ''); if (m && !_gameTypeOf.has(m[1].toLowerCase()) && gameTypeKey(d) === 'unknown') return true; }
+    }
+    return false;
+  }
   const gameTypeShown = (d, on) => (on || gameTypesOn()).includes(gameTypeKey(d));
 
   /* EACH SYSTEM'S OWN YEARS ON THE MARKET -- first release to discontinuation --
@@ -6204,7 +6591,7 @@
     const on = gameTypesOn();
     return '<span class="vgtypes" role="group" aria-label="Types of game">' + GAME_TYPES.map(t => {
       const lit = on.includes(t.key);
-      return '<button type="button" class="vgtype' + (lit ? ' active' : '') + '" role="checkbox" aria-checked="' + lit + '" data-vg-type="' + t.key + '"' +
+      return '<button type="button" class="vgtype' + (lit ? ' active' : '') + '" role="checkbox" aria-checked="' + lit + '" data-vg-type="' + t.key + '"' + (t.key === 'unknown' && !vgUnknownOnWall() ? ' hidden' : '') +
              ' aria-label="' + t.label + '" title="' + t.label + ': ' + t.tip + '">' + svg(GAME_TYPE_ICON[t.key] || '') + '</button>';
     }).join('') + '</span>';
   }
@@ -6288,7 +6675,8 @@
       if (videoState.person || videoState.collection) refreshGrid();
       else if (videoState.cacheReady) applyFilterSort(true);
       else refreshGrid();
-      vgWallTop();   // what the wall shows changed: its top, as a pick of systems
+      if (videoState.person || videoState.collection) aimBanner();   // an open cast member or collection: its banner stays in view (9 Nov 2026)
+      else vgWallTop();   // what the wall shows changed: its top, as a pick of systems
     }
     vgSyncMenu();
     return changed;
@@ -6739,14 +7127,21 @@
      ambient picker itself checks them, so the two never disagree about which
      widgets exist. */
   function widgetsOnlyHTML() {
-    const cfg = getWidgetCfg();
+    const cfg = getWidgetCfg(), X = extraW();
     let html = '', n = 0;
-    if (cfg.clock.on)   { html += clockTileHTML();   n++; }
-    if (cfg.weather.on) { html += weatherTileHTML(); n++; }
-    if (cfg.facts.on)   { html += factsTileHTML();   n++; }
-    if (cfg.quotes.on)  { html += quotesTileHTML();  n++; }
-    if (cfg.stats.on)   { const s = statsTileHTML(); if (s) { html += s; n++; } }
-    if (cfg.cast.on && session.token) { html += castTileHTML(); n++; }
+    /* In the order of importance (8 Nov 2026; the old fixed order when none is set). */
+    for (const k of widgetPlaceOrder(cfg)) {
+      if (!widgetContentShown(k)) continue;   // its content is hidden (9 Nov 2026)
+      let h = '';
+      if (k === 'clock') h = cfg.clock.on ? clockTileHTML() : '';
+      else if (k === 'weather') h = cfg.weather.on ? weatherTileHTML() : '';
+      else if (k === 'facts') h = cfg.facts.on ? factsTileHTML() : '';
+      else if (k === 'quotes') h = cfg.quotes.on ? quotesTileHTML() : '';
+      else if (k === 'stats') h = cfg.stats.on ? statsTileHTML() : '';
+      else if (k === 'cast') h = cfg.cast.on && session.token ? castTileHTML() : '';
+      else if (X) h = X.tileHTML(k, cfg);   // Image and Play Time
+      if (h) { html += h; n++; }
+    }
     return { html, n };
   }
 
@@ -6786,6 +7181,16 @@
     let key;
     if (s === 'year') key = (g) => String(g.dev.released || g.dev.year || '');
     else if (s === 'rating') key = (g) => (g.dev.score10 > 0 ? g.dev.score10 : 0);
+    else if (s === 'most') {
+      const t = (window.CwWidgetsExtra && CwWidgetsExtra.totalsNow()) || new Map();
+      return (a, b) => {
+        const ka = t.get(a.dev.id) || 0, kb = t.get(b.dev.id) || 0;
+        if (!ka !== !kb) return ka ? -1 : 1;
+        if (!ka) return shuffleRank('g:' + a.dev.id) - shuffleRank('g:' + b.dev.id);   // never played: the Shuffle order
+        if (ka !== kb) return ka < kb ? -dir : dir;
+        return name(a).localeCompare(name(b));
+      };
+    }
     else { const ps = gamePlayStore(); key = (g) => { const e = ps[g.dev.id]; return e && Number(e.last) > 0 ? Number(e.last) : 0; }; }
     return (a, b) => {
       const ka = key(a), kb = key(b);
@@ -7349,7 +7754,10 @@
     if (fam === 'atari') { const m = ATARI_ART_ID_RE.exec(card.dataset.id || ''); return m ? m[1] : 'a2600'; }
     return series === 'game-boy-color' ? 'gbc' : 'gb';
   }
-  window.cwGameTypeLabel = id => { const t = GAME_TYPES.find(x => x.key === gameTypeKey({ id })); return t ? t.label : 'Commercial'; };
+  window.cwGameTypeLabel = id => { const pm = /^pm-x/.test(id) && typeof POKEMON_MINI !== 'undefined' && POKEMON_MINI.find(x => x.id === id); const t = GAME_TYPES.find(x => x.key === gameTypeKey(pm || { id })); return t ? t.label : 'Commercial'; };
+  /* A game file we have not tested (9 Nov 2026): in no version table and not in the types table, so neither a known
+     release nor a file of our own library. False until both tables are here (nothing is said about a file not looked up). */
+  window.cwUnknownGame = d => { try { const id = typeof d === 'string' ? d : (d && d.id) || '', m = /-x([0-9a-f]{12})$/i.exec(id); return !!(m && _gameTypeOf && !_gameTypeOf.has(m[1].slice(0, 10).toLowerCase()) && window.Variants && Variants.unknown && Variants.unknown(id)); } catch (e) { return false; } };
   /* host: the element the picture fills (fitted and centred, with `inset` as a share of the host
      on every side, as the tiles' covers are); shelf: gb, gbc, nes, famicom, fds, pm, a2600.. or
      the compat list's names; id: the tile's id (or any string carrying "-x" + the hash). */
@@ -7996,6 +8404,9 @@
        the NES family until its buckets exist): gamemeta.js, same name-floor
        shape, and also before anything arms the tiles. */
     try { if (window.GameMeta) GameMeta.mountBoxArt(videoState.artMode); } catch {}
+    /* Image and Play time tiles (8 Nov 2026): filled as they come into view; a 4x one is kept off
+       the far-tile list before the next line hands the tiles to it. */
+    try { const X = extraW(); if (X) X.mount(); } catch (e) { console.warn('[Emby] Image / Play time tiles:', e); }
     /* The tile reveal (index.html): every new game tile shimmers until all of
        its artwork layers have decoded, then fades in whole (uibugs #5). Before
        armGameTiles() so the layers it mounts are already behind the shimmer. */
@@ -10040,6 +10451,65 @@
     return Math.max(1, Math.floor((w + gap) / (vw + gap)));
   }
 
+  /* WHERE THE NEXT TILE LANDS (8 Nov 2026, the 2x and 4x Image and Play time tiles).
+     The row grid places tiles by CSS Grid's own rule: a cursor that only moves forward, each tile
+     going to the first place from there where it fits. This follows that rule over the cells taken
+     so far (a trailer and a wide game tile take two across, a 4x tile two across and two down), so
+     a big widget is only put down where it leaves no hole: otherwise it waits and goes in as soon
+     as the next place is clean. A 4x tile also waits for the start of a row, so the far-tile code's
+     whole-row stand-ins (index.html _cwWallMerge) never meet its second row. The trailer's old
+     "not in the last column" test is the same question asked here. One column: every tile is one. */
+  function gridSimReset() { videoState.gridSim = { r: 0, c: 0, occ: new Set(), pend: [] }; }
+  function gridShape(html, cols) {
+    if (!(cols > 1)) return [1, 1];
+    const m = /^\s*<div\b[^>]*?\sclass="([^"]*)"/.exec(html || '');
+    const cls = m ? ' ' + m[1] + ' ' : '';
+    if (/ vw-size-4 /.test(cls)) return [2, 2];
+    if (/ (tile-wide|trailer) /.test(cls)) return [2, 1];
+    return [1, 1];
+  }
+  function gridPlace(sim, w, h, cols) {
+    let r = sim.r, c = sim.c, clean = true;
+    for (let guard = 0; guard < 4096; guard++) {
+      if (c + w > cols) { for (let x = c; x < cols; x++) if (!sim.occ.has(r * 4096 + x)) clean = false; r++; c = 0; continue; }
+      let ok = true;
+      for (let y = 0; y < h && ok; y++) for (let x = 0; x < w && ok; x++) if (sim.occ.has((r + y) * 4096 + c + x)) ok = false;
+      if (ok) return { r, c, clean };
+      if (!sim.occ.has(r * 4096 + c)) clean = false;
+      c++;
+    }
+    return { r, c, clean: false };
+  }
+  function gridCommit(sim, p, w, h) {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) sim.occ.add((p.r + y) * 4096 + p.c + x);
+    if (p.r > sim.r + 2) for (const k of sim.occ) if (k < (p.r - 1) * 4096) sim.occ.delete(k);
+    sim.r = p.r; sim.c = p.c + w;
+  }
+  const gridBigWaits = (p, h) => !p.clean || (h > 1 && p.c !== 0);
+  /* One tile through the follower: its markup back to emit now, or '' when a big widget waits. */
+  function gridTake(html, cols, shape, noWait) {
+    const sim = videoState.gridSim;
+    if (!html || !sim || !(cols > 0)) return html;
+    const [w, h] = shape || gridShape(html, cols);
+    const p = gridPlace(sim, w, h, cols);
+    /* A wide game tile (the Lynx's) waits the same way: it used to leave the last column of its row empty. */
+    if (!noWait && (w > 1 || h > 1) &&/\b(vw-wx|device-card)\b/.test(html.slice(0, 200)) && gridBigWaits(p, h)) { sim.pend.push(html); return ''; }
+    gridCommit(sim, p, w, h);
+    return html;
+  }
+  /* The big widgets waiting, emitted where the next place is clean. */
+  function gridFlush(cols) {
+    const sim = videoState.gridSim;
+    if (!sim || !sim.pend.length || !(cols > 0)) return '';
+    let out = '';
+    while (sim.pend.length) {
+      const html = sim.pend[0], [w, h] = gridShape(html, cols), p = gridPlace(sim, w, h, cols);
+      if (gridBigWaits(p, h)) break;
+      sim.pend.shift(); gridCommit(sim, p, w, h); out += html;
+    }
+    return out;
+  }
+
   /* Swap each game card a rebuild just inserted for the identical one the last
      rebuild had (2026-10-17; see the note at the top of renderGrid).
      The key is the card's markup AS INSERTED, recorded here before anything
@@ -10091,7 +10561,7 @@
     const keep = videoState._keepWidgets;
     for (const c of grid.querySelectorAll(':scope > .vgrid-widget[data-wgi]')) {
       if (c.__wkey) continue;
-      const type = (c.className.match(/\b(vw-clock|weather-widget|vw-facts|vw-quotes|vw-stats|vw-cast)\b/) || [''])[0];
+      const type = (c.className.match(/\b(vw-clock|weather-widget|vw-facts|vw-quotes|vw-stats|vw-cast|vw-image|vw-playtime)\b/) || [''])[0] + (c.dataset.wimg ? ':' + c.dataset.wimg + ':' + (c.dataset.wn || '') : '') + ((c.className.match(/\bvw-size-\d\b/) || [''])[0]);
       const key = c.dataset.wgi + ':' + type;
       const old = keep && keep.get(key);
       if (old && old !== c && !old.isConnected &&
@@ -10330,6 +10800,7 @@
         for (const c of keepT.values()) if (c._trMounted) { try { _gameFramePark.moveBefore(c, null); } catch (_) {} }
       }
     }
+    if (reset) gridSimReset();   // the 2x and 4x tiles' follower (8 Nov 2026)
     if (reset) { grid.innerHTML = ''; videoState.shown = 0; videoState.gridCells = 0; videoState.gamesPlaced = null; resetTrailerTiles(); _artKeysAtRender = artKeyCount(); _shelfSigAtRender = gameShelfSignature(); }
     /* Held until the wall's layout can be decided once (see wallGamesSettled). An
        append asked meanwhile (the auto-load, a repaint's catch-up) waits for that one draw. */
@@ -10373,7 +10844,7 @@
         const g = gm.list[gm.at];
         if (videoState.gamesPlaced.has(g.dev.id)) continue;
         videoState.gamesPlaced.add(g.dev.id);
-        ghtml += gameTileHTML(g);
+        ghtml += gridTake(gameTileHTML(g), gridColumns(grid), null, true);   // a search answer never waits
         videoState.gridCells = (videoState.gridCells || 0) + 1;
       }
       if (ghtml) {
@@ -10406,18 +10877,22 @@
            through gridWidgetsEnabled() -- the widgets' own door -- so this
            branch honours the Show Widgets button and nothing else. */
         const widgets = gridWidgetsEnabled();
+        const gcols = gridColumns(grid);
         let ghtml = '';
         for (let k = 0; k < slice.length; k++) {
           const g = slice[k];
+          ghtml += gridFlush(gcols);
           if (widgets) {
             const w = widgetTileFor(start + k);
-            if (w) { ghtml += w; videoState.gridCells = (videoState.gridCells || 0) + 1; }
+            if (w) { ghtml += gridTake(w, gcols); videoState.gridCells = (videoState.gridCells || 0) + 1; }
           }
           if (videoState.gamesPlaced.has(g.dev.id)) continue;
           videoState.gamesPlaced.add(g.dev.id);
-          ghtml += gameTileHTML(g);
+          ghtml += gridTake(gameTileHTML(g), gcols);
           videoState.gridCells = (videoState.gridCells || 0) + 1;
         }
+        /* The end of the list: whatever still waits for a clean place goes in now rather than not at all. */
+        if (start + slice.length >= all.length && videoState.gridSim && videoState.gridSim.pend.length) ghtml += videoState.gridSim.pend.splice(0).join('');
         if (ghtml) {
           grid.insertAdjacentHTML('beforeend', ghtml);
           keepGameCards(grid);
@@ -10471,15 +10946,19 @@
       next.forEach((it, k) => {
         const gi = start + k;
         let placed = '';
+        html += gridFlush(cols);   // a 2x or 4x widget that was waiting for a clean place (8 Nov 2026)
         if (widgets) placed = widgetTileFor(gi);   // occasional clock / weather / facts tile
+        if (placed && games && gameOutranks(gi)) placed = '';   // Games set above that widget (8 Nov 2026)
         // Games are emitted on their own path because they answer to their own
         // button. Skipped when a widget already landed on this index: two
         // ambient tiles back to back reads as a clump, and the game simply
         // takes its next cycle instead.
         if (!placed && games) placed = gameTileFor(gi);
-        if (placed) { html += placed; cells += 1; }
+        if (placed) { html += gridTake(placed, cols); cells += 1; }
         let trailer = isTrailerAt(gi);
-        if (trailer && cols > 1 && (cells % cols) === cols - 1) trailer = false;
+        /* Not where it would leave a hole (the last column, or beside a 4x tile's second row). */
+        if (trailer && cols > 1 && (videoState.gridSim ? !gridPlace(videoState.gridSim, 2, 1, cols).clean : (cells % cols) === cols - 1)) trailer = false;
+        gridTake('x', cols, trailer && cols > 1 ? [2, 1] : [1, 1]);
         const vh = videoCardHTML(it, trailer);
         if (!trailer) srcs.push(vh); else tsrcs.push(vh);
         html += vh;
@@ -10695,7 +11174,9 @@
     });
     /* The type boxes beside "Systems" (21 Oct). */
     { const on = gameTypesOn();
-      menu.querySelectorAll('[data-vg-type]').forEach(b => { const lit = on.includes(b.dataset.vgType); b.classList.toggle('active', lit); b.setAttribute('aria-checked', String(lit)); }); }
+      menu.querySelectorAll('[data-vg-type]').forEach(b => { const lit = on.includes(b.dataset.vgType); b.classList.toggle('active', lit); b.setAttribute('aria-checked', String(lit)); });
+      /* Unknown (10 Nov): shown only while a game we have not tested is on the wall. */
+      const ub = menu.querySelector('[data-vg-type="unknown"]'); if (ub) { const show = vgUnknownOnWall(); if (ub.hidden === show) ub.hidden = !show; } }
     /* The series boxes follow the units that are here now (2026-10-14). */
     {
       const listed = vgSeriesListed();
@@ -11218,7 +11699,7 @@
       if (i >= 0) cur.splice(i, 1); else cur.push(k);
       const same = cur.length === GAME_TYPE_DEFAULT.length && GAME_TYPE_DEFAULT.every(x => cur.includes(x));
       reseedAmbientTiles();
-      saveWidgetCfg({ games: { types: same ? null : GAME_TYPES.map(t => t.key).filter(x => cur.includes(x)) } });
+      saveWidgetCfg({ games: { types: same ? null : GAME_TYPES.map(t => t.key).filter(x => cur.includes(x)).concat(cur.includes('unknown') ? [] : ['!unknown']) } });
       vgSyncMenu();
       return;
     }
@@ -11510,8 +11991,28 @@
   /* Single entry point for a fresh browse/search/sort/library change: use the
    * instant local path once the cache is ready, else the API path. */
   function refreshGrid() {
+    if (answerRefilter()) return;
     if (videoState.cacheReady) applyFilterSort();
     else videoLoad(true);
+  }
+  /* AN OPEN CAST MEMBER OR COLLECTION STAYS OPEN (9 Nov 2026: with no films or shows on,
+     opening a cast tile correctly shows no shows; then pressing Y turns on all films and shows, not
+     filtered by the open cast member). Their titles came from their own request, and every redraw
+     while they were open (Movies on by the menu, the pad's X or Y, the O key, the Filters menu, a
+     games sort) went through applyFilterSort, which knows only the library: the banner stayed and
+     the whole library was drawn under it. The titles the request answered are kept as they came
+     (videoState.answerItems) and filtered again here, so Movies, Filters and the rest act on the
+     open list. Still loading: nothing to redraw, and the request applies what is set when it lands.
+     False when no cast member or collection is open. */
+  function answerRefilter() {
+    const of = videoState.person || videoState.collection;
+    if (!of) return false;
+    if (!videoState.answerItems || videoState.answerOf !== of) return true;
+    videoState.filtered = mfFilter(mediaFilter(videoState.answerItems));
+    videoState.total = videoState.filtered.length;
+    renderGrid(true);
+    reArmScroll();
+    return true;
   }
 
   /* =====================================================================
@@ -11749,6 +12250,7 @@
   function clearPerson() {
     videoState.person = null;
     videoState.collection = null;
+    videoState.answerItems = null; videoState.answerOf = null;   // answerRefilter (9 Nov 2026)
     const b = document.getElementById('video-person-banner');
     if (b) { b.hidden = true; b.innerHTML = ''; }
   }
@@ -11862,6 +12364,7 @@
         SortBy: s.by, SortOrder: videoState.sortDir === 'desc' ? 'Descending' : 'Ascending',
       });
       if (videoState.person !== person) return; // a newer person click superseded this
+      videoState.answerItems = items; videoState.answerOf = person;   // kept for answerRefilter (9 Nov 2026)
       videoState.filtered = mfFilter(mediaFilter(items));
       videoState.total = videoState.filtered.length;
       renderGrid(true);
@@ -11903,6 +12406,7 @@
     try {
       const { items } = await getItems({ ParentId: coll.Id, IncludeItemTypes: 'Movie', Limit: 200, SortBy: 'PremiereDate,SortName', SortOrder: 'Ascending' });
       if (videoState.collection !== coll) return;   // superseded
+      videoState.answerItems = items; videoState.answerOf = coll;   // kept for answerRefilter (9 Nov 2026)
       videoState.filtered = mfFilter(mediaFilter(items));
       videoState.total = videoState.filtered.length;
       renderGrid(true);
@@ -14812,7 +15316,7 @@
     v.addEventListener('error', () => teardown('The stream started but the video couldn’t be decoded here. It’ll play in a media server app.'));
 
     try {
-      const mod = await import('./remux.js?v=2.0.0');
+      const mod = await import('./remux.js?v=2.1.0');
       if (!ov.classList.contains('open')) return;   // user bailed while it loaded
 
       // MPEG-4/AVI: no browser decoder, so libav decodes + we re-encode to H.264.
@@ -15327,6 +15831,10 @@
   function vsEdit(inp, how) {
     if (!inp) return;
     inp.readOnly = false;
+    /* Asking to search: the results must not sit behind a window. A press closes it when the focus lands
+       (focusin above) or on its click, never at the press itself: the page moves as the window goes, and the
+       finger's tap would land somewhere else. */
+    if (how !== 'pointer' && inp.id === 'video-search' && window.CwAboutWindow && window.CwAboutWindow.isOpen()) window.CwAboutWindow.close();
     inp.setAttribute('inputmode', 'search');
     const p = inp.closest('.search'); if (p) p.classList.add('vs-editing');
     vsPlaceholder(inp);
@@ -15490,6 +15998,7 @@
     });
     inp.addEventListener('click', () => {
       // Recent opens on the click, not the press: the box moves when the row above it changes.
+      if (!inp.readOnly && window.CwAboutWindow && window.CwAboutWindow.isOpen()) window.CwAboutWindow.close();   // the box already had the focus: no focusin
       if (!inp.readOnly) vsRecentOpen();
       if (tapRefocus) { tapRefocus = false; vsRefocus(inp); }
     });
@@ -16018,6 +16527,8 @@
       vgSetShow({ [key]: !shown() });
       return { ok: true, on: shown() };
     },
+    /* Which content a widget belongs to (9 Nov 2026): 'general', 'games' or 'films' (WIDGET_CONTENT). */
+    widgetGroup: (k) => widgetContentGroup(k),
     /* The Systems menu's tile picture for a menu key ('gnw', 'gb', 'a7800', ...),
        read from VG_MENU itself so the Timeline (index.html renderTimeline) shows
        the very same asset and cannot drift from the menu. '' for an unknown key. */

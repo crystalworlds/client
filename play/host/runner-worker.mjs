@@ -24,7 +24,7 @@
 import { CoreError } from './core-api.mjs';
 
 export async function createWorkerCore(url, env, { channels = 1 } = {}) {
-  const w = new Worker(new URL('./core-worker.js?v=2.0.0', import.meta.url), { type: 'module' });
+  const w = new Worker(new URL('./core-worker.js?v=2.1.0', import.meta.url), { type: 'module' });
   let seq = 0, inFlight = 0, video = null, wantState = false, wantVideo = true, latest = null, inputs = [], mirror = { frames: 0, model: null, ready: true, bdirty: null };
   let audioQ = [], audioFrames = 0, options = null, details = null, dead = null, ports = [];
   const waits = new Map();

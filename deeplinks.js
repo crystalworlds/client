@@ -38,10 +38,10 @@
      windows over it, like Compatibility. Their old addresses (#/about, #/series, #/media/about ...)
      open the same windows and are rewritten to the one address each. */
   /* FEATURES (31 Oct): a window like the others, opened by the button right of Home. */
-  const WIN = { '/compatibility': 'compat', '/about': 'about', '/timeline': 'timeline', '/series': 'timeline', '/home': 'home', '/features': 'features',
+  const WIN = { '/compatibility': 'compat', '/about': 'about', '/timeline': 'timeline', '/series': 'timeline', '/home': 'home', '/features': 'features', '/stories': 'stories',
     '/media/about': 'about', '/media/timeline': 'timeline', '/media/home': 'home', '/media/features': 'features' };
-  const WIN_PATH = { compat: '/compatibility', about: '/about', timeline: '/timeline', home: '/home', features: '/features' };
-  const WIN_BTN = { compat: 'video-compat-btn', about: 'video-about-btn', timeline: 'video-timeline-btn', home: 'video-home-btn', features: 'video-features-btn' };
+  const WIN_PATH = { compat: '/compatibility', about: '/about', timeline: '/timeline', home: '/home', features: '/features', stories: '/stories' };
+  const WIN_BTN = { compat: 'video-compat-btn', about: 'video-about-btn', timeline: 'video-timeline-btn', home: 'video-home-btn', features: 'video-features-btn', stories: 'video-stories-btn' };
   const ALIAS = { gameboy: 'gb', 'game-boy': 'gb', 'gameboy-color': 'gbc', 'game-boy-color': 'gbc', pm: 'pokemon-mini', pokemini: 'pokemon-mini',
     lynx: 'atarilynx', 'atari-lynx': 'atarilynx', a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', 2600: 'atari2600', 5200: 'atari5200', 7800: 'atari7800',
     'disk-system': 'fds', 'famicom-disk-system': 'fds', gnw: 'silver-ball', 'game-and-watch': 'silver-ball', 'game-and-watch-colour': 'reissue-super-mario-bros' };
@@ -194,6 +194,7 @@
     if (autoDone) return;
     autoDone = true;
     if (OFF) return;   // off our address there is no Home (28 Oct)
+    if (window.__cwStoriesBack) return;   // just back from the Stories sign-in: its result shows instead (7 Nov)
     if (!newVault() && (!/crystalworlds\.media/i.test(location.hostname) || joinedServer())) return;
     pending = { win: 'home', q: '', auto: true }; later();
   }
@@ -294,17 +295,18 @@
       return;
     }
     if (!WIN[p]) { pushed = false; return; }   // Back already left it
-    if (pushed) { pushed = false; selfBack(); } else history.replaceState(null, '', href('/media'));
+    /* A story has its own entry on top of the Stories window's (stories.js, 7 Nov): step past both. */
+    if (pushed) { pushed = false; selfBack(history.state && history.state.cwStory ? 2 : 1); } else history.replaceState(null, '', href('/media'));
   }
   /* The window took its own entry back (it was closed by its button, Escape or a click outside):
      index.html's popstate/hashchange must not route again, since the page under it has not changed
      (a fresh route redrew the bar and took the focus off the button the window had returned it to;
      22 Oct). One step each, forgotten after a second. */
   let skipPop = 0, skipHash = 0, skipT = 0;
-  function selfBack() {
+  function selfBack(steps) {
     skipPop = 1; skipHash = PATHS ? 0 : 1;
     clearTimeout(skipT); skipT = setTimeout(() => { skipPop = skipHash = 0; }, 1000);
-    history.back();
+    history.go(-(steps || 1));
   }
   /** index.html: is this popstate ('pop') or hashchange ('hash') the window's own step back? */
   function ownStep(kind) {
@@ -364,7 +366,7 @@
   const metaSoon = () => { if (!metaT) metaT = setTimeout(meta, 0); };
   (function loadMeta() {
     if (typeof fetch !== 'function' || !/^https?:$/.test(location.protocol)) return;
-    fetch('site-routes.json?v=2.0.0', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
+    fetch('site-routes.json?v=2.1.0', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
     for (const k of ['pushState', 'replaceState']) {
       const orig = history[k];
       if (typeof orig !== 'function') continue;
@@ -378,5 +380,5 @@
 
   /* isWindow (1 Nov 2026): does route r open one of the windows over the page? index.html
      route() then leaves the page where it is, so the window stays under the search bar. */
-  window.CwDeepLink = { route, windowChanged, compatChanged, sysDoc: window.cwSysDocHTML, now, href, forward, ownStep, paths: PATHS, isWindow: r => !!WIN[split(String(r || '/'))[0]] };
+  window.CwDeepLink = { route, windowChanged, compatChanged, sysDoc: window.cwSysDocHTML, now, href, forward, ownStep, stepBack: () => selfBack(), paths: PATHS, isWindow: r => !!WIN[split(String(r || '/'))[0]] };
 })();

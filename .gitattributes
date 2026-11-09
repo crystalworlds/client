@@ -1,4 +1,7 @@
 * text=auto eol=lf
+# Windows batch files always reach a clone or a zip with Windows line endings.
+*.cmd text eol=crlf
+*.bat text eol=crlf
 *.png binary
 *.wasm binary
 *.gz  binary

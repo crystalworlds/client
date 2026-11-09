@@ -10,7 +10,7 @@ function gbcMachineEmulationTabHTML(d) {
   return '<div class="gbemu-area" id="gbcemu-area-machine">' +
 
   '<section class="gbemu-hero">' +
-    '<div class="gbemu-hero-num"><b>258</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy Color, starting from a Game Boy that is already right</h3>' +
+    '<div class="gbemu-hero-num"><b>259</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy Color, starting from a Game Boy that is already right</h3>' +
       '<p>This is the research for the colour machine, written to the same standard as the ' +
       'original&rsquo;s page and assuming you have read it: everything there is still true here, and ' +
       'this page is only what the Color adds, changes and breaks. The number beside it is the ' +
@@ -19,7 +19,7 @@ function gbcMachineEmulationTabHTML(d) {
       'render or against two independent implementations agreeing. That does not make the ' +
       'mechanisms below wrong. It means section&nbsp;17 is the part you must read before quoting ' +
       'any number from this page.</p>' +
-      '<p>The core these pages describe stands at <b>258 passing rows of 264</b> on the public Game ' +
+      '<p>The core these pages describe stands at <b>259 passing rows of 264</b> on the public Game ' +
       'Boy Emulator Shootout board, on a <em>PASS-only, all-264-rows</em> basis: one board ' +
       'covering both machines. Section&nbsp;17 gives that basis in full, says why published ' +
       'comparisons are not like-for-like, and names which of the remaining rows nobody can win ' +
@@ -27,7 +27,7 @@ function gbcMachineEmulationTabHTML(d) {
     '<div class="gbemu-rule" id="gbcr-0-1"><b>Rule C0/1.</b> A build must implement everything the core this site ships does, with the values this page gives as current. A build that wants to match ours must leave out three kinds of thing: (1) anything this page describes as switched off, an off arm, a research arm, refused, not shipped, or written but behind a switch that is off; (2) anything this page puts outside the core (the site&rsquo;s player, the host&rsquo;s devices and files); (3) any earlier value or earlier core this page or a record names as history: building it gives an older core, not a second valid one. On the original, four parts belong together and a build must implement all four: the running processor&rsquo;s two-dot look, the drawing registers&rsquo; extra machine cycle, the dispatch holds of 3 and 1, and the mode-1 source on dot 6. Every other part this page describes is required: a build that leaves one out has a gap in that build, not an option.</div>' +
     '<div class="gbemu-why"><b>Why.</b> These pages describe the core this site ships, and both tabs state this same rule. History is kept off the tab (it lives in the developer changelog) so older records can still be read. A build with only some of the four original-machine parts, or none of them, is not the core this site is scored against.</div>' +
     '<div class="gbemu-rule" id="gbcr-0-2"><b>Rule C0/2.</b> A build of the Color must implement every part on this checklist. Item 1 is the Game Boy tab&rsquo;s own checklist, and it is built first: where this page says nothing different, the original&rsquo;s rule holds. Each later item names the section that specifies the part and the area file that holds it (this page is split into four area files, listed after this introduction).</div>' +
-    '<p class="gbemu-key"><b>The build checklist: every part a build of the Color must implement.</b></p><ul class="gbemu-bullets" style="list-style:none;padding-left:4px"><li>1. <b>Everything on the Game Boy tab&rsquo;s checklist first.</b> The Color runs the original&rsquo;s machine underneath; where this page says nothing different, the original&rsquo;s rule holds. <i>File: the Game Boy tab&rsquo;s eight area files, <code>gb-*-emulation-tab.js</code>.</i></li><li>2. <b>The start</b>: the boot program&rsquo;s two pieces and the hand-over, the register file by branch, KEY0 and compatibility mode, the divider by header, the no-boot fallback and the booted lists (section 2). <i>File: <code>gbc-machine-emulation-tab.js</code>.</i></li><li>3. <b>Double speed</b>: KEY1, the switch, the 32,766-cycle stall, the deferred flip, the divider, the picture&rsquo;s two-dot move, what scales and what does not (section 3). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>4. <b>Work RAM</b>: eight banks, the register&rsquo;s 0-to-1 rule (section 4). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>5. <b>Video memory</b>: two banks, the attribute byte, the access rules and windows at both speeds (section 5). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>6. <b>Palette memory</b>: indexes, auto-increment and wrap, the busy window, colour conversion (section 6). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>7. <b>Priority</b>: the bit that means two things (section 7). <b>Objects</b>: the attribute byte, bank and palette, the priority order by mode (section 8). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>8. <b>Compatibility mode</b>: which registers are alive, the compatibility palette and what the host supplies for it (section 9). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>9. <b>The Color&rsquo;s picture timing</b>: the CPU-visible timing table, interrupt sources and LY, the LCDC train, the tile-data select glitches, the E.1 Color column, the window on the Color, the processor-to-dot phase (section 10). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>10. <b>Block transfers</b>: general-purpose and horizontal-blank, their timing at both speeds, cancel, display off (section 11). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>11. <b>Sprite-memory transfer on the Color</b>: the bus split, the conflict read (section 12). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>12. <b>Sound on the Color</b>: the unit off the processor&rsquo;s clock, the sample grid in double speed, <code>FF76</code>/<code>FF77</code>, 512 Hz in double speed, the wave rule, the power and length splits (section 13). <i>File: <code>gbc-apu-emulation-tab.js</code>.</i></li><li>13. <b>The undocumented registers</b> (section 14) and <b>the revision choices</b> this core makes (section 15). <i>Files: <code>gbc-timing-emulation-tab.js</code>, <code>gbc-machine-emulation-tab.js</code>.</i></li><li>14. <b>Every Color register, bit by bit</b> (appendix A). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li></ul>' +
+    '<p class="gbemu-key"><b>The build checklist: every part a build of the Color must implement.</b></p><ul class="gbemu-bullets" style="list-style:none;padding-left:4px"><li>1. <b>Everything on the Game Boy tab&rsquo;s checklist first.</b> The Color runs the original&rsquo;s machine underneath; where this page says nothing different, the original&rsquo;s rule holds. <i>File: the Game Boy tab&rsquo;s eight area files, <code>gb-*-emulation-tab.js</code>.</i></li><li>2. <b>The start</b>: the boot program&rsquo;s two pieces and the hand-over, the register file by branch, KEY0 and compatibility mode, the divider by header, the no-boot fallback and the booted lists (section 2). <i>File: <code>gbc-machine-emulation-tab.js</code>.</i></li><li>3. <b>Double speed</b>: KEY1, the switch, the 32,769-cycle stall, the speed change counted in machine cycles, the divider&rsquo;s one reset, the picture&rsquo;s move, the frame sequencer&rsquo;s delay, what scales and what does not (section 3). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>4. <b>Work RAM</b>: eight banks, the register&rsquo;s 0-to-1 rule (section 4). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>5. <b>Video memory</b>: two banks, the attribute byte, the access rules and windows at both speeds (section 5). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>6. <b>Palette memory</b>: indexes, auto-increment and wrap, the busy window, colour conversion (section 6). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>7. <b>Priority</b>: the bit that means two things (section 7). <b>Objects</b>: the attribute byte, bank and palette, the priority order by mode (section 8). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>8. <b>Compatibility mode</b>: which registers are alive, the compatibility palette and what the host supplies for it (section 9). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>9. <b>The Color&rsquo;s picture timing</b>: the CPU-visible timing table, interrupt sources and LY, the LCDC train, the tile-data select glitches, the E.1 Color column, the window on the Color, the processor-to-dot phase (section 10). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>10. <b>Block transfers</b>: general-purpose and horizontal-blank, their timing at both speeds, cancel, display off (section 11). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>11. <b>Sprite-memory transfer on the Color</b>: the bus split, the conflict read (section 12). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>12. <b>Sound on the Color</b>: the unit off the processor&rsquo;s clock, the sample grid in double speed, <code>FF76</code>/<code>FF77</code>, 512 Hz in double speed, the wave rule, the power and length splits (section 13). <i>File: <code>gbc-apu-emulation-tab.js</code>.</i></li><li>13. <b>The undocumented registers</b> (section 14) and <b>the revision choices</b> this core makes (section 15). <i>Files: <code>gbc-timing-emulation-tab.js</code>, <code>gbc-machine-emulation-tab.js</code>.</i></li><li>14. <b>Every Color register, bit by bit</b> (appendix A). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li></ul>' +
     '<div class="gbemu-why"><b>Result of a build from these pages.</b> An independent build that read only the two tabs (the Game Boy tab and this one) wrote a Game Boy Color in plain JavaScript. It had none of our test programs; we ran them on it and compared it with our core. It is identical to ours, with the same verdict and every checkpoint byte for byte, on 94 of 94 Color test runs (73 of them sound), 167 of 167 Game Boy test runs (12 of them sound) and 3 of 3 Super Game Boy runs; it gives the same verdict as ours on all 60 AGE runs and the same picture as ours on all 24 mealybug cells it was scored on. The board figure beside the title is our core&rsquo;s.</div></div></section>' +
   gbcEmuAreaIndexHTML() +
 
@@ -49,11 +49,11 @@ function gbcMachineEmulationTabHTML(d) {
     '</dl>' +
     '<h4 class="gbemu-sub">Timing, double speed, transfers (sections 3, 4, 11, 12, 14, appendix A)</h4>' +
     '<dl class="gbemu-gloss">' +
-      '<dt>CPU T-cycle</dt><dd>one period of the processor&rsquo;s own clock: four per machine cycle at both speeds; one T-cycle (one dot) at single speed, half a T-cycle (half a dot) in double speed. "Processor T-cycles" means the same. Used for the speed-switch stall (131,080 CPU T-cycles), the frame (140,448 CPU T-cycles in double speed) and the real-time-clock divisor (Color tab, section 3 (units paragraph), Rule C3/1)</dd>' +
+      '<dt>CPU T-cycle</dt><dd>one period of the processor&rsquo;s own clock: four per machine cycle at both speeds; one T-cycle (one dot) at single speed, half a T-cycle (half a dot) in double speed. "Processor T-cycles" means the same. Used for the community figure for the speed-switch stall (131,080 CPU T-cycles; this core&rsquo;s stall is the shorter one of Rule C3/4), the frame (140,448 CPU T-cycles in double speed) and the real-time-clock divisor (Color tab, section 3 (units paragraph), Rule C3/1)</dd>' +
       '<dt>going up / coming down</dt><dd>a speed switch from single speed to double speed / from double speed to single speed (Color tab, section 3 (units paragraph))</dd>' +
       '<dt>armed (KEY1)</dt><dd>bit 0 of 0xFF4D, written by the processor; a STOP in colour mode with it set takes the speed switch (Color tab, Rules C3/2, C3/4)</dd>' +
-      '<dt>stalled machine cycle</dt><dd>one machine cycle of the speed-switch stall, numbered from 1 starting at the end of the STOP&rsquo;s operand fetch; it lasts the dots of the speed in force during it (Color tab, Rule C3/4)</dd>' +
-      '<dt>speed flip</dt><dd>the moment the current speed (KEY1 bit 7) changes. While the processor is halted in the stall: the start of stalled machine cycle 4, before that cycle is clocked, so stalled cycles 1 to 3 run at the old speed and cycle 4 at the new (Rule C3/4). While the processor is running: when the flip counter of Rule C3/5 reaches 0, counted in instruction boundaries.</dd>' +
+      '<dt>stalled machine cycle</dt><dd>one machine cycle of the speed-switch stall, numbered from 1 starting with the first machine cycle after the STOP&rsquo;s operand fetch; it lasts the dots of the speed in force during it (Color tab, Rule C3/4)</dd>' +
+      '<dt>speed flip</dt><dd>the moment the current speed (KEY1 bit 7) changes: the start of machine cycle 2 after the STOP&rsquo;s operand fetch, before that cycle is clocked, so machine cycle 1 runs at the old speed and cycle 2 at the new (Rule C3/4); with an interrupt already pending on revisions B and C, the start of machine cycle 3. It is counted in machine cycles whether the processor is halted or running (Rule C3/5).</dd>' +
       '<dt>the device / colour mode (as register gates)</dt><dd>"the device": true on any Color, also running an original cartridge; "colour mode": false on a Color running a cartridge with no Color flag (compatibility mode) (Color tab, Rule C4/1)</dd>' +
       '<dt>cursor (block transfer)</dt><dd>the destination as written with its low four bits cleared at the register write, advanced by one per byte; each byte goes to 0x8000 ((cursor &amp; 0x1FFF) in the bank FF4F selects)</dd>' +
       '<dt>byte slot</dt><dd>the time one byte of a block takes: one machine cycle in double speed; the double-speed horizontal-blank block spends one before its first byte (Color tab, Rule C11/8)</dd>' +
@@ -85,7 +85,7 @@ function gbcMachineEmulationTabHTML(d) {
       '<dt>discharged</dt><dd>a fence site with its own Color arm, recording no breach (section 10, "three words")</dd>' +
       '<dt>unresolved</dt><dd>a fence row with no Color arm; at run time it returns the original&rsquo;s value and records a breach (a declared placeholder) (section 10, "three words")</dd>' +
       '<dt>carried</dt><dd>code with no device test; the original&rsquo;s behaviour runs on both machines and no fence row records it (section 10, "three words")</dd>' +
-      '<dt>fence row, G number</dt><dd>our source&rsquo;s name for a place where the Color might differ from the original (G1, G2, ...); a pointer into the source, like a constant&rsquo;s name (section 10, the Color column for appendix E.1)</dd>' +
+      '<dt>fence row</dt><dd>our source&rsquo;s name for a place where the Color might differ from the original; a pointer into the source, like a constant&rsquo;s name (section 10, the Color column for appendix E.1)</dd>' +
       '<dt>timing block</dt><dd>the Color&rsquo;s own processor-visible timing values (CT_ON = 1 in our source): LY, STAT mode bits, requests, wake, speed switch, access windows, per speed (Rule C10/35)</dd>' +
       '<dt>line-144 one-shot</dt><dd>the Color&rsquo;s mode-2-select status request written straight into IF on line 143 (event dot 454 single speed, 451 double), one machine cycle (single speed) before the vertical-blank request; it never drives the status line (Rule C10/39)</dd>' +
       '<dt>priming increments</dt><dd>the window position counter&rsquo;s seven increments at the start of mode 3 (line dots 90 to 96 at SCX 0 with no object); paused on every dot an object fetch is in progress (Rules C10/30, C10/32)</dd>' +
@@ -122,7 +122,7 @@ function gbcMachineEmulationTabHTML(d) {
     '<div class="gbemu-rule" id="gbcr-2-1"><b>Rule C2/1.</b> To run cartridges, a Color build must execute the real Color boot program. It must not start a Color-flagged cartridge from a table of hand-over values in its place. (The no-boot start of Rules C2/14 to C2/17 is a fallback for instruments, not a way to run.)</div>' +
     '<div class="gbemu-why"><b>Why.</b> The original&rsquo;s page offers two honest ways to begin: run the real boot program, or tabulate what it leaves. <b>On the Color only the first one is honest</b>, and the reason is structural rather than a matter of taste: <b>every Color test in both of the vendored suites (Mooneye and mealybug tearoom) runs a cartridge with no Color flag in its header.</b> (Other suites do carry the flag: blargg&rsquo;s processor suite, its Color sound suite and its interrupt-time cartridge, and the Color acid test, so the Color-flagged branch is executed by cartridges, only never asserted against a declared register set.) All of them therefore exercise the boot program&rsquo;s compatibility branch, and <em>none</em> exercises the branch a Color-only title takes. A table for that branch cannot be validated by anything anyone holds. Execute the program.</div>' +
     '<h4 class="gbemu-sub">The boot program is 2,304 bytes and it is mapped in two pieces</h4>' +
-    '<div class="gbemu-rule" id="gbcr-2-2"><b>Rule C2/2.</b> While the boot program is mapped, a build must map it in two pieces, each image byte at the address equal to its offset in the image. It occupies <code>0x0000&ndash;0x00FF</code> <b>and</b> <code>0x0200&ndash;0x08FF</code>, with a hole at <code>0x0100&ndash;0x01FF</code>: a read in the hole returns the cartridge, so the cartridge header stays visible <em>through</em> the boot program. The image&rsquo;s own bytes at offsets <code>0x100&ndash;0x1FF</code> are never mapped.</div>' +
+    '<div class="gbemu-rule" id="gbcr-2-2"><b>Rule C2/2.</b> While the boot program is mapped, a build must map it in two pieces, each image byte at the address equal to its offset in the image. It occupies <code>0x0000&ndash;0x00FF</code> <b>and</b> <code>0x0200&ndash;0x08FF</code>, with a hole at <code>0x0100&ndash;0x01FF</code>: a read in the hole returns the cartridge, so the cartridge header stays visible <em>through</em> the boot program. The image&rsquo;s own bytes at offsets <code>0x100&ndash;0x1FF</code> are never mapped. With an image shorter than <code>0x900</code> bytes the whole of <code>0x0200&ndash;0x08FF</code> shows the cartridge; with one shorter than <code>0x100</code> bytes the start is the no-boot start.</div>' +
     '<div class="gbemu-example"><b>Example.</b> With the boot program mapped, a read of <code>0x0134</code> returns the first byte of the cartridge&rsquo;s title, not image byte <code>0x134</code>; a read of <code>0x0200</code> returns image byte <code>0x200</code>; a read of <code>0x00FF</code> returns image byte <code>0x0FF</code>. Map all 2,304 bytes flat at <code>0x0000</code> and you hide the header from the one program that must read it, and the failure presents as a checksum bug.</div>' +
     '<div class="gbemu-why"><b>Why the hole is load-bearing, not padding.</b> The boot program reads the header: that is how it sums <code>0x0134&ndash;0x0143</code> into the title checksum it hands off, and how it picks the compatibility palette.<br><br>' +
     '<b>Two different quantities are in play here, and one word for both will ' +
@@ -287,7 +287,7 @@ function gbcMachineEmulationTabHTML(d) {
     '<ul class="gbemu-bullets">' +
     '<li><b>Processor registers:</b> the two-branch table above, branch chosen by <code>$0143</code> bit ' +
     '7.</li>' +
-    '<li><b>Colour mode or compatibility mode:</b> taken straight from <code>$0143</code> bit 7, because ' +
+    '<li><b>Colour mode or compatibility mode:</b> taken straight from <code>$0143</code> bit 7 alone (bits 2 and 3 of that byte do not count), because ' +
     'no program writes <code>0xFF4C</code>. The register itself is left at 0.</li>' +
     '<li><b>Where the picture is: the booted hand-over.</b> Line 148, dot 354, mode 1, for a cartridge without the Color flag; line 144, dot 166, mode 1, for one with it. The dot is the counter&rsquo;s reading. Rule C2/16 gives how the start gets there.</li>' +
     '<li><b>Divider: by the cartridge header</b>, through how long the boot program takes, as in the ' +
@@ -328,7 +328,7 @@ function gbcMachineEmulationTabHTML(d) {
     '<div class="gbemu-rule" id="gbcr-2-16"><b>Rule C2/16.</b> A no-boot start must place the picture at the booted hand-over&rsquo;s position by these steps, with only the picture running:</div>' +
     '<ol class="gbemu-steps">' +
       '<li>Start at line 0, dot 0 of an <b>ordinary</b> line (full length, counter from 0; not a switch-on line of 450 dots whose counter starts at 8), with the display on.</li>' +
-      '<li>Run the picture unit, and nothing else, through ordinary lines until the line&rsquo;s dot counter reads the target dot: line 148, dot 354 for a cartridge without the Color flag; line 144, dot 166 for one with it. The timer, the divider and the sound unit do not move during this run, and the frame it draws is not shown.</li>' +
+      '<li>Run the picture unit, and nothing else, through ordinary lines until the line&rsquo;s dot counter reads the target dot: line 148, dot 354 for a cartridge without the Color flag; line 144, dot 166 for one with it. The timer, the divider and the sound unit do not move during this run, and the frame it draws is not shown: no frame-finished signal is given. Its pixels stay in the frame buffer, with no refill, until the cartridge&rsquo;s first frame draws over them; the palettes are zero during the run, so every word reads <code>0x0000</code>.</li>' +
       '<li>Keep everything the run did to the picture: the line, the dot, the mode (mode 1), the coincidence comparison and the status line are the ones it reaches, and every internal picture state is the one it would have there.</li>' +
       '<li>Drop every request the run raised: IF is set as the register table of Rule C2/15 gives it (<code>0xE1</code>), not as the run leaves it.</li>' +
       '<li>The first machine cycle of the processor then processes dots 354 to 357 of line 148 (unflagged case): dots 0 to 353 have been processed when it begins.</li>' +
@@ -336,7 +336,7 @@ function gbcMachineEmulationTabHTML(d) {
     '<div class="gbemu-example"><b>Example.</b> Unflagged: 148 full lines and 354 dots, 67,842 dots, which is 4k&nbsp;+&nbsp;2, so the processor-to-dot phase is the booted one (machine cycles covering 4k&nbsp;+&nbsp;2 to 4k&nbsp;+&nbsp;5). Color-flagged: 144 full lines and 166 dots, 65,830 dots, also 4k&nbsp;+&nbsp;2 (DERIVED, by the same arithmetic).</div>' +
     '<div class="gbemu-why"><b>Labels.</b> MECHANISM, read from our source (<code>CGB_NOBOOT_HANDOVER</code> runs the picture until the counter reads that dot). Measured against booted runs on our core: 19,996 instruction boundaries ' +
     'in 20,000 fall on a dot of the form 4k&nbsp;+&nbsp;2 either way. A no-boot start runs at the booted Color&rsquo;s processor-to-dot phase.</div>' +
-    '<div class="gbemu-rule" id="gbcr-2-17"><b>Rule C2/17.</b> At the hand-over the internal divider must hold the value this table gives for the cartridge header (booted and no-boot alike). Read the rows top to bottom and take the first that matches; then apply the last row if the Color flag is set.</div>' +
+    '<div class="gbemu-rule" id="gbcr-2-17"><b>Rule C2/17.</b> At the hand-over the internal divider must hold the value this table gives for the cartridge header (booted and no-boot alike), except that a no-boot start on the revision 0 or Advance model takes that model&rsquo;s value from Rule C2/10, whatever the header says. Read the rows top to bottom and take the first that matches; then apply the last row if the Color flag is set.</div>' +
     '<table class="gbemu-table"><thead><tr><th>Cartridge header</th><th>Internal divider at the ' +
     'hand-over (16-bit internal counter, T-cycles)</th></tr></thead><tbody><tr><td>Old licensee <code>$014B</code> neither <code>$01</code> ' +
     'nor <code>$33</code></td><td><code>0x2678</code></td></tr><tr><td><code>$014B</code> = ' +
@@ -447,7 +447,7 @@ function gbcMachineEmulationTabHTML(d) {
       '<tr><td>The extra length-clock rule</td><td>A documented <b>revision-02 variant</b> in which the current enable state does not matter: it breaks one commercial title and was changed on later revisions. Not modelled here, and the rows that would score it are among the revision-dependent ones the board does not carry</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-why"><b>Two consequences this project lives with and states rather than ' +
-    'resolves.</b> <b>This core contains no runtime revision test of any kind</b> (every model ' +
+    'resolves.</b> <b>This site never chooses a revision at run time</b>: the core holds a few revision tests (the Advance&rsquo;s power-on B register, the no-boot divider of revision 0 and the Advance, and in the speed switch the timer step, the line-register read and the divider reset on revisions B and C against D and E), but the site always runs revision C, so none of them chooses a value here (every other model ' +
     'comparison in it sits in a comment), so a behaviour whose reference splits by revision ' +
     'cannot be settled here by choosing a value, and choosing one anyway is the definition of a ' +
     'fitted constant. And the recommendation on record is to carry the revision as a first-class ' +
@@ -480,7 +480,7 @@ function gbcMachineEmulationTabHTML(d) {
     'document, which is the right instinct: a cartridge you wrote asserting your own expectation is ' +
     'not the same kind of evidence as one somebody else verified on silicon.</p>' +
     '<h4 class="gbemu-sub">Two newer Color suites: cgb-acid-hell and the AGE tests</h4>' +
-    '<p class="hw-readable">Our figure is measured on the core this site serves (its sha256 begins <code>5bd7320427e1</code>), with the same build, plan, judge and frame counts for every emulator. ' +
+    '<p class="hw-readable">Our figure is measured on the core this site serves (its sha256 begins <code>ca5a2a32f97e</code>), with the same build, plan, judge and frame counts for every emulator. ' +
     'Neither suite is published ready to run, so we built both from their authors&rsquo; published source with the RGBDS assembler: ' +
     '<b>cgb-acid-hell</b> by Matt Currie (one frame that must match its author&rsquo;s reference picture pixel for pixel, in colour mode) and ' +
     'the <b>AGE tests</b> by Christoph Sprenger (47 tests of picture and processor timing, from <code>HALT</code> and the status register to sprite and video memory access and the speed switch). Both carry the MIT licence. ' +
@@ -489,13 +489,14 @@ function gbcMachineEmulationTabHTML(d) {
     'A test that prints its own verdict (TEST PASSED or TEST FAILED) is judged by that verdict. A picture test is compared with its author&rsquo;s reference picture: colour at full 5-bit precision, and a monochrome picture allowing each emulator its own four shades. ' +
     'Every emulator was given the same real boot programs and the same frame counts, with colour correction off.</p>' +
     '<table class="gbemu-table"><thead><tr><th>Emulator</th><th>Version</th><th>Machine</th><th>Score</th></tr></thead><tbody>' +
-      '<tr><td><b>Ours</b></td><td>this site</td><td>DMG and Color revision C</td><td><b>32 of 50</b></td></tr>' +
-      '<tr><td>SameBoy</td><td>0.16.2 (libretro, 2d29ece)</td><td>DMG and Color revision C</td><td>25 of 50</td></tr>' +
+      '<tr><td><b>Ours</b></td><td>this site</td><td>DMG and Color revision C</td><td><b>49 of 50</b></td></tr>' +
+      '<tr><td>SameBoy</td><td>1.0.5 (the official program)</td><td>DMG and Color revision C</td><td>39 of 50</td></tr>' +
+      '<tr><td>DocBoy</td><td>1.3</td><td>DMG and Color (no revision named, no boot program)</td><td>17 of 50</td></tr>' +
       '<tr><td>Gambatte</td><td>v0.5.0 (libretro, cbda5ea)</td><td>DMG and Color (no revision chosen)</td><td>11 of 50</td></tr>' +
       '<tr><td>mGBA</td><td>0.11-dev (libretro, b256448)</td><td>DMG and Color (no revision chosen)</td><td>0 of 50</td></tr>' +
     '</tbody></table>' +
-    '<p class="hw-readable"><b>On these two suites we are ahead of SameBoy 0.16.2</b> (32 of 50 against its 25). Set to the Color of revision E, SameBoy passes 28 of the 36 runs that name that revision. ' +
-    'SameBoy 1.0.4 is newer than the version measured here and was not run.</p>' +
+    '<p class="hw-readable"><b>On these two suites we are ahead of SameBoy 1.0.5</b> (49 of 50 against its 39, on the same 50 runs). Set to the Color of revision E, SameBoy 1.0.5 passes 31 of the 36 runs that name that revision. ' +
+    'SameBoy and DocBoy were run on 7 Nov 2026; Gambatte and mGBA are the versions shown, run on 26 Oct 2026. DocBoy names no revision and runs without a boot program, so its 17 is probably a floor.</p>' +
     '<p class="hw-readable"><b>The timing edges our passing runs rest on</b>, each one the processor can see:</p>' +
     '<ul class="gbemu-bullets">' +
       '<li><code>EI</code> just before <code>HALT</code> with an interrupt waiting returns to the <code>HALT</code> (both machines).</li>' +
@@ -514,62 +515,65 @@ function gbcMachineEmulationTabHTML(d) {
       '<li>On the Color at double speed, <code>vram-read</code>, <code>oam-read</code> and <code>oam-write</code>: video and sprite memory close and open exactly when the status register changes mode (video memory while it reads drawing, sprite memory while it reads the sprite search or drawing; a write to sprite memory meets the closing edge one dot sooner, <b>FITTED</b>).</li>' +
       '<li><code>stat-mode-ds</code>: on the first line after the screen is switched on the drawing mode is reported three dots after drawing starts and the end of drawing one dot later (both <b>FITTED</b>: the dot counts are the tables&rsquo;, the reason is not known).</li>' +
       '<li><code>ly</code> on the Color: on line 153 the line counter reads 153 on the same tick as every other line changes, and then 0 (section 10 gives the dot).</li>' +
+      '<li><code>cgb-acid-hell</code>, and <code>m3-bg-lcdc</code> and <code>m3-bg-bgp</code> in colour mode, in compatibility mode and in double speed: on the Color a write to a drawing register lands inside its own machine cycle, as on the DMG (section 10, Rule C10/25).</li>' +
+      '<li><code>m3-bg-scx</code> on both machines and at both speeds: the background map column is the whole scroll plus the screen position the tile lands on, divided once, so a mid-line change of the scroll&rsquo;s low bits moves the column. The sum carries one extra pixel on the original and none on the Color outside an object fetch, which is the whole difference between the original&rsquo;s photograph and the Color ones (the Game Boy tab, Rule C.1/2; section 10, Rule C10/2).</li>' +
+      '<li><code>stat-mode-window</code> on the Color, in colour mode, compatibility mode and double speed: the DMG&rsquo;s three window rules, with the Color&rsquo;s counts (section 10, Rule C10/49).</li>' +
+      '<li><code>spsw-mode0</code>, <code>spsw-tima</code>, <code>spsw-interrupts</code> and <code>spsw-ch2-lc-delay</code>: the switch pauses for 32,768 machine cycles in both directions with one divider reset, the speed change is counted in machine cycles, and each switch up toggles a one-machine-cycle delay of the sound unit&rsquo;s frame sequencer (section 3).</li>' +
+      '<li><code>lcd-align-ly</code>: LY changes on the same dot on every line, and a read just before it changes returns the old and new values ANDed (section 10, Rule C10/36).</li>' +
     '</ul>' +
-    '<p class="hw-readable">What fails, each a timing edge rather than a missing feature: how much longer drawing takes with the window on the Color; ' +
-    'the line counter when the screen is switched on at different moments; the timer, picture and sound phase across a speed switch; sprite memory writes on the DMG just after the screen is switched on; ' +
-    'and the pixel at which a change to the scroll, the screen control or the palette register during drawing takes effect in colour mode. ' +
-    'cgb-acid-hell differs from its reference in 2 pixels, one above the other at column 80, lines 68 and 69 (mGBA shows the same 2).</p>' +
-    '<table class="gbemu-table"><thead><tr><th>Test</th><th>Machine</th><th>Ours</th><th>SameBoy</th><th>Gambatte</th><th>mGBA</th></tr></thead><tbody>' +
-      '<tr><td><code>cgb-acid-hell</code></td><td>Color, colour mode</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>ei-halt-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>ei-halt-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>halt-m0-interrupt-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>halt-m0-interrupt-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>halt-prefetch-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>halt-prefetch-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>lcd-align-ly-cgbBC</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>ly-dmgC-cgbBC</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>ly-dmgC-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>ly-ncmBC</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-bgp</code></td><td>DMG</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-bgp</code></td><td>Color, monochrome cartridge</td><td><b>fail</b></td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-lcdc-ds</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-lcdc-nocgb</code></td><td>Color, monochrome cartridge</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-lcdc</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-lcdc</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-scx-ds</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-scx-nocgb</code></td><td>Color, monochrome cartridge</td><td><b>fail</b></td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-scx</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>m3-bg-scx</code></td><td>DMG</td><td><b>fail</b></td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>oam-read-dmgC-cgbBC</code></td><td>DMG</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>oam-read-dmgC-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>oam-read-ncmBC</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>oam-write-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>oam-write-dmgC</code></td><td>DMG</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>oam-write-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>spsw-interrupts-cgbBC</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>spsw-ch2-lc-delay-cgbBCE</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>spsw-div-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>spsw-mode0-cgbBCE</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>spsw-stop-prefetch-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>spsw-tima-cgbBC</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-int-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-int-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-int-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-sprites-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-sprites-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-sprites-ds-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-window-cgbBCE</code></td><td>Color, colour mode</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-window-dmgC</code></td><td>DMG</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-window-ds-cgbBCE</code></td><td>Color, colour mode</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-window-ncmBCE</code></td><td>Color, monochrome cartridge</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-dmgC-cgbBC</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-dmgC-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-ds-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>stat-mode-ncmBC</code></td><td>Color, monochrome cartridge</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>vram-read-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>vram-read-dmgC</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
-      '<tr><td><code>vram-read-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+    '<p class="hw-readable">What fails: one run, <code>oam-write-dmgC</code>, sprite memory writes on the DMG just after the screen is switched on, on the rows its author marks as depending on when the LCD was last switched off. ' +
+    'Every other counted run passes, cgb-acid-hell included, pixel for pixel. The SameBoy and DocBoy columns are SameBoy 1.0.5 (Color revision C) and DocBoy 1.3; the Gambatte and mGBA columns are the versions in the table above.</p>' +
+    '<table class="gbemu-table"><thead><tr><th>Test</th><th>Machine</th><th>Ours</th><th>SameBoy 1.0.5</th><th>DocBoy 1.3</th><th>Gambatte</th><th>mGBA</th></tr></thead><tbody>' +
+      '<tr><td><code>cgb-acid-hell</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>ei-halt-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>ei-halt-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>halt-m0-interrupt-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>halt-m0-interrupt-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>halt-prefetch-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>halt-prefetch-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>lcd-align-ly-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>ly-dmgC-cgbBC</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>ly-dmgC-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>ly-ncmBC</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-bgp</code></td><td>DMG</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-bgp</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-lcdc-ds</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-lcdc-nocgb</code></td><td>Color, monochrome cartridge</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-lcdc</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-lcdc</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-scx-ds</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-scx-nocgb</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-scx</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>m3-bg-scx</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>oam-read-dmgC-cgbBC</code></td><td>DMG</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>oam-read-dmgC-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>oam-read-ncmBC</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>oam-write-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>oam-write-dmgC</code></td><td>DMG</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>oam-write-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>spsw-interrupts-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>spsw-ch2-lc-delay-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>spsw-div-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>spsw-mode0-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>spsw-stop-prefetch-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>spsw-tima-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-int-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-int-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-int-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-sprites-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-sprites-dmgC-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-sprites-ds-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-window-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-window-dmgC</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-window-ds-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-window-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-dmgC-cgbBC</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-dmgC-cgbBC</code></td><td>Color, colour mode</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-ds-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>stat-mode-ncmBC</code></td><td>Color, monochrome cartridge</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>vram-read-cgbBCE</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>vram-read-dmgC</code></td><td>DMG</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
+      '<tr><td><code>vram-read-ncmBCE</code></td><td>Color, monochrome cartridge</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
     '</tbody></table>' +
     '</section>' +
 
@@ -585,34 +589,32 @@ function gbcMachineEmulationTabHTML(d) {
     '<p class="hw-readable">Separately from the colour pixel board below, there is the Game Boy ' +
     'Emulator Shootout&rsquo;s own enumeration: <b>264 rows</b> across nine suites, covering both ' +
     'machines from one core (97 Mooneye, 68 SameSuite, 51 Blargg, 24 mealybug tearoom, 9 ' +
-    'daid, 5 acid, 4 cpp, 3 ashiepaws, 3 ax6). This core stands at <b>258 PASS, 3 FAIL, 0 ERROR, 3 ' +
+    'daid, 5 acid, 4 cpp, 3 ashiepaws, 3 ax6). This core stands at <b>259 PASS, 2 FAIL, 0 ERROR, 3 ' +
     'unscoreable</b> on the core this site serves, measured by framebuffer <em>byte</em> comparison per row. ' +
     'The original machine&rsquo;s section 22 ' +
-    'names all three failures; <b>all three are Color rows</b>. ' +
-    '<b>Three of three, row by row:</b> ' +
-    '<code>cgb-acid-hell.gbc</code> is a colour-mode row, <code>daid/ppu_scanline_bgp.gb</code> is ' +
+    'names both failures; <b>both are Color rows</b>. ' +
+    '<b>Two of two, row by row:</b> ' +
+    '<code>daid/ppu_scanline_bgp.gb</code> is ' +
     'declined <em>on the Color</em>, and <code>channel_4_freq_change</code> is a ' +
-    'Colour-side defect. <code>ashiepaws/strikethrough.gb</code>, on the original machine, is not among the failures. ' +
-    '<code>cgb-acid-hell</code> differs by 2&nbsp;px and ' +
-    '<code>channel_4_freq_change</code> has 4 wrong cells; both FAIL. <b>A ' +
+    'Colour-side defect. <code>ashiepaws/strikethrough.gb</code>, on the original machine, and the colour-mode row <code>cgb-acid-hell.gbc</code> are not among the failures. ' +
+    '<code>channel_4_freq_change</code> has 4 wrong cells and FAILs. <b>A ' +
     'defect narrowed is not a row won.</b></p>' +
     '<p class="gbemu-key"><b>Published comparisons are not like-for-like, and the error is worth ' +
     'three rows.</b> Totals in circulation count <code>INFO</code> rows (rows that ship no ' +
     'reference and that <em>nobody</em> can score, including the emulator being credited with them ' +
     '), while this figure counts <code>PASS</code> only. And two of the comparison emulators ' +
-    'were <b>never run on 3 of the 264 rows</b>, all three of which this core passes.</p>' +
-    '<table class="gbemu-table"><thead><tr><th>Basis</th><th>Ours</th><th>SameBoy</th><th>Emulicious</th><th>DocBoy</th></tr></thead><tbody>' +
-      '<tr><td><b>PASS only, all 264</b></td><td><b>258</b></td><td>250</td><td>never run</td><td>never run</td></tr>' +
-      '<tr><td>PASS + INFO, all 264</td><td><b>261</b></td><td>253</td><td>never run</td><td>never run</td></tr>' +
-      '<tr><td>PASS only, shared 261</td><td><b>255</b></td><td>249</td><td>251</td><td>255</td></tr>' +
-      '<tr><td>PASS + INFO, shared 261</td><td><b>258</b></td><td>252</td><td>254</td><td>258</td></tr>' +
+    'were <b>never run on 3 of the 264 rows</b> (DocBoy 1.3 cannot run them), all three of which this core passes.</p>' +
+    '<table class="gbemu-table"><thead><tr><th>Basis</th><th>Ours</th><th>SameBoy 1.0.5</th><th>Emulicious</th><th>DocBoy 1.3</th></tr></thead><tbody>' +
+      '<tr><td><b>PASS only, all 264</b></td><td><b>259</b></td><td>252</td><td>never run</td><td>cannot run 3</td></tr>' +
+      '<tr><td>PASS + INFO, all 264</td><td><b>262</b></td><td>255</td><td>never run</td><td>cannot run 3</td></tr>' +
+      '<tr><td>PASS only, shared 261</td><td><b>256</b></td><td>249</td><td>251</td><td>255</td></tr>' +
+      '<tr><td>PASS + INFO, shared 261</td><td><b>259</b></td><td>252</td><td>254</td><td>258</td></tr>' +
     '</tbody></table>' +
     '<p class="gbemu-key"><b>Only the first row of that table is a measurement; the other ' +
-    'three are arithmetic from it, and are marked as such.</b> The three rows outside the shared 261 are three this core passes. <b>The rival columns ' +
-    'were taken once and not re-taken.</b></p>' +
+    'three are arithmetic from it, and are marked as such.</b> The three rows outside the shared 261 are three this core passes. <b>The SameBoy 1.0.5 and DocBoy 1.3 columns ' +
+    'were taken by us on 7 Nov 2026 with the board&rsquo;s own tool and judge; the Emulicious column is the board&rsquo;s published run of 4 June 2026.</b></p>' +
     '<p class="hw-readable"><b>On the ordering: on the ' +
-    'two bases where DocBoy was run at all it is a tie: 255 and 255, 258 and 258.</b> A tie is ' +
-    'not a lead and is not reported as one. The basis held here ' +
+    'two bases where DocBoy runs every row, this core passes one row more than DocBoy 1.3: 256 and 255, 259 and 258.</b> The Game Boy tab, section 21, names the five rows on which the two differ. The basis held here ' +
     'is the first row. A figure three higher than ours is the <code>PASS + INFO</code> basis and is ' +
     'not comparable with it. And a trap from the same family: two scoring scripts in this project ' +
     'enumerate <b>264</b> and <b>288</b> rows. Both are useful; the totals must never be ' +
@@ -710,12 +712,10 @@ function gbcMachineEmulationTabHTML(d) {
         'available moves in fours, and <b>the one constant that reaches it wins the row and costs ' +
         'five protected colour cells</b> (both merge-rule cells among them). +1 for ' +
         '&minus;5, measured rather than estimated.</li>' +
-      '<li><b>One colour acid test (<code>cgb-acid-hell</code>) is open at 2 px and ' +
-        'is explicitly <em>not</em> declined.</b> The two remaining pixels are one bit of one plane on each of two rows, ' +
-        'labelled <b>NOT ESTABLISHED</b>, and section 22 writes out in as many words that the row ' +
-        'is <em>not</em> declined on price, <em>not</em> unwinnable in principle, and <b>blocked ' +
-        'behind a probe cartridge nobody has built</b>: one that holds <code>LCDC</code> ' +
-        'bit 4 across several tiles and makes a single transition in a chosen direction. <b>Do not ' +
+      '<li><b>One colour acid test (<code>cgb-acid-hell</code>) passes, and it was never declined.</b> Its last two pixels were one bit of one plane on each of two rows, ' +
+        'and the Game Boy tab&rsquo;s section 22 writes out why it was ' +
+        '<em>not</em> declined on price and <em>not</em> unwinnable in principle; ' +
+        'what closed it is the Color&rsquo;s drawing-register write landing inside its own machine cycle (section 10, Rule C10/25). <b>Do not ' +
         'confuse this row with the previous bullet</b>: the revision-sensitive argument (six ' +
         'named reference columns agreeing pixel for pixel with exactly one revision differing ' +
         ') belongs there, to a row declined on which revision this project claims, and not ' +
@@ -798,10 +798,9 @@ function gbcMachineEmulationTabHTML(d) {
         '<br><br><b>And there ARE colour-mode picture rows on the board: two of them.</b> ' +
         '<code>cgb-acid2.gbc</code> is a board row. It runs on model ' +
         'CGB with the Color boot program, it is scored against the board suite&rsquo;s own stored ' +
-        'reference, and <b>it PASSES</b>, which is why the acid suite reads 2 PASS / 1 FAIL ' +
-        '/ 2 INFO on both tabs, the two INFO being <code>which.gb</code> twice and the one FAIL ' +
-        'being <code>cgb-acid-hell</code>, itself also a colour-mode row. <b>One passing and one ' +
-        'failing: it is not true that nothing here is scored against a colour-mode render.</b>' +
+        'reference, and <b>it PASSES</b>; so does <code>cgb-acid-hell</code>, itself also a colour-mode row, which is why the acid suite reads 3 PASS / 0 FAIL ' +
+        '/ 2 INFO on both tabs, the two INFO being <code>which.gb</code> twice. <b>Both ' +
+        'passing: it is not true that nothing here is scored against a colour-mode render.</b>' +
         '<br><br><b>You will meet a note in this project that says otherwise, and it is about a ' +
         'different thing.</b> An ' +
         '&ldquo;unscoreable&rdquo; comment in one off-board instrument records that <b>that ' +
@@ -853,8 +852,8 @@ function gbcMachineEmulationTabHTML(d) {
         'fresh-trigger test can separate them; both are refuted for the implementation we compared ' +
         'against, whose behaviour is a third thing. The narrow direction (which is what music ' +
         'uses) agrees exactly, and nothing in the corpus watches the other.</li>' +
-      '<li><b>The speed-switch resumption phase</b>: four to nine dots, locus named, no arm ' +
-        'built. Section 3.</li>' +
+      '<li><b>The speed switch&rsquo;s smaller parts</b>: the sound channels&rsquo; one-sample delay at a switch down and the frame-sequencer delay carried through a divider write at single speed are not modelled, and the revision D and E branches are read, not measured. ' +
+        'Section 3.</li>' +
       '<li><b>What the object scan sees while a sprite-memory transfer holds the bus.</b> ' +
         '<b>Do not ask which object survives: none does.</b> The ' +
         'scan performs no read while the transfer holds the bus, so all forty slots test one stale ' +

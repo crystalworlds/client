@@ -94,6 +94,7 @@
   const monthYear = s => { const f = g('formatMonthYear'); const v = s && f ? f(s) : ''; return unknown(v) ? '' : v; };
   const narrow = () => window.matchMedia('(max-width: 1400px)').matches;
 
+  const RESUME_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M10 9l5 3-5 3z"/></svg>';
   const PLAY_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/><line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258C21.166 6.83 19.51 5 17.32 5z"/></svg>';
   /* The open book (2026-10-17), the same shape as the tiles' badge (manual_booklet.js CW_OPEN_BOOK_SVG). */
   const BOOK_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5h6a4 4 0 0 1 4 4V21a3 3 0 0 0-3-3H2z"/><path d="M22 4.5h-6a4 4 0 0 0-4 4V21a3 3 0 0 1 3-3h7z"/></svg>';
@@ -274,7 +275,7 @@
      runs cheats (the others join when their cheat build is installed), so the drawer never offers
      what the player cannot run. A 404 shows nothing. */
   const CHEAT_SYSTEMS = new Set(['gnw', 'nes', 'gb', 'atari', 'pm']);   // NES, Game Boy and Atari cheat builds installed 28 Oct 2026; Pokemon mini (our own cheats, served core unchanged) 28 Oct
-  const CHEATS_MJS = './play/host/cheats.mjs?v=2.0.0';
+  const CHEATS_MJS = './play/host/cheats.mjs?v=2.1.0';
   async function cheatPlaces(d, p) {
     if (p === PROFILES.gb) {
       const sha = await gbSha1(d); if (!sha) return [];
@@ -508,7 +509,11 @@
     const can = val(p, 'playable', d) || (p.playable2 && p.playable2(d));
     if (!can) return '';
     const t = val(p, 'playTitle', d);
-    return `<button class="play-now" data-ud-play="${esc(d.id)}" onclick="${p.play}('${attr(d.id)}', event)" title="${esc(t)}" aria-label="Play">${PLAY_SVG}<span>Play Now!</span></button>`;
+    /* RESUME PLAY (8 Nov 2026): left of Play Now!, shown only once fillResume finds this game's auto save
+       (the Continue row's record of THIS id, the game on the box: an auto save made on another version is
+       that version's, and never shown here). It resumes that save exactly as its Continue card does. */
+    return `<button class="resume-play" data-ud-resume="${esc(d.id)}" hidden onclick="if(window.ContinueRow)ContinueRow.openGame('${attr(d.id)}')" title="Resume from the auto save made when you last closed this game" aria-label="Resume play">${RESUME_SVG}<span>Resume play</span></button>` +
+      `<button class="play-now" data-ud-play="${esc(d.id)}" onclick="${p.play}('${attr(d.id)}', event)" title="${esc(t)}" aria-label="Play">${PLAY_SVG}<span>Play Now!</span></button>`;
   }
   function manualButton(d) {
     const MB = g('MANUAL_BOOKLETS') || {}, M = g('MANUALS') || {};
@@ -704,6 +709,8 @@
     fillStrip(modal, d, p);
     fillMarquee(modal, d, p);
     fillCheats(modal, d, p);
+    fillResume(modal, d);
+    fillUnknown(modal, d);
     call('probeModalImage');
     call('hwMountSegMaps', modal);
 
@@ -719,6 +726,60 @@
     requestAnimationFrame(() => toTop(modal));
     if (window.cwRouteNow ? cwRouteNow() !== '/device/' + d.id : location.hash.replace(/^#/, '') !== '/device/' + d.id) history.pushState({ cwLayer: 1 }, '', window.cwRouteHref ? cwRouteHref('/device/' + d.id) : '#/device/' + d.id);   // real addresses (22 Oct); marked as the page's own entry
     return true;
+  }
+  /* Resume play shows when this game (this id) has an auto save in the Continue row's store. */
+  function fillResume(modal, d) {
+    const b = modal.querySelector('[data-ud-resume]'), CR = window.ContinueRow;
+    if (!b || !CR || typeof CR.list !== 'function') return;
+    /* The version Play opens (9 Nov 2026: a preferred region can make that another version than the tile's):
+       its own auto save, as saves stay per file. With no region set it is the tile's own id, as before. */
+    let pid = d.id;
+    try { if (window.Variants && Variants.region && Variants.region() && Variants.preferred) pid = Variants.preferred(d.id) || d.id; } catch (_) {}
+    Promise.resolve(CR.list()).then(list => {
+      if (modal.dataset.udId !== d.id || !b.isConnected) return;
+      const rec = (list || []).find(r => r && r.id === pid && !r.hidden && r.state != null);
+      if (!rec) return;
+      if (pid !== d.id) { b.removeAttribute('onclick'); b.dataset.udResume = pid; b.onclick = e => { e.preventDefault(); if (window.ContinueRow) ContinueRow.openGame(pid); }; }
+      b.hidden = false;
+      if (rec.ts) try { b.title = 'Resume from the auto save of ' + new Date(rec.ts).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (_) {}
+    }).catch(() => {});
+  }
+  /* A GAME WE HAVE NOT TESTED (9 Nov 2026: visitors can email us what the file is and
+     where they found it; we never ask for the file, and the notice says nothing about sending it). A file whose fingerprint
+     no table holds (emby.js cwUnknownGame) shows its type's pill (Unknown since 10 Nov; a Pokemon mini file named as
+     homebrew stays Homebrew), and a short notice under its name
+     with the site's contact address, the footer's own link copied, shown the way the footer shows it. The notice
+     never speaks of files. Asked again as each version table lands, while this drawer stays open on this game. */
+  function fillUnknown(modal, d) {
+    const show = () => {
+      if (modal.dataset.udId !== d.id || !modal.isConnected || modal.querySelector('.ud-unknown')) return true;
+      if (!(window.cwUnknownGame && window.cwUnknownGame(d))) return false;
+      const body = modal.querySelector('.device-modal-body'), title = body && body.querySelector('.drawer-title-row');
+      if (!title) return true;
+      const pills = body.querySelector('.pill-row');
+      if (pills && !pills.querySelector('.ud-hb')) {
+        const pl = document.createElement('span'), first = pills.querySelector('.pill');
+        pl.className = 'pill ud-hb'; let w = 'Unknown'; try { if (window.cwGameTypeLabel) w = cwGameTypeLabel(d.id) || w; } catch (_) {} pl.textContent = w;
+        pills.insertBefore(pl, first ? first.nextSibling : pills.firstChild);
+      }
+      const s = document.createElement('section');
+      s.className = 'sect ud-unknown'; s.setAttribute('role', 'note');
+      s.innerHTML = '<h3 class="sect-h">Not tested yet</h3><p>We have not tested this game yet. To help us add it, email us what it is and where you found it: <span class="ud-mail"></span>.</p>';
+      const own = document.querySelector('footer .contact-email');
+      const a = own ? own.cloneNode(true) : document.createElement('a');
+      if (!own) { a.href = '#'; a.className = 'contact-email'; a.setAttribute('data-u', 'info'); a.setAttribute('data-d', 'crystalworlds.media'); a.setAttribute('onclick', 'composeContactEmail(event)'); a.title = 'Click to open your email client';
+        a.innerHTML = '<span class="contact-user">info</span><span class="contact-at"> [at] </span><span class="contact-domain">crystalworlds.media</span>'; }
+      a.removeAttribute('id');
+      s.querySelector('.ud-mail').replaceWith(a);
+      title.after(s);
+      return true;
+    };
+    if (show()) return;
+    /* Only a content-addressed file the tables have not placed yet can still turn out to be one; asked for a minute at most. */
+    try { if (!/-x[0-9a-f]{12}$/.test(d.id) || !window.Variants || Variants.info(d)) return; } catch (_) { return; }
+    const again = () => { if (show() || modal.dataset.udId !== d.id) window.removeEventListener('gnw-variants', again); };
+    window.addEventListener('gnw-variants', again);
+    setTimeout(() => window.removeEventListener('gnw-variants', again), 60000);
   }
   function toTop(modal) {
     try { if (window.gnwDrawerToTop) window.gnwDrawerToTop(document.getElementById('device-overlay')); else modal.scrollTop = 0; } catch (_) {}
@@ -777,7 +838,7 @@
   document.addEventListener('click', e => {
     if (!on()) return;
     if (e.target && e.target.closest && e.target.closest('#device-modal .ud-thumb')) { stripClick(e); return; }
-    const b = e.target && e.target.closest && e.target.closest('#device-modal .play-now, #device-modal .vr-item[data-vr-play]');
+    const b = e.target && e.target.closest && e.target.closest('#device-modal .play-now, #device-modal .resume-play, #device-modal .vr-item[data-vr-play]');
     if (b) wakeSound();
   }, true);
 
@@ -794,6 +855,14 @@
       }
       /* The picture strip: the old viewer's thumbnails, as buttons so a remote and a pad reach them. */
       #device-modal.ud-drawer .ud-gallery[hidden] { display: none; }
+      /* Resume play (8 Nov 2026): Play's shape, outlined, left of it; the pair sits at the row's end. */
+      #device-modal .device-modal-body .pill-row .resume-play { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 11px;
+        background: transparent; color: var(--text); border: 2px solid var(--accent-3); border-radius: 999px; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .04em; cursor: pointer; transition: all .15s; }
+      #device-modal .device-modal-body .pill-row .resume-play[hidden] { display: none; }
+      #device-modal .device-modal-body .pill-row .resume-play:not([hidden]) + .play-now { margin-left: 0; }
+      #device-modal .device-modal-body .pill-row .resume-play:hover,
+      #device-modal .device-modal-body .pill-row .resume-play:focus-visible { background: rgba(93,200,240,.16); transform: translateY(-1px); }
+      #device-modal .device-modal-body .pill-row .resume-play svg { display: block; }
       #device-modal.ud-drawer .ud-thumb { padding: 0; margin: 0; font: inherit; color: inherit; -webkit-appearance: none; appearance: none; width: 100%; }
       #device-modal.ud-drawer .ud-thumb.ud-contain { background-size: contain; background-repeat: no-repeat; }
       #device-modal.ud-drawer .ud-thumb:focus-visible { outline: none; }
@@ -840,6 +909,16 @@
       .overlay .modal-head .ud-pm-logo { display: block; width: auto; height: 100%; max-width: min(60vw, 360px); object-fit: contain;
         filter: drop-shadow(0 1px 3px rgba(0,0,0,.55)) drop-shadow(0 0 1px rgba(0,0,0,.45)); }
       .overlay .modal-head .ud-pm-year { font-size: 15px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+      /* A game we have not tested (9 Nov 2026): the notice, and the contact address as the footer shows it. */
+      #device-modal .ud-unknown { border: 1px solid rgba(var(--accent-rgb),.35); border-radius: 12px; padding: 12px 14px; background: rgba(var(--accent-rgb),.06); }
+      #device-modal .ud-unknown p { margin: 0; color: var(--text); line-height: 1.55; }
+      #device-modal .ud-unknown .contact-email { color: var(--accent); text-decoration: none; font-family: ui-monospace, Consolas, monospace; white-space: nowrap;
+        padding: 1px 6px; border-radius: 5px; background: rgba(var(--accent-rgb),.08); border: 1px solid rgba(var(--accent-rgb),.25); transition: background .15s, border-color .15s; }
+      #device-modal .ud-unknown .contact-email:hover, #device-modal .ud-unknown .contact-email:focus-visible { background: rgba(var(--accent-rgb),.16); border-color: rgba(var(--accent-rgb),.45); }
+      #device-modal .ud-unknown .contact-email:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      #device-modal .ud-unknown .contact-at { color: color-mix(in srgb, var(--muted) 65%, #ffffff); font-style: italic; }   /* the muted grey read 4.2:1 on the green ground */
+      :root[data-theme="light"] #device-modal .ud-unknown .contact-email { color: var(--accent-ink); }
+      :root[data-theme="light"] #device-modal .ud-unknown .contact-at { color: var(--muted-ink, var(--muted)); }
     `;
     document.head.appendChild(st);
   }
@@ -922,5 +1001,16 @@
   // index.html's own script runs before DOMContentLoaded; wrap as soon as the names exist too.
   wrap();
 
-  window.CwDrawer = { BUILD, on, profileOf, build, open: id => { const d = (g('ALL_DEVICES') || []).find(x => x.id === id); return d ? open(d) : false; }, PROFILES };
+  /* The Play time widget's picture (8 Nov 2026, widgets-extra.js): the game's marquee (its logo),
+     else its box art in the tiles' order, ending with the generic box; null when none loads. */
+  async function widgetArt(id) {
+    const d = (g('ALL_DEVICES') || []).find(x => x.id === id), p = d && profileOf(d);
+    if (!p) return null;
+    const logo = await marqueeUrls(d, p).then(firstOf).catch(() => null);
+    if (logo) return { url: logo, kind: 'logo' };
+    const box = await coverUrls(d, p, '2d').then(firstOf).catch(() => null);
+    return box ? { url: box, kind: 'box' } : null;
+  }
+
+  window.CwDrawer = { BUILD, on, profileOf, build, open: id => { const d = (g('ALL_DEVICES') || []).find(x => x.id === id); return d ? open(d) : false; }, PROFILES, widgetArt };
 })();

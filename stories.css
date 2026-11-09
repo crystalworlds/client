@@ -1,0 +1,95 @@
+/* stories.css -- the Stories window (7 Nov 2026; stories.js draws it, emby.js aboutSet opens it).
+ *
+ * Follows the accent the visitor picked. On a computer, like Home and Features, the window is see-through
+ * and its black screen inside the red frame stays dark in both themes. On a small screen (html.cw-small, no
+ * frame) it follows the site's theme: truly light in light mode. The screen fills the frame; the side
+ * panel's mascots set the least height.
+ * The page class is .story-page, NOT .st-page: Settings' pages are .st-page (settings-ui.js), and the shared
+ * name gave them this file's dark colours as soon as this file loaded.
+ */
+.story-page { --st-panel: var(--bg-1, #11161f); --st-line: var(--line, #2a3242);
+  color: var(--text); max-width: 720px; margin: 0 auto; min-width: 0;
+  font-size: 18px; line-height: 1.7; overflow-wrap: break-word; }
+:root[data-theme="light"]:not(.cw-small) .story-page { --bg-1: #11161f; --line: #2a3242; --text: #e7ecf2; --muted: #8a94a6;
+  --accent: var(--accent-d); --accent-rgb: var(--accent-rgb-d); --on-accent: var(--on-accent-d); color-scheme: dark; --st-panel: #11161f; --st-line: #2a3242; }
+html:not(.cw-small) body:not(.st-x) #video-about[data-kind="stories"] .about-pop .gw-frame-screen { color: #e7ecf2; }
+/* Light on a small screen: small-light.css, for every window. Only this page's two panel colours are here. */
+:root[data-theme="light"].cw-small .story-page { --st-panel: #f5f6f9; --st-line: #d4d9e1; }
+/* The screen is as tall as the frame, not the frame as short as one story. */
+#video-about[data-kind="stories"] .about-pop .gw-frame-bezel { align-items: stretch; }
+#video-about[data-kind="stories"] .about-pop .gw-screen-wrap { display: flex; min-width: 0; }
+#video-about[data-kind="stories"] .about-pop .gw-frame-screen { flex: 1 1 auto; min-width: 0; }
+
+.story-page h1 { color: var(--text); font-size: clamp(30px, 6vw, 44px); line-height: 1.12; letter-spacing: -.01em; margin: 12px 0 12px; font-weight: 800; }
+.story-page h2 { color: var(--text); font-size: 24px; line-height: 1.25; margin: 40px 0 10px; font-weight: 800; }
+.story-page p { color: var(--text); font-size: inherit; line-height: inherit; margin: 0 0 18px; }
+.story-page a { color: var(--accent); }
+.story-page p.st-sub, .story-page p.st-lead { color: var(--muted); font-size: 19px; line-height: 1.5; margin-bottom: 16px; }
+.story-page :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+.story-page blockquote { margin: 24px 0; padding: 14px 18px; border-left: 3px solid var(--accent);
+  background: var(--st-panel); border-radius: 0 8px 8px 0; }
+.story-page blockquote p { margin: 0; }
+.story-page figure { margin: 28px 0; min-height: 40px; }
+.story-page figure img { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--st-line); }
+
+.st-back, .st-btn { appearance: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700;
+  min-height: 44px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center;
+  border: 1px solid var(--st-line); background: transparent; color: var(--accent); }
+.st-back::before { content: "\2190"; margin-right: 8px; }
+.st-back-end { margin-top: 28px; }
+@media (hover: hover) and (pointer: fine) { .st-back:hover, .st-btn:hover, .st-card:hover { border-color: var(--accent); } }
+
+.st-list { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 12px; }
+.st-card { appearance: none; cursor: pointer; font: inherit; text-align: left; width: 100%;
+  display: grid; gap: 4px; padding: 18px 20px; border-radius: 10px;
+  background: var(--st-panel); border: 1px solid var(--st-line); color: var(--text); }
+.st-card-t { font-size: 21px; font-weight: 700; line-height: 1.25; }
+.st-card-s { color: var(--muted); font-size: 16px; line-height: 1.45; }
+.st-card-m { color: var(--accent); font-size: 13px; font-weight: 700; margin-top: 6px; line-height: 1.4; }
+
+.st-story { padding-bottom: 24px; }
+
+/* The small player. On a computer or TV, a tab on the right edge directly above the Systems tab
+   (emby.js .vg-tab: the same bottom, 72 px tall, 96 on a TV), growing upward, never over it.
+   On a small screen (html.cw-small, the window's own rule), a bar along the bottom. */
+.story-page .pa-ctl, .story-page .st-sound {
+  position: fixed; z-index: 60; margin: 0; height: auto; gap: 6px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  right: 0; bottom: calc(max(88px, calc(13vh + env(safe-area-inset-bottom, 0px))) + 80px);
+  width: 58px; padding: 8px 2px 8px 6px;
+  background: var(--st-panel); color: var(--text);
+  border: 1px solid rgba(var(--accent-rgb), .55); border-right: 0; border-radius: 14px 0 0 14px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .28);
+}
+body.gnw-tv .story-page .pa-ctl, body.gnw-tv .story-page .st-sound { bottom: calc(max(88px, calc(13vh + env(safe-area-inset-bottom, 0px))) + 104px); width: 70px; }
+.story-page .pa-btn { width: 44px; height: 44px; min-height: 44px; padding: 0; justify-content: center; border-radius: 50%;
+  border-color: rgba(var(--accent-rgb), .55); color: var(--accent); background: transparent; }
+.story-page .pa-btn svg { width: 20px; height: 20px; }
+.story-page .pa-btn-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.story-page .pa-stop { color: var(--text); border-color: var(--st-line); }
+.st-sound-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.st-sound-p { font-size: 13px; color: var(--accent); }
+.story-page .st-sound-retry { min-height: 44px; padding: 0 4px; font-size: 11px; border-radius: 10px; }
+
+html.cw-small .story-page .pa-ctl, html.cw-small .story-page .st-sound {
+  left: 0; right: 0; bottom: 0; width: auto; flex-direction: row;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  border: 0; border-top: 1px solid rgba(var(--accent-rgb), .55); border-radius: 0;
+}
+html.cw-small .story-page .st-sound-t { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: 14px; }
+html.cw-small .story-page .st-sound { min-height: 60px; }
+html.cw-small .story-page .st-sound-retry { padding: 0 14px; font-size: 13px; border-radius: 999px; }
+html.cw-small .story-page[data-view="story"] { padding-bottom: 96px; }
+
+/* Room for the window's close button on a small screen. */
+html.cw-small .story-page > .st-back:first-child { margin-right: 56px; }
+html.cw-small .story-page h1 { padding-right: 0; }
+.story-page[data-view="list"] h1, .story-page[data-view="message"] h1 { padding-right: 52px; }
+
+@media (max-width: 520px) { .story-page { font-size: 17px; } }
+
+/* The tile's panel in Settings. */
+.st-panel-row { display: flex; gap: 10px; flex-wrap: wrap; }
+#vault-overlay .src-note.st-note { color: var(--text); font-weight: 600; }
+#vault-overlay .src-body[data-for="stories"] a { color: var(--accent); overflow-wrap: anywhere; }

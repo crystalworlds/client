@@ -47,8 +47,8 @@ The first release of CrystalWorlds.Media. The full notes are in
   Home page reads "#1 emulators in the world on nine systems", and each
   system's card gives its measured score beside other emulators, with the
   date: Game & Watch 61 of 61 units pass all six parts of our test; Game Boy
-  258 of 264 on the public Game Boy accuracy board and 32 of 50 on the
-  cgb-acid-hell and AGE tests (SameBoy 0.16.2: 25); NES 146 of 146 on
+  259 of 264 on the public Game Boy accuracy board and 49 of 50 on the
+  cgb-acid-hell and AGE tests (SameBoy 1.0.5: 39); NES 147 of 147 on
   AccuracyCoin; Pokémon mini 10 of 12 on our own test cartridges; Atari 2600
   18 of 18 and Atari 7800 27 of 27 on our tests; Atari 5200 47 of
   47 on Acid5200; Atari Lynx 128 of 129 on the Lynx hardware test suite.
@@ -131,7 +131,10 @@ nothing moves.
 
 **Online parts.** Supabase holds only the vault: a vault code and an optional
 recovery email, used to link a browser to a game server. Browsing works without
-it. The game server is a separate program in its own repository.
+it. For the credits roll, each page load also reads the public list of supporters'
+GitHub names from a second Supabase project. It sends no sign-in, and if it fails the roll is
+simply shown without names. The game server is a separate program in its own
+repository.
 
 ---
 
@@ -272,6 +275,7 @@ need their console's firmware from a content pack or a game server.
 | `vendor/` | Third-party runtime libraries (libav.js, mediabunny, pdf.js, hls.js, supabase-js) with their licences. |
 | `server.ps1`, `server-single.ps1` | The local server described in the quick start. |
 | `site.local.json.example`, `carts.local.json.example` | Optional local settings: the one address of a copy (above), and Game Boy cartridge slots read from a folder on this computer. Copy without `.example`; the copies are never part of the repository. |
+| `robots.txt`, `.well-known/tdmrep.json` | Rules for crawlers: search engines are allowed, AI training crawlers are asked to stay out, and text and data mining is reserved (`LICENSE`, section 3E). |
 | `licenses/` | The project licence, the assets licence, `NOTICE` and `THIRD-PARTY-NOTICES`. |
 
 The source of the NES, Pokémon mini and colour Game & Watch twin cores, with

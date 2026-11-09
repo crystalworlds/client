@@ -7,7 +7,7 @@
   "famicom",
   "fds"
  ],
- "count": 984,
+ "count": 833,
  "entries": {
   "004e48e80410d72c1e4b4e9005b2df3a91c62e0b7e54db9a8c433074b708a785": {
    "kind": "cartridge",
@@ -50,18 +50,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Mighty Final Fight (U) [b2]"
-  },
-  "020e19f42bdda78d24fa5061d794c3fcd085b9a49c10f6e4df7fce046e371990": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 535).",
-   "title": "Nazo no Murasamejou (Asia) (Ja) (LH53) (Pirate)"
-  },
-  "0227d9d20293ac709721ce2d54d1344d66f75169b7656c59514cdf85e4b6b244": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 307).",
-   "title": "Jinji Zhiling (Asia) (En) (Kaiser) (KS-7037) (Pirate)"
   },
   "023d24d97261957628ced56a9c0b4363626ce30beb7aa3e4fefefa474fa5bbd7": {
    "kind": "cartridge",
@@ -141,12 +129,6 @@
    "reason": "it shows nothing.",
    "title": "Venice Beach Volleyball (AVE) [b1]"
   },
-  "0755e229c0b6964ee15e3ac3728a0d6e6cbaaf0a150db7f3e3d02438f292a7fc": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 346).",
-   "title": "Zanac (Asia) (En) (Kaiser) (KS-7012) (Pirate)"
-  },
   "075be4b0dc8cec785d65d307b053241ab94beb5404987aa1fd95cac8a4818b80": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -177,23 +159,11 @@
    "reason": "it shows nothing.",
    "title": "Digger - The Legend of the Lost City (U) [b1]"
   },
-  "07fd5048f15d1af0a64a87ed6bb93599aa7ea4aaa6133327605e22f7ef491b84": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 125).",
-   "title": "Monty no Doki Doki Daisassou (Asia) (Ja) (Pirate)"
-  },
   "0829937c0e015da147aea756e31ffa00b27262c8476f21ee92e7a89684d64ded": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Ys (J) [b4]"
-  },
-  "0888ecd4c3c6d9c6b21dab2f8573472eb89c59cdc5de8246178abd18e9768e03": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 289).",
-   "title": "18-in-1 - Videogame Super 8 Bit - Cassetta 18 Giochi (Italy) (En) (Aftermarket) (Pirate)"
   },
   "08944fa8a33c289c2f1682dd5773d6e3a9b9f197bd3369cc2e2a44872d94211c": {
    "kind": "cartridge",
@@ -218,12 +188,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Takahashi Meijin no Bouken Shima (J) [b1]"
-  },
-  "08f94b77dacd3596f32f09645d8cbd08afd1a98baaad3096388ca4d551e85dfb": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 256).",
-   "title": "Ping Pong (Asia) (En) (Unl)"
   },
   "09814e02a7f6830ac5f600aa24542614e00fcdb78ece06e50bea2e0f9b36de8f": {
    "kind": "cartridge",
@@ -309,12 +273,6 @@
    "reason": "it crashes.",
    "title": "Family Tennis (J) [b2]"
   },
-  "0ccb440ac27754a72c419e9c125485d98253089a1477e09cc3be195939ec8ecc": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xin Mojie (China) (Aftermarket) (Unl)"
-  },
   "0ce992b0d932cf30bd6fcad3a3239c8cf81c17a435608e9c4948a8a78ac5a65a": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -332,18 +290,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Crazy Climber (J) [hM15][b1]"
-  },
-  "0e22a81e09a293ec9fad1567da8488f086505a633e53e2b726e9d5e47ff81d3b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 394).",
-   "title": "6-in-1 (Asia) (En) (VIP002) (Pirate)"
-  },
-  "0e64f19fbc6a450ce7cb412b9e3b95c4a5568c74ed329de8fe0f112c26b1d24e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yongzhe Dou Elong - Tiankong de Xinniang (China) (Aftermarket) (Pirate)"
   },
   "0f40e32f44976a6075b6e18859ed250f100df09ee2edb5801fe7d1d3d10180bd": {
    "kind": "cartridge",
@@ -375,12 +321,6 @@
    "reason": "it crashes.",
    "title": "Super Mario Bros. (W) [b3]"
   },
-  "10d23ef467d3b1bdeff130d677343acb9d5bf6e1b96e971075ff3400bca95dbc": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yongzhe Dou Elong - Tiankong Pian (China) (Aftermarket) (Pirate)"
-  },
   "10d88e0510c66b7da8f3075da250cb66aa23e5c65d489b1d1b2d031d3374e695": {
    "kind": "cartridge",
    "code": "UNSUPPORTED_MAPPER",
@@ -411,12 +351,6 @@
    "reason": "it shows nothing.",
    "title": "Baseball Star - Mezase Sankanou!! (J) [b2]"
   },
-  "123f69988abc11d2e54a176936bd1dce061c4f8b68e4bf07b937b3c9dc5ded04": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-461) (Aftermarket) (Pirate)"
-  },
   "12dff501f3fcfa6f6cc60e73b46521d9ce86377c35fd3630124707102f368e99": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
@@ -441,23 +375,11 @@
    "reason": "it shows nothing.",
    "title": "Mindseeker (J) [hFFE][b1]"
   },
-  "14347826ac64b9ba43b428f8b900c695603da07933ea3e11999b597768e396f0": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 518).",
-   "title": "Tiaowu Tianshi (China) (Pirate)"
-  },
   "1477be63003a8c17d89cd3461618619cc9dc4086894da334d24562b53bee6cf8": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Dong Fang de Chuan Shuo - The Hyrule Fantasy (Ch) [b1]"
-  },
-  "148a53394ca95c51c5375b831a80876ecc1601da4e340619a4d0c21e8be6509d": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Shen Mo Dalu (China) (Aftermarket) (Unl)"
   },
   "149641d68c8955da0c75c1abfebf56e49cd5b35cf0ebebf3f8612f5333ff22e8": {
    "kind": "cartridge",
@@ -494,12 +416,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Tetris (Tengen) [p2]"
-  },
-  "15db3ffe95efe0819339275983376b1611879c3e94304b92ebddefb8bbfb39cf": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 415).",
-   "title": "Lucky Rabbit (Asia) (En) (Pirate)"
   },
   "16218d1286decf2899acbe27fe2d53100c9f5a043ca0cbfc99220c38cc0a2017": {
    "kind": "cartridge",
@@ -603,18 +519,6 @@
    "reason": "it crashes.",
    "title": "Zelda II - The Adventure of Link (U) [b3]"
   },
-  "1bb559eac0b6cfd3ba831976f19f95a915690c363f9d0ee0604c081bd68b1f39": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Wushuang Luan Wu (China) (Aftermarket) (Unl)"
-  },
-  "1c9c28dc5fdb9e5cf4e94cffe409ba366fc1d821722c17e860bad5fd06cdae50": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 519).",
-   "title": "Fangkuai Zongdongyuan (China) (Pirate)"
-  },
   "1cb4e9a2269ce3047439a9e3040765ef76d87bb0793b4443eb25e460ecedb563": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -626,12 +530,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Super Mario Bros. 3 (U) (PRG1) [b7]"
-  },
-  "1d285d5de72f331460986315bedf3e6f00743f8982583e8bca65af63ff142911": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 396).",
-   "title": "2-in-1 - Conan & Rygar (Asia) (En) (Pirate)"
   },
   "1d8f3338019524eeffaa0962c61f8cde39b4a14c17a7b7dfb6098a2128692872": {
    "kind": "cartridge",
@@ -741,18 +639,6 @@
    "reason": "it shows nothing.",
    "title": "Majou Densetsu II -Daimashikyou Galious (J) [b1]"
   },
-  "21ce7f99b1dc34725d207288ac987c303c1af6f0511f0da5f16b8de9ee92394e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 418).",
-   "title": "Highway Star (Asia) (En) (Whirlwind Manu) (LH42) (Pirate)"
-  },
-  "22100f7ed0d179646058cccfea2b0eb2f7c8758b951079c52841b9c343edee7b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 347).",
-   "title": "Yume Koujou - Doki Doki Panic (Asia) (Ja) (Kaiser) (KS-7030) (Pirate)"
-  },
   "221b23c5c80f5d5b779eec510c26c1d7de9b2980a3583d156cdaaf5d9edfcd3a": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -807,18 +693,6 @@
    "reason": "it hangs at start.",
    "title": "Bad SMB1 (SMB1 Hack) [b1][ad]"
   },
-  "2575c8568662157906bae517fe8c3809c635e012f9cef2fe191ac8d27d40f044": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 306).",
-   "title": "Exciting Basket (Asia) (En) (Kaiser) (KS-7016) (Pirate)"
-  },
-  "25caa515600f11e7efa426d21da44f75ed00b819273a2c3160a0105c991ca423": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yongzhe Dou Elong - Yongzhe de Shi Lian (China) (Aftermarket) (Pirate)"
-  },
   "25d6df99046e2615f136e1afe53130965cc7ae436d3a7f06764224581c2ab90e": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -849,12 +723,6 @@
    "reason": "it shows nothing.",
    "title": "Road Fighter (J) [T+Chi]"
   },
-  "27d209cbb349b80fcfe977204d0cec2f7f615264716edaf7a55ee278f2ae4d47": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 264).",
-   "title": "Master Fighter VI' (Asia) (En) (Pirate)"
-  },
   "2810169df614d785e823caead968dcf12294d047937cc850e6bdacae9f86a5ed": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
@@ -866,12 +734,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Castlevania III - Dracula's Curse (U) [b2][o1]"
-  },
-  "287feb6dbdd94d61764054f4dc0dbc93093bc95617953697ab0d2b110edcd075": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 326).",
-   "title": "Contra (Asia) (Ja) (Pirate)"
   },
   "28b7001b94844a9a8c39480625ff08c0d4cd8c42255d6c4f40964dda5e4afdeb": {
    "kind": "cartridge",
@@ -902,12 +764,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Cobra Triangle (U) [b1][o1]"
-  },
-  "2aac0c3737a411e989e45f5a621879f5cc5778800bd799faa08c45dda29de236": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 539).",
-   "title": "Hikari Shinwa - Palthena no Kagami (Asia) (Ja) (Pirate)"
   },
   "2abcdd20e9c657614da123c6d3bb1cc123ff4e022ad94d1bb8ae5698a8c8a6e4": {
    "kind": "cartridge",
@@ -1023,12 +879,6 @@
    "reason": "it shows nothing.",
    "title": "Rollerball (U) [b1]"
   },
-  "2eebb924af62409cd8eac1724f4777a55f6912101e9ea9faf5637480f1d0dae6": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 547).",
-   "title": "Idemitsu - Space College - Kikenbutsu no Yasashii Butsuri to Kagaku (Japan)"
-  },
   "2f0411efc62bd834af75d356264f09f551dd5a5aff5ab6a64125dc98150dde74": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1077,12 +927,6 @@
    "reason": "it shows nothing.",
    "title": "Adventures of Lolo (U) [b3]"
   },
-  "3174c766193936a8bb9c52b97fc7f7ecf667d9c651f3ac2b73f201ed662182c9": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 309).",
-   "title": "Ai Senshi Nicol (Asia) (Ja) (Whirlwind Manu) (LH51) (Pirate)"
-  },
   "31fe23f0e178f60fa0ff0333f4a4a963f9b4c63fc0865fda2da8e2d4c3d8d68c": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1106,12 +950,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Hissatsu Shigoto Nin (J) [b2]"
-  },
-  "32bc8085451ccc96f7c73322913328e30814c04cc51c214c9f4d15f1fcb605a8": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-450) (Aftermarket) (Pirate)"
   },
   "3308d912198b0422da389b0f21b738ab883d8a219d479cb9c13b7350d400bebd": {
    "kind": "cartridge",
@@ -1172,12 +1010,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Digger - The Legend of the Lost City (U) [b2]"
-  },
-  "36876b34fdf1dcb4a9b52eff8695a161dfe21d80af2dfe3133c73ae8c9f0d0f4": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 533).",
-   "title": "Dong Dongnao II - Guozhong Yingwen (Yi) (Asia) (Unl)"
   },
   "369db1338ee3be44f6c115df3a3e064dfd33f2d6c9440f587206ad4661548262": {
    "kind": "cartridge",
@@ -1317,12 +1149,6 @@
    "reason": "it hangs at start.",
    "title": "Tetramino (V0.27-PAL) by Damian Yerrick (PD)"
   },
-  "3cab8a7289c3f51628472ceccf5d115fc93bb4139091895983bd23df0bbdf34d": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-460) (Aftermarket) (Pirate)"
-  },
   "3d2b711b83e50c4e54b3ca14d23e11e55f3d8296f5675c4310f5a67fb48dec71": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1344,7 +1170,7 @@
   "3dc8d9c19c51d0b3802d3f701a64c8e79001027288f3ad12b401edeb796b0185": {
    "kind": "cartridge",
    "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 256).",
+   "reason": "its cartridge chip draws with picture modes that are not built yet, so the game starts with a garbled picture.",
    "title": "Desert Storm (China) (En) (Aftermarket) (Pirate)"
   },
   "3de61c1640d38ced3d7c5537b5046bcf428eeee3721c64a871ee37a3cd05905c": {
@@ -1371,12 +1197,6 @@
    "reason": "it shows nothing.",
    "title": "Test1 by Goldmomo (PD)"
   },
-  "3f01f7730e5f9b52e897053611536744818b665506b462698da7073cf3673987": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 557).",
-   "title": "Moero TwinBee - Cinnamon Hakase o Sukue! (Asia) (Ja) (Pirate)"
-  },
   "3f1464e9a77f2533f8556da4638cba1fbaa9099bafd93c8b7d3c9324c39972e0": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1388,12 +1208,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Galaxy 5000 (U) [b2][o1]"
-  },
-  "3f5821fbb4d304dbebe3c813c474dab44f2ff99c77094898c6f22af582c62470": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 313).",
-   "title": "Champion Cassette 2-in-1 (Asia) (En) (AS300) (Pirate)"
   },
   "3f6cbf2c240f611cdaac6018bfad80bc42ebe7a1e78a18147520a02928bf2542": {
    "kind": "cartridge",
@@ -1509,12 +1323,6 @@
    "reason": "it shows nothing.",
    "title": "Square Force (Unl) [!]"
   },
-  "43702b992a163b8c04f25d70172d720d51fc9d029a29eadcd26450d3e6c8d5d5": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yisu de Qiyuan - Younika (Ys Origin - Yunica) (China) (Aftermarket) (Pirate)"
-  },
   "437a760bf3238ff42eb6b22d08cf102660e6474ca62e6bb9a69c5c2b6ae62995": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1551,12 +1359,6 @@
    "reason": "it shows nothing.",
    "title": "Bomberman II (J) [p1][hM02][b1]"
   },
-  "449750ddfca56e2d28d858180886ef4bd0300f3d60001db54bf845c03c69f78b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 302).",
-   "title": "Gyruss (Asia) (En) (Kaiser) (KS-7057) (Pirate)"
-  },
   "44d76ef54fe6624c04e4b807228a8f8479bcbc7b5cc162685c111240d9a22d50": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1587,29 +1389,11 @@
    "reason": "it shows nothing.",
    "title": "King of Fighters 97, The (AKA Colour 2001 Streetfighter II) (Unl) [!]"
   },
-  "4698c126fbd009fb3402cc45ba5039b209fa060beea31666763192b10c4442ae": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 368).",
-   "title": "Super Mario Bros. 2 (Asia) (En) (YUNG-08 PCB) (Pirate)"
-  },
-  "46bdf8ba5192484dba764109f1a992d9cab3d48773a9ab76470ea76cc6253830": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 547).",
-   "title": "NHK Gakuen - Space School - Sansu 5 Nen (Jou) (Japan)"
-  },
   "46dfd7ad5e5cdbe70c3e83bd26b75c03e6e9fd8380ad98c26435229b772048a8": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Rollerball (J) [b1]"
-  },
-  "47084a1877419615e340455171a08272576122e20c41a7df326ed45603e04c71": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Daojian Yingxiong Zhuan (China) (Aftermarket) (Unl)"
   },
   "47cd3434c21c241fc4b11eebc8229230abff6957b3b251e66208e58f59bb7fe3": {
    "kind": "cartridge",
@@ -1628,12 +1412,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Family Pinball (J) [hFFE][b1]"
-  },
-  "47f5549745045ecccb37bb63f563b32f05ccc43f5cdce468ea13afcb5946ceda": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xuanyuan Jian - Tian Zhi Hen (China) (Aftermarket) (Unl)"
   },
   "4818debdcbd80d59d5d5f5ce7a5ae4097b7fcd31a8c369341f6e2dd33ee0cafd": {
    "kind": "cartridge",
@@ -1695,12 +1473,6 @@
    "reason": "it shows nothing.",
    "title": "Bakushou!! Jinsei Gekijou 3 (J) [o1]"
   },
-  "4b52abb4442ff6458af77afbd03e05e43c8a4493bbf3fdc54c396e567b340d7a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 266).",
-   "title": "City Fighter IV (Asia) (En) (Pirate)"
-  },
   "4c0fd69004791a9c692f9fb384f0a09f988c570f367b1f49f99f100f1616f67d": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -1749,23 +1521,11 @@
    "reason": "it shows nothing.",
    "title": "Snake Rattle N Roll (U) [b1][o2]"
   },
-  "4fcf8640751020dd3e5dd375b7214216092a37094bf2189f34031dc11608bd4a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 422).",
-   "title": "16-in-1 Cassetta Videogame (Italy) (En) (Pirate)"
-  },
   "4fd64617621c3ce3ae1ef25c38865185f34041c1dd9f62c02b89f565b35a2aba": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
    "reason": "it hangs at start.",
    "title": "NESZIP (World) (Program) (Aftermarket) (Unl)"
-  },
-  "4fe668a9c223f15432d03e6ba7ada0333f7554a807bb62dd4ee1d109e888b247": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xuanyuan Jian - Feng Zhi Wu (China) (Aftermarket) (Unl)"
   },
   "50034061783ff99b2517941676063de8145244e3c1d31afbeefcd2d951ce332f": {
    "kind": "cartridge",
@@ -1784,12 +1544,6 @@
    "code": "HANGS_AT_BOOT",
    "reason": "it hangs at start.",
    "title": "Lost Levels 2, The (V03-07-2000) (SMB1 Hack) [a1]"
-  },
-  "50a2ec326d94913fd1d2a73c1a81746f82f95b1a607a5fcb8cb1e1d26d4b4eb6": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 394).",
-   "title": "Golden Card 5-in-1 (Asia) (Top001) (Pirate)"
   },
   "5122c6d6c8a9c1bbcd752bd38bfecaee763949f48c50c1966ce9a43cfdab8f3d": {
    "kind": "cartridge",
@@ -1851,23 +1605,11 @@
    "reason": "it crashes.",
    "title": "30 Games (Brazil) (En) (Pirate)"
   },
-  "52eaea5f8921483b41408f43dd62cb5768a03288db4d64c184f702cf2639b92a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 264).",
-   "title": "Mortal Kombat II (Asia) (En) (YOKO) (Pirate)"
-  },
   "533b80707317051dae75b87f5b79e37400b8171f2b2ab3dc13be6d2bb9edd1ba": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Super 1000000-in-1 [p1][b1]"
-  },
-  "535250dedba0dccadd58cdbdcc2a213f9533da860fc12a2c953238cc981d3edb": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 31).",
-   "title": "Famicompo Pico 2 (World) (Aftermarket) (Unl)"
   },
   "548a65fa803f0cd435398caca0ab51157748e84b496fbbc08e12c1295ed9ab93": {
    "kind": "cartridge",
@@ -1875,23 +1617,11 @@
    "reason": "it shows nothing.",
    "title": "Romance of The Three Kingdoms II (U) [b8]"
   },
-  "554d202f1753fc9a7077435bb884b11ef0c96149b7afd38e7ed8beb582a1435c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 396).",
-   "title": "1995 Super Value Collection 2-in-1 (Asia) (En) (Pirate)"
-  },
   "555dfd5d4a8046cf956bfd637f242468d5b4375f8d35a49aa1b0f2c8ec1dfa92": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Puzslot (J) [b1]"
-  },
-  "557030923a1446f07d80f7d9369343baf8c33124203354716ff44f28a1ae04c9": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 519).",
-   "title": "3-in-1 - Spartan Super 1998 (Asia) (En) (Pirate)"
   },
   "55923ca6b8b3a33e159cd8af49e76ea5f190262081a9e8dd7de7a642a6e93bbf": {
    "kind": "cartridge",
@@ -1952,12 +1682,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Quattro Arcade (Camerica) [b2]"
-  },
-  "57ab0b9206cd45ad901e3c1d71d9596ce0aed5ae1ab896e6a015b1a78a0eb737": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 519).",
-   "title": "1996 Yingyu CAI 3-in-1 (China) (Unl)"
   },
   "57ca0da03363eac44fdd5b600e4a1396f0a8577e1b2c21470dd21fd1e721771f": {
    "kind": "cartridge",
@@ -2061,12 +1785,6 @@
    "reason": "it shows nothing.",
    "title": "Spartan X 2 (J) [b1]"
   },
-  "5e3300c4f8964b59a8bec0d5aeaf2074eabcbd51004dc3f8da21e3ed3704e1ca": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 394).",
-   "title": "Golden Card 7-in-1 (Asia) (En) (Pirate)"
-  },
   "5e866dab7fd0d3f402dff679748a68f9c98d32ffa6c970923be97b79f33617d1": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -2090,18 +1808,6 @@
    "code": "HANGS_AT_BOOT",
    "reason": "it hangs at start.",
    "title": "Super Trent Bros (SMB1 Hack) [o1]"
-  },
-  "5ebb161a68aabab6de53b6821ff025c3560f5b2d584ae695a90aa81529ed319f": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 127).",
-   "title": "Double Dragon II - The Revenge (Asia) (Ja) (Pirate)"
-  },
-  "5ec8cd23c25085be2d86e9c03345a83a103f5f0df8c3d2b6dcd5272101c2bdce": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 170).",
-   "title": "Fujiya Famicasse Series 3 - Thinking Game Collection (Japan) (En) (Unl)"
   },
   "5ee50fbd578dc84c7c90bc90377ace703f3e14dce12205f2570d49a10d1448b0": {
    "kind": "cartridge",
@@ -2139,12 +1845,6 @@
    "reason": "it shows nothing.",
    "title": "Pro Wrestling (U) (PRG1) [b1]"
   },
-  "6211cfb9608cf5c202d255b5084673008a467fe06d327c47310e38816a549632": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Zuanshi Ban (China) (Aftermarket) (Pirate)"
-  },
   "626049f1bba2c9a17087da0ba453ad92fe877d281c4e769d093a74d59d50e3cd": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -2162,12 +1862,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Jarinko Chie - Bakudan Musume no Shiawase Sagashi (J) [hM04]"
-  },
-  "629a9a18cf9d4846c23388a65b5c68e81186f4a86be8398f1ac3a689a97fe815": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 544).",
-   "title": "Bawang de Dalu - Zhongwen Jiaqiang Ban (China) (Pirate)"
   },
   "62f7dfff3a21a6d756bc0f22285d7337ebae8cfd0e1ac6b24d9f68eb148e708e": {
    "kind": "cartridge",
@@ -2445,35 +2139,11 @@
    "reason": "it shows nothing.",
    "title": "Mechanized Attack (U) [b5]"
   },
-  "720700a0380d55d19d5d54588838029fc4a2c79b133fdec9fa465ba7fd35b960": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 256).",
-   "title": "Monkey King (China) (En) (Aftermarket) (Unl)"
-  },
-  "7226537287ed7e38e0c7793e9f8479427c0eb6a56b908218add6c6773867b3b7": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yisu - Feiergaina Zhi Shiyue (Ys - The Oath of Felghana) (China) (Aftermarket) (Pirate)"
-  },
   "7227bce654654e33df112ef7f2abbc91b0415d6aaad9b6ad2a60e34582bf488a": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Majou Densetsu II -Daimashikyou Galious (J) [b2]"
-  },
-  "726d6359233c87e6b09e326bf95fbca7cce466f1811860a167f750311d6e421c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-483) (Aftermarket) (Pirate)"
-  },
-  "726f9c0734df1517aeecb75af564d1c706f3742786ef68fc4145ce5da09e915a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Baiyu Ban (China) (Aftermarket) (Pirate)"
   },
   "727953234d0b45c82d33df1e48bd2f3a24f9566e108c06a40fcf29b843e68686": {
    "kind": "cartridge",
@@ -2510,12 +2180,6 @@
    "code": "UNSUPPORTED_MAPPER",
    "reason": "it uses an unsupported cartridge chip (mapper 446).",
    "title": "S.C.A.T. - Special Cybernetic Attack Team (USA) (Limited Run Games)"
-  },
-  "740d74082cebdbbf38ab594e4ba3d14bea52057d8688d6cb11656b2719689eca": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 303).",
-   "title": "Armana no Kiseki (Asia) (Ja) (Kaiser) (KS-7017) (Pirate) (Alt)"
   },
   "74e2f78db09d39b849e633d7a1082e449a709e836afb99ddd7e83aaa3c9ed4c5": {
    "kind": "cartridge",
@@ -2595,29 +2259,11 @@
    "reason": "it is one half of a two-screen VS. DualSystem arcade cabinet, which needs its other half running beside it; this site does not run the pair yet.",
    "title": "Baseball (VS) (Player 1 Mode)"
   },
-  "799f9c23f4efcd9792004dcb59e39ac180e981330fa02368fb51de4cb8dbf865": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 534).",
-   "title": "Humen Jinyan (China) (Pirate)"
-  },
   "79a4d653e74c0cf508f92431b874fca14500ccf4385dde83fadbbe6fbca4616b": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Castlevania III - Dracula's Curse (U) [b2]"
-  },
-  "79afe073da95ded874f5c80dff2c4e449643f73d8a9a550d8ad4bbaeea6ecc5c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-462) (Aftermarket) (Pirate)"
-  },
-  "7a0f81db6d835534ddd3eec6c59f06cc95faa1ce9a74a7a05a82fac7e6343072": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 552).",
-   "title": "Kyuukyoku Harikiri Koushien (Japan)"
   },
   "7a1f86d101e80564833e5d8de080978efc4e398864d9d4dc4976ce75b2f33e59": {
    "kind": "cartridge",
@@ -2697,12 +2343,6 @@
    "reason": "it shows nothing.",
    "title": "Sangokushi II - Haou no Tairiku (J) [hFFE][p1]"
   },
-  "7cbc83278e781d002f07d227d215f7fa4eb9e6ab7865c6339c0e146cc0a86f7d": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Sanguozhi - Shuhan Fengyun (China) (Aftermarket) (Unl)"
-  },
   "7d07b548b17cfbfc8358408866e7b95869a53f6c4eefc2f2e722803d9055b2da": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
@@ -2733,23 +2373,11 @@
    "reason": "it crashes.",
    "title": "Kaiketsu Yanchamaru 3 - Taiketsu! Zouringen (J) [hM19][a1]"
   },
-  "7d8dd24e01a16b6c42729dd43ac5580cf8879bfb7a25c4bbc241239573e41062": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 330).",
-   "title": "Sangokushi III - Haou no Tairiku (Asia) (Ja) (Pirate)"
-  },
   "7dd2e80191056ad038823feff3d9ad268db6790ded4711cda549ebe5096cb0db": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Idol Shisen Mahjong (Hacker) [b1]"
-  },
-  "7e24052919a9960e74258945692c8a8ddc5752245d598120cc6a38a1e9d36fc9": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Sanguozhi - Shu Wei Zhengba (China) (Aftermarket) (Unl)"
   },
   "7e36e57297be0273f60f0cb8ebee06b846dc367d5b8be5a5a036173f631673c5": {
    "kind": "cartridge",
@@ -2763,23 +2391,11 @@
    "reason": "it crashes.",
    "title": "1943 - The Battle of Midway (U) [b1]"
   },
-  "7e860503cce198a5a232d98d836610471c273fae2918ef20f2a2e1cb9373006e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 256).",
-   "title": "2-in-1 - Street Dance + Hit Mouse (China) (En) (Aftermarket) (Unl)"
-  },
   "7ed632b0ffa2d0eb19cb37634c2403c7ec6a305620db1a6fc51ddb93ad2d08de": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Mappy-Land (J) [b2]"
-  },
-  "7ed7cda767531ce52b2c788e4e9341f17febe3403fb20fe7d52ebb7f8aa6d9e1": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yisu VI - Nabisiting de Fangzhou (China) (Aftermarket) (Pirate)"
   },
   "7f04d378b0be5a78316f3f5a6eabdfb378597a7c340a30c1dbfd6bda5e797e9d": {
    "kind": "cartridge",
@@ -2841,12 +2457,6 @@
    "reason": "it shows nothing.",
    "title": "Tenchi wo Kurau II - Shokatsu Koumei Den by Zeven (Hack)"
   },
-  "80d0530762f4b6b0d50167b83edce25fb64f99d9c48d6cef52362d9aee7df23b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 525).",
-   "title": "Getsu Fuuma Den (Asia) (Ja) (Kaiser) (KS-7021A) (Pirate)"
-  },
   "81146b603c84b41ecc2e0868de2a83adf99fa26aa16884791b24e7ae5cfd4fdb": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -2858,12 +2468,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Wai Wai World 2 - SOS!! Paseri Jou (J) [b3]"
-  },
-  "81e14e90ad0809699b653b101d5fffeb41fddb4e3b50ac7ffd29f9969424abb4": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 547).",
-   "title": "NHK Gakuen - Space School - Sansu 6 Nen (Jou) (Japan)"
   },
   "82040d6c78d17f4a5af0e885a99829f9c76203106bad7bc3ca319a86a90d00c2": {
    "kind": "cartridge",
@@ -2937,12 +2541,6 @@
    "reason": "it shows nothing.",
    "title": "Lupin Sansei - Pandora no Isan (J) [t1]"
   },
-  "851650ed683d4b3ca2b5bc312518fe9aadd2bb18cda8a0f0704c75e183bb958b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Shiluo de Shenqi (China) (Aftermarket) (Unl)"
-  },
   "8539195196a0d2ec8e28c9b6c0f1021cfb3bcf3e231c9270a116f2dc56de4f27": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -2973,12 +2571,6 @@
    "reason": "it is one half of a two-screen VS. DualSystem arcade cabinet, which needs its other half running beside it; this site does not run the pair yet.",
    "title": "Wrecking Crew (VS) [!]"
   },
-  "85f9e6a95b96e7e3c6e5ccb56206ec6805180c12ff15d9872428a220fc873eb6": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 517).",
-   "title": "Kkachi-wa Norae Chingu (Korea) (Unl)"
-  },
   "8600cca902ef41aa44d8062cfda4c9b3bd76e2f6181e27b4053bdb7c390e6968": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -2991,12 +2583,6 @@
    "reason": "it crashes.",
    "title": "Zelda II - The Adventure of Link (U) [b4]"
   },
-  "8651af52b826fabb0775481973a42581063161663c2ac2ffdd7b49c0841469d8": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-449) (Aftermarket) (Pirate)"
-  },
   "865b8631899e114d67e01afca1583e6c690227fb8fcdf173de976c30552898bb": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -3008,12 +2594,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Famicom Jump II - Saikyou no 7 Nin (J) [hFFE][a1]"
-  },
-  "86c26f8b8a63ab659dc40dac425d4ecfda7c032a19f760b8047010afcd477b2f": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 548).",
-   "title": "Armana no Kiseki (Asia) (Ja) (Co Tung) (CTC-15) (Pirate)"
   },
   "86fae3b3fb8a91c71be5ab182563769bb2aaa189a640a89243948f152651bc12": {
    "kind": "cartridge",
@@ -3044,12 +2624,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Bucky O'Hare (U) [b2]"
-  },
-  "880be274c48217059139cbca752808d7b876b978f0fce25fa205c390706776d6": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Zhenzhu Ban (China) (Aftermarket) (Pirate)"
   },
   "885594508c0ba1b3ff6af6cefc1e26a6774bd75e0b17ae0d4a383ec5fcaf0f56": {
    "kind": "cartridge",
@@ -3087,53 +2661,17 @@
    "reason": "it hangs at start.",
    "title": "Stars SE Demo by Chris Covell (PD)"
   },
-  "8b0d5001c55eecbdc246394a931d9b995e48b4a0c00a6bd38eefa2acea4a230d": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 292).",
-   "title": "Dragon Fighter (Asia) (En) (Pirate)"
-  },
-  "8b3616fa83dbd9d6e29d4712444438200b3e1b87cee3ea3712d4d7c78ab6b07e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 81).",
-   "title": "Super Gun (USA) (Unl)"
-  },
   "8b3f28ff833670bf8e0d87921859e45720ea730171bb38da72fae66be3026053": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Magic John (J) [b1]"
   },
-  "8b4d1b14e528c0aef924b9966940aea931aa77c8b086d3124b9b7b88f131fe20": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yongzhe Dou Elong III - Zuie Yuanyuan (China) (Aftermarket) (Pirate)"
-  },
-  "8b7ef471990aa0a1f5c783b1beafa838e466ee84bdf6b25b68911e29123bb49e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Aoshi Tiandi (China) (Aftermarket) (Pirate)"
-  },
-  "8cec0e1f48aab49f3fbc0cb064c3d3f68727b8420f8798fcc63997e677d271cf": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Jianxia Qingyuan (China) (Jncota) (Aftermarket) (Unl)"
-  },
   "8cff1552be849160d81a32be8d3c708cf072c960037995fd9553a5b668edb547": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Fantastic Adventures of Dizzy, The (Camerica) [b1]"
-  },
-  "8d3673e5b204a887ef49e4a6a44207b0030c2d569c060941783bc55315ff5561": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 594).",
-   "title": "Os Cavaleiros do Zodiaco (Asia) (Ar) (Extract) (Unl)"
   },
   "8d5ffee62aee1f5c3dbcbc033f2cb07daaada6e1d7289bd74b6423eedc38327c": {
    "kind": "cartridge",
@@ -3183,18 +2721,6 @@
    "reason": "it crashes.",
    "title": "Super Mario Bros. 2 (U) (PRG0) [b1][T+Gre1.0_Giama]"
   },
-  "8f6fc19dbdd794d772520f35d05f7eff20f9d53f49398010cb5ad05c2a2668a3": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 516).",
-   "title": "Brilliant Com Cocoma Pack 1 (Korea) (Unl)"
-  },
-  "8f7d9f4ac99d828b15c1f1dbc0bd0be40722d7a1fbe35a43d1582fb4bfa94a26": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 256).",
-   "title": "Five Kids (Asia) (En) (Unl)"
-  },
   "8ff148065ee03df06102df62f703588dc384c76fcd3d5348be42c4fcc7aa85ad": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -3206,12 +2732,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Astyanax (U) [b1]"
-  },
-  "9004d123fdc9dde1904818c12fbabb46a39881eaf2371270666c1e31d2d8b75a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 299).",
-   "title": "'93 Zuixin Yizhi Chaoji Jinka 4-in-1 (China) (Unl)"
   },
   "909b718a451e0dff53e962a7f1b3300be366ed4263e0de5d0422d448bf351079": {
    "kind": "cartridge",
@@ -3236,12 +2756,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Ikari Warriors II - Victory Road (U) [b2]"
-  },
-  "91c9812bb884f686e17dc5b25d063dd716d76a3d577fada10241ed521329891f": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-448) (Aftermarket) (Pirate)"
   },
   "91ce357aa37e4cb99122fab112ca0755f689ec2c5792971bebb867bcfe82aa59": {
    "kind": "cartridge",
@@ -3375,18 +2889,6 @@
    "reason": "it hangs at start.",
    "title": "SE Super Mario Bros (SMB1 Hack)"
   },
-  "9559414be76616b80e72646802cc07dd9da8975c95e863b64c75d2d1f621d785": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-410) (Aftermarket) (Pirate)"
-  },
-  "95a0ba369c0bbaf22f88756307f4d8cb426915119b0627eec79d9f8ecb6dd63d": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 534).",
-   "title": "Atari Flashback (USA) (Aftermarket) (Unl)"
-  },
   "96cbbd50b15da7e9bf9f57bb8428df02b1c316b05cfbf6d27629ee767d379435": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -3458,12 +2960,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Igo Shinan '92 (J) [b2]"
-  },
-  "9c4e9e4e83d02b2ead43d97358d9b3aeed5ca88be74dc30f8ee52606225a4c03": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Tiejia Tuji (China) (Pirate)"
   },
   "9c9467f6c7bf699054d88093d11a9caf2eb5224da8d12096b143a9fd3750460a": {
    "kind": "cartridge",
@@ -3603,18 +3099,6 @@
    "reason": "it shows nothing.",
    "title": "Mortal Kombat 3 - Special 56 Peoples (Unl) [b1][o1]"
   },
-  "a205f9f188b7aab39471cdfb548afa83c25e41f546a345bba7a2539845f22656": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-458) (Aftermarket) (Pirate)"
-  },
-  "a260b8ef62960243944f7d55838f095b044361770ffdc3b110af3ab31edec365": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 334).",
-   "title": "5-in-1 (1993) (Asia) (En) (Unl)"
-  },
   "a2a2c6e36acf591472dd3fbeaaa98dd1a2a40a6df10d63d781093b3fed12ecc6": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -3651,12 +3135,6 @@
    "reason": "it crashes.",
    "title": "Popeye (J) (PRG0) [o1][T+Ger]"
   },
-  "a41fd2f1e32a4745528339aac1600f0106b3305863cd67fd81d48d7d6554330e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xinghe Zhandui (China) (Pirate)"
-  },
   "a45d3107d2efb3a4a76bbc79623cb0a98a406dca65491c35b9d0c7c0c2eb3d46": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
@@ -3674,12 +3152,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "North & South (U) [b5]"
-  },
-  "a5a7134f5c6798d29200297f34cffb0b0030a3f01fc799e93e8ba0a46ebd972f": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Wangling Jueqi (China) (Aftermarket) (Unl)"
   },
   "a5adfbf6e39d6c9dc45608886493cff83a7d1e8d9bc1e07ff331e41f004ffa90": {
    "kind": "cartridge",
@@ -3735,35 +3207,17 @@
    "reason": "it crashes.",
    "title": "Rollerball (J) [b2]"
   },
-  "a74a8d28ae8dfb3ce8607639da825d2f17a207fb3d9426cf1c49191b974078a5": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 585).",
-   "title": "Super 72-in-1 (Asia) (En) (Pirate)"
-  },
   "a7532857e13f1ce6af90549375f96d5c0bace8b0a6e436ac72bccf6916cd0b59": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Mario Tails (SMB1 Hack) [b1]"
   },
-  "a7696cba5c42c7be1b89b52b478647b08930226a391c60aeefcb31bc36ff6524": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 552).",
-   "title": "SD Keiji - Blader (Japan)"
-  },
   "a7aa143f94ada56963a6be829b707228c8cad287bec0874dd2b36c6084d5432f": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Megaman (U) [b2]"
-  },
-  "a7b449195d93edf66240985889289a13e7a1b275edfddf44b74b7ce2f664a10c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Feicui Ban (China) (Aftermarket) (Pirate)"
   },
   "a808a55614d130df8b462f1162cf3a0673f016772ea6d62dff62f644fe70fb25": {
    "kind": "cartridge",
@@ -3807,30 +3261,6 @@
    "reason": "it hangs at start.",
    "title": "VS. Castlevania (VS) [b1]"
   },
-  "a9430b0117e27ecd6d6bf7383551ff48b57ee560e698b94c7e8e2d7c5d100051": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 31).",
-   "title": "Famicompo Pico (World) (Aftermarket) (Unl)"
-  },
-  "a9669524e8cfc8744c5ac299280081df74771e10adf9fbfa75ef41c82eeadfb9": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-495) (Aftermarket) (Pirate)"
-  },
-  "a9876d705fd12043371f0f6b1a0a95c5f5324d2264be0a9464a7dadd2db53f6a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Luori Zhengzhan (China) (Aftermarket) (Unl)"
-  },
-  "a9e991ca39c58206547aaa4788dc4a578fbf3ba96c81478105c89b9f142c1fa3": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 303).",
-   "title": "Armana no Kiseki (Asia) (Ja) (Kaiser) (KS-7017) (Pirate)"
-  },
   "aa9933504efc2f04322c059dc8c628bf386be6b282abda8da42308b64a62ea86": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -3842,12 +3272,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Ultima - Kyoufu no Exodus (J) [b1]"
-  },
-  "aac2bb97c9e0fb4321605001e21d7e37e8792aa98706c0922db9a732f1a5a053": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 549).",
-   "title": "Meikyuu Jiin Dababa (Asia) (Ja) (Kaiser) (KS-7016B) (Pirate)"
   },
   "aadeba69aa8b4f59f18c850c728025050fb01c60266704131b282ac5a6247660": {
    "kind": "cartridge",
@@ -3890,12 +3314,6 @@
    "code": "HANGS_AT_BOOT",
    "reason": "it hangs at start.",
    "title": "Super Mario by Macbee (SMB1 Hack) [b1]"
-  },
-  "ac331ce0cd27eb2f9679160ee125d63561368771d78b69fd6155473f22122d31": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 351).",
-   "title": "29~10MG-in-1 (Asia) (En,Ja) (Pirate)"
   },
   "ac52acbf299eede28fceecc157e8a83a5db18425fa24536ae8f30b62b0c5af38": {
    "kind": "cartridge",
@@ -3951,12 +3369,6 @@
    "reason": "it shows nothing.",
    "title": "Tenchi wo Kurau II - Stone Rascal Edition (Shokatsu Koumei Den Hack)"
   },
-  "aecf2e07c9141e4996922110c18e98a858d1c4c938f465a3031a23930ccd0330": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 516).",
-   "title": "Brilliant Com Cocoma Pack 2 (Korea) (Unl)"
-  },
   "af1243029e1ebfaf97d45c7ceba03743a2bced928c03dcbeca7b97450b4abd13": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -3968,12 +3380,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Digital Devil Monogatari - Megami Tensei (J) [hM04][b1]"
-  },
-  "af70db3e13521f85f23e8bbd674030bb1ba3253ddbecbae643d54815fca1ae84": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Fumo Yingxiong Chuan (China) (Aftermarket) (Unl)"
   },
   "af763eabbd38ea1cfd37fb6c5de5dc09fb0fcfeaff662a77abbc2b08b9b620a8": {
    "kind": "cartridge",
@@ -4011,12 +3417,6 @@
    "reason": "it shows nothing.",
    "title": "Family Pinball (J) [hFFE]"
   },
-  "b0e6c0e96d1aa5c23904ef50c9a755f89d1e322e3cbda189eb84b68f833dcf76": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 538).",
-   "title": "Super Soccer Champion (Asia) (Ja) (Pirate)"
-  },
   "b0fa4fbc92d6ed10070c454f9e52e214de3c81b69e812517b583a66588b65e5a": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4047,12 +3447,6 @@
    "reason": "it shows nothing.",
    "title": "Tianshen Zhi Jian (China) (Aftermarket) (Pirate)"
   },
-  "b1ce0ad7644a9663c69f222d71d92055de864e1035acaf83094ea1a111a6fa5b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Jiqi Zhanshi Gaoda (China) (Pirate)"
-  },
   "b1e5cb152dbd4c159e0882efb72a8842ec6784018e2f6b42a6bf99fd57fbc835": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -4064,12 +3458,6 @@
    "code": "UNSUPPORTED_MAPPER",
    "reason": "it uses an unsupported cartridge chip (mapper 389).",
    "title": "Caltron - 9 in 1 (USA) (Proto) (Unl)"
-  },
-  "b25945871c0e14cfc996dff6884827aca817a453bb09e5f9980bdf9fe6eac847": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yisu de Qiyuan - Youge (Ys Origin - Hugo) (China) (Aftermarket) (Pirate)"
   },
   "b297465ed60ed8234fc7edd6b0f21b04529e2d29e8451f430a4d18fd3e5486c6": {
    "kind": "cartridge",
@@ -4100,12 +3488,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Prince of Persia (U) [b1]"
-  },
-  "b3b996394aaebf53de5a151faee1a7b00cc78b38ea27c695bcd1f52240539791": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xuanyuan Jian - Yun de Di Duan (China) (Aftermarket) (Unl)"
   },
   "b44248453e23f1419abd0eb698e46d5a410d7dc7eeecd3bd519a97d0d7dba48d": {
    "kind": "cartridge",
@@ -4143,12 +3525,6 @@
    "reason": "it shows nothing.",
    "title": "Street Fighter Zero 2 '97 (Unl) [b1]"
   },
-  "b5d0c7371fc4d03ffe31fb6da7c03a56ad630c2d85915d2bd002529ab801f9ce": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xuanyuan Jian - Xian Zhi Yuan (China) (Aftermarket) (Unl)"
-  },
   "b5dbd899a4fcf73e607889462f648d3f04aa825e5838ac7aeffc80b0ca962bc0": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4161,12 +3537,6 @@
    "reason": "it crashes.",
    "title": "Moe Pro! '90 - Kandou Hen (J) [b2]"
   },
-  "b7369b59c176945199c723f45480b43827cd9dc70b02cf82d8526c5d52c9cfa1": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 35).",
-   "title": "Wario Land 2 (Asia) (Ja) (JY039) (Pirate)"
-  },
   "b77f9a2b4e65705d6a212f7c18823fe50d81f6c4cd17f9b6ab0ddf620906e713": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4178,12 +3548,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Garou Densetsu Special (Unl) [b4]"
-  },
-  "b86a5b9002bedff78e9ea95da7c5aa0dd820950b08fdc8fa70410833ea3eeeb7": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Hupo Ban (China) (Aftermarket) (Pirate)"
   },
   "b88b43b8e7b5c339f4355f7e77ebdac8d951790968f0ce42bb45e0820a5fbeb2": {
    "kind": "cartridge",
@@ -4203,23 +3567,11 @@
    "reason": "it shows nothing.",
    "title": "Ganbare Goemon Gaiden 2 - Tenka no Zaihou (J) [b1][o1]"
   },
-  "b8b3c0fb94b88071b8ee860f816279e1e05a408e3370ee3b3034f5dbf9e47a4f": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-497) (Aftermarket) (Pirate)"
-  },
   "b8f9c7a67040a3be1ffe6edfdca75f353948efca133289abd99ea2dc2fd17ed8": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Mario W-256 (SMB1 Hack) [b3]"
-  },
-  "b911652156d4d60e06dac806d6b26a579258867a0624a9e970ba01a5db94228e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Zhanshen Shijie (China) (Aftermarket) (Unl)"
   },
   "b912d8829307996421be66c60376dcbd729ca3e8e9e1c920db7c86ab50b808bc": {
    "kind": "cartridge",
@@ -4281,12 +3633,6 @@
    "reason": "it shows nothing.",
    "title": "Golgo 13 - The Riddle of Icarus (J) [b2]"
   },
-  "ba77e453141722ad316d5aeaf7086c3ef384428ef466097b24c3ad5ff8df7f82": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Zhengzhan Tianxia (China) (Aftermarket) (Unl)"
-  },
   "ba95f268cddca3c20e8d42737d1dcfe032c1b41631c3564e4f82b983858c31ff": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4322,12 +3668,6 @@
    "code": "UNSUPPORTED_MAPPER",
    "reason": "it uses an unsupported cartridge chip (mapper 258).",
    "title": "Super Hang-On (China) (Pirate)"
-  },
-  "bb992d4e47281237aaa9651186822c2870e1345426556d52ac56ef66b0b5c7a2": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 576).",
-   "title": "100-in-1 (Asia) (En) (Pirate)"
   },
   "bba847d3b27208ea845cc429874cd502fa95fb247272709a9591948384960d50": {
    "kind": "cartridge",
@@ -4371,29 +3711,11 @@
    "reason": "it crashes.",
    "title": "Moero!! Pro Yakyuu (Red) (J) [a1][hFFE]"
   },
-  "beaeed6f459e66e210c6a31a782cd1ffff0838830c7fb4cd8d9f817228380bd2": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 519).",
-   "title": "Xiaoxuesheng Shuxue CAI (China) (Unl)"
-  },
   "bed457561e082648f022512588481e97afeb067735125e606f989357991dbec6": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
    "reason": "it hangs at start.",
    "title": "Luigi's First Quest - Search for Mario (SMB1 Hack)"
-  },
-  "bf010c70fe8537d149f36e1d392a098b1c60bb5f9bc05c9e8cc1984cdd12dad4": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Olympic 2000 - 1000000-in-1 (Asia) (En) (Pirate)"
-  },
-  "bf1313acd563f29411d338f7ce9f8d92c8aeec5cdf9e470e79e70a52e75ef076": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 540).",
-   "title": "Master Fighter VI' (Asia) (En) (EJ-4003) (Pirate)"
   },
   "bf44fc4c5e4c2f2c90f4c295cfa7efc4c6c97e15793a8fd26a37dc763ea86f66": {
    "kind": "cartridge",
@@ -4448,18 +3770,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "1991 Du Ma Racing (Ch) [hM03][b1]"
-  },
-  "c244acc4f171a1d4d58084b984339bd02466572673ee0fb76b603a439f7e3e9c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Baijin Ban (China) (Aftermarket) (Pirate)"
-  },
-  "c27119725c9474354162f00b3f51bea117e4279a96edcdd6b6070bcd1e27fae6": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 31).",
-   "title": "2A03 Puritans (World) (Aftermarket) (Unl)"
   },
   "c2908dd825250bfcd3f5755b85f1ed57eac904fa1be5ea610177732fc34274cb": {
    "kind": "cartridge",
@@ -4527,12 +3837,6 @@
    "reason": "it shows nothing.",
    "title": "Chiisana Obake - Acchi Socchi Kocchi (J) [b2]"
   },
-  "c53fb547e23caa16ab761ed4ea032f2dbbcd5a573553eef86565c7846b2f85c4": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 305).",
-   "title": "Dracula II - Noroi no Fuuin (Asia) (Ja) (Kaiser) (KS-7031) (Pirate)"
-  },
   "c622bbedf8079578718c100903093e194827894ff9f5593b8eaef26464a3151d": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4550,12 +3854,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Seirei Gari (J) [b3]"
-  },
-  "c72e334791dfbb0d75a1b337070714ccc24d48b13a48876277f464d316706f01": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 594).",
-   "title": "Captain Bassam (Asia) (Ar) (Extract) (Pirate)"
   },
   "c74c7cc8542a34d13bfccb915697cec097b1238153503c09e1ef9bc736bbfa87": {
    "kind": "cartridge",
@@ -4659,12 +3957,6 @@
    "reason": "it shows nothing.",
    "title": "Kick Off (E) [b1]"
   },
-  "cce6b2c414c4bb3305bc802cba37adcb10c80b3d56861fc24d99e46df5b9689d": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 417).",
-   "title": "Batman - The Video Game (Asia) (En) (Fine Studio) (Pirate)"
-  },
   "cd22d695ec82fc37f7ea1d563e8c2f4fb77410217e4b1b2b848221dfdf1c2656": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4737,12 +4029,6 @@
    "reason": "it crashes.",
    "title": "Paris-Dakar Rally Special (J) [b1]"
   },
-  "d0acc1d78e2c56e6064b19b9932c8562f1e2d27d33995e10519ba221c82deef0": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-459) (Aftermarket) (Pirate)"
-  },
   "d0cdcc9095ac9f30da128f92715f7f527896972a60e4b7e97ae93aa28658e841": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4761,35 +4047,11 @@
    "reason": "it uses an unsupported cartridge chip (mapper 487).",
    "title": "Maxivision 30-in-1 (USA) (Beta) (Unl)"
   },
-  "d194512fcaa72f353c53fbe9ce82b3129c2b82463420e42f45c30f944a933bfe": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 63).",
-   "title": "Powerful 255-in-1 (Asia) (En) (Pirate)"
-  },
-  "d1a072ef1475b5635c7b6260bde82a4190b194a76ef0bf3bbeaee3cbcb826271": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Ys VI - The Ark of Nephistim (World) (Aftermarket) (Pirate)"
-  },
   "d1d822ded55e975b74d8bb528e1434f8f1954fc8e19a567d177daeb704043a1a": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Gorilla Man, The (J) [b1]"
-  },
-  "d233c69781d324ad5cd73fa49fd3c0cf34ceff58c0743945ac999877ee8f6b93": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 313).",
-   "title": "4-in-1 (AP009) (Asia) (En) (Pirate)"
-  },
-  "d2862f2fa42cd5f935c0174060a6213ae99409d27ea5cc289e1a4b998fb67bad": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 594).",
-   "title": "Dragon, The (Asia) (En,Ar) (Extract) (Pirate)"
   },
   "d2a23f7b7ea97e64148930f4aa160b374b96beaa729ee2258eaaa751e5d75281": {
    "kind": "cartridge",
@@ -4851,12 +4113,6 @@
    "reason": "it shows nothing.",
    "title": "Zippy Race (J) [b1]"
   },
-  "d51c76202a64e97314ab1492ed2254472f39943707b979d113731aeea4cef6e1": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Sanguo Fengyun (China) (Jncota) (Unl)"
-  },
   "d5500cc4f86aa2e5ff62ec80e3587da8c11646a3d7b603eaa31a84d1e64e36f6": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -4911,12 +4167,6 @@
    "reason": "it uses an unsupported cartridge chip (mapper 446).",
    "title": "David Crane's A Boy and His Blob - Trouble on Blobolonia (USA) (Limited Run Games)"
   },
-  "d803273c07bfc74035ccac68176cedeaece599b4966d204d34ec64f16d5aabd8": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 554).",
-   "title": "Akumajou Dracula (Asia) (En) (Kaiser) (Pirate)"
-  },
   "d81ae14c4d50ef4841b206b5280b6a6fea3a66b5657c9dd8e90b65a70ada838f": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -4928,12 +4178,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Tennis (VS) [o1]"
-  },
-  "d8f93d912757ed6dc62d182a32357b608ceec828b115e0dcc9023dedc4906a83": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "9999999-in-1 - 14 Giochi X-140 (Italy) (En) (Pirate)"
   },
   "d9146b7782ee031c53ad8209c4a428ce1f09e0641d29fceb5120a8db15a364e6": {
    "kind": "cartridge",
@@ -5001,12 +4245,6 @@
    "reason": "it hangs at start.",
    "title": "Toilet Mario (SMB1 Hack) [a1]"
   },
-  "daaa037724ca8b31f2d29c8cf7f2b9cb57ea61e59cd738f2218ef9634f8e874c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 552).",
-   "title": "Kyuukyoku Harikiri Stadium - Heisei Gannen Ban (Japan)"
-  },
   "dafed8da805f34eb057bd8fb11a2349d182f7edd3c189a53984b1667cb3acd82": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -5030,12 +4268,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Operation Wolf (U) [b5]"
-  },
-  "dccfe53e7d30c86c3263c9cf24f926e1ace59ce24cc34ba6832f7b61798f4c76": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 547).",
-   "title": "NHK Gakuen - Space School - Sansu 6 Nen (Ge) (Japan)"
   },
   "dd6f48a6ba6a74d90d59ec25c1a3633ecf1b9f0b4e0a20861c6a5e2c4fab3b16": {
    "kind": "cartridge",
@@ -5072,12 +4304,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it is one half of a two-screen VS. DualSystem arcade cabinet, which needs its other half running beside it; this site does not run the pair yet.",
    "title": "Ice Climber (VS) (Player 2 Mode)"
-  },
-  "e008246cc19ab4c54c37de2689847c7e928fed96990ef1599e8fcda34ca4c609": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 534).",
-   "title": "Shudu & Wuziqi (China) (Aftermarket) (Unl)"
   },
   "e0223268b44cb908eabc4f7ff20e8d76afd71e6e8031cd6491a038acffea534b": {
    "kind": "cartridge",
@@ -5120,12 +4346,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Mortal Kombat (Asia) (En) (JJ-01) (Pirate)"
-  },
-  "e2bef1b8f035032f6e4e0be96d38ee671737b7c36efe280cd361723f8f89a580": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 513).",
-   "title": "Mei Shaonu Meng Gongchang (Asia) (Pirate)"
   },
   "e31b91f67bb9b4b222baf6e50c34059d7e0e1df8dec391e68405fb91cbd0d47d": {
    "kind": "cartridge",
@@ -5174,18 +4394,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Tetris (Tengen) [p2][o1]"
-  },
-  "e58736331666d29f24e769e40d7c771007c42014fbea14c7c333c903678a5048": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 312).",
-   "title": "Highway Star (Asia) (En) (Kaiser) (KS-7013) (Pirate)"
-  },
-  "e5d05c81a079610e6aa68abab3e411d584f972c935293c0a654378086cb6651a": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 380).",
-   "title": "1200-in-1 (Asia) (En) (Pirate)"
   },
   "e6250685ffc60024310e8f40bc13a08a4ea64e037df94c53272e8a83c76cd0df": {
    "kind": "cartridge",
@@ -5259,23 +4467,11 @@
    "reason": "the disk drive stops it with an error at start.",
    "title": "Sunsoft Dev Disk Lot - 'G188D21N' no. 1 (Japan)"
   },
-  "e89c7ebd5cf37c2522d4ee7fa8717ceea1c5f1f4e6aed04e20e3bef73a3ec9d0": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 594).",
-   "title": "Rinco Talkman 3-in-1 (Asia) (Ar) (Pirate)"
-  },
   "e95044f8a8e304c1e6668b8e07d3104f1d44b6c43cf45144568cf053649029be": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Double Dragon II - The Revenge (U) (PRG1) [b3]"
-  },
-  "e95299905cc33050a7d8c8badfbee6a0ad5204fb02bcc8969fa8062bd0b35e24": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 303).",
-   "title": "Armana no Kiseki (Asia) (Ja) (Whirlwind Manu) (LH29) (Pirate)"
   },
   "e95b5ad93ca23cc9b45186f43b8a8989700e5b57a91b51fc07b5084acae19109": {
    "kind": "cartridge",
@@ -5325,12 +4521,6 @@
    "reason": "it shows nothing.",
    "title": "Major League Baseball (U) (PRG1) [b1]"
   },
-  "ea8d13a5cdeed732eb65e69d6aef40e8d2628d97c5529c7784b25e2440f4cf15": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 522).",
-   "title": "Fengyun Shaolinquan (Asia) (Ja) (Pirate)"
-  },
   "eae728d8bb61814b962f48ba63ff9a06a3736d0617bf29a37bbe55c434861525": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -5360,12 +4550,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Nim-tendo by Erik Jakobsson 2004 (PD)"
-  },
-  "ec0e0385a2854e808ea526c2265b287e20b764c2e4a9db492b1178cd9a069f44": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 374).",
-   "title": "4-in-1 - Unsurpass Air-Combat Series (Asia) (Ja) (Pirate)"
   },
   "ec36beb064ef2080229a6034910aa714f2b0e2b0797ca055c6445cfcdcff2f50": {
    "kind": "cartridge",
@@ -5438,12 +4622,6 @@
    "code": "UNSUPPORTED_MAPPER",
    "reason": "it uses an unsupported cartridge chip (mapper 29).",
    "title": "Glider - Pluto's Bath House (World) (Aftermarket) (Unl)"
-  },
-  "ee727e17465a556b2f39a3038fb0b65001c23f7f586df0f61b7457cfa9bce82f": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 563).",
-   "title": "Teenage Mutant Ninja Turtles II - The Arcade Game (Asia) (En) (Pirate)"
   },
   "ee86b4a12169661f9163dc1973cc91c857ed036a08a8adf2c3ee7df8a565dc55": {
    "kind": "cartridge",
@@ -5535,12 +4713,6 @@
    "reason": "it shows nothing.",
    "title": "Commando (U) [b3]"
   },
-  "f281cc274f8e9e12553ae71f34acbdfa2bae1fb88fa129f4b3b472aec85b01b3": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-457) (Aftermarket) (Pirate)"
-  },
   "f2aa66554ccdebc06201354c38c81a30a9f30de1857c35366a1da3547d4c523c": {
    "kind": "cartridge",
    "code": "UNSUPPORTED_MAPPER",
@@ -5552,12 +4724,6 @@
    "code": "HANGS_AT_BOOT",
    "reason": "it hangs at start.",
    "title": "Phat (SMB1 Hack)"
-  },
-  "f2fcc94fa3669ab1f2c16c5131b209962648d088e1d1c79cae69b7b44864ed14": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 564).",
-   "title": "NTDEC 22-in-1 (Asia) (Pirate)"
   },
   "f3036dbbcbcc79709bed5d2cfadf9e7948deb94be5f9d8cda1c922c40e910fda": {
    "kind": "cartridge",
@@ -5576,12 +4742,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Yoshi no Tamago (J) [b1]"
-  },
-  "f378879c15a8afc71e8bffac7ee0d2a5c342e1ed8f6703b5ce24ec873b275c54": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 526).",
-   "title": "Sangoku III (Asia) (Ja) (BJ-56) (Pirate)"
   },
   "f38938f926c87e6f76ba998c9225e9bf1e50e262d552d5676d83032d66d6bb98": {
    "kind": "cartridge",
@@ -5613,18 +4773,6 @@
    "reason": "it crashes.",
    "title": "Poker (Hacker) [b2]"
   },
-  "f45dce70039d7c3fef8d9e66d5317f1ab8e87d71b4e6f8485173af4c762988bf": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 552).",
-   "title": "Kyuukyoku Harikiri Stadium III (Japan)"
-  },
-  "f493886252bc431dc36c6becc5eceefb8fd433681bace6aec20b18dbb860a448": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Yongzhe Heian Shijie - Hundun Shijie (China) (Aftermarket) (Pirate)"
-  },
   "f4ae6dd3ba4da247972aa979ba35a26967e8d7239e45a20326f818b4e7178487": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -5654,12 +4802,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "52 Games [p1][b1]"
-  },
-  "f5ffebf59b538a80220597d0e5d3edeabfb5d6d02be6b58710a0cc3e5f9e3acf": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 289).",
-   "title": "Super 42-in-1 (Asia) (En) (Pirate)"
   },
   "f60186918cd360e4457a84c38ce6d226e5c41ae8ea67d5b0dc641869c9e756f6": {
    "kind": "cartridge",
@@ -5721,12 +4863,6 @@
    "reason": "it shows nothing.",
    "title": "Zhan Guo Qun Xiong Zhuan (Ch) [b1]"
   },
-  "f8254c515a95b165a55633d63a8419cf88e58f23e32252b1b2c3e52e1302c90e": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 190).",
-   "title": "Magic Kid Googoo (Korea) (En) (Unl)"
-  },
   "f840a9d70136f90dc151501878282bad7b31c1bd6ce48e53d0e35c598029b0f0": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -5744,12 +4880,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Princess Tomato in Salad Kingdom (U) [b2]"
-  },
-  "f8a3eac7575dfc6fd50ad483bbfb154e71f523d2403c293f2c513722168affbd": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Koudai Guaishou - Shuijing Ban (China) (Aftermarket) (Pirate)"
   },
   "f8be7c49f962ef4ec11932156f5e128bf05e5f8a837756eef46039fa01287c7e": {
    "kind": "cartridge",
@@ -5769,12 +4899,6 @@
    "reason": "it crashes.",
    "title": "Fire Hawk (Camerica) [b1]"
   },
-  "f985383b63381f83c289c889b6bd3dd95d53650bec521e72550891c4953b8ec4": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 224).",
-   "title": "Xuanyuan Jian - Wangzhe Guilai (China) (Aftermarket) (Unl)"
-  },
   "f9df115ffe0aa17816ac688e29cbe5d1701bf9b1e0fc8a2e124e2067f68a4677": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -5786,12 +4910,6 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Megaman V (U) [b1]"
-  },
-  "fb1bb8e66019f0dcd7fee7eedb0ff8a4c01afba81e82429bec3fcfb569f4fd95": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-496) (Aftermarket) (Pirate)"
   },
   "fb2549200894777cc2797fa163bb11355c787d3da4adf6d2c6f37b5c068f7311": {
    "kind": "cartridge",
@@ -5817,12 +4935,6 @@
    "reason": "it hangs at start.",
    "title": "Klax (J) [b3]"
   },
-  "fc9113362fd068963801751329e9028e0c09e2c5c5acf2a67e07c70d137ef185": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 308).",
-   "title": "Batman - The Video Game (Asia) (En) (NTDEC) (Pirate)"
-  },
   "fcd32c418a722d0cb1bf99867de433de94e80cf68f49615051b4a0509e9d0c87": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -5846,12 +4958,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Insector X (J) [hM01][b1]"
-  },
-  "fd896c2a1332a7412ae8d2d30aea37da7fd06d897013dc15e3d21744ab476b6b": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 319).",
-   "title": "Super Game 4-in-1 (Asia) (En) (KG-481) (Aftermarket) (Pirate)"
   },
   "fda84d8dcde690b15acf8f11b27d613d571a65b2b34719c6e03e7f00e3b7096b": {
    "kind": "cartridge",
@@ -5889,12 +4995,6 @@
    "reason": "it shows nothing.",
    "title": "Racket Attack (U) [b5]"
   },
-  "fe18cb2098a5227c892f85f30f8b10340f9c92e280281eb3c6c5bd968cc8e6e9": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 553).",
-   "title": "Dong Dongnao 1 (Asia) (En) (Unl)"
-  },
   "fedbf10ccfac69af619e1f19c79a2a33b98f5b7a0c4241b956c9d2d5b77299b1": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -5906,12 +5006,6 @@
    "code": "UNSUPPORTED_MAPPER",
    "reason": "it uses an unsupported cartridge chip (mapper 515).",
    "title": "Family Noraebang - The Best 40 Songs (Korea) (DS-H353) (Unl)"
-  },
-  "ff734a5571a187201eb4b953ace602e967dbf0ed9ebf35e7fca4372532b40e9c": {
-   "kind": "cartridge",
-   "code": "UNSUPPORTED_MAPPER",
-   "reason": "it uses an unsupported cartridge chip (mapper 290).",
-   "title": "Asder - 20 in 1 (USA) (Unl)"
   }
  }
 }

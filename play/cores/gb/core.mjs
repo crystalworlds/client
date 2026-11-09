@@ -2,24 +2,24 @@
  * play/cores/gb/core.mjs -- Game Boy / Game Boy Color for the one play host (Core API 1.0).
  *
  * Wraps the vendored development-tree files in play/gameboy/web/ (GBHost, GBMachine, the GBST
- * state container, the audio pull) and the site's Color skin modules beside them
+ * state container, the audio pull) and the site's Color modules beside them
  * (cgb-assign.js, cgb-boot.js, cgb-palettes.js). Nothing there is edited: this module
  * only calls what they publish. No DOM, no storage, no timers, no Date.now().
  *
- * WHICH MACHINE, from the cartridge (header $0143) and the Skin option, exactly as
- * play/gameboy/app.js mount() decides it:
+ * WHICH MACHINE, from the cartridge (header $0143) and the Machine choice:
  *   - a Color-only cartridge needs the player's own Color boot program (CoreError
  *     'needs-firmware' otherwise, never a DMG that shows its own refusal screen);
- *   - a Color-enhanced cartridge runs as a Color when that program is present;
- *   - an original cartridge on the "Game Boy Color" skin runs on a Color machine
- *     booted by our own stub (cgb-boot.js), which writes the console's palette
+ *   - a Color-enhanced cartridge runs as a Color when that program is present, unless the
+ *     player chose the Game Boy for those games;
+ *   - an original cartridge runs on the Game Boy, unless the player chose the Color: then a
+ *     Color machine booted by our own stub (cgb-boot.js), which writes the console's palette
  *     assignment into palette RAM: no Nintendo program needed.
  * The model ('dmg' / 'cgb') is reported in LoadResult.model, and the host keys saves
  * by it: a Game Boy and a Game Boy Color are two consoles (decided 2026-10-03).
  */
 import { GBHost, FRAME_HZ, SCREEN_W, SCREEN_H, BTN } from '../../gameboy/web/core.js';
 import { CoreAudioSource, coreHasAudio, discardCoreAudio } from '../../gameboy/web/audio.js';
-import { paletteLUT, PALETTES, DEFAULT_PALETTE, saveState, stateHeader, cartFingerprint,
+import { PALETTES, DEFAULT_PALETTE, saveState, stateHeader, cartFingerprint,
          STATE_HEADER, STATE_MAGIC, STATE_VERSION, STATE_FLAG_BIOS } from '../../gameboy/web/shell.js';
 import { cgbAssignmentFor, cgbAppliesTo, cgbConfigName, cgbExplain, cgbDefaultManual } from '../../gameboy/cgb-assign.js';
 import { cgbBootStub, cgbBootKey } from '../../gameboy/cgb-boot.js';
@@ -33,8 +33,10 @@ import { GB_MODE } from './mode.mjs';
 /* 25 Oct: the Super Game Boy shelf. Opened with ?console=sgb, the game always plays as on
    a Super Game Boy; the border is the game's own, else Nintendo's default read from the player's own SNES
    program (firmware 'sgb', from the game server; sgb-border.mjs), else plain black; or fan art. */
-import { biosBorder, builtinBorders } from './sgb-border.mjs?v=2.0.0';
-import { cheatEngine } from '../cheats-core.mjs?v=2.0.0';
+import { biosBorder, builtinBorders } from './sgb-border.mjs?v=2.1.0';
+import { cheatEngine } from '../cheats-core.mjs?v=2.1.0';
+import { TEAL, colourCorrectionTable } from './colour.mjs?v=2.1.0';
+import { PANELS, slowScreen } from './lcd.mjs?v=2.1.0';
 const ON_SGB_SHELF = (() => { try { return new URLSearchParams(globalThis.location.search).get('console') === 'sgb'; } catch (_) { return false; } })();
 const SGB_FANART = 'https://pub-5656d877345d49ae96626afa8d6ebd56.r2.dev';   // sgb-borders: <SHA-1 of the cartridge>.jpg, 1920x1080
 
@@ -63,7 +65,18 @@ export function barcodeTitle(bytes) {
 const P2_KEYS = { a: ['KeyG'], b: ['KeyF'], select: ['KeyR'], start: ['KeyT'], right: ['KeyL'], left: ['KeyJ'], up: ['KeyI'], down: ['KeyK'] };
 const LINK_GAP = 16;                    // the two linked screens, side by side, this far apart
 
-export const CGB_SKIN = 'gbc';
+/* The Mono Palette choices: the four-colour palettes only. A palette changes the picture, never the machine. */
+const MONO_PALETTES = Object.assign({}, PALETTES, { teal: TEAL });
+function monoLUT(key) {
+  const p = (MONO_PALETTES[key] || MONO_PALETTES[DEFAULT_PALETTE]).rgb, l = new Uint32Array(4);
+  for (let i = 0; i < 4; i++) l[i] = (0xFF << 24) | (p[i][2] << 16) | (p[i][1] << 8) | p[i][0];
+  return l;
+}
+/* The Machine choices. Adding a model here (Advance, SP, Micro) is the whole of offering it: `device` is
+   the core's device, and which cartridges have the choice is decided in one place, machineRows(). */
+const MACHINES = { gb: { label: 'Game Boy', device: 'dmg' }, gbc: { label: 'Game Boy Color', device: 'cgb' } };
+const machineValues = () => Object.entries(MACHINES).map(([v, m]) => ({ v, label: m.label }));
+const onColor = v => !!(MACHINES[v] && MACHINES[v].device === 'cgb');
 
 export const manifest = {
   api: '1.0',
@@ -155,8 +168,14 @@ export async function create(env) {
     });
     return cheat;
   };
-  let model = 'dmg', lut = paletteLUT(DEFAULT_PALETTE), skin = DEFAULT_PALETTE, combo = '';
+  let model = 'dmg', lut = monoLUT(DEFAULT_PALETTE), mono = DEFAULT_PALETTE, combo = '';
   let cgbInfo = null, cleanCram = null, cleanCram2 = null, locked = false;
+  let cartFlag = '', hasCgbFw = false, onStub = false;      // onStub: an original cartridge on the Color (our own boot stub)
+  let correct = false;                                      // Colour correction: the picture only, never the frame
+  /* Screen response (lcd.mjs): the panel's slow change, once per emulated frame, on the picture only. */
+  let response = 'real';
+  const screen = slowScreen();
+  let flat = null;                                          // this frame as ABGR, the panel's input
   let rtcCleanAt = 0;
   /* HuC3 / TAMA5 (2026-10-17): their clocks live in battery RAM and count emulated
      time only. A 'clock' region keeps the wall time of the save; on load (after cram, which
@@ -208,13 +227,13 @@ export async function create(env) {
     if (bb.obj) { const at = []; for (let i = 0; i < bb.obj.length; i++) if (bb.obj[i]) at.push(i); objAt = Int32Array.from(at); objCol = Uint32Array.from(at, i => bb.obj[i]); }
   }
   function optionDefs() {
-    const skins = Object.entries(PALETTES).map(([v, p]) => ({ v, label: p.name })).concat([{ v: CGB_SKIN, label: 'Game Boy Color' }]);
-    const showCombo = skin === CGB_SKIN && cgbInfo && !cgbInfo.assigned;
+    const palettes = Object.entries(MONO_PALETTES).map(([v, p]) => ({ v, label: p.name }));
+    const showCombo = onStub && cgbInfo && !cgbInfo.assigned;
     const bt = cart ? barcodeTitle(cart) : null;
-    const more = [];
+    const more = machineRows();
     /* the Super Game Boy (on by itself for the games made for it,
-       one choice to switch off). Not offered on the Color skin. */
-    if (HAS_SGB && !ON_SGB_SHELF) more.push({ id: 'sgb', label: 'Super Game Boy', type: 'enum', group: 'machine', scope: 'console', live: true, default: 'auto',
+       one choice to switch off). Not offered on the Color. */
+    if (HAS_SGB && !ON_SGB_SHELF) more.push({ id: 'sgb', label: 'Super Game Boy', type: 'enum', group: 'machine', scope: 'console', live: true, default: 'auto', hidden: model === 'cgb',
       help: 'The Super Game Boy’s colours and border, and up to four players, for the games made for it',
       values: [{ v: 'auto', label: 'On for the games made for it' }, { v: 'all', label: 'On for every Game Boy game' }, { v: 'off', label: 'Off' }] });
     /* the SNES program's built-in borders, offered when that firmware is loaded and recognised. */
@@ -227,16 +246,34 @@ export async function create(env) {
         .concat(HAS_LINK ? [{ v: 'gb', label: 'A second Game Boy: two players side by side' }] : [])
         .concat(HAS_BCB ? [{ v: 'barcode', label: 'Barcode Boy card reader' }] : []) });
     return [
-      { id: 'skin', label: 'Skin', type: 'enum', values: skins, default: DEFAULT_PALETTE, scope: 'console', live: true,
-        group: 'display', key: 'gb.palette' },
+      { id: 'skin', label: 'Mono Palette', type: 'enum', values: palettes, default: DEFAULT_PALETTE, scope: 'console', live: true,
+        group: 'display', key: 'gb.palette', hidden: model === 'cgb' },
+      { id: 'colourCorrection', label: 'Colour correction', type: 'enum', values: [{ v: 'off', label: 'Off' }, { v: 'on', label: 'On' }], default: 'off',
+        scope: 'console', live: true, group: 'display', key: 'gb.colourCorrection', hidden: model !== 'cgb' },
+      { id: 'screenResponse', label: 'Screen response', type: 'enum', default: 'real', scope: 'console', live: true, group: 'display', key: 'gb.screenResponse',
+        hidden: !!sgb && !m2,
+        help: 'The real screen changes slowly: something shown every other frame looks see-through, as the game intends, and moving things leave a faint trail',
+        values: [{ v: 'real', label: 'As the real screen' }, { v: 'off', label: 'Off (every frame sharp)' }] },
       ...more,
       { id: 'cgbCombo', label: 'Color palette', type: 'enum', hidden: !showCombo,
         values: CGB_MANUAL.map(m => ({ v: m.combo, label: cgbConfigName(m) })), default: cgbDefaultManual().combo,
         scope: 'console', live: false, group: 'display', key: 'gb.cgbCombo' },
     ];
   }
+  /* The Machine row, for a cartridge that can run on both. Two stored choices, one row at a time, because the
+     two kinds start from different machines: an original cartridge from the Game Boy, a Color-enhanced one
+     from the Color. Going to the Color for Tetris and back must not move Link's Awakening DX. A Color-enhanced
+     cartridge needs the Color boot program to run as a Color, so without one it has no choice to offer. */
+  function machineRows() {
+    const row = (id, key, dflt, shown) => ({ id, label: 'Game Boy', type: 'enum', group: 'machine', scope: 'console', live: false, key,
+      values: machineValues(), default: dflt, hidden: !shown || ON_SGB_SHELF, notice: 'Changing this restarts the game.' });
+    const orig = row('machine', 'gb.machine', 'gb', cartFlag === 'dmg');
+    /* The old "Game Boy Color" skin was this choice: its stored value moves here (host readOption). */
+    orig.movedFrom = { key: 'gb.palette', value: 'gbc', to: 'gbc' };
+    return [orig, row('machineDual', 'gb.machineDual', 'gbc', cartFlag === 'cgb-enhanced' && hasCgbFw)];
+  }
   function note() {
-    if (model === 'cgb' && skin === CGB_SKIN && cgbInfo) { try { return cgbExplain(cgbInfo); } catch (_) { return ''; } }
+    if (onStub && cgbInfo) { try { return cgbExplain(cgbInfo); } catch (_) { return ''; } }
     /* plain help for what is plugged in. */
     if (m2) return 'Two Game Boys are linked by cable. Player 2 uses a second controller, or I J K L with F, G, R and T on the keyboard.';
     if (bcb) return 'The Barcode Boy is plugged in. Swipe a card from the Barcode reader menu in the bar.';
@@ -249,13 +286,17 @@ export async function create(env) {
   function build(r) {
     const bytes = r.game.bytes;
     if (!bytes || bytes.length < 0x150) throw new CoreError('damaged', 'This file is too short to be a Game Boy cartridge.');
-    skin = String(r.options.skin || DEFAULT_PALETTE);
-    if (!PALETTES[skin] && skin !== CGB_SKIN) skin = DEFAULT_PALETTE;
+    mono = String(r.options.skin || DEFAULT_PALETTE);
+    if (!MONO_PALETTES[mono]) mono = DEFAULT_PALETTE;
     combo = String(r.options.cgbCombo || '');
+    correct = r.options.colourCorrection === 'on';
+    response = r.options.screenResponse === 'off' ? 'off' : 'real';
     const fw = r.firmware || {};
-    const flag = cgbFlagOf(bytes);
+    const flag = cartFlag = cgbFlagOf(bytes);
+    hasCgbFw = !!fw.cgb;
     cgbInfo = cgbAppliesTo(bytes) ? cgbAssignmentFor(bytes) : null;
-    const skinWantsCgb = skin === CGB_SKIN && !!cgbInfo;
+    const stubWanted = onColor(r.options.machine) && !!cgbInfo;
+    const dualOnGb = flag === 'cgb-enhanced' && r.options.machineDual != null && !onColor(r.options.machineDual);
     /* (26 Oct): a real Super Game Boy never reads $0143; it reads the header's Super Game Boy
        flag ($0146 = $03 with licensee $33). A cartridge marked Color-only that also asks for the Super
        Game Boy's functions (In the Dark, homebrew: $C0 with $03/$33) runs on the Game Boy inside it,
@@ -268,17 +309,18 @@ export async function create(env) {
     }
     /* The Super Game Boy shelf plays every cartridge a Super Game Boy can run (all but Color-only) on its DMG. */
     const forceSgb = ON_SGB_SHELF && (flag !== 'cgb-only' || sgbAsks) && HAS_SGB;
-    const cgb = !forceSgb && (skinWantsCgb || (flag !== 'dmg' && !!fw.cgb));
+    const cgb = !forceSgb && (stubWanted || (flag !== 'dmg' && !dualOnGb && !!fw.cgb));
+    onStub = cgb && stubWanted;
     host.setBios(fw.dmg || null, 'dmg');
     host.setBios(fw.cgb || null, 'cgb');
     let biosKey = cgb ? 'cgb' : 'dmg';
-    if (skinWantsCgb) {
+    if (stubWanted) {
       const cfg = cgbInfo.assigned ? cgbInfo.config : cgbManual();
       const key = cgbBootKey(cfg);
       host.setBios(cgbBootStub(cfg), key);
       biosKey = key;
     }
-    const useBios = (skinWantsCgb && !forceSgb) ? true : (cgb ? !!fw.cgb : !!fw.dmg);
+    const useBios = (stubWanted && !forceSgb) ? true : (cgb ? !!fw.cgb : !!fw.dmg);
     if (m2) { try { host.free(m2); } catch (_) {} m2 = null; fb2 = 0; }
     machine = host.switchTo(machine, bytes, { label: game || 'cartridge', useBios, device: cgb ? 'cgb' : 'dmg', bios: biosKey });
     cart = bytes;
@@ -313,7 +355,7 @@ export async function create(env) {
     GB_MODE.wide = !!wide; GB_MODE.sgb = !!sgb; GB_MODE.link = !!m2;
     P2.fill(0); rumbleLevel = 0; toneSeen = typeof X.gb_huc3_tones === 'function' ? (X.gb_huc3_tones(machine.ctx) & 0xFFFF) : 0; toneLeft = 0;
     model = cgb ? 'cgb' : 'dmg';
-    lut = paletteLUT(PALETTES[skin] ? skin : DEFAULT_PALETTE);
+    lut = monoLUT(mono);
     locked = false;
     // The pull buffer lives in the arena, which a switch may have reclaimed: stage it
     // again, arm the APU (its first pull only sets the rate) and drop anything banked.
@@ -390,11 +432,12 @@ export async function create(env) {
   /* The two linked screens side by side, each in its own colours (ABGR). */
   const lutAbgr = new Uint32Array(32768);
   for (let c = 0; c < 32768; c++) { const r5 = c & 31, g5 = (c >> 5) & 31, b5 = (c >> 10) & 31; lutAbgr[c] = ((0xFF << 24) | (((b5 << 3) | (b5 >> 2)) << 16) | (((g5 << 3) | (g5 >> 2)) << 8) | ((r5 << 3) | (r5 >> 2))) >>> 0; }
+  const lutCorrected = colourCorrectionTable();
   function blit(src, cgbFmt, ox) {
     const W = SCREEN_W * 2 + LINK_GAP;
     for (let y = 0; y < SCREEN_H; y++) {
       const o = y * W + ox, s = y * SCREEN_W;
-      if (cgbFmt) for (let x = 0; x < SCREEN_W; x++) wide[o + x] = lutAbgr[src[s + x] & 0x7FFF];
+      if (cgbFmt) { const t = correct ? lutCorrected : lutAbgr; for (let x = 0; x < SCREEN_W; x++) wide[o + x] = t[src[s + x] & 0x7FFF]; }
       else for (let x = 0; x < SCREEN_W; x++) wide[o + x] = lut[src[s + x] & 3] >>> 0;
     }
   }
@@ -448,6 +491,23 @@ export async function create(env) {
       buf[i * 2 + 1] = b > 32767 ? 32767 : b < -32768 ? -32768 : b;
     }
   }
+  /* SCREEN RESPONSE. Which panel this is: the Color's, the Pocket's and Light's (their palettes), or the
+     original's. The Super Game Boy's television has none; two linked consoles each keep their own panel. */
+  function panel() { return sgb && !m2 ? PANELS.tv : model === 'cgb' ? PANELS.cgb : (mono === 'pocket' || mono === 'teal') ? PANELS.pocket : PANELS.dmg; }
+  const ghostOn = () => response === 'real' && !!machine && panel().follow < 1;
+  /* one emulated frame onto the panel (runFrame); again = the same frame shown at once, nothing kept from before */
+  function toPanel(again) {
+    if (!ghostOn()) return;
+    if (again) screen.reset();
+    screen.set(panel().follow);
+    if (m2) { if (wide) screen.push(wide, wide.length); return; }
+    if (wide) return;
+    const n = SCREEN_W * SCREEN_H, src = machine.frame;
+    if (!flat) flat = new Uint32Array(n);
+    if (machine.frameFormat === 'rgb555') { const t = correct ? lutCorrected : lutAbgr; for (let i = 0; i < n; i++) flat[i] = t[src[i] & 0x7FFF]; }
+    else for (let i = 0; i < n; i++) flat[i] = lut[src[i] & 3];
+    screen.push(flat, n);
+  }
   const SGB_TAG = 0x31424753, LINK_TAG = 0x314B4E4C;     // 'SGB1', 'LNK1' trailers after the state
 
   const core = {
@@ -457,6 +517,7 @@ export async function create(env) {
       req = r;
       game = String(r.game.name || '');
       build(r);
+      toPanel(true);
       return {
         fps: FRAME_HZ,
         video: videoInfo(),
@@ -467,7 +528,7 @@ export async function create(env) {
         extensions: extensionsOf(),
         model,
         note: note(),
-        usedFirmware: machine.usedBios ? (model === 'cgb' && skin === CGB_SKIN && cgbInfo ? 'stub' : model) : null,
+        usedFirmware: machine.usedBios ? (onStub ? 'stub' : model) : null,
       };
     },
     reset() {
@@ -478,6 +539,7 @@ export async function create(env) {
       const keepFlash = flash ? new Uint8Array(flashView()) : null;
       const keep2 = m2 && m2.hasBattery && m2.cram ? new Uint8Array(m2.cram) : null;   // player 2's save too
       build(req);
+      toPanel(true);
       if (keep2 && m2 && m2.cram && m2.cram.length === keep2.length) m2.cram.set(keep2);
       if (keep && machine.cram && machine.cram.length === keep.length) machine.cram.set(keep);
       if (keepRtc && machine.rtc && machine.rtc.length === keepRtc.length) machine.rtc.set(keepRtc);
@@ -498,13 +560,20 @@ export async function create(env) {
       if (cheat) cheat.frame();
       if (sgb) sgbFrame();
       if (caps & 0x10) { const r = X.gb_rumble_take(machine.ctx) | 0; rumbleLevel = r > 0 ? r : 0; }
+      toPanel(false);
       tonePoll();
       if (machine.locked) { locked = true; env.emit('error', { message: `The game stopped: the core hit an illegal instruction (PC ${machine.pc.toString(16)}).` }); }
     },
     video() {
       const v = videoInfo();
       if (sgb && fanartOn() && small) return { format: 'rgba8888', width: SCREEN_W, height: SCREEN_H, stride: SCREEN_W, data: small, fill: true, backdrop: fanart };
-      if (wide) return { format: 'rgba8888', width: v.width, height: v.height, stride: v.width, data: wide, fill: true, backdrop: '' };
+      /* Screen response: the panel's picture, made from the frame, which stays the core's as ever. */
+      const shown = ghostOn() && screen.picture;
+      if (wide) return { format: 'rgba8888', width: v.width, height: v.height, stride: v.width, data: m2 && shown && shown.length === wide.length ? shown : wide, fill: true, backdrop: '' };
+      if (shown && shown.length === SCREEN_W * SCREEN_H) return { format: 'rgba8888', width: SCREEN_W, height: SCREEN_H, stride: SCREEN_W, data: shown, palette: undefined };
+      /* Colour correction: the same frame, read through another table (index16 is the presenter's own format
+         for a frame of palette indexes). The frame itself, which every test reads, is the core's as ever. */
+      if (correct && v.format === 'bgr555') return { format: 'index16', width: SCREEN_W, height: SCREEN_H, stride: SCREEN_W, data: machine.frame, palette: lutCorrected };
       return { format: v.format, width: SCREEN_W, height: SCREEN_H, stride: SCREEN_W, data: machine.frame, palette: v.palette };
     },
     audio() {
@@ -584,6 +653,7 @@ export async function create(env) {
       machine.buttons = 0; e.gb_set_buttons(machine.ctx, 0);   // the host re-sends what is held now
       machine.frames = h.frames;
       locked = !!machine.locked;
+      toPanel(true);                      // a saved moment: the panel starts from its picture
       return h;
     },
     /* The old page's Continue history: raw contexts of contextBytes each, with its own
@@ -653,17 +723,34 @@ export async function create(env) {
         if (id === 'clock') clockCleanAt = Date.now();
       },
     },
-    /* Options: the four panel skins change only the picture; the Color skin and its
-       palette change which machine runs, so they ask the host to load again. */
+    /* Options: Mono Palette and Colour correction change only the picture; the Machine and
+       the Color palette change which machine runs, so they ask the host to load again. */
     setOption(id, v) {
       if (id === 'skin') {
-        const was = skin, wasCgb = (was === CGB_SKIN), nowCgb = (v === CGB_SKIN);
-        skin = String(v);
-        if (req) req.options.skin = skin;
-        if (wasCgb !== nowCgb && cgbInfo) return 'reload';
-        lut = paletteLUT(PALETTES[skin] ? skin : DEFAULT_PALETTE);
+        mono = MONO_PALETTES[v] ? String(v) : DEFAULT_PALETTE;
+        if (req) req.options.skin = mono;
+        lut = monoLUT(mono);
+        if (m2) composeLink();
+        toPanel(true);
         env.emit('options');
         return 'live';
+      }
+      if (id === 'colourCorrection') {
+        correct = v === 'on';
+        if (req) req.options.colourCorrection = correct ? 'on' : 'off';
+        if (m2) composeLink();
+        toPanel(true);
+        return 'live';
+      }
+      if (id === 'screenResponse') {
+        response = v === 'off' ? 'off' : 'real';
+        if (req) req.options.screenResponse = response;
+        toPanel(true);
+        return 'live';
+      }
+      if (id === 'machine' || id === 'machineDual') {
+        if (req) req.options[id] = String(v);
+        return (id === 'machine' ? cartFlag === 'dmg' : cartFlag === 'cgb-enhanced') ? 'reload' : 'live';
       }
       if (id === 'sgbFrame') {
         frameChoice = String(v); if (req) req.options.sgbFrame = frameChoice;
@@ -676,7 +763,7 @@ export async function create(env) {
       if (id === 'cgbCombo') {
         combo = String(v);
         if (req) req.options.cgbCombo = combo;
-        return (skin === CGB_SKIN && cgbInfo && !cgbInfo.assigned) ? 'reload' : 'live';
+        return (onStub && cgbInfo && !cgbInfo.assigned) ? 'reload' : 'live';
       }
       return 'unknown';
     },
@@ -716,9 +803,9 @@ export async function create(env) {
         },
         /* bits 0-7 status, 8 plugged in, 9 attached, 10 busy, 11 image data held, 16-31 packets */
         info() { return machine ? (X.gb_printer_info(machine.ctx) >>> 0) : 0; },
-        /* The skin's four colours, lightest first, as the screen draws shades 0-3 (the same object
-           while the skin stays); null on the Game Boy Color skin, which has no four-shade palette. */
-        palette() { return PALETTES[skin] ? PALETTES[skin].rgb : null; },
+        /* The Mono Palette's four colours, lightest first, as the screen draws shades 0-3 (the same object
+           while the choice stays); null for an original cartridge on the Color, which has no four-shade palette. */
+        palette() { return onStub ? null : MONO_PALETTES[mono].rgb; },
         record: PRN_REC,
       } : undefined,
       tilt: {

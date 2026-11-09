@@ -190,7 +190,7 @@ function gbHardwareTabHTML(d) {
       ['DMG0', '256 B', 'Yes', 'Very early Japanese units. Blinks the screen on failure instead of hanging.'],
       ['DMG', '256 B', 'Yes', 'The familiar scroll-down logo and "ba-ding" chime, then the header checksum'],
       ['MGB', '256 B', 'Yes', 'One byte different, so a game can tell it is on a Pocket'],
-      ['SGB, SGB2', '256 B', 'No', 'Passes the header to the SNES side, which shows its own start-up screen'],
+      ['SGB, SGB2', '256 B', 'No', 'Passes the header to the SNES side, which shows its own start-up screen and then checks the logo and the header checksum itself, locking up if either is wrong'],
       ['CGB0, CGB', '2 KB', 'Yes', 'The Color logo animation; also chooses a colour palette for older games'],
       ['AGB0, AGB', '2 KB', 'Yes', 'The Game Boy Advance\'s copy, one instruction different so games can tell it apart'],
     ],
@@ -252,12 +252,13 @@ function gbHardwareTabHTML(d) {
         <p class="hw-readable">The crystal runs at <b>4,194,304 Hz</b>, exactly 2<sup>22</sup>. Instructions take a whole number of <b>machine cycles</b> of four clocks each, so the CPU really does about 1.05 million basic steps a second. The divider register DIV ticks at 16,384 Hz, and the programmable timer TIMA can count at 4,096, 16,384, 65,536 or 262,144 Hz.</p>
         <p class="hw-readable">There are five interrupt sources, each with a fixed address to jump to:</p>
         ${irqs}
-        <p class="hw-readable">HALT stops the CPU until an interrupt arrives and is how games save batteries between frames. STOP goes further, stopping the clock almost entirely until a button is pressed; on a Color it is also the instruction that changes speed.</p>
+        <p class="hw-readable">HALT stops the CPU until an interrupt arrives and is how games save batteries between frames. Documents from the 1990s, repeated in Pan Docs, claim that HALT extends battery life by anywhere from 5% to 50%, and that switching the sound off (writing $00 to NR52) saves about 16%. These are old claims from one source, not new measurements. STOP goes further, stopping the clock almost entirely until a button is pressed; on a Color it is also the instruction that changes speed.</p>
       </section>
 
       <section class="sect">${hwSectH('Memory map')}
         <p class="hw-readable">The CPU sees 64 KB. Half of it is the cartridge's program memory, split into a fixed 16 KB and a switchable 16 KB window, which is why almost every game larger than 32 KB carries a memory bank controller (MBC) to choose what appears in that window.</p>
         ${memMap}
+        <p class="hw-readable"><b>Memory at power-on.</b> Work RAM holds no set values when the power comes on: its contents are close to random, and the pattern differs from model to model. Cartridge RAM is the same the first time it is used. A game has to clear what it relies on. The emulator on this site starts work RAM, and a cartridge's RAM before its first save, cleared to zero.</p>
       </section>
 
       <section class="sect">${hwSectH('The picture: tiles, maps, window and sprites')}
@@ -273,6 +274,7 @@ function gbHardwareTabHTML(d) {
         ${ppuModes}
         <p class="hw-readable">The drawing mode is not a fixed length. It starts at 172 dots and grows with fine horizontal scroll, the window starting part-way across, and each sprite on the line, up to about 289; the HBlank after it shrinks to match. That is why code that changes registers part-way down the screen has to be written with care, and why accurate timing of the PPU is the hardest part of reproducing this machine.</p>
         <p class="hw-readable">The LCD must only be switched off during vertical blanking. Nintendo's documentation warned that switching it off mid-frame could damage the screen, and games are written to wait for line 144 before doing so.</p>
+        <p class="hw-readable"><b>Switching the LCD off blanks the original&rsquo;s screen.</b> On the original Game Boy and the Pocket the screen goes blank while the LCD is off, a little whiter than the lightest shade, and it stays blank for the first frame after the LCD comes back on, so even a brief switch-off shows one blank frame. The Super Game Boy keeps the last picture on the television. Pan Docs describes it, and the author of the <code>firstwhite</code> test checked it on hardware.</p>
       </section>
 
       <section class="sect">${hwSectH('Sound')}
@@ -282,8 +284,8 @@ function gbHardwareTabHTML(d) {
       </section>
 
       <section class="sect">${hwSectH('Buttons, link cable and timers')}
-        <p class="hw-readable">The eight buttons are read through a single register, $FF00, as two groups of four: the directions in one, A, B, Select and Start in the other. The game picks a group by writing a bit, then reads four bits back where 0 means pressed. A button press can raise an interrupt and wake the CPU from STOP.</p>
-        <p class="hw-readable">The <b>link port</b> is a simple synchronous serial port. One Game Boy supplies the clock and the other follows it, and each transfer swaps one byte in each direction at the same time. The internal clock on the original is <b>8,192 Hz</b>, roughly 1 KB a second; an external clock can be much faster. This is the port the Printer, the 4-player adapter and the Japanese mobile-phone adapter plug into.</p>
+        <p class="hw-readable">The eight buttons are read through a single register, $FF00, as two groups of four: the directions in one, A, B, Select and Start in the other. The game picks a group by writing a bit, then reads four bits back where 0 means pressed. The lines take a moment to settle after the group is chosen, so games read the register several times in a row and use only the last read. A button press can raise an interrupt and wake the CPU from STOP. The contacts bounce, so one press, or one release, can raise the joypad interrupt more than once.</p>
+        <p class="hw-readable">The <b>link port</b> is a simple synchronous serial port. One Game Boy supplies the clock and the other follows it, and each transfer swaps one byte in each direction at the same time. The internal clock on the original is <b>8,192 Hz</b>, roughly 1 KB a second; an external clock, supplied by the other machine, can run up to about 500 kHz. A transfer on the internal clock with nothing attached receives <b>$FF</b>, because the input line reads 1 when no cable drives it. This is the port the Printer, the 4-player adapter and the Japanese mobile-phone adapter plug into.</p>
       </section>
 
       <section class="sect">${hwSectH('Cartridges and memory bank controllers')}
@@ -336,6 +338,11 @@ function gbHardwareTabHTML(d) {
         <p class="hw-readable"><b>The Color at double speed: memory follows the status register.</b> In double-speed mode the Color's video memory is closed to the processor exactly while the status register reads "drawing", and sprite memory while it reads "sprite search" or "drawing". At normal speed the original Game Boy closes video memory a few dots before drawing starts; at double speed the Color does not. The AGE tests <code>vram-read</code>, <code>oam-read</code> and <code>oam-write</code> measure both edges on real hardware.</p>
         <p class="hw-readable"><b>The first line after switching the screen on, at double speed (FITTED).</b> On that line the Color reports the drawing mode three dots after drawing really starts, and the end of drawing one dot later than on other lines; video and sprite memory follow the same report. This is <b>FITTED</b>: the dot counts come from the AGE tables, and why that line differs is not known.</p>
         <p class="hw-readable"><b>Line 153 at double speed.</b> On line 153 the line counter reads 153 from the same moment every other line changes its number, then 0 a few dots later. The AGE test <code>ly</code> measures it on the Color.</p>
+        <p class="hw-readable"><b>A write to a drawing register lands inside its own machine cycle.</b> On the original and on the Color alike, a write to the screen control, scroll, window position or palette registers during drawing takes effect inside the processor&rsquo;s own write cycle, not before it. The AGE tests photograph mid-line writes on both machines, and <i>cgb-acid-hell</i>, one frame built from such writes, depends on exactly where each lands.</p>
+        <p class="hw-readable"><b>The background map column follows the whole scroll.</b> The background fetcher finds its tile from the full horizontal scroll plus the screen position the tile will land on, divided by eight once, not from the scroll&rsquo;s coarse part plus a count of tiles. So a mid-line change to the scroll&rsquo;s lowest three bits moves the column too. The original adds one more pixel to that sum than the Color does; the AGE photographs of both machines show it.</p>
+        <p class="hw-readable"><b>The window on the Color.</b> The Color follows the original&rsquo;s window timing: a window that starts during the fine-scroll discard still pays for it, a window at WX 1 to 7 reports the end of drawing a dot later, and a window that starts in the line&rsquo;s last pixels still lengthens drawing, on the Color up to one pixel further (WX 166). The AGE test <code>stat-mode-window</code> measures it in both modes and at both speeds.</p>
+        <p class="hw-readable"><b>The speed switch pauses for 32,768 machine cycles.</b> When the Color switches speed it pauses the processor for 32,768 machine cycles in either direction and resets the divider once, at the start; the pause wraps the 16-bit divider exactly, so it reads zero afterwards. The speed itself changes one machine cycle into the switch, counted in machine cycles rather than instructions. Each pair of switches moves the picture against the processor by one constant, 149 dots, and each switch into double speed toggles a one-cycle delay of the sound unit&rsquo;s frame sequencer. The AGE speed-switch tests measure each of these on Color revisions B and C.</p>
+        <p class="hw-readable"><b>Reading LY just before it changes.</b> On the Color, a read of the line register in the last moment before it changes returns the old and the new line number ANDed together. The AGE test <code>lcd-align-ly</code> records it on hardware. An ordinary program never reads at that moment; only the shift a switch back from double speed makes can bring a read there.</p>
         <p class="hw-readable"><b>Super Game Boy speed.</b> The first Super Game Boy's 2.4% speed-up on NTSC means games, and their music, run slightly fast on it.</p>
       </section>
 

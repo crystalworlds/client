@@ -858,6 +858,7 @@
       { ids: ['game.help'], label: 'Help over the game: its controls, while the game waits', short: 'game help' },
       { ids: ['game.rewind'], pad: ['Pad:LB', 'Pad:Start+Left'], label: 'Rewind, held, where the game has it' },
       { pad: ['Pad:RB', 'Pad:Start+Right'], label: 'Speed up, held' },
+      { kb: ['Ctrl+B'], label: 'Swap a controller’s A with B and X with Y, in the game only: also the Swap A/B button on the Control Bar' },
       { ids: ['game.pad.buttons'], label: 'The console’s own buttons: the letters printed on the controller are the console’s, and so are Start and Select' },
       { ids: ['game.pad.bar'], label: 'The Control Bar along the top of the window (Pause, Reset, Saves, Keys, Settings): a trigger the console does not use moves to it, the triggers step along it, A presses, B goes back to the game', short: 'Control Bar in a game' },
       { ids: ['game.pad.players'], label: 'More controllers are players 2 to 4 where the game has them' },
@@ -1138,6 +1139,8 @@
     if (rewOld || lb) rows.push(helpRow('Rewind, held', (rewOld ? '<kbd>Ctrl+←</kbd>' + SEP + '<kbd class="gk-padkey">Pad Start + ←</kbd>' : '') + (rewOld && lb ? SEP : '') + (lb ? padKbd('LB') : ''), ' data-win="rewind"'));
     // The play window's controller shortcut (2026-10-17): Start + Right runs at 2x while held.
     rows.push(helpRow('Speed up, held', '<kbd class="gk-padkey">Pad Start + →</kbd>' + (rb ? SEP + padKbd('RB') : ''), ' data-win="speed"'));
+    // The Control Bar's Swap A/B (play/host/host.mjs), where A and B, or X and Y, do different things.
+    if (hosted && m0 && (m0.A !== m0.B || m0.X !== m0.Y)) rows.push(helpRow('Swap a controller’s A with B and X with Y, in the game only', '<kbd>Ctrl+B</kbd>' + SEP + '<span class="gq-sub">the window’s Swap A/B button</span>', ' data-win="swap"'));
     if (has.saves) rows.push(helpRow('Save and load states', '<span class="gq-sub">Back, then Saved states</span>', ' data-win="saves"'));
     if (has.controls) rows.push(helpRow('The Controls diagram', '<span class="gq-sub">Back, then Controls</span>', ' data-win="controls"'));
     if (sys === 'gnw' || sys === 'tj') rows.push(helpRow('Mute', codeKbd('Minus'), ' data-win="mute"'));
@@ -1162,6 +1165,9 @@
     const sys = systemOf(ov), dev = openDev();
     const sysLabel = dev ? gameSystemLabel(dev) : ((PP() && PP().MAPS[sys] && PP().MAPS[sys].label) || 'Game');
     const rows = controlRows(sys, dev);
+    /* Swap A/B on (the Control Bar, play/host/host.mjs): the list says what each button does now. */
+    let swapOn = false; try { swapOn = localStorage.getItem('cw.pad.swap.v1') === '1'; } catch (_) {}
+    if (swapOn) { const SW = { A: 'B', B: 'A', X: 'Y', Y: 'X' }; for (const r of rows) r.pads = r.pads.map(x => [SW[x[0]] || x[0], x[1]]); }
     const ctl = rows.map(r => helpRow(r.label,
       r.codes.map(codeKbd).join(SEP) + (r.codes.length && r.pads.length ? SEP : '') + r.pads.map(x => padKbd(x[0], x[1])).join(SEP),
       ` data-fn="${esc(r.fn || '')}" data-keys="${esc(r.codes.join(' '))}" data-pads="${esc(r.pads.map(x => (x[1] ? x[1] + ':' : '') + x[0]).join(' '))}"`)).join('');

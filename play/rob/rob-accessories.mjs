@@ -205,6 +205,22 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
 
   const box = clone('ACC_Box'); box.position.set(BOX_AT.x, 0, BOX_AT.z); box.visible = false; group.add(box);
   const boxAcc = tmplAcc('ACC_Box');
+  /* THE BOX LEAVES WHEN THE SET IS READY (10 Nov 2026: the box goes away once the set is correctly set
+     up and the game asks to play again, so the view zooms back on R.O.B. directly). boxAway(true)
+     lifts the box a little, shrinks it and fades it out over BOX_FADE seconds (in update), then hides it, so the picture
+     can be framed on R.O.B. and his set; done() runs when it has gone. boxBack() puts it back at once: reset (Play again,
+     Back in box) and every new set. While it is away nothing can be put in it. */
+  const BOX_FADE = 0.6;
+  let boxK = 0, boxGoal = 0, boxDone = null;   // 0 here, 1 gone
+  const boxMats = []; box.traverse(o => { if (o.isMesh) for (const m of [].concat(o.material)) boxMats.push({ m, t: m.transparent, o: m.opacity }); });
+  function boxPaint() {
+    const e = boxK * boxK * (3 - 2 * boxK);
+    box.position.y = 0.03 * e; box.scale.setScalar(1 - 0.15 * e);
+    for (const r of boxMats) { const tr = r.t || boxK > 0; if (r.m.transparent !== tr) { r.m.transparent = tr; r.m.needsUpdate = true; } r.m.opacity = r.o * (1 - e); }
+    box.visible = setName !== 'none' && boxK < 1;
+  }
+  function boxAway(away, done) { boxGoal = away ? 1 : 0; boxDone = done || null; if (boxK === boxGoal && boxDone) { const f = boxDone; boxDone = null; try { f(); } catch (_) {} } }
+  function boxBack() { boxK = 0; boxGoal = 0; boxDone = null; boxPaint(); }
 
   function clone(name) {
     const t = templates[name];
@@ -231,7 +247,7 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
     for (const p of parts) group.remove(p.obj);
     parts.length = 0;
     setName = name;
-    box.visible = name !== 'none';
+    boxBack();   // shows it for a set, hides it for none
     if (name === 'gyro') {
       makePart('gyro1', 'gyro', 'ACC_Gyro'); makePart('gyro2', 'gyro', 'ACC_Gyro');
       makePart('spinner', 'spinner', 'ACC_Spinner', { on: false }); makePart('dcell', 'dcell', 'ACC_DCell');
@@ -350,7 +366,7 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
       out.push({ id: p.id + '.peg', type: 'peg', owner: p, pos: top, accepts: q => q.kind === 'block' && q !== p, occupant: occupantOf(p.id + '.peg') });
     }
     TABLE_SPOTS.forEach(([x, z], i) => out.push({ id: 'table' + i, type: 'table', pos: V3(x, 0, z), accepts: q => !q.acc.slots || true, occupant: parts.find(q => q.support.type === 'table' && q.support.spot === i) || null }));
-    out.push({ id: 'box', type: 'box', pos: V3(BOX_AT.x, boxAcc.floor * MM, BOX_AT.z), accepts: q => q.support.type !== 'box' });
+    out.push({ id: 'box', type: 'box', pos: V3(BOX_AT.x, boxAcc.floor * MM, BOX_AT.z), accepts: q => boxGoal === 0 && q.support.type !== 'box' });
     const hb = new THREE.Box3(); for (const n of ['ROB_HandL_gyro', 'ROB_HandR_gyro']) { const o = node[n]; if (o) { const was = o.visible; o.visible = true; hb.expandByObject(o); o.visible = was; } }
     out.push({ id: 'arms', type: 'arms', pos: hb.getCenter(V3()), accepts: q => q.kind === 'hands' && q.support.type !== 'arms' });
     return out;
@@ -424,7 +440,7 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
     // the plinth top (a hexagon: use the wall radius at the part's angle)
     const ang = Math.atan2(-c.x, -c.z); const rr = Math.hypot(c.x, c.z);
     const wall = D.slot_r[3] * MM; if (rr < wall - r * 0.5) consider(D.plinth_top * MM, null, false, 'plinth');
-    if (Math.abs(c.x - BOX_AT.x) < boxAcc.w * MM / 2 && Math.abs(c.z - BOX_AT.z) < boxAcc.d * MM / 2) consider(boxAcc.floor * MM, null, true, 'box');
+    if (boxGoal === 0 && Math.abs(c.x - BOX_AT.x) < boxAcc.w * MM / 2 && Math.abs(c.z - BOX_AT.z) < boxAcc.d * MM / 2) consider(boxAcc.floor * MM, null, true, 'box');
     for (const t of targets()) {
       if (t.type === 'slot' || t.type === 'box' || t.type === 'table' || t.type === 'arms' || t.type === 'holder' || t.type === 'bay') continue;
       const d = Math.hypot(t.pos.x - c.x, t.pos.z - c.z);
@@ -509,6 +525,10 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
   let lastPose = null;
   function update(now, dt) {
     dt = Math.min(0.05, dt || 0.016);
+    if (boxK !== boxGoal) {   // the box leaving or coming back (boxAway)
+      boxK = boxGoal > boxK ? Math.min(1, boxK + dt / BOX_FADE) : Math.max(0, boxK - dt / BOX_FADE); boxPaint();
+      if (boxK === boxGoal && boxDone) { const f = boxDone; boxDone = null; try { f(); } catch (_) {} }
+    }
     inUpdate = true; tcache = null;
     try { updateInner(now, dt); } finally { inUpdate = false; tcache = null; }
   }
@@ -712,7 +732,7 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
     } finally { loading = false; }
     return true;
   }
-  function reset() { for (const p of parts) { if (p.support.type === 'arms') setHands('bare'); p.support = { type: 'box' }; p.held = false; p.spin = 0; p.fallen = false; p.yaw = 0; p.obj.visible = true; if (p.kind === 'gyrotray' && p.capsSwapped) turn(p); p.upsideDown = false; p.on = false; p.obj.rotation.set(0, 0, 0); } if (heldPart) { group.attach(heldPart.obj); heldPart = null; armsMin = 0; } hideGhost(); hideSnap(); cursor = null; layoutBox(); notify(); log('everything back in the box'); }
+  function reset() { boxBack(); for (const p of parts) { if (p.support.type === 'arms') setHands('bare'); p.support = { type: 'box' }; p.held = false; p.spin = 0; p.fallen = false; p.yaw = 0; p.obj.visible = true; if (p.kind === 'gyrotray' && p.capsSwapped) turn(p); p.upsideDown = false; p.on = false; p.obj.rotation.set(0, 0, 0); } if (heldPart) { group.attach(heldPart.obj); heldPart = null; armsMin = 0; } hideGhost(); hideSnap(); cursor = null; layoutBox(); notify(); log('everything back in the box'); }
   function standGyros() { for (const g of parts) if (g.kind === 'gyro' && (g.fallen || g.support.type === 'loose' || g.support.type === 'air')) { const cup = targets().find(t => t.type === 'cup' && !t.occupant); if (cup) { placeOn(g, cup); } else { const spot = targets().find(t => t.type === 'table' && !t.occupant); g.spin = 0; placeLoose(g, V3(spot.pos.x, 0, spot.pos.z), 'stand', { type: 'table', spot: TABLE_SPOTS.findIndex(([x, z]) => x === spot.pos.x) }); g.fallen = false; } } notify(); }
   function setup(on) { setupOn = !!on; if (!setupOn) { if (drag) { dropAt(drag.p, drag.p.obj.position); drag = null; controls.enabled = true; } if (cursor) { if (cursor.phase === 'targets') putBack(cursor.p); cursor = null; cursorShow(); } if (hover) { highlight(hover, false); hover = null; } } notify(); }
   const label = p => p.kind === 'block' ? `the ${p.colour} block` : p.kind === 'gyro' ? `gyro ${p.id.slice(-1)}` : p.kind === 'blocktray' ? `block tray ${p.id.slice(-1)}` : ({ spinner: 'the spinner', dcell: 'the D cell', gyrotray: 'the gyro tray', pad2: 'Controller 2', holder: 'the gyro holder', hands: `the ${p.which === 'gyro' ? 'Gyro' : 'Block'} Hands` })[p.kind] || p.id;
@@ -795,7 +815,7 @@ export async function createAccessories({ THREE, GLTFLoader, scene, camera, cont
   function setSet(name) { if (!['none', 'gyro', 'block'].includes(name)) return; buildSet(name); if (!load()) layoutBox(); if (heldPart) { heldPart = null; armsMin = 0; } notify(); }
 
   return {
-    setSet, get set() { return setName; }, goals, setup, get inSetup() { return setupOn; }, key, update, clampArms, reset, standGyros, place, state, targets: () => targets().map(t => ({ id: t.id, type: t.type, pos: t.pos.toArray().map(v => +(v * 1000).toFixed(1)), occupied: !!t.occupant })),
+    setSet, get set() { return setName; }, boxAway, get boxGone() { return boxK; }, goals, setup, get inSetup() { return setupOn; }, key, update, clampArms, reset, standGyros, place, state, targets: () => targets().map(t => ({ id: t.id, type: t.type, pos: t.pos.toArray().map(v => +(v * 1000).toFixed(1)), occupied: !!t.occupant })),
     legalTargets: id => { const p = parts.find(q => q.id === id); return p ? legalTargets(p).map(t => t.id) : []; },
     turn: id => { const p = parts.find(q => q.id === id); if (p) turn(p); }, spin: (id, v) => { const p = parts.find(q => q.id === id); if (p) p.spin = v; },
     onChange: f => listeners.push(f), applyUrl, ghosts: on => { ghostsOn = !!on; }, pad2: () => { const lv = levers(); return (lv.A ? 1 : 0) | (lv.B ? 2 : 0); }, group, EX,

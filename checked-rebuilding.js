@@ -28,9 +28,9 @@
   const CHECKED = [
     { sys: 'gnw', name: 'Game &amp; Watch', date: '1 Nov 2026', at: 'f07b89cb', time: '15 min', built: 'Yes', pass: true, score: 'All 6 test sections pass on all 61 games' },
     { sys: 'pokemon-mini', name: 'Pokémon mini', date: '1 Nov 2026', at: '69b5e9c4', time: '25 min', built: 'Yes', pass: true, score: '54 of 54 games identical in picture and sound' },
-    { sys: 'gb', name: 'Game Boy', date: '2 Nov 2026', at: '5bd7320427e1', time: '2 h 4 min', built: 'Yes', pass: true, score: 'Identical to ours: 170 of 170 tests, every AGE and mealybug test' },
-    { sys: 'gbc', name: 'Game Boy Color', date: '2 Nov 2026', at: '5bd7320427e1', time: '3 h 36 min', built: 'Yes', pass: true, score: 'Identical to ours: 94 of 94 Color tests (73 sound), 167 of 167 Game Boy tests, every AGE and mealybug test' },
-    { sys: 'nes', name: 'NES', date: '2 Nov 2026', at: '8bf5958fe848', time: '2 h 35 min', built: 'Yes', pass: true, score: 'Identical to ours on all 9 test sections: 200 of 200 cartridge types, 208 of 208 library games' },
+    { sys: 'gb', name: 'Game Boy', date: '10 Nov 2026', at: 'ca5a2a32f97e', time: '2 h 6 min', built: 'Yes', pass: true, score: 'Identical to ours: 170 of 170 tests, every AGE and mealybug test' },
+    { sys: 'gbc', name: 'Game Boy Color', date: '10 Nov 2026', at: 'ca5a2a32f97e', time: '3 h 47 min', built: 'Yes', pass: true, score: 'Identical to ours: 94 of 94 Color tests (73 sound), 167 of 167 Game Boy tests, every AGE and mealybug test' },
+    { sys: 'nes', name: 'NES', date: '9 Nov 2026', at: '11bdfbfa1e99', time: '3 h 53 min', built: 'Yes', pass: true, score: 'Identical to ours on all 9 test sections: 202 of 202 cartridge types, 208 of 208 library games' },
     { sys: 'atari2600', name: 'Atari 2600', date: '2 Nov 2026', at: '2624d06e085f', time: '68 min', built: 'Yes', pass: true, score: 'Identical to ours: 167 of 167 runs in picture, every processor step, sound and memory' },
     { sys: 'atari7800', name: 'Atari 7800', date: '2 Nov 2026', at: '9fcf64924bbd', time: '38 min', built: 'Yes', pass: true, score: '332 of 332 runs identical in picture, sound and every processor step' },
     { sys: 'atari5200', name: 'Atari 5200', date: '2 Nov 2026', at: '7fc3ff99d1fa', time: '39 min', built: 'Yes', pass: true, score: 'Identical to ours: 68 of 68 runs in picture, sound, every processor step and memory' },

@@ -394,7 +394,7 @@ registerProcessor('twin-sink', TwinSink);
     // worker posts {ready} -- i.e. once the clock is built (see onWorkerMsg).
     if (tap) { tap.classList.add('starting'); tap.disabled = true; }   // plain black cover (contents hidden via CSS)
     var fw = window.TWIN_FW || 'retail';               // 'retail' (default) | 'custom'
-    worker = new Worker('../twin-worker.js?v=2.0.0&unit=' + (window.TWIN_UNIT || 'mario') + '&fw=' + fw);
+    worker = new Worker('../twin-worker.js?v=2.1.0&unit=' + (window.TWIN_UNIT || 'mario') + '&fw=' + fw);
     worker.onmessage = onWorkerMsg;
     var off = canvas.transferControlToOffscreen();
     worker.postMessage({ canvas: off }, [off]);
@@ -447,7 +447,8 @@ registerProcessor('twin-sink', TwinSink);
   /* Custom firmware is another machine: its states never share slots with the
      retail firmware's (2026-10-11, when custom-firmware saves began to work). */
   var SAVE_NS = UNIT + (window.TWIN_FW === 'custom' ? ':custom' : '');
-  var SLOTS = 4;
+  var SLOTS = 20;   // the one save table, as in every play window (play/shared/save-table.js, 8 Nov 2026)
+  var _tableReady = new Promise(function(res){ if (window.CwSaveTable) return res(); try { var sc = document.createElement('script'); var cs = document.currentScript; sc.src = (cs ? new URL('shared/save-table.js?v=2.1.0', cs.src) : new URL('../shared/save-table.js?v=2.1.0', location.href)).href; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); } catch (e) { res(); } });
   var _PAUSE_ICO = '<svg viewBox="0 0 24 24" style="fill:none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></svg>';
   var _PLAY_ICO  = '<svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>';
 
@@ -475,7 +476,7 @@ registerProcessor('twin-sink', TwinSink);
       + 'font-size:15px;letter-spacing:.18em;padding:10px 20px;box-shadow:0 8px 26px rgba(0,0,0,.5)}'
     + '#twin-saves{position:fixed;inset:0;display:none;flex-direction:column;z-index:50;background:linear-gradient(180deg,#11161f,#0a0e14);'
       + 'padding:52px 14px 14px;box-sizing:border-box;overflow:auto}'
-    + '#twin-saves .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:start;max-width:760px;margin:0 auto;width:100%}'
+    + '#twin-saves .grid{display:flex;flex-direction:column;align-items:center;gap:10px;margin:0 auto;width:100%;color:#e6e8ec;font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
     + '@media (max-width:560px){#twin-saves .grid{grid-template-columns:repeat(2,1fr)}}'
     + '.twin-slot{position:relative;border:1px solid #2b3342;border-radius:10px;background:#141821;cursor:pointer;'
       + 'display:flex;flex-direction:column;overflow:hidden;align-self:start;transition:border-color .14s,box-shadow .14s}'
@@ -682,7 +683,10 @@ registerProcessor('twin-sink', TwinSink);
   window.addEventListener('resize', function(){ if (keysOpen && window.KeysDiagram) window.KeysDiagram.fit(_keys); });
 
   // Toolbar Back / Escape — return from whichever overlay is open.
-  _byId('twin-back').addEventListener('click', function(){ if (savesOpen) _setSavesOpen(false); else if (keysOpen) _setKeysOpen(false); });
+  _byId('twin-back').addEventListener('click', function(){
+    // A save's question (Replace? Delete?) is answered Cancel first; Back again closes the list (8 Nov 2026).
+    var ak = savesOpen && _saves.querySelector('.cb-sv-ask'); if (ak && ak._cancel) { ak._cancel(); return; }
+    if (savesOpen) _setSavesOpen(false); else if (keysOpen) _setKeysOpen(false); });
   window.addEventListener('keydown', function(e){ if (e.code === 'Escape'){ if (savesOpen){ e.preventDefault(); _setSavesOpen(false); } else if (keysOpen){ e.preventDefault(); _setKeysOpen(false); } } });
 
   // ---- IndexedDB: a save is ~2.5 MB, over localStorage quota --------------
@@ -710,56 +714,62 @@ registerProcessor('twin-sink', TwinSink);
     g.putImageData(new ImageData(rgba, thumb.w, thumb.h), 0, 0);
     return c;
   }
-  var _expanded = -1;
-  function _renderSaves(){
-    idbAll().then(function(map){
-      var grid = _byId('twin-saves-grid'); grid.innerHTML = '';
-      for (var s=0; s<SLOTS; s++){
-        (function(slot){
-          var rec = map[slot];
-          var card = document.createElement('div');
-          card.className = 'twin-slot' + (rec ? '' : ' empty') + (_expanded===slot && rec ? ' expanded' : '');
-          if (rec){
-            var thumbWrap = document.createElement('div'); thumbWrap.className = 'thumb';
-            try { if (rec.thumb) thumbWrap.appendChild(_thumbCanvas(rec.thumb)); } catch(e){}
-            var when = rec.time ? new Date(rec.time) : null;
-            var wtxt = when ? (('0'+when.getHours()).slice(-2)+':'+('0'+when.getMinutes()).slice(-2)+' '+(when.getMonth()+1)+'/'+when.getDate()) : '';
-            var meta = document.createElement('div'); meta.className = 'meta';
-            meta.innerHTML = '<span class="num">SLOT '+(slot+1)+'</span><span>'+wtxt+'</span>';
-            var detail = document.createElement('div'); detail.className = 'detail';
-            detail.innerHTML = '<div class="pad"><div class="acts"><button class="load">Load</button><button class="del">Delete</button></div></div>';
-            card.appendChild(thumbWrap); card.appendChild(meta); card.appendChild(detail);
-            card.addEventListener('click', function(ev){ if (ev.target.closest('.acts')) return; _expanded = (_expanded===slot ? -1 : slot); _renderSaves(); });
-            detail.querySelector('.load').addEventListener('click', function(){ _loadSlot(slot); });
-            detail.querySelector('.del').addEventListener('click', function(){ idbDel(slot).then(function(){ _expanded=-1; _twinToast('Deleted slot '+(slot+1)); _renderSaves(); }); });
-          } else {
-            var t2 = document.createElement('div'); t2.className = 'thumb'; t2.innerHTML = '<div class="plus">+</div>';
-            var m2 = document.createElement('div'); m2.className = 'meta';
-            m2.innerHTML = '<span class="num">SLOT '+(slot+1)+'</span><span>Save</span>';
-            card.appendChild(t2); card.appendChild(m2);
-            card.addEventListener('click', function(){ _saveSlot(slot); });
-          }
-          grid.appendChild(card);
-        })(s);
-      }
+  /* The saves as the one save table (8 Nov 2026): newest first, the picture first, Select a row, then
+     Load or Save; Save over a save and Delete ask first, in the row. The records stay as they were
+     (twin-saves, keyed unit:slot), so every save made before the table still shows and loads. */
+  var _sel = null, _seq = 0;
+  function _renderSaves(focusWhere){
+    var seq = ++_seq;
+    Promise.all([idbAll(), _tableReady]).then(function(got){
+      if (seq !== _seq || !window.CwSaveTable) return;
+      var map = got[0], rows = [];
+      Object.keys(map).forEach(function(k){
+        var rec = map[k], i = +k; if (!rec || !(i >= 0)) return;
+        var thumb = null; try { if (rec.thumb) thumb = _thumbCanvas(rec.thumb).toDataURL('image/png'); } catch (e) {}
+        rows.push({ i: i, ts: rec.time || 0, thumb: thumb, thumbWhy: thumb ? '' : 'no picture' });
+      });
+      var grid = _byId('twin-saves-grid');
+      var used = rows.length;
+      grid.innerHTML = '<div class="cb-sv-title" style="font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#9aa1ad">Saves</div>'
+        + '<div style="font-size:12px;color:#9aa1ad">' + used + ' of ' + SLOTS + ' saves</div><div class="cb-sv-host" style="display:contents"></div>'
+        + '<div class="cb-sv-hint">Select a save, then Load or Save.</div>';
+      window.CwSaveTable.render(grid.querySelector('.cb-sv-host'), {
+        max: SLOTS, shot: '320/240', pixelated: true, rows: rows, autos: [],
+        selected: _sel, focus: focusWhere || null, ownKeys: true, askDelete: true,
+        pressCodes: ['KeyX', 'KeyE'], backCodes: ['KeyZ', 'KeyQ'],
+        can: { note: false, transfer: false },
+        on: {
+          select: function(v){ _sel = v; },
+          load: function(i){ _loadSlot(i); },
+          save: function(i){
+            if (i == null) {
+              i = -1; for (var k = 0; k < SLOTS; k++) if (!map[k]) { i = k; break; }
+              if (i < 0) { _twinToast('All ' + SLOTS + ' saves are in use: select one to replace it'); return; }
+            }
+            _sel = i; _saveSlot(i);
+          },
+          del: function(i){ idbDel(i).then(function(){ _sel = 'new'; _twinToast('Save ' + (i + 1) + ' deleted'); _renderSaves('row'); }); }
+        }
+      });
+      if (!focusWhere && savesOpen) { var f = grid.querySelector('.cb-sv-pick'); if (f) try { f.focus({ preventScroll: true }); } catch (e) {} }
     });
   }
 
-  function _saveSlot(slot){ if (!worker){ _twinToast('Insert batteries first'); return; } worker.postMessage({ save:{ slot:slot } }); _twinToast('Saving slot '+(slot+1)+'…'); }
+  function _saveSlot(slot){ if (!worker){ _twinToast('Insert batteries first'); return; } worker.postMessage({ save:{ slot:slot } }); _twinToast('Saving Save '+(slot+1)+'…'); }
   function _twinOnSaveResult(res){
     var rec = { id:_key(res.slot), unit:SAVE_NS, slot:res.slot, snap:res.snap, thumb:res.thumb, time:res.time };
-    idbPut(rec).then(function(){ _twinToast('Saved to slot '+(res.slot+1)); if (savesOpen) _renderSaves(); })
+    idbPut(rec).then(function(){ _twinToast('Saved as Save '+(res.slot+1)); if (savesOpen) _renderSaves('act'); })
       .catch(function(err){ _twinToast('Save failed: '+(err&&err.message||err)); });
   }
   function _loadSlot(slot){
     idbGet(slot).then(function(rec){
-      if (!rec || !rec.snap){ _twinToast('Slot '+(slot+1)+' is empty'); return; }
+      if (!rec || !rec.snap){ _twinToast('Save '+(slot+1)+' is empty'); return; }
       // The machine is already frozen (the grid is open); restore is applied to
       // the frozen state and the resume happens on overlay-close (below) unless
       // the user explicitly paused. No force-resume here.
       worker.postMessage({ load:{ snap:rec.snap, slot:slot } });   // structured-clone copy (IDB record stays intact)
-      _twinToast('Loading slot '+(slot+1)+'…');
+      _twinToast('Loading Save '+(slot+1)+'…');
     });
   }
-  function _twinOnLoadResult(res){ if (res && res.ok){ _twinToast('Loaded slot '+(res.slot+1)); _setSavesOpen(false); } }
+  function _twinOnLoadResult(res){ if (res && res.ok){ _twinToast('Loaded Save '+(res.slot+1)); _setSavesOpen(false); } }
 })();

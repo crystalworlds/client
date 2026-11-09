@@ -70,6 +70,8 @@
 {"sha256":"d0b1756bdced26372e0524230a9cb72b882c566396ee0069386cd6b65c7247f0","bytes":4096,"device":"ghouse","part":"program"},
 {"sha256":"7c7aa1511ebf25964be6f2fb4e5764c37ea04ca3ff09d37b519816aa497d2058","bytes":1856,"device":"helmet","part":"program"},
 {"sha256":"f92ce28f00124c1da3627a5461f06d5157d45b1067e5f15c0a36edecdce67a68","bytes":1856,"device":"judge","part":"program"},
+{"sha256":"cd1160e842e83226269dfc72c51335cabfbd2e4333317c5ba2f184f6b0df321e","bytes":1856,"device":"helmet~cn07","part":"program"},
+{"sha256":"7a6a931445c1af0d84e2edd100a8efdbe4d7d5f7da484de6a1ea54fad3ea3c74","bytes":1856,"device":"judge~ip15","part":"program"},
 {"sha256":"c5fc5f8c8b5fa21f0aa8a6448d57c961d6e53b8afa723efe3172e2c98141f194","bytes":4096,"device":"lboat","part":"program"},
 {"sha256":"16e1a9b9849ed0c5ebcf818e9ed64157528631ac110b4e649a4e339f08e99582","bytes":1856,"device":"lion","part":"program"},
 {"sha256":"bf1de11e8b450de8d6bde4a864848ccff31ac13d3329734ee006dfb5d232a36d","bytes":1856,"device":"manhole","part":"program"},
@@ -280,15 +282,15 @@
   // matched by whole-file SHA-256 exactly like the classic firmware files.
   var PM_MANIFEST = [
 {"sha256":"16b3a68bb9d3e5c577bc6cf6d9d73c39b4c40b76ca3fbf1a0b9288089f97a014","bytes":524288,"device":"pm-pichu-bros-mini"},
-{"sha256":"7914ae74c227dd29c93fc9ee23f16da4489396cfa160d034c2394f4bcd3d06e3","bytes":524288,"device":"pm-pokemon-breeder-mini"},
+{"sha256":"035688227eeb8f381f83e1246a10df8a99b27f63b68e548482de16da42fdb4b2","bytes":524288,"device":"pm-pokemon-breeder-mini"},
 {"sha256":"9c6619a683f76dcb63957d02ac4e812f9148b85e05cc6705b24a8a4e6080b221","bytes":524288,"device":"pm-pokemon-party-mini"},
 {"sha256":"5ac75fd2b6d5dea85e17e5e6131339e0e19eefe978a6f4b7f8700fb28c89cc23","bytes":524288,"device":"pm-pokemon-pinball-mini"},
 {"sha256":"6c473867e9bad1883307d5372dedfa9443a620423d82ae83b6171fcaaffc291e","bytes":524288,"device":"pm-pokemon-puzzle-collection"},
-{"sha256":"e303afb55f858b284029abe69a7f96d58bf46956cd3e12cc3c1134e171ffae25","bytes":524288,"device":"pm-pokemon-puzzle-collection-vol-2"},
+{"sha256":"d75dd948a0bfe92b9f712dbc61cc1fb5ef24c2ddf6a6629f4f00e0fe573f931d","bytes":524288,"device":"pm-pokemon-puzzle-collection-vol-2"},
 {"sha256":"bc5d1c0664d0f80900558f1e99dded5fe597535b468aefc13c1dae51c18b4fbb","bytes":524288,"device":"pm-pokemon-race-mini"},
 {"sha256":"b54fc57472d363111eb0b229b5e26d3eb653c1b85f211501beab640530d19805","bytes":524288,"device":"pm-pokemon-shock-tetris"},
 {"sha256":"dc96d606ed54be035e8c3139a0b20d462b7622b15f617ccc6be411dcbd68c921","bytes":524288,"device":"pm-pokemon-zany-cards"},
-{"sha256":"19265776c8aa438a20a18064fa4097c33ba8edf9d4b712c73e3fd431bd724187","bytes":524288,"device":"pm-togepis-great-adventure"},
+{"sha256":"9f34277ae054e8aca6355bc3f73548d860a8ea377103752d403ab150fcc80802","bytes":524288,"device":"pm-togepis-great-adventure"},
 {"sha256":"45a1c7f28b9ad585e67f047abe9c1c956724bfcab8c9011002af4274e7c50e8f","bytes":4096,"device":"bios"}
   ];
   var PM_CART = 524288, PM_BIOS = 4096;
@@ -683,9 +685,9 @@
   var GB_INDEX_URL = (function () {
     try {
       var s = document.currentScript && document.currentScript.src;   // .../firmware/site/content_pack.js?v=…
-      if (s) return s.replace(/[^/]*$/, '') + 'gb_index.json.gz?v=2.0.0';   // cache tag: bump when the index is rebuilt (17 Oct: Sachen MMC2 boards are Color; 23 Oct: Binary Monsters II on the Game Boy shelf)
+      if (s) return s.replace(/[^/]*$/, '') + 'gb_index.json.gz?v=2.1.0';   // cache tag: bump when the index is rebuilt (17 Oct: Sachen MMC2 boards are Color; 23 Oct: Binary Monsters II on the Game Boy shelf)
     } catch (e) {}
-    return 'firmware/site/gb_index.json.gz?v=2.0.0';
+    return 'firmware/site/gb_index.json.gz?v=2.1.0';
   })();
   var GB_INDEX = null;         // { <sha256 prefix>: { s, b, n, name } } once loaded
   var GB_INDEX_PREFIX = 12;
@@ -1340,7 +1342,9 @@
 
   // --- what a pack covers, for the Settings summary ---------------------------
   function summarize(pack) {
-    var programDevices = {}; GNW_MANIFEST.forEach(function (r) { if (r.part === 'program') programDevices[r.device] = 1; });
+    /* A device written key~variant (8 Nov 2026: Helmet CN-07, Judge IP-15) is another program
+       revision of that device, chosen in its drawer, never a device of its own: not counted. */
+    var programDevices = {}; GNW_MANIFEST.forEach(function (r) { if (r.part === 'program' && r.device.indexOf('~') < 0) programDevices[r.device] = 1; });
     var allPrograms = Object.keys(programDevices);
     var havePrograms = allPrograms.filter(function (d) { return pack.programs[d] && pack.programs[d].program; });
     var allArt = SVG_MANIFEST.map(function (s) { return s.path; });

@@ -355,7 +355,7 @@ export class MatPanel {
    HTTP Range: a tape is 150 to 180 MB and is never copied whole) and the tapes chosen from this
    device this visit, and offers "Choose a tape file…" and Eject. Key Y ejects or inserts. The
    tape's sound plays through the console's own audio. */
-import * as LF from './local-files.mjs?v=2.0.0';
+import * as LF from './local-files.mjs?v=2.1.0';
 export const TAPE_EXT = /\.(study|studybox)$/i;
 const tapeTidy = n => String(n).replace(TAPE_EXT, '').replace(/\s*\((Japan|Unl)\)/g, '');
 /* TAPES REMEMBERED ON THIS DEVICE (2026-10-19; the old NES page's 'tape:handles'): a tape
@@ -706,7 +706,7 @@ export class Printer {
     this.visible = !!listed;            // the bar shows Print: a listed title, or once the game talked to the printer
     this.rows = 0; this.px = null;      // RGBA of the roll, 160 wide
     this.sh = null; this.ex = null;     // the shade (0-3) of every dot and each line's exposure, kept to colour again
-    this.pal = null;                    // the skin's four colours (core), or null: the printer's own grey paper
+    this.pal = null;                    // the Mono Palette's four colours (core), or null: the printer's own grey paper
     this.active = false; this.busy = false; this.hush = false; this.prints = 0;
     const el = this.el = document.createElement('div');
     el.className = 'cwp';
@@ -754,8 +754,8 @@ export class Printer {
   frame() {
     const c = this.core(), x = c && c.ext && c.ext.printer;
     if (!x) return;
-    /* 2026-10-21: the paper in the skin's colours, shade i in colour i as the
-       screen draws it, following a change of skin at once. */
+    /* 2026-10-21: the paper in the Mono Palette's colours, shade i in colour i as the
+       screen draws it, following a change of palette at once. */
     const pal = x.palette ? x.palette() : null;
     if (pal !== this.pal) { this.pal = pal; this.colour(0, this.rows); this.paint(); }
     const lines = x.poll();
@@ -792,8 +792,8 @@ export class Printer {
     this.paint();
     this.say();
   }
-  /* Dot lines from..to-1 into RGBA: the skin's colour for each shade, or, with no skin palette
-     (Game Boy Color skin), the printer's grey ink darkened by the line's exposure. */
+  /* Dot lines from..to-1 into RGBA: the Mono Palette's colour for each shade, or, with no four-colour
+     palette (an original cartridge on the Color), the printer's grey ink darkened by the line's exposure. */
   colour(from, to) {
     if (!this.px) return;
     const pal = this.pal;
@@ -905,7 +905,7 @@ export class Printer {
     if (!url) return false;
     window.__cwPrintJob = { url, scale: k, rows: this.rows };
     if (this.printOnTop(url, k)) return true;
-    const page = new URL('./print.html?v=20261102-srcclean', import.meta.url).href;
+    const page = new URL('./print.html?v=2.1.0', import.meta.url).href;
     if (/Android/i.test(navigator.userAgent || '')) {
       const w = window.open(page, '_blank');
       if (w) { this.lastPrintTab = w; return true; }

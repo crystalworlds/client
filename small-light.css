@@ -1,0 +1,82 @@
+/* small-light.css -- every window follows the light theme on a small screen (7 Nov 2026).
+ *
+ * Home, Features, Compatibility, Timeline, About, Stories and the keys page keep a black ground on a
+ * computer because they sit in the red frame, on a Game & Watch's LCD screen, in both themes (index.html
+ * "On-screen pages stay dark in light mode"). On a small screen (html.cw-small: 760 px wide or 500 px tall
+ * or less, or a phone, a fold or a small tablet) there is no frame, so there the window takes the theme.
+ * Every rule here starts with :root[data-theme="light"].cw-small: nothing here applies to a computer in the
+ * frame, or to the dark theme. Windows are drawn with the site's colour tokens, so the tokens come back
+ * first; the rest are the colours written for a dark ground, one by one.
+ * Pictures and films keep their own dark edges: the words on them are white on a dark fade.
+ */
+
+/* The light tokens: "inherit" takes them from the page, so the accent the visitor picked comes too.
+   Words in the accent colour need its deep version on white, and white words on a button of that colour. */
+:root[data-theme="light"].cw-small #view-home,
+:root[data-theme="light"].cw-small #view-series,
+:root[data-theme="light"].cw-small #view-about,
+:root[data-theme="light"].cw-small .about-pop {
+  --bg-0: inherit; --bg-1: inherit; --bg-2: inherit; --bg-3: inherit; --line: inherit; --text: inherit; --muted: inherit;
+  --accent: var(--accent-ink, var(--accent-l)); --accent-rgb: inherit; --accent-2: inherit; --accent-3: inherit; --on-accent: #ffffff;
+  --silver: inherit; --gold: inherit; --widescreen: inherit; --newwidescreen: inherit; --multiscreen: inherit; --tabletop: inherit;
+  --panorama: inherit; --supercolor: inherit; --microvs: inherit; --crystal: inherit; --other: inherit; --special: inherit;
+  --reissue: inherit; --tft: inherit; --prototype: inherit; --shadow: inherit; --glow: inherit;
+  color: var(--text); color-scheme: light;
+}
+
+/* The ground. */
+html:root[data-theme="light"].cw-small #video-about.video-about { background: #ffffff; }
+html:root[data-theme="light"].cw-small body #video-about .about-pop.gw-frame-outer,
+html:root[data-theme="light"].cw-small body #video-about .about-pop .gw-frame-screen { background: #ffffff; color: var(--text); }
+
+/* The close button that floats over the page. */
+html:root[data-theme="light"].cw-small #video-about .about-x { background: #ffffff; color: #1b2230; border-color: #c3cad4; box-shadow: 0 2px 10px rgba(30,42,64,.28); }
+html:root[data-theme="light"].cw-small #video-about .about-x:active { background: #e4e7ee; }
+html:root[data-theme="light"].cw-small #video-about .about-x:focus-visible { outline-color: var(--accent-ink, var(--accent-l)); }
+
+/* Home: the console wall, Checked by rebuilding. */
+:root[data-theme="light"].cw-small .hero-card { background: linear-gradient(180deg, #ffffff, #f5f6f9); }
+:root[data-theme="light"].cw-small .ft-crtable { --cr-ok: #15803d; --cr-no: #b91c1c; }
+
+/* About: the words, the quote. */
+:root[data-theme="light"].cw-small #video-about .article p { color: #3d4655; }
+:root[data-theme="light"].cw-small #video-about .quote { color: #2f3642; }
+
+/* About: the credits roll, a light panel with the same fade and control bar. */
+:root[data-theme="light"].cw-small .credits-roll { --cr-blue: #0b6a96; --cr-role: #58626f; --cr-sub: #58626f; --cr-soft: #3d4655; --cr-line: #d4d9e1; background: #f5f6f9; }
+:root[data-theme="light"].cw-small .credits-window { background: #f5f6f9; border-color: #d4d9e1; }
+:root[data-theme="light"].cw-small .credits-roll .cr-rule { background: rgba(11,106,150,.6); }
+:root[data-theme="light"].cw-small .credits-roll .credits-track .cr-open { text-shadow: none; }
+:root[data-theme="light"].cw-small .credits-roll .credits-track .cr-name { color: #1b2230; }
+:root[data-theme="light"].cw-small .credits-roll .credits-track .cr-special-line { color: #1b2230; text-shadow: none; }
+:root[data-theme="light"].cw-small .credits-roll .credits-track .cr-close { color: #2f3642; }
+:root[data-theme="light"].cw-small .credits-roll .credits-track .cr-close.cr-thanks { color: var(--cr-blue); }
+:root[data-theme="light"].cw-small .credits-bar { background: rgba(255,255,255,.94); border-color: #d4d9e1; box-shadow: 0 10px 28px -12px rgba(30,42,64,.45); }
+:root[data-theme="light"].cw-small .credits-bar .cr-play { background: #1b2230; color: #ffffff; }
+:root[data-theme="light"].cw-small .credits-bar .cr-play:hover { background: #2f3642; }
+:root[data-theme="light"].cw-small .credits-bar .cr-speeds { border-color: #d4d9e1; }
+:root[data-theme="light"].cw-small .credits-bar .cr-speed:hover,
+:root[data-theme="light"].cw-small .credits-bar .cr-top:hover { color: #1b2230; }
+:root[data-theme="light"].cw-small .credits-bar .cr-speed[aria-pressed="true"] { background: #e4e7ee; color: var(--cr-blue); }
+
+/* Timeline: each system's own colour, a deeper shade, as the drawers' headings have. */
+:root[data-theme="light"].cw-small :is(.tl-series, .tl-arrow) { color: color-mix(in srgb, var(--c, var(--accent)) 60%, #000); }
+
+/* Compatibility. */
+:root[data-theme="light"].cw-small .cl-root { --lad-plays: #0f766e; --lad-untested: #b98a1e; --lad-track: rgba(0,0,0,.08); }
+:root[data-theme="light"].cw-small .cl-head { background: #ffffff; }
+:root[data-theme="light"].cw-small .cl-row { border-bottom-color: rgba(0,0,0,.09); }
+:root[data-theme="light"].cw-small .cl-row.cl-kid { background: rgba(0,0,0,.025); }
+:root[data-theme="light"].cw-small .cl-art.cl-art-none,
+:root[data-theme="light"].cw-small .cl-clip { background: rgba(0,0,0,.05); }
+:root[data-theme="light"].cw-small .cl-flag { box-shadow: 0 0 0 1px rgba(0,0,0,.2); }
+:root[data-theme="light"].cw-small .cl-none { color: var(--muted); }
+:root[data-theme="light"].cw-small .cl-st.lad-plays { color: #ffffff; }
+:root[data-theme="light"].cw-small .cl-root .lad-notfound { box-shadow: inset 0 0 0 1.5px #6a7a8c; }
+:root[data-theme="light"].cw-small .cl-st.lad-notfound { color: #3d4655; }
+/* A generic box's small printed label sits on the box's own black. */
+:root[data-theme="light"].cw-small .cl-art:has(.gb-art-generic-label) { background: #0a0e14; }
+
+/* Home's cards: small words at full strength, and the gold word its deep shade. */
+:root[data-theme="light"].cw-small .emu-score small { opacity: 1; }
+:root[data-theme="light"].cw-small .emu-n.emu-n-alt { color: #8a6410; }

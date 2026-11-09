@@ -17,11 +17,11 @@
  * SOUND: only through the Sink lent by CwPlayAudio, only while this window is open.
  */
 import { manifestProblems, coreProblems, VirtualClock, CoreError } from './core-api.mjs';
-import { Presenter } from './present.mjs?v=2.0.0';   // HOST MODULES: bump this tag (and present.mjs's own) when one changes
-import { Input, keyLabel } from './input.mjs?v=2.0.0';
-import * as S from './saves.mjs?v=2.0.0';
-import * as E from './save-envelope.mjs?v=2.0.0';
-import { Cheats } from './cheats.mjs?v=2.0.0';
+import { Presenter } from './present.mjs?v=2.1.0';   // HOST MODULES: bump this tag (and present.mjs's own) when one changes
+import { Input, keyLabel } from './input.mjs?v=2.1.0';
+import * as S from './saves.mjs?v=2.1.0';
+import * as E from './save-envelope.mjs?v=2.1.0';
+import { Cheats } from './cheats.mjs?v=2.1.0';
 import { API as CORE_API } from './core-api.mjs';
 
 const BUILD = '20261014-host1';
@@ -41,39 +41,39 @@ const $ = id => document.getElementById(id);
    the relay its old page used, which the site already answers. */
 const REGISTRY = {
   gb: {
-    core: '../cores/gb/core.mjs', art: '../cores/gb/art.mjs?v=2.0.0',
+    core: '../cores/gb/core.mjs', art: '../cores/gb/art.mjs?v=2.1.0',
     relay: { ask: 'gbNeedCart', answer: 'gbCart', game: g => 'gb-' + g, firmware: { dmg: 'bios', cgb: 'biosCgb' } },
-    deviceId: g => 'gb-' + g, padSys: 'gb', slots: 8,
+    deviceId: g => 'gb-' + g, padSys: 'gb', slots: 20,
   },
   nes: {
     core: '../cores/nes/core.mjs', art: '../cores/nes/art.mjs',
     relay: { ask: 'nesNeedCart', answer: 'nesCart', game: g => 'nes-' + g, firmware: {} },
-    deviceId: g => 'nes-' + g, padSys: 'nes', slots: 8,
+    deviceId: g => 'nes-' + g, padSys: 'nes', slots: 20,
   },
   /* P1 (Pokemon mini, Phase 2, 2026-10-14). */
   pm: {
     core: '../cores/pm/core.mjs', art: '../cores/pm/art.mjs',
     relay: null,                                   // the one relay only (play/host/site-relay.js 'pm')
-    deviceId: g => g, padSys: 'pm', slots: 8,
+    deviceId: g => g, padSys: 'pm', slots: 20,
   },
   /* Game & Watch (Phase 5, the G&W migration, 2026-10-14): the classic units. The game is
      the site's device id (silver-ball); the one relay answers with its program and melody. */
   gnw: {
-    core: '../cores/gnw/core.mjs?v=2.0.0', art: '../cores/gnw/art.mjs?v=2.0.0',
+    core: '../cores/gnw/core.mjs?v=2.1.0', art: '../cores/gnw/art.mjs?v=2.1.0',
     relay: null,
-    deviceId: g => g, padSys: 'gnw', slots: 8,
+    deviceId: g => g, padSys: 'gnw', slots: 20,
   },
   /* H1 (Tetris Jr. and the colour units, Phase 5, 2026-10-14). Tetris Jr. is the one
      built-in game: no file is asked for (manifest.files.game.builtIn, H2). */
   tetrisjr: {
-    core: '../cores/tetrisjr/core.mjs?v=2.0.0', art: '../cores/tetrisjr/art.mjs?v=2.0.0',
-    relay: null, deviceId: g => g, padSys: 'tj', slots: 8,
+    core: '../cores/tetrisjr/core.mjs?v=2.1.0', art: '../cores/tetrisjr/art.mjs?v=2.1.0',
+    relay: null, deviceId: g => g, padSys: 'tj', slots: 20,
   },
   /* The two colour units: the game is the unit ('mario' / 'zelda'); its external flash comes
      as the game and its internal flash as firmware '<unit>:internal', through the one relay. */
   tft: {
-    core: '../cores/tft/core.mjs?v=2.0.0', art: '../cores/tft/art.mjs?v=2.0.0',
-    relay: null, deviceId: g => ({ mario: 'reissue-super-mario-bros', zelda: 'reissue-zelda' })[g] || g, padSys: 'twin', slots: 8,
+    core: '../cores/tft/core.mjs?v=2.1.0', art: '../cores/tft/art.mjs?v=2.1.0',
+    relay: null, deviceId: g => ({ mario: 'reissue-super-mario-bros', zelda: 'reissue-zelda' })[g] || g, padSys: 'twin', slots: 20,
   },
 };
 /* The four Atari consoles: ONE shared module for all four (play/cores/atari/, Phase 3, the
@@ -81,7 +81,7 @@ const REGISTRY = {
    through the one relay (site-relay.js SOURCES). */
 function atariReg(sys) {
   return { core: `../cores/atari/core.mjs?sys=${sys}`, art: `../cores/atari/art.mjs?sys=${sys}`,
-    relay: { ask: 'atariNeedCart', answer: 'atariCart', game: g => g }, deviceId: g => g, padSys: sys, slots: 8 };
+    relay: { ask: 'atariNeedCart', answer: 'atariCart', game: g => g }, deviceId: g => g, padSys: sys, slots: 20 };
 }
 for (const s of ['a2600', 'a5200', 'a7800', 'alynx']) REGISTRY[s] = atariReg(s);
 /* CORE MODULE TAGS (2026-10-15): the one place a console's core and art modules get their cache
@@ -89,7 +89,7 @@ for (const s of ['a2600', 'a5200', 'a7800', 'alynx']) REGISTRY[s] = atariReg(s);
    play/cores/<id>/ folder changes (its own sub-imports, e.g. the colour units' compose.mjs,
    carry their own tags inside core.mjs). The Ataris share one module, so one tag. */
 const CORE_V = {
-  gb: '20261101-gb32-gb6', nes: '20261102-nes25-nesc1', pm: '20261029-pm10-srcrev1', gnw: '20261101-gnw13-gwpad2',
+  gb: '2.1.0-gbupdate', nes: '2.1.0-nesinstall', pm: '20261029-pm10-srcrev1', gnw: '20261101-gnw13-gwpad2',
   tetrisjr: '20261029-tj5-srcrev1', tft: '20261102-tft15-fix6a', atari: '20261101-atari35-biospref4',
 };
 const tagged = (p, v) => p + (p.includes('?') ? '&' : '?') + 'v=' + v;
@@ -772,7 +772,7 @@ async function boot() {
   const wantWorker = typeof Worker === 'function' && ((manifest.thread === 'worker' && threadAsk !== 'main') || threadAsk === 'worker')   /* ?thread=worker: any core (the Core API's cores are page-free), for an A/B */;
   if (wantWorker) {
     try {
-      const { createWorkerCore } = await import('./runner-worker.mjs?v=2.0.0');
+      const { createWorkerCore } = await import('./runner-worker.mjs?v=2.1.0');
       core = await createWorkerCore(new URL(REG.core, import.meta.url).href, env, { channels: manifest.audio.channels || 1 });
       core.onFrame = () => { dirtyPicture = true; };
       /* R4 audio (2026-10-15): the worker's sound goes to the sink as it arrives, into a deeper
@@ -803,7 +803,7 @@ async function boot() {
      play/host/rewind-ring.mjs (XOR delta + deflate on a worker, first written for the Atari core);
      the host decides from the manifest's state size, never the core. */
   if (manifest.state.supported && manifest.state.approxBytes >= BIG_STATE) {
-    try { const R = (await import('./rewind-ring.mjs?v=2.0.0')).Ring; big = new R({ max: Math.round(REW_SECONDS * 1000 / REW_CAPTURE_MS), capBytes: REW_CAP_BYTES, approxBytes: manifest.state.approxBytes }); }
+    try { const R = (await import('./rewind-ring.mjs?v=2.1.0')).Ring; big = new R({ max: Math.round(REW_SECONDS * 1000 / REW_CAPTURE_MS), capBytes: REW_CAP_BYTES, approxBytes: manifest.state.approxBytes }); }
     catch (e) { big = null; log('rewind helper not available, raw states: ' + e.message); }
   }
 
@@ -868,6 +868,7 @@ async function start(g, bytesIn) {
   }
   gameBytes = bytes;
   gameHash = await digest(bytes);
+  H.sha256 = builtIn ? null : gameHash;      // the site's record of play (continuerow.js); a built-in game has no file
   rememberPick(bytes, pickName);
   firmware = await loadFirmware(bytes);
   await mount();
@@ -1019,9 +1020,9 @@ async function setupDevices() {
   if (printer) { try { printer.destroy(); } catch (_) {} printer = null; }
   const ex = (result && result.extensions) || {};
   if (ex.printer && core.ext && core.ext.printer && !PREVIEW) {
-    const P = await import('./peripherals.mjs?v=2.0.0');
+    const P = await import('./peripherals.mjs?v=2.1.0');
     let listed = false;
-    try { const T = await import('../cores/gb/printer-titles.mjs?v=2.0.0'); listed = !!(gameHash && T.PRINTER_TITLES.has(gameHash.slice(0, 16))); } catch (_) {}
+    try { const T = await import('../cores/gb/printer-titles.mjs?v=2.1.0'); listed = !!(gameHash && T.PRINTER_TITLES.has(gameHash.slice(0, 16))); } catch (_) {}
     printer = new P.Printer({ core: () => core, listed, log, onShow: () => changed(),
       /* 2026-10-22: the window opens 2 seconds after a print is detected, not at once.
          The paper still collects meanwhile; Back before then (a thrown-away print) keeps it shut. */
@@ -1033,7 +1034,7 @@ async function setupDevices() {
   }
   /* R.O.B. (2026-10-21): beside the game, always (play/host/rob-panel.mjs). */
   if (ex.rob && core.ext && core.ext.rob && !PREVIEW) {
-    const R = await import('./rob-panel.mjs?v=2.0.0');
+    const R = await import('./rob-panel.mjs?v=2.1.0');
     devices.rob = new R.RobPanel({ core: () => core, kind: ex.rob, stage: $('stage'), layout: () => presenter.layout(), log, toast });   // toast: the Test note (25 Oct)
     log(`r.o.b.: plugged in (${ex.rob === 'gyro' ? 'Gyromite: gyro trays on controller two' : 'Stack-Up'}); he watches the screen for commands`);
   }
@@ -1041,7 +1042,7 @@ async function setupDevices() {
   trackballBound = null;
   if (core.ext && core.ext.trackball && !PREVIEW) bindTrackball(core.ext.trackball);
   if (!(ex.tilt || ex.camera || ex.microphone || ex.tape || ex.recorder || ex.barcode || matPort)) return;
-  const P = await import('./peripherals.mjs?v=2.0.0');
+  const P = await import('./peripherals.mjs?v=2.1.0');
   const x = core.ext || {};
   if (ex.tilt && x.tilt) { devices.tilt = new P.Tilt({ core: () => core, screen: $('screen'), log }); log('tilt sensor: keys I J K L, the right stick, or drag on the screen'); }
   if (ex.camera && x.camera) {
@@ -1175,6 +1176,9 @@ function consoleKeysOf() {
 }
 const optDef = id => (core && core.options ? core.options() : []).find(d => d.id === id);
 function readOption(d) {
+  /* A choice stored under another option's value moves to this one, once (the Game Boy's old
+     "Game Boy Color" skin is now its Machine choice). */
+  if (d.movedFrom) { try { if (localStorage.getItem(d.movedFrom.key) === d.movedFrom.value) { localStorage.setItem(optKey(d), d.movedFrom.to); localStorage.removeItem(d.movedFrom.key); } } catch (_) {} }
   let v = null;
   if (PREVIEW && params.has('o.' + d.id)) v = params.get('o.' + d.id);   // the picture's own options, never stored
   else
@@ -1330,6 +1334,29 @@ function lynxLists() {
   return w ? { turned: Object.assign({}, w.LYNX_TURNED), wrong: Object.assign({}, w.LYNX_HEADER_WRONG || {}) } : undefined;
 }
 let homePrev = false;   // the Guide button held at the last feed (2026-10-29: the Guide while paused)
+/* SWAP A/B, THE CONTROL BAR'S BUTTON (7 Nov 2026). A controller's A and B, and X and Y, change places
+   in the GAME ONLY: applied here, as the last thing before the game's pad path, so the names are
+   already the printed letters (gamepad.js, with the layout and Reverse buttons, comes first and is
+   never changed by this), and the bar, its menus and panels, the start screen and the whole site, which
+   read the buttons earlier or elsewhere, keep the controller's normal layout. It works by button name,
+   before the console's pad table: a table with the viewer's changes stays as saved, and the two named
+   buttons trade what the table gives them. Keys and touch never come through here. Remembered in this
+   browser, the same for every game and console. */
+const PAD_SWAP_STORE = 'cw.pad.swap.v1', PAD_SWAP = { A: 'B', B: 'A', X: 'Y', Y: 'X' };
+let padSwap = false, padSeen = false;
+try { padSwap = localStorage.getItem(PAD_SWAP_STORE) === '1'; } catch (_) {}
+function setPadSwap(on) {
+  padSwap = !!on;
+  try { if (padSwap) localStorage.setItem(PAD_SWAP_STORE, '1'); else localStorage.removeItem(PAD_SWAP_STORE); } catch (_) {}
+}
+const padSwapped = players => padSwap ? (players || []).map(p => (p || []).map(n => PAD_SWAP[n] || n)) : players;
+/* Would it change anything here? Not where A and B, and X and Y, reach one control (the 2600's Fire, the Game & Watch's Action). */
+function padSwapDoes() {
+  let m = null; try { const M = window.gnwPlayPad && window.gnwPlayPad.mapsFor(REG.padSys || SYS); m = M && M[0]; } catch (_) { m = null; }
+  if (!m || !input) return false;
+  const to = n => { const f = m[n] && input.fnMap.get(m[n]); return f ? f[0] + ':' + f[1] : ''; };
+  return to('A') !== to('B') || to('X') !== to('Y');
+}
 function installPad() {
   const own = () => {
     // Without the site's table: each control's first pad button.
@@ -1341,6 +1368,7 @@ function installPad() {
     BUILD: 'host-' + BUILD,
     get MAPS() { const P = sitePad(); return P ? P.MAPS : null; },
     feed(players, ctx) {
+      if (!padSeen) { padSeen = true; try { if (window.ControlBar && window.ControlBar.sync) window.ControlBar.sync(); } catch (_) {} }   // shows Swap A/B on a touch screen once a controller is in use
       /* SELECT+START IS THE GUIDE BUTTON, WHEREVER THE FOCUS IS (2026-10-17, reported: "I cannot seem to
          press Start + Select to get the Guide menu up when I am on the Control bar, but I can when I
          am in game play ... The Guide button seems to work everywhere"). The chord was read only by
@@ -1390,7 +1418,7 @@ function installPad() {
         if (!ready || holding()) { input.releasePad(); if (fresh) { back(); return 'menu'; } return null; } }
       const P = sitePad();
       let maps = null; try { maps = P && P.mapsFor ? P.mapsFor(REG.padSys || SYS) : null; } catch (_) { maps = null; }
-      return input.padFeed(players, maps || own());
+      return input.padFeed(padSwapped(players), maps || own());
     },
     release() { input.releasePad(); },
     players() { return result ? result.ports.filter(p => p.kind === 'player').length : 1; },
@@ -1782,10 +1810,13 @@ function sealBattery(keys) {
 }
 /* A slot as the Saves panel shows it, one path for every console: the envelope's header gives
    the date, the picture and the model, its metadata the play time; a damaged one is listed as damaged. */
+const TWO_MACHINES = new Set(['gb', 'pm']);   // Game Boy or Game Boy Color; one Pokemon mini or two linked
 async function slotView(r, i) {
   if (!r) return null;
   if (r.env && E.isEnvelope(r.state)) {
-    try { const h = E.verify(r.state); return { ts: h.created, state: r.state, thumb: h.thumb || null, thumbWhy: h.thumb ? '' : 'no picture', model: h.model || model, core: h.core && h.core.build, env: h, playSeconds: playedOf(r.state), note: noteOf(r.state) }; }
+    try { const h = E.verify(r.state); return { ts: h.created, state: r.state, thumb: h.thumb || null, thumbWhy: h.thumb ? '' : 'no picture', model: h.model || model, core: h.core && h.core.build, env: h, playSeconds: playedOf(r.state), note: noteOf(r.state),
+      /* The save table (8 Nov 2026): the machine where a console has more than one, and a save an older build made. */
+      machine: TWO_MACHINES.has(SYS) ? label(h.model || model) : null, older: !sameBuild(h.core && h.core.build) }; }
     catch (e) { return { ts: r.ts || 0, state: r.state, thumb: null, thumbWhy: E.MESSAGES.damaged, model, damaged: true, env: null }; }
   }
   return { ts: r.ts || 0, state: r.state, thumb: null, thumbWhy: E.MESSAGES.damaged, model, damaged: true, env: null };
@@ -1869,6 +1900,7 @@ function settingsGroups() {
       sel.value = String(cur);
       sel.addEventListener('change', () => setOption(d, sel.value));
       r.appendChild(sel);
+      if (d.notice) { const h = document.createElement('span'); h.className = 'host-note'; h.textContent = d.notice; r.appendChild(h); }
     } else if (d.type === 'bool') {
       const c = document.createElement('input'); c.type = 'checkbox'; c.id = id; c.checked = !!cur;
       c.addEventListener('change', () => setOption(d, c.checked));
@@ -1897,7 +1929,7 @@ async function setOption(d, v) {
   }
   const how = core.setOptionAsync ? await core.setOptionAsync(d.id, v).catch(() => 'unknown') : core.setOption ? core.setOption(d.id, v) : 'unknown';   // a worker core answers when it has it (2026-10-22)
   log(`option ${d.id} = ${v} (${how})`);
-  if (how === 'reload') { await batteryFlush('option'); await mount(); }
+  if (how === 'reload') { await batteryFlush('option'); stopRewind(); rewindReset(); await mount(); }   // a restart: the history before it belongs to the machine that was
   else if (how === 'ports') portsChanged();
   else if (how === 'art') { presenter.configure(core.video()); await placeArt(); present(); }
   else present();
@@ -1965,16 +1997,20 @@ async function registerBar() {
           const h = input.litSet ? input.litSet() : input.heldSet(), out = [];
           for (const [code, f] of input.fnMap) if (h.has(f[0] + ':' + f[1])) out.push(code);
           return out;
+        }, () => {
+          const out = [];
+          if (input.pad.size) for (const [code, f] of input.fnMap) if (input.pad.has(f[0] + ':' + f[1])) out.push(code);
+          return out;
         });
       }
     } catch (e) { log('on-screen buttons not available: ' + e.message); }
   }
   const states = {
-    async list() { const raw = await S.listSlots(manifest, game, model, REG.slots || 8); const out = []; for (let i = 0; i < raw.length; i++) out.push(await slotView(raw[i], i)); return out; },
+    async list() { const raw = await S.listSlots(manifest, game, model, REG.slots || 20); const out = []; for (let i = 0; i < raw.length; i++) out.push(await slotView(raw[i], i)); return out; },
     async save(i) {
       const state = core.serializeAsync ? await core.serializeAsync() : core.serialize();
       let env = seal('state', state, presenter.shot('image/png'));
-      const before = (await S.listSlots(manifest, game, model, REG.slots || 8).catch(() => []))[i];
+      const before = (await S.listSlots(manifest, game, model, REG.slots || 20).catch(() => []))[i];
       const kept = before && before.env && E.isEnvelope(before.state) ? noteOf(before.state) : '';
       if (kept) env = withNote(env, kept);
       await S.putSlot(manifest, game, model, i, { env: 1, ts: Date.now(), state: env });
@@ -1993,7 +2029,7 @@ async function registerBar() {
     },
     async remove(i) { const rec = (await states.list())[i]; await S.putSlot(manifest, game, model, i, S.TOMB); return rec; },
     async setNote(i, text) {
-      const raw = (await S.listSlots(manifest, game, model, REG.slots || 8))[i];
+      const raw = (await S.listSlots(manifest, game, model, REG.slots || 20))[i];
       if (!raw || !raw.env || !E.isEnvelope(raw.state)) throw new Error(`slot ${i + 1} is empty`);
       E.verify(raw.state);                               // a damaged save gets no note
       await S.putSlot(manifest, game, model, i, Object.assign({}, raw, { state: withNote(raw.state, text) }));
@@ -2017,7 +2053,7 @@ async function registerBar() {
     overlay: null,
     caps: () => ({
       pause: true, reset: true, rewind: !!manifest.state.supported,
-      saves: manifest.state.supported ? { slots: REG.slots || 8, cols: 4, shot: `${result.video.width}/${result.video.height}` } : false,
+      saves: manifest.state.supported ? { slots: REG.slots || 20, cols: 4, shot: `${result.video.width}/${result.video.height}` } : false,
       transfer: !!manifest.state.supported, lastClosed: embedded, screenshot: true, mute: true, keys: true, help: embedded,
       fullscreen: true, settings: true, variant: embedded, overlay: !!overlay, speed: SPEEDS, statusLog: true,
       media: !!(core.ext && core.ext.media && result.extensions && result.extensions.media),
@@ -2025,7 +2061,9 @@ async function registerBar() {
       consoleKeys: consoleKeysOf(), rotate: !!(core.ext && core.ext.rotation),
       printer: !!printer,
       cheats: !!(core.ext && core.ext.cheats) && !PREVIEW,
+      padSwap: !PREVIEW,
     }),
+    padSwap: { on: () => padSwap, set: setPadSwap, does: padSwapDoes, seen: () => padSeen },
     title: () => gameTitle,
     paused,
     pause(on) { const was = paused(); setPaused(on); return was !== paused(); },
@@ -2113,7 +2151,7 @@ async function registerBar() {
 let pendingTape = null, localPick = null;
 const TAPE_FILE = /\.(study|studybox)$/i;
 const hasTapes = () => !!(manifest && (manifest.extensions || []).includes('tape'));
-const LFmod = () => import('./local-files.mjs?v=2.0.0');
+const LFmod = () => import('./local-files.mjs?v=2.1.0');
 async function openLocal(f) {
   if (!f) return;
   if (TAPE_FILE.test(f.name)) {

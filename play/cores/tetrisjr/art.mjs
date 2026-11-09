@@ -19,7 +19,7 @@
  * opacity (the etched ghost of an unlit grid cell is level 33), and the canvas kept out of
  * sight (it would black out the hinge between the two windows).
  */
-import { loadEngine, engineDiagram } from '../keys-engine.mjs?v=2.0.0';
+import { loadEngine, engineDiagram } from '../keys-engine.mjs?v=2.1.0';
 const ART_W = 1100, ART_H = 1369;
 const OVERSCAN = 2 / ART_W;
 /* The two windows, in fractions of the art (index.html #topLCD / #botLCD). */

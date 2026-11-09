@@ -5,7 +5,8 @@
    only once a narration first plays, and the marker is absolutely positioned
    inside its paragraph, so playing never moves the text.
    No light-theme rules: the home view re-declares the dark palette in light
-   mode (it sits on the black LCD screen), and everything here uses tokens. */
+   mode (it sits on the black LCD screen; small-light.css on a small screen),
+   and everything here uses tokens. */
 
 .pa-btn {
   appearance: none; cursor: pointer;

@@ -11,6 +11,7 @@
     "/about": { "priority": "0.8", "title": "Crystal Worlds", "description": "About CrystalWorlds.Media: who builds it, how the emulators are made and tested, the licences, and how to get in touch." },
     "/timeline": { "priority": "0.8", "title": "Crystal Worlds", "description": "Every handheld and console on CrystalWorlds.Media in the order it was released." },
     "/features": { "priority": "0.8", "title": "Crystal Worlds", "description": "Everything CrystalWorlds.Media does: the consoles and accessories we rebuilt, the play window, controls, the library, films and shows, game servers and vault codes, and every screen it runs on." },
+    "/stories": { "title": "Crystal Worlds", "description": "Stories for 16-Bit sponsors, to read and listen to." },
     "/compatibility": { "priority": "0.9", "title": "Crystal Worlds", "description": "Every game on every system, with how it runs on our emulators: Plays, Boots or Nothing, and the reason when a game does not play." },
     "/game-and-watch/hardware": { "title": "Crystal Worlds", "description": "The Nintendo Game & Watch hardware: the Sharp chips, screens, buttons and sound." },
     "/game-and-watch/emulation": { "title": "Crystal Worlds", "description": "How our Game & Watch emulator is built and checked: the three Sharp cores and their acceptance tests." },

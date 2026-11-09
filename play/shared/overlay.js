@@ -74,10 +74,15 @@
  *     thumb rolls across the d-pad and slides from Select to Start.
  *   - Hysteresis (RetroArch's range_mod): a held control's hit area grows by 25%, so a thumb on
  *     an edge does not flicker on and off.
+ *   - One finger presses one control (8 Nov 2026): where two touch areas overlap (a thumb's
+ *     slop reaching a neighbour, as Left reached Down on the Tetris Jr. picture), the finger
+ *     gets the button drawn under it; between buttons, the one it already holds, else the
+ *     nearest. A d-pad is one control, so its diagonals stay.
  *   - Released on pointerup / cancel / lost capture, window blur, a hidden tab, pagehide, any
  *     mode change, Display switched off, and release().
- *   - Pressed feedback always; with "Show inputs" the keyboard's and the gamepad's presses light
- *     the same buttons (read from the key events the page receives, so it is the truth).
+ *   - Pressed feedback always (the face sinks and its arc of light dims, 8 Nov 2026). A controller's presses light the same buttons always (7 Nov 2026,
+ *     setLitSource); with "Show inputs" the keyboard's do too (read from the key events the page
+ *     receives, so it is the truth).
  *   - SOUND: none. This file makes no sound and starts none (the sound rule); a press is a
  *     user gesture inside the play window, so the game's own audio unlocks as for a key.
  *
@@ -88,8 +93,8 @@
  *                       navigator.maxTouchPoints > 0: the Game Boy rule, because a
  *                       desktop Chrome can report coarse with no digitiser) AND no gamepad
  *                       connected (RetroArch's "Hide overlay when controller is connected").
- *     Show inputs       light buttons pressed on the keyboard or a pad too (RetroArch's "Show
- *                       inputs on overlay: Physical"). Teaching and streaming.
+ *     Show inputs       light buttons pressed on the keyboard too (RetroArch's "Show inputs on
+ *                       overlay: Physical"). Teaching and streaming. A pad always lights them.
  *     Opacity           0.2-1, default 0.7 (RetroArch's default).
  *     Size              0.75-1.5 (RetroArch's overlay scale).
  *     Edge spacing      0-48 px (RetroArch's separation: how far the two halves sit from the edges).
@@ -102,8 +107,7 @@
  * ------------------------------------------------------------------ WHAT WAS TAKEN FROM RETROARCH
  *   Ideas only (RetroArch is GPLv3; libretro/common-overlays is CC-BY-4.0; nothing copied):
  *   normalised coordinates; rect and radial (ellipse) hit areas; range_mod hysteresis;
- *   an 8-way d-pad area (dpad_area) whose diagonals are the OR of two directions; every hit
- *   control pressed at once; the pressed state shown by raising opacity (alpha_mod); a
+ *   an 8-way d-pad area (dpad_area) whose diagonals are the OR of two directions; the pressed state shown by raising opacity (alpha_mod); a
  *   full-screen layout separate from the device layout; landscape / portrait pages; the
  *   settings above. Sources and the licence table: the play interface design, section 11.
  */
@@ -171,6 +175,7 @@
   .cwov-c.held::after { inset:-12.5%; }
   .cwov-c[data-shape="dpad"]::after { inset:-12px; border-radius:0; }
   .cwov-c[data-shape="dpad"].held::after { inset:-18%; }
+  .cwov-tight .cwov-c::after { inset:0 !important; }   /* for one hit test only: the button as drawn (_pick) */
   .cwov-c[data-shape="circle"], .cwov-c[data-shape="circle"]::after { border-radius:50%; }
   .cwov-c[data-shape="pill"], .cwov-c[data-shape="pill"]::after { border-radius:999px; }
   /* ART: invisible until pressed, then the button glows (the G&W / Pokemon mini idiom). */
@@ -191,12 +196,44 @@
     transition:background .05s linear, color .05s linear; }
   .cwov-float .cwov-c.lit { background:var(--cwov-press); color:var(--cwov-press-ink); border-color:rgba(255,255,255,.6); }
   .cwov-float .cwov-c[data-shape="pill"] { font-size:clamp(8px,2vw,9.5px); letter-spacing:.1em; }
+  /* DEPTH (8 Nov 2026): each button is a rim and a face. The 1px border is the rim's outer edge, a
+     shaded band inside it, a thin light ring where the face starts, the face a little lighter at the
+     top, a soft arc of light along its upper edge (::before) and a faint shadow under it. All of it is
+     painted inside the button's own box (insets and a pseudo-element that takes no touches), so sizes,
+     positions and the touch areas (::after) are exactly as before. Pressed: the face sinks (a shadow
+     from the top edge, the arc moves down and dims). Static paint only: nothing animates while idle. */
+  .cwov-float .cwov-c:not([data-shape="dpad"]) {
+    background:radial-gradient(120% 90% at 50% 18%, rgba(255,255,255,.13) 0%, rgba(255,255,255,0) 58%), var(--cwov-fill);
+    box-shadow:inset 0 0 0 .24em rgba(6,8,12,.28), inset 0 0 0 calc(.24em + 1px) rgba(255,255,255,.3),
+      inset 0 -.3em .55em -.2em rgba(0,0,0,.32), 0 3px 10px -5px rgba(0,0,0,.75); }
+  .cwov-float .cwov-c:not([data-shape="dpad"])::before, .cwov-strip .cwov-c::before { content:''; position:absolute; inset:13% 16% auto; height:52%;
+    border-radius:50% 50% 0 0 / 100% 100% 0 0; border:max(1.5px,.11em) solid transparent; border-top-color:rgba(255,255,255,.5); border-bottom:0;
+    pointer-events:none; transition:opacity .05s linear, transform .05s linear; }
+  .cwov-float .cwov-c[data-shape="rect"]::before { border-radius:3px 3px 0 0; inset:12% 12% auto; }
+  /* A pill's arc is shorter and flatter, so it stays above the word on it (SELECT, START, RESET). */
+  .cwov-float .cwov-c[data-shape="pill"]::before, .cwov-strip .cwov-c[data-shape="pill"]::before { inset:9% 28% auto; height:22%; border-width:max(1px,.1em); }
+  .cwov-strip .cwov-c[data-kind="toggle"]::before { inset:5% 30% auto; height:12%; }   /* two lines of words: the arc stays above them */
+  .cwov-float .cwov-c:not([data-shape="dpad"]).lit { background:var(--cwov-press);
+    box-shadow:inset 0 0 0 .24em rgba(6,8,12,.2), inset 0 0 0 calc(.24em + 1px) rgba(255,255,255,.36),
+      inset 0 .28em .5em -.1em rgba(0,0,0,.42), 0 1px 4px -2px rgba(0,0,0,.7); }
+  .cwov-float .cwov-c.lit::before, .cwov-strip .cwov-c.lit::before { opacity:.32; transform:translateY(1.5px); }
   .cwov-float .cwov-c[data-shape="dpad"] { background:transparent; border:0; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
-  .cwov-float .cwov-cross { position:absolute; inset:0; pointer-events:none; background:rgba(150,162,180,.22);
+  /* The d-pad (and every stick drawn as one) sits in a round base: a rim ring whose top edge is the glare. */
+  .cwov-float .cwov-c[data-shape="dpad"]::before { content:''; position:absolute; inset:-3%; border-radius:50%; pointer-events:none;
+    border:1px solid rgba(255,255,255,.2); border-top-color:rgba(255,255,255,.46);
+    background:radial-gradient(circle at 50% 50%, rgba(20,24,30,.12) 0 58%, rgba(20,24,30,.26) 72%);
+    box-shadow:inset 0 0 0 4px rgba(6,8,12,.16), inset 0 0 0 5px rgba(255,255,255,.2), 0 3px 10px -5px rgba(0,0,0,.6); }
+  .cwov-float .cwov-cross { position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(to bottom, rgba(255,255,255,.12), rgba(255,255,255,0) 40%), rgba(150,162,180,.24);
     backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); filter:drop-shadow(0 6px 16px rgba(0,0,0,.65));
     clip-path:polygon(34% 0,66% 0,66% 34%,100% 34%,100% 66%,66% 66%,66% 100%,34% 100%,34% 66%,0 66%,0 34%,34% 34%); }
+  /* The cross's face, a step inside its rim, and the round dimple at its centre. */
+  .cwov-float .cwov-cross::before { content:''; position:absolute; inset:0; background:linear-gradient(to bottom, rgba(255,255,255,.07), rgba(6,8,12,.16));
+    clip-path:polygon(37.5% 3.5%,62.5% 3.5%,62.5% 37.5%,96.5% 37.5%,96.5% 62.5%,62.5% 62.5%,62.5% 96.5%,37.5% 96.5%,37.5% 62.5%,3.5% 62.5%,3.5% 37.5%,37.5% 37.5%); }
+  .cwov-float .cwov-cross::after { content:''; position:absolute; left:50%; top:50%; width:19%; height:19%; transform:translate(-50%,-50%); border-radius:50%;
+    border:1px solid rgba(255,255,255,.26); box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
   .cwov-float .cwov-arm { display:flex; align-items:center; justify-content:center; border-radius:9px; color:#aeb6c2; font-size:clamp(14px,3.4vw,20px); }
-  .cwov-float .cwov-arm.lit { background:var(--cwov-press); color:var(--cwov-press-ink); }
+  .cwov-float .cwov-arm.lit { background:var(--cwov-press); color:var(--cwov-press-ink); box-shadow:inset 0 2px 5px rgba(0,0,0,.38); }
   /* STRIP: the console switches, bottom centre of the window. */
   .cwov-strip { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(6px + env(safe-area-inset-bottom, 0px));
     display:flex; gap:8px; flex-wrap:nowrap; pointer-events:none; max-width:calc(100% - 12px); }
@@ -208,6 +245,13 @@
   .cwov-strip .cwov-c small { font-weight:600; font-size:.86em; letter-spacing:.04em; opacity:.8; text-transform:none; }
   .cwov-strip .cwov-c.lit { background:var(--cwov-press); color:var(--cwov-press-ink); border-color:rgba(255,255,255,.6); }
   .cwov-strip .cwov-c[data-kind="toggle"][data-on="1"] { border-color:var(--cwov-press); }
+  /* The strip's switches get the same rim, face and arc (see DEPTH above). */
+  .cwov-strip .cwov-c { background:radial-gradient(120% 90% at 50% 18%, rgba(255,255,255,.13) 0%, rgba(255,255,255,0) 58%), rgba(20,22,26,.55);
+    box-shadow:inset 0 0 0 .24em rgba(6,8,12,.28), inset 0 0 0 calc(.24em + 1px) rgba(255,255,255,.3),
+      inset 0 -.3em .55em -.2em rgba(0,0,0,.32), 0 3px 10px -5px rgba(0,0,0,.75); }
+  .cwov-strip .cwov-c.lit { background:var(--cwov-press);
+    box-shadow:inset 0 0 0 .24em rgba(6,8,12,.2), inset 0 0 0 calc(.24em + 1px) rgba(255,255,255,.36),
+      inset 0 .28em .5em -.1em rgba(0,0,0,.42), 0 1px 4px -2px rgba(0,0,0,.7); }
   /* Settings rows (hosted by the Control Bar's Settings panel). */
   .cwov-set { display:grid; gap:10px; font:13px/1.4 system-ui,sans-serif; color:inherit; }
   .cwov-set .row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
@@ -547,17 +591,37 @@
 
     /* ---- the gesture ---- */
     _ctlOf(el) { for (const k of this.ctls) if (k.el === el) return k; return null; }
-    _hit(x, y) {
+    _hit(x, y, id) {
       const out = new Set();
-      const doc = this.root.ownerDocument;
-      let list = [];
-      try { list = doc.elementsFromPoint(x, y); } catch (_) { list = []; }
-      for (const el of list) {
-        const k = this._ctlOf(el); if (!k) continue;
-        if (k.def.kind === 'toggle') continue;           // a toggle answers a tap (pointerup), not a hold
-        if (k.def.shape === 'dpad') this._dpad(k, x, y, out); else if (k.def.input) out.add(k.def.input);
-      }
+      const k = this._pick(x, y, id, false);             // a toggle answers a tap (pointerup), not a hold
+      if (k) { if (k.def.shape === 'dpad') this._dpad(k, x, y, out); else if (k.def.input) out.add(k.def.input); }
       return out;
+    }
+    /* The ONE control a finger at x, y gets (see BEHAVIOUR). Only where touch areas overlap does
+       it look further: the buttons as drawn (no slop) first, the smaller on top where two drawn
+       shapes meet (a pill over the d-pad's base); between buttons, the one this finger holds, else
+       the nearest drawn edge. */
+    _pick(x, y, id, toggles) {
+      const doc = this.root.ownerDocument, html = doc.documentElement;
+      const at = tight => {
+        let list = [];
+        if (tight) html.classList.add('cwov-tight');
+        try { list = doc.elementsFromPoint(x, y); } catch (_) { list = []; }
+        if (tight) html.classList.remove('cwov-tight');
+        const o = [];
+        for (const el of list) { const k = this._ctlOf(el); if (k && !o.includes(k) && (toggles || k.def.kind !== 'toggle')) o.push(k); }
+        return o;
+      };
+      const cand = at(false);
+      if (cand.length < 2) return cand[0] || null;
+      const area = k => k.el.offsetWidth * k.el.offsetHeight;
+      const drawn = at(true).filter(k => cand.includes(k));
+      if (drawn.length) return drawn.reduce((a, b) => (area(b) < area(a) ? b : a));
+      const mine = id != null && this.byPointer.get(id);
+      const held = mine && cand.find(k => k.def.input && mine.has(k.def.input));
+      if (held) return held;
+      const gap = k => { const r = k.el.getBoundingClientRect(); return Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom)); };
+      return cand.reduce((a, b) => (gap(b) < gap(a) ? b : a));
     }
     /* Eight-way from the angle in SCREEN space, dead centre 20% (the Game Boy's rule). Screen
        space on purpose: a turned Lynx's page turns screen directions into console ones itself. */
@@ -573,7 +637,7 @@
       if (oct === 5 || oct === 6 || oct === 7) out.add(d.up);
     }
     _down(e) {
-      const k = this._ctlOf(e.target && e.target.closest ? e.target.closest('.cwov-c') : null);
+      const k = this._pick(e.clientX, e.clientY, null, true) || this._ctlOf(e.target && e.target.closest ? e.target.closest('.cwov-c') : null);
       if (!k) return;
       e.preventDefault(); e.stopPropagation();
       try { k.el.setPointerCapture(e.pointerId); } catch (_) {}
@@ -586,7 +650,7 @@
        as a real pad's thumb does: off its square it still points the same way. */
     _inputsAt(id, x, y) {
       const k = this.dpadOf.get(id);
-      if (!k) return this._hit(x, y);
+      if (!k) return this._hit(x, y, id);
       const out = new Set(); this._dpad(k, x, y, out); return out;
     }
     _move(e) {
@@ -663,19 +727,21 @@
        keyboard, the overlay will light up and it does not on the Lynx. It does on the G&W"). The
        host hands a source of what the game has held now from any input (keys with the viewer's
        remaps, a pad, touch), by the functions' default key codes; the art buttons and the strip
-       light from it always, the float pad only with "Show inputs" as before. The host calls
-       refreshLit() each frame; it repaints only when the set changed. */
-    setLitSource(fn) { this.litSource = typeof fn === 'function' ? fn : null; this._litKey = ''; this._paint(); }
+       light from it always. THE FLOAT PAD LIGHTS FOR A CONTROLLER TOO (7 Nov 2026: "When pressing the
+       controller buttons, the same overlay buttons should light up"): padFn is the same thing for the
+       controller's presses alone; the keyboard's light the float pad only with "Show inputs" as before.
+       The host calls refreshLit() each frame; it repaints only when the set changed. */
+    setLitSource(fn, padFn) { this.litSource = typeof fn === 'function' ? fn : null; this.litPad = typeof padFn === 'function' ? padFn : null; this._litKey = ''; this._paint(); }
     refreshLit() {
       if (!this.litSource || !this.root) return;
-      let s; try { s = this.litSource(); } catch (_) { return; }
-      const key = Array.from(s || []).sort().join(',');
+      let s, p; try { s = this.litSource(); p = this.litPad ? this.litPad() : null; } catch (_) { return; }
+      const key = Array.from(s || []).sort().join(',') + '|' + Array.from(p || []).sort().join(',');
       if (key === this._litKey) return;
-      this._litKey = key; this._srcLit = new Set(s || []); this._paint();
+      this._litKey = key; this._srcLit = new Set(s || []); this._padLit = new Set(p || []); this._paint();
     }
     _paint() {
-      const L0 = this.lit(), src = this.litSource ? (this._srcLit || new Set()) : null;
-      const litOf = k => (src && k.layer !== 'float') ? new Set([...L0, ...src]) : L0;
+      const L0 = this.lit(), src = this.litSource ? (this._srcLit || new Set()) : null, pad = this._padLit || new Set();
+      const litOf = k => (src && k.layer !== 'float') ? new Set([...L0, ...src]) : (pad.size ? new Set([...L0, ...pad]) : L0);
       for (const k of this.ctls) {
         const held = Array.from(this.byPointer.values()).some(set => k.def.shape === 'dpad'
           ? ['up', 'down', 'left', 'right'].some(n => set.has(Object.assign({}, DIRS, k.def.dirs || {})[n])) : set.has(k.def.input));
@@ -700,7 +766,7 @@
         <div class="row"><span>On-screen buttons</span><span class="seg" data-k="display">
           <button type="button" data-v="auto">Auto</button><button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></span></div>
         <div class="hint">Auto shows them on a touch screen, and hides them while a gamepad is connected.</div>
-        <label class="row"><span>Light buttons pressed on the keyboard or a gamepad</span><input type="checkbox" data-k="showInputs"></label>
+        <label class="row"><span>Light buttons pressed on the keyboard</span><input type="checkbox" data-k="showInputs"></label>
         <label class="row"><span>Opacity</span><input type="range" min="0.2" max="1" step="0.05" data-k="opacity"></label>
         <label class="row"><span>Size</span><input type="range" min="0.75" max="1.5" step="0.05" data-k="scale"></label>
         <label class="row"><span>Spacing from the edges</span><input type="range" min="0" max="48" step="2" data-k="spacing"></label>

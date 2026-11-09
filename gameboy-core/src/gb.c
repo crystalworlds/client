@@ -154,6 +154,21 @@ void *memcpy(void *d, const void *s, unsigned long n) {
 #define MBC3_INVALID_BANK_FF 1
 #endif
 
+/* LCD_OFF_BLANK -- THE ORIGINAL GAME BOY'S PICTURE WHEN THE LCD IS SWITCHED OFF.  1 = blank, 0 = the old
+ * behaviour (the last picture stays).  MECHANISM: the switch stops the display, and nothing drives the
+ * panel, so the panel shows no picture; the first frame after switching back on is still not shown
+ * (frame_discard, unchanged), so it must not show the OLD picture either.  One write clears both cases.
+ * Pan Docs (LCDC.7): "When the display is disabled the screen is blank, which on DMG is displayed as a
+ * white 'whiter' than color #0", and "the screen will stay blank during the first frame".  firstwhite's
+ * author records it on Game Boy and Game Boy Pocket.  Read: SameBoy GB_display_vblank.
+ * The framebuffer holds shade indices, so the blank is shade 0, the lightest the site's palettes have,
+ * not the panel's slightly lighter off tone.
+ * NOT THE COLOR (no evidence covers it beyond one passing test).
+ * NOT THE SUPER GAME BOY: Pan Docs and firstwhite's author both say its picture stays. */
+#ifndef LCD_OFF_BLANK
+#define LCD_OFF_BLANK 1
+#endif
+
 #ifndef STOP_BLANKS_LCD
 #define STOP_BLANKS_LCD 1
 #endif
@@ -1804,6 +1819,34 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef LYC_CARRY
 #define LYC_CARRY 1
 #endif
+/* LYC_BLANK_HOLD (8 Nov 2026) -- MECHANISM, original Game Boy only.
+ * At the start of a line the comparator is blind for one machine cycle and LY
+ * already holds the new line.  That blind spot is what STAT bit 2 READS (0);
+ * it is not a falling edge on the interrupt line.  A match from the line
+ * before (LY=LYC on line N) keeps the line high until the blind spot ends, and
+ * by then the new line's mode-2 source is already high, so line N+1 raises no
+ * mode-2 STAT interrupt: "STAT blocking" across the boundary.  Without it a
+ * game that runs LYC=N with the mode-2 select on takes a spurious interrupt at
+ * every N to N+1 boundary.  Pinball Deluxe does exactly that (LYC=126): its
+ * per-line handler then runs one line late, misses line 144's mode 3, spins
+ * through VBlank and nests the VBlank handler once a frame until the stack
+ * runs over the game's variables (the broken table and the lock-up).  The same
+ * row was found and fixed once before as D8 (see the mode-2 source note in
+ * ppu_update_stat_line); the blind-spot form that LYC_CARRY left in place
+ * reopened it.  Hardware tests (gambatte, DMG): 7 rows move to pass
+ * (lycm2int_m2irq_1, lyc0m2int_m2irq_1, lyc143_late_m2enable_lycdisable_2,
+ * enable_after_lycint_1, late_enable_after_lycint_1 and _2,
+ * lyc1_m2irq_late_lyc255_3) and 3 move to fail (lycm2int_m2irq_2,
+ * lyc0m2int_m2irq_2, enable_after_lycint_2): each of the 3 is the second half
+ * of a pair whose first half now passes, read one machine cycle later, so they
+ * passed before only because of the spurious interrupt and now show a
+ * one-cycle offset that was hidden behind it.  Net +4, TRADE taken;
+ * SameBoy 1.0.5 holds the line the same way (lyc_interrupt_line is not cleared
+ * while ly_for_comparison is -1, models up to CGB-C at single speed).  The
+ * Color keeps its own comparator arm (CT_*), unmeasured here.  Off arm: 0. */
+#ifndef LYC_BLANK_HOLD
+#define LYC_BLANK_HOLD 1
+#endif
 /* 2026-10-28: 1, not 4.  The same correction as LINE0_DISPATCH_LAG:
  * with the running look at the line start (RUN_IRQ_LOOK_EDGES 3) a 4-dot hold
  * hid the coincidence raise from the look's sample and daid/ppu_scanline_bgp
@@ -1915,19 +1958,19 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * that runs with ppu_dots == k and is visible to a read from the end of it.
  * _SS = single speed, _DS = double speed; -1 for an LY tick = at the line wrap. */
 #ifndef CT_LY_SS               /* LY register, lines 1..152                       */
-#define CT_LY_SS 1
+#define CT_LY_SS (SPSW_LY_GLITCH ? 2 : 1)
 #endif
 #ifndef CT_LY_DS
-#define CT_LY_DS 3
+#define CT_LY_DS (SPSW_LY_GLITCH ? 4 : 3)
 #endif
 #ifndef CT_LY144_SS            /* LY register, line 144                           */
-#define CT_LY144_SS 0
+#define CT_LY144_SS (SPSW_LY_GLITCH ? 2 : 0)
 #endif
 #ifndef CT_LY144_DS
-#define CT_LY144_DS 3
+#define CT_LY144_DS (SPSW_LY_GLITCH ? 4 : 3)
 #endif
 #ifndef CT_LY153_SS            /* LY reads 153 on line 153 ...                    */
-#define CT_LY153_SS 0
+#define CT_LY153_SS (SPSW_LY_GLITCH ? 2 : 0)
 #endif
 /* CT_LY153_DS / CT_LY153Z_DS (2026-11-01): HARDWARE OVERRULES THE
  * REFERENCE.  AGE ly-dmgC-cgbBC, verified by its author on CPU CGB B and C,
@@ -1938,10 +1981,10 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * 153; the zero keeps the reference's six-dot gap from it (9), FITTED within
  * the table's window (9 or 10).  Color guard unchanged (GREEN). */
 #ifndef CT_LY153_DS
-#define CT_LY153_DS 3
+#define CT_LY153_DS (SPSW_LY_GLITCH ? 4 : 3)
 #endif
 #ifndef CT_LY153Z_SS           /* ... and 0 from this tick of line 153            */
-#define CT_LY153Z_SS 4
+#define CT_LY153Z_SS (SPSW_LY_GLITCH ? 6 : 4)
 #endif
 #ifndef CT_LY153Z_DS
 #define CT_LY153Z_DS 9
@@ -1957,6 +2000,17 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #endif
 #ifndef CT_M3R_DS
 #define CT_M3R_DS 84
+#endif
+/* CT_M0_OWED (7 Nov 2026; Mooneye intr_2_mode0_timing_sprites on the
+ * Color, test 0x20, ten objects at X = 167, verified on hardware by its author;
+ * it failed from 22 Oct).  The report and the request lead the last pixel by a
+ * count that left out an object not yet fetched, so an object in the line's last
+ * two pixels reported mode 0 before its own fetch.  The count is now the dots of
+ * object work still owed, which is what OBJ_M0_LEAD has always used.  This one
+ * count sat in both paths (M0_LEAD_CGB's and the CT block's), which is why either
+ * alone caused the failure.  MECHANISM.  0 = the old count. */
+#ifndef CT_M0_OWED
+#define CT_M0_OWED 1
 #endif
 #ifndef CT_M0R_SS              /* mode-0 report: dots BEFORE the last pixel (-1 = one after) */
 #define CT_M0R_SS 2
@@ -2061,6 +2115,70 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #endif
 #ifndef CT_SWITCH_PPU          /* FITTED: PPU alignment change at a switch, dots  */
 #define CT_SWITCH_PPU 2
+#endif
+/* CT_SWITCH_PPU_BACK: the same at a switch back to single speed, dots the PPU
+ * runs ahead (negative: dots it falls behind).  Default: the original arm
+ * (-CT_SWITCH_PPU), i.e. no change.  MEASURED AND DECLINED (measured
+ * 2026-11-07): AGE spsw-mode0 (its author's table) reads our LY and STAT a
+ * quarter line late after every switch back to single speed; a sweep of this
+ * knob gives 36 -> 1 wrong cells of 120 at 15 (and lcd-align-ly 27 -> 6 of 72),
+ * 13 at 14, 15 at 16, with CT_SWITCH_PPU 1 or 3 and CT_SWITCH_SHORT 3 or 5
+ * all worse.  No value passes a run, so nothing is adopted; the one cell left
+ * at 15 is the line after the THIRD switch (ours a line early), so the stall's
+ * end is not a constant offset.  Reopen: a model of how the switch's stall
+ * ends relative to the PPU (see the CT doc, section 4).
+ * CORRECTION (7 Nov 2026): "not a constant offset" was wrong.  The
+ * pair of switches is one constant, 149 dots mod 456, and the one cell left at 15
+ * was the LY glitch (SPSW_LY_GLITCH), not a position.  This knob only applies with
+ * SPSW_STALL 0. */
+#ifndef CT_SWITCH_PPU_BACK
+#define CT_SWITCH_PPU_BACK (-CT_SWITCH_PPU)
+#endif
+/* SPSW_STALL (7 Nov 2026): 1 = THE MODEL OF THE SWITCH'S STALL.
+ * 0 = the old stall (32766 cycles, deferred flip, a second divider reset at its
+ * end, and CT_SWITCH_SHORT / CT_SWITCH_PPU* above).
+ * MECHANISM, read in the AGE emulator's source (its author's own tests, Apache
+ * licence) and confirmed on his tables, AFTER a table-only derivation had found
+ * the pair of switches moves the picture unit by 149 dots (mod 456) against the
+ * processor, one constant, whatever the earlier single remaining cell suggested:
+ *   - the stall is 32768 machine cycles BOTH WAYS, which is exactly why the
+ *     divider reads 0 after it: 0x20000 CPU clocks wrap the 16-bit divider twice.
+ *     There is no second reset.  The speed changes and the divider resets once.
+ *   - ours has one cycle more (32769): our reads land at the end of a machine
+ *     cycle and AGE's at its start, so its "after STOP" is our next cycle's end;
+ *     the divider reset and the speed change go there (speed_flip_in, tick4).
+ *   - the PPU runs through the whole stall, so its dots follow from the speed:
+ *     4 + 2 x 32768 = 65540 going up, 2 + 4 x 32768 = 131074 coming down.
+ * SPSW_PPU_FWD 0: nothing added, MECHANISM.
+ * SPSW_PPU_BACK -1: one dot per pair, MECHANISM (AGE: line start one dot later per
+ *   pair, placed at the switch up; ours at the switch down, because our double-
+ *   speed tables already sit on the other side of that dot; placement FITTED).
+ * SPSW_PPU_FWD0 -2: a switch up on the very line the LCD came on.  FITTED
+ *   (lcd-align-ly's first row; our power-on line length, LCD_ON_LEN_*, is itself
+ *   fitted).
+ * Disproved by: any hardware capture of an edge after a switch that disagrees.  The
+ * earlier sweep to beat (CT_SWITCH_PPU_BACK, best 36 -> 1 cells) is replaced:
+ * this form passes all five tests with no sweep. */
+#ifndef SPSW_STALL
+#define SPSW_STALL 1
+#endif
+#ifndef SPSW_PPU_FWD
+#define SPSW_PPU_FWD 0
+#endif
+#ifndef SPSW_PPU_FWD0
+#define SPSW_PPU_FWD0 (-2)
+#endif
+#ifndef SPSW_PPU_BACK
+#define SPSW_PPU_BACK (-1)
+#endif
+/* SPSW_LY_GLITCH: a read just before the visible LY moves sees LY & (LY + 1), and
+ * the visible LY moves on the same dot on every line, 144 and 153 too (their old
+ * earlier values were indistinguishable at the only alignment reads could have
+ * before a switch back existed).  SOURCE-READ (AGE read_ly) and on his table
+ * ("glitch: LY & (LY + 1)", lcd-align-ly verified on CPU CGB B and C); why the read
+ * sees both values is NOT ESTABLISHED.  0 = no glitch, the old CT_LY* values. */
+#ifndef SPSW_LY_GLITCH
+#define SPSW_LY_GLITCH 1
 #endif
 #define CT_CGB(gb) (CT_ON && (gb)->dev == GB_DEV_CGB && (CT_SS || (gb)->double_speed))
 #define CT_VBG(gb) (CT_CGB(gb) || (CT_ON && (gb)->dev == GB_DEV_CGB && CT_SS_VB))
@@ -4051,7 +4169,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  *     same mode-0 request): groups 0 | 1-4 | 5-7, the timing we had.
  * So the request is where it was for the halted processor, and the running
  * processor's sample (the instruction-boundary test and HALT's own test) sees
- * two dots further on.  Measured, not taken from any source: GBACC's refused
+ * two dots further on.  Measured, not taken from any source: an earlier refused
  * arm M0_IRQ_LEAD_DMG 2 moved the request for both and broke the Mooneye row.
  * SCOPE: THE END-OF-DRAWING (MODE-0) REQUEST ONLY (RUN_IRQ_LOOK_EDGES 2).  The
  * same look at the line start (mode 2, LYC, vertical blank; RUN_IRQ_LOOK_EDGES
@@ -4109,6 +4227,30 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef DMG_WRITE_LAG
 #define DMG_WRITE_LAG 4
 #endif
+/* CGB_WRITE_LAG -- THE SAME PLACEMENT ON THE COLOR (2026-11-07).
+ * AGE m3-bg-lcdc / m3-bg-scx / m3-bg-bgp in colour mode and in the Color's
+ * DMG-compatibility mode (the ncm runs) all failed while the DMG runs of the
+ * same cartridges pass.  Traced on m3-bg-lcdc (colour): every wrong tile is
+ * the write seen one tile-fetch early; with the writes placed 4 dots later the
+ * toggle lands on the hardware's tile at every SCX phase (the hardware tables
+ * are the author's, verified on CPU CGB B, C and E).  The Color's line-start
+ * dispatch is already on time (the CT block; AGE stat-int passes on the
+ * Color), so its writes were still placed with the old leads, one machine
+ * cycle before the DMG's.  This is DMG_WRITE_LAG's placement for the Color:
+ * the write lands inside its own machine cycle.  Measured: AGE
+ * m3-bg-lcdc (colour and compatibility modes), m3-bg-bgp (compatibility mode)
+ * and cgb-acid-hell pass, the Color timing guard stays green, mealybug 24/24.
+ * CGB_WRITE_LAG_DS: the dots at double speed; 1 passes m3-bg-lcdc-ds, 2-4 do
+ * not (1664 px) and 0 does not (2304 px): FITTED (inside the two-dot cycle).
+ * LABEL: MECHANISM (one placement for both machines), the double-speed dot
+ * FITTED.  Off arm: 0. */
+#ifndef CGB_WRITE_LAG
+#define CGB_WRITE_LAG 4
+#endif
+/* CGB_WRITE_LAG_DS: the same at double speed, in dots (one machine cycle). */
+#ifndef CGB_WRITE_LAG_DS
+#define CGB_WRITE_LAG_DS 1
+#endif
 /* DMG_HALT_TEST_END -- THE DMG'S HALT TESTS FOR A REQUEST AT THE END OF ITS OWN
  * MACHINE CYCLE, WITH THE RUNNING PROCESSOR'S LOOK (2026-10-28).
  * The Color's CT_HALT_TEST_END, on the DMG.  AGE halt-m0-interrupt-dmgC: with the
@@ -4144,6 +4286,77 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * Off arm: 0. */
 #ifndef WIN_HELD_EXTRA
 #define WIN_HELD_EXTRA 1
+#endif
+/* WIN_FINE_STALL_CGB / WIN_TAIL_HOLD_CGB -- THE SAME TWO WINDOW LAWS ON THE COLOR
+ * (2026-11-07).  AGE stat-mode-window-cgbBCE / -ncmBCE / -ds (the
+ * author's tables, CPU CGB B, C and E): WX 1-9 and 162-166 all end drawing
+ * on the same dot as WX 8, and WX 167 does not; ours ended SCX & 7 dots early
+ * for WX 1-7 (the discard voided at the takeover, as on the DMG before
+ * WIN_FINE_STALL) and early for WX 165-166 (the Color's report, CT_M0R, fired
+ * before the window's start-up fetch).  On the Color the window still takes
+ * over at pixel 159 (WX 166), one later than the DMG's last (WX 165), so the
+ * tail's range is 7 + 157 .. 7 + 159 here.  WIN_TAIL_K_CGB: the report's
+ * dots through the start-up fetch; measured 3 at single speed (2 reports a
+ * dot early) and 6 at double speed, where the Color's report lead is one dot
+ * AFTER the last pixel (CT_M0R_DS -1).  With WIN_HELD_EXTRA_CGB all four
+ * stat-mode-window runs pass (DMG, Color, compatibility mode, double speed).
+ * LABEL: MECHANISM (the DMG's laws, measured on the Color's tables); the two
+ * K values FITTED (the lead's arithmetic, not derived).  Off arms: 0. */
+#ifndef WIN_FINE_STALL_CGB
+#define WIN_FINE_STALL_CGB 1
+#endif
+/* BGMAP_SUM -- THE BACKGROUND MAP COLUMN IS A SUM, NOT A TILE COUNT (2026-11-07,
+ * measured).  AGE m3-bg-scx (the author's photographs, DMG-CPU C and CPU CGB
+ * B/C/E, colour and compatibility modes, single and double speed): a line that
+ * starts with fine scroll 1-7 and has SCX written to a multiple of 8 near its
+ * end shows map column 20 in its last pixels; ours showed 21.  Traced: our
+ * column was (SCX >> 3) + the count of tiles fetched, and the fine scroll's
+ * discarded pixels had already cost one tile of that count.  The hardware
+ * forms the column from the whole SCX and the screen position the tile will
+ * land on in one sum, (SCX + x) >> 3, so the fine-scroll discard never enters
+ * it and a mid-line change of the low bits moves the column too.  Identical to
+ * the count whenever SCX's low bits are those the line started with, which is
+ * why no earlier table saw it.  The window keeps its own tile count.
+ * BGMAP_SUM_DMG: the original adds one more pixel to the sum than the Color
+ * (SameBoy: + 8 on the DMG, + 7 on the Color outside an object fetch).  The
+ * photographs decide it: with the fine scroll lowered by exactly one mid-line
+ * the DMG shows column 21 in the last pixels and the Color column 20 (AGE
+ * m3-bg-scx-dmgC against -cgbBCE / -nocgb / -ds).  BGMAP_SUM_OBJ: during an
+ * object fetch the Color sums like the original (read in SameBoy, not
+ * measured here: no table we hold changes the low bits beside an object).
+ * LABEL: MECHANISM (one address law for every scroll value); the extra pixel
+ * is SOURCE-READ and photographed, its reason (which edge samples the
+ * position) NOT ESTABLISHED.  Off arm: 0 (the tile count). */
+#ifndef BGMAP_SUM
+#define BGMAP_SUM 1
+#endif
+#ifndef BGMAP_SUM_DMG
+#define BGMAP_SUM_DMG 1
+#endif
+#ifndef BGMAP_SUM_OBJ
+#define BGMAP_SUM_OBJ 1
+#endif
+#ifndef WIN_TAIL_HOLD_CGB
+#define WIN_TAIL_HOLD_CGB 1
+#endif
+#ifndef WIN_TAIL_K_CGB
+#define WIN_TAIL_K_CGB 3
+#endif
+#ifndef WIN_TAIL_K_CGB_DS
+#define WIN_TAIL_K_CGB_DS 6
+#endif
+/* WIN_HELD_EXTRA_CGB: the DMG's WIN_HELD_EXTRA on the Color -- a line whose
+ * window starts at WX 1-7 reports mode 0 one dot later (AGE stat-mode-window
+ * cgbBCE / ncmBCE: WX 1-9 read alike; ours read WX 1-7 one dot early after the
+ * stall).  At double speed the report goes through the late path (ct_m0_late),
+ * so the dot is a countdown there (WIN_HELD_EXTRA_CGB_DS, bits 4-5): 1 passes
+ * stat-mode-window-ds, 2 and 3 do not.  FITTED, as the DMG's.  Off arm: 0. */
+#ifndef WIN_HELD_EXTRA_CGB
+#define WIN_HELD_EXTRA_CGB 1
+#endif
+/* WIN_HELD_EXTRA_CGB_DS: the same at double speed, in dots. */
+#ifndef WIN_HELD_EXTRA_CGB_DS
+#define WIN_HELD_EXTRA_CGB_DS 1
 #endif
 #ifndef M0_LEAD_CGB_DS
 #define M0_LEAD_CGB_DS 0
@@ -5198,7 +5411,7 @@ static unsigned long gb_seqno;
  *
  * 2026-10-28: 6, no longer LINE0_DISPATCH_LAG + 4.  With the running
  * look at the line start (RUN_IRQ_LOOK_EDGES 3) AGE stat-int-dmgC's mode-1 rows
- * want the vertical-blank mode-1 source at dot 6 (GBACC2 measured the same; 7
+ * want the vertical-blank mode-1 source at dot 6 (an earlier measurement agreed; 7
  * fails them), and Mooneye intr_1_2_timing-GS still passes at 6. */
 #ifndef VB_MODE_DOT
 #define VB_MODE_DOT 6
@@ -6937,7 +7150,18 @@ static void bcb_tick(struct GB *gb, int cycles) {
 #define GBH_IR_DECAY 31500u
 #define GBH_IR_WARMUP 19900u
 #define GBH_IR_THRESHOLD 240u
-#define GBH_IR_MAX (GBH_IR_THRESHOLD * 2u + GBH_IR_DECAY + 268u)
+/* IR_FADE_CAP: the counter's cap sits above the fade bound, so a steady light
+ * fades (Pan Docs "Signal Fade"; SameBoy 1.0.5 fades too). The 1.0.3 form copied
+ * here capped at 32,248, below the bound 51,640, so a light never faded although
+ * this comment always said it does. MECHANISM for the fade; the figures stay
+ * SameBoy 1.0.3's (CONVERGENCE). Off arm: 0 restores the old cap. */
+#ifndef IR_FADE_CAP
+#define IR_FADE_CAP 1
+#endif
+#ifndef LOCK_RUNS_FRAME
+#define LOCK_RUNS_FRAME 1
+#endif
+#define GBH_IR_MAX ((IR_FADE_CAP ? GBH_IR_WARMUP : 0u) + GBH_IR_THRESHOLD * 2u + GBH_IR_DECAY + 268u)
 static int ir_led(const struct GB *gb) {
     return (gb->dev == GB_DEV_CGB && gb->cgb_mode && (gb->io[0x56] & 1)) || gb->cart_ir;
 }
@@ -7125,6 +7349,10 @@ static void ppu_update_stat_line(struct GB *gb) {
                 gb->lyc_flag = _prev;
             /* LYC_CARRY: the blind spot may not DROP a live match. */
             if (LYC_CARRY && gb->lyc_blank && _m && _prev) gb->lyc_flag = 1;
+            /* LYC_BLANK_HOLD: the blind spot may not drop a match early either.
+             * See the knob; STAT bit 2 still reads 0 through the blind spot. */
+            if (LYC_BLANK_HOLD && gb->dev == GB_DEV_DMG && gb->lyc_blank && !_m && _prev)
+                gb->lyc_flag = 1;
         }
         if ((gb->stat & 0x40) && gb->lyc_flag) line = 1;
         /* The mode sources read `int_mode`, NOT the live mode. They are two
@@ -7628,9 +7856,14 @@ static u8 lcdc_wincmp(const struct GB *gb) {
 #define WIN_TAIL_HOLD 1
 #endif
 static int win_tail_pending(const struct GB *gb) {
-    if (gb->win_active) return gb->wx >= 7 + 157 && gb->wx <= 7 + 158 && gb->bgf_len == 0;
+#if WIN_TAIL_HOLD_CGB
+    const int last = gb->dev == GB_DEV_CGB ? 7 + 159 : 7 + 158;   /* the Color still takes over at pixel 159 */
+#else
+    const int last = 7 + 158;
+#endif
+    if (gb->win_active) return gb->wx >= 7 + 157 && gb->wx <= last && gb->bgf_len == 0;
     return (lcdc_wincmp(gb) & 0x20) && gb->win_y_cond
-        && (int)gb->wx >= 7 + (int)gb->lx && gb->wx <= 7 + 158;
+        && (int)gb->wx >= 7 + (int)gb->lx && gb->wx <= last;
 }
 
 /* THE FUNNEL FOR LCDC.1, on the pattern bit 5 has always used: every consumer
@@ -9258,6 +9491,22 @@ static void ppu_fetcher_step(struct GB *gb) {
             } else {
                 map = (fsn_bgmap(gb) & 0x08) ? 0x9C00 : 0x9800;
                 tx  = (u8)(((fsn_scx(gb) >> 3) + gb->fetch_x) & 0x1F);
+#if BGMAP_SUM
+                /* BGMAP_SUM: the map column is the whole scroll plus the LCD
+                 * position, divided once (see the knob). */
+                /* The tile's first pixel lands at screen x = 8 * fetch_x less the
+                 * line's fine-scroll discard (the pixels already dropped, bg_pos -
+                 * lx, plus those still to drop); the column is (SCX + x) >> 3.
+                 * Not the pops so far alone: at the line start the second fetch
+                 * begins before the discard has run (0 to 2 pops, an object at
+                 * the left edge delays them), and the landing position must not
+                 * move with that. */
+                if (gb->fetch_x) {   /* the line's opening fetch is the scroll's own column */
+                    int fine = ((int)gb->bg_pos - (int)gb->lx) + ((gb->discard & 0x80) ? 0 : (gb->discard & 0x7F));
+                    tx  = (u8)(((int)fsn_scx(gb) + 8 * (int)gb->fetch_x - fine
+                                 + ((gb->dev == GB_DEV_DMG || (BGMAP_SUM_OBJ && gb->obj_fetching)) ? BGMAP_SUM_DMG : 0)) >> 3 & 0x1F);
+                }
+#endif
                 /* BGMAP_POS_CGB -- ORACLE-DERIVED (SameBoy, the tile-index
                  * address its background fetch forms).
                  * RESTATED: the reference does not quantise the scroll to tiles
@@ -9548,7 +9797,11 @@ static void ppu_fetcher_step(struct GB *gb) {
                      * restart empties the FIFO and this dot outputs nothing. */
                     gb->win_pend = 0;
                     gb->win_active = 1;
-                    if (WIN_FINE_SCOPE) gb->discard = (WIN_FINE_STALL && gb->dev == GB_DEV_DMG && gb->discard)
+                    if (WIN_FINE_SCOPE) gb->discard = (WIN_FINE_STALL && (gb->dev == GB_DEV_DMG
+#if WIN_FINE_STALL_CGB
+                        || gb->dev == GB_DEV_CGB
+#endif
+                        ) && gb->discard)
                         ? (u8)(0x80 | gb->discard) : 0;   /* the abandoned fetch owed it; WIN_FINE_STALL keeps its dots */
                     gb->win_retrig_px = (int)gb->lx;
                     gb->win_start_px = 7;
@@ -10717,6 +10970,8 @@ static void ppu_set_lcd(struct GB *gb, int on) {
         gb->mode_pending = 0; gb->mode_delay = 0;
     } else if (!on && gb->lcd_was_on) {
         gb->lcd_was_on = 0;
+        if (LCD_OFF_BLANK && gb->dev == GB_DEV_DMG && !gb->sgb)
+            for (int i = 0; i < 160 * 144; i++) gb->fb[i] = 0;
         gb->ly = 0; gb->ly_for_cmp = 0; gb->ppu_dots = 0;
         /* LY READS 0 WHILE THE LCD IS OFF -- ly_vis too, not only ly.
          * REASON: LY is the PPU's line counter, and switching the LCD off stops
@@ -10790,13 +11045,17 @@ static void ppu_tick_1(struct GB *gb) {
     if (CT_CGB(gb) && (gb->lcdc & 0x80)) {
         if (gb->ct_hdma_late && --gb->ct_hdma_late == 0 && gb->hdma_mode == 2) gb->hdma_hb_pending = 1;
         if (gb->ct_m0_late) {
-            if (gb->ct_m0_late & 1) gb->ct_stat = 0;
+            /* WIN_HELD_EXTRA_CGB: at double speed a WX 1-7 line's report still owes
+             * dots (count in bits 4-5); the request below is not held. */
+            int held = WIN_HELD_EXTRA_CGB ? (gb->ct_m0_late & 0x30) : 0;
+            if (held) gb->ct_m0_late = (u8)(gb->ct_m0_late - 0x10);
+            if ((gb->ct_m0_late & 1) && !held) gb->ct_stat = 0;
             if (CT_M0I_DS_EXTRA && (gb->ct_m0_late & 0x0C)) {
                 /* CT_M0I_DS_EXTRA: the request still owes dots (count in bits 2-3). */
-                gb->ct_m0_late = (u8)((gb->ct_m0_late & ~1) - 4);
+                gb->ct_m0_late = (u8)((gb->ct_m0_late & (held ? ~0 : ~1)) - 4);
             } else {
                 if (gb->ct_m0_late & 2) { gb->int_mode = 0; ppu_update_stat_line(gb); }
-                gb->ct_m0_late = 0;
+                gb->ct_m0_late = (u8)(held ? (gb->ct_m0_late & 0x31) : 0);
             }
         }
         if (gb->ct_m2r_due && gb->ly < 144 && !gb->lcd_on_line && gb->ppu_dots == CT_V(gb, CT_M2R)) {
@@ -11462,7 +11721,11 @@ static void ppu_tick_1(struct GB *gb) {
                         gb->win_frame_act = 1;
                         if (WIN_FINE_SCOPE) {
                             /* WIN_FINE_STALL / WIN_HELD_EXTRA: see the knobs. */
-                            int st = (WIN_FINE_STALL && gb->dev == GB_DEV_DMG) ? gb->discard : 0;
+                            int st = (WIN_FINE_STALL && (gb->dev == GB_DEV_DMG
+#if WIN_FINE_STALL_CGB
+                                      || gb->dev == GB_DEV_CGB
+#endif
+                                      )) ? gb->discard : 0;
                             gb->discard = st ? (u8)(0x80 | st) : 0;   /* the abandoned fetch owed it */
                         }   /* the abandoned fetch owed it; WIN_FINE_STALL keeps its dots */
 #ifdef WTPROBE
@@ -12116,9 +12379,22 @@ static void ppu_tick_1(struct GB *gb) {
                  * dots and the mode-0 REQUEST by CT_M0I (one dot less at single
                  * speed, the same at double speed).  Replaces the two leads below. */
                 if (CT_CGB(gb) && (int)gb->lx < 160) {
-                    int _d = (160 - (int)gb->lx) + (gb->obj_have_last ? obj_dots_owed(gb) : 0);
+                    int _d = (160 - (int)gb->lx) + ((gb->obj_have_last || CT_M0_OWED) ? obj_dots_owed(gb) : 0);
                     int _lr = gb->obj_have_last ? CT_V(gb, CT_M0RO) : CT_V(gb, CT_M0R);
                     int _li = gb->obj_have_last ? CT_V(gb, CT_M0IO) : CT_V(gb, CT_M0I);
+#if WIN_HELD_EXTRA_CGB
+                    if (gb->win_active && gb->wx && gb->wx < 8 && !gb->obj_have_last)
+                        _lr -= gb->double_speed ? WIN_HELD_EXTRA_CGB_DS : WIN_HELD_EXTRA_CGB;
+#endif
+#if WIN_TAIL_HOLD_CGB
+                    /* WIN_TAIL_HOLD_CGB: the report waits for a window still to start in the
+                     * line's last pixels, then counts through its start-up fetch. */
+                    if (gb->ct_stat == 3 && !gb->obj_have_last && win_tail_pending(gb)) {
+                        if (gb->win_active && gb->fetch_step * 2 + gb->fetch_sub
+                                >= (160 - (int)gb->lx) + (gb->double_speed ? WIN_TAIL_K_CGB_DS : WIN_TAIL_K_CGB))
+                            gb->ct_stat = 0;
+                    } else
+#endif
                     if (gb->ct_stat == 3 && _d <= _lr) gb->ct_stat = 0;
                     if (gb->int_mode == 3 && _d <= _li) { gb->int_mode = 0; ppu_update_stat_line(gb); }
                 }
@@ -12154,7 +12430,7 @@ static void ppu_tick_1(struct GB *gb) {
                 if (!CT_CGB(gb) && M0_LEAD_CGB && gb->dev == GB_DEV_CGB
                     && (M0_LEAD_CGB_DS || !gb->double_speed)
                     && gb->mode_report == 3 && !gb->obj_have_last
-                    && (int)gb->lx < 160 && (160 - (int)gb->lx) <= M0_LEAD_CGB) {
+                    && (int)gb->lx < 160 && (160 - (int)gb->lx) + (CT_M0_OWED ? obj_dots_owed(gb) : 0) <= M0_LEAD_CGB) {
                     gb->mode_report = 0;
                     gb->int_mode = 0;
                     ppu_update_stat_line(gb);
@@ -12162,6 +12438,10 @@ static void ppu_tick_1(struct GB *gb) {
                 if (gb->lx >= 160 && !gb->m0_seen) {
                     if (CT_CGB(gb) && gb->ct_stat == 3) {
                         if ((gb->obj_have_last ? CT_V(gb, CT_M0RO) : CT_V(gb, CT_M0R)) < 0) gb->ct_m0_late |= 1; else gb->ct_stat = 0;
+#if WIN_HELD_EXTRA_CGB
+                        if (gb->double_speed && (gb->ct_m0_late & 1) && gb->win_active && gb->wx && gb->wx < 8 && !gb->obj_have_last)
+                            gb->ct_m0_late |= (u8)(WIN_HELD_EXTRA_CGB_DS << 4);   /* the DMG's held dot, at double speed */
+#endif
                     }
                     if (CT_CGB(gb) && gb->int_mode == 3 && (gb->obj_have_last ? CT_V(gb, CT_M0IO) : CT_V(gb, CT_M0I)) < 0)
                         gb->ct_m0_late |= (u8)(2 | (gb->double_speed ? (CT_M0I_DS_EXTRA << 2) : 0));
@@ -12706,16 +12986,22 @@ static int cam_px(struct GB *gb, int x, int y) {
     if (x < 0) x = 0; if (x >= CAM_W) x = CAM_W - 1;
     if (y < 0) y = 0; if (y >= CAM_H) y = CAM_H - 1;
     long exposure = (gb->cam_reg[2] << 8) | gb->cam_reg[3];
-    /* FITTED: brightness scales linearly with exposure and is unity at
-     * $1000.  Measured: Game Boy Camera (USA, Europe) sets exposure $1000 at
-     * its default brightness and holds it there, so
-     * $1000 is the setting at which the game expects a normally exposed
-     * scene; SameBoy's camera normalises at the same value (output only, no
-     * code taken).  Pan Docs' sample code divides by $0300, which saturated
-     * the picture to white at the game's default.  Gain and level control
-     * are not modelled (Pan Docs advises against it for a host image that is
-     * already exposed). */
-    long v = (long)gb->cam_src[y * CAM_W + x] * exposure / 0x1000;
+    /* FITTED (8 Nov 2026): brightness scales linearly with exposure
+     * and is unity at $0500.  A webcam already exposes every scene to about
+     * mid-grey, so the host image carries no light level of its own.  $0500
+     * is chosen so that a normally exposed webcam picture (mean luma 128)
+     * makes the Game Boy Camera's own auto exposure settle at $081B, the
+     * value Pan Docs gives for "a room during the day with good light"
+     * ($0800).  At the old unity, $1000, the same picture settled at $19EA,
+     * which made the viewfinder 6.0 pictures a second instead of the
+     * hardware's 8.5 (the game's own limit; the sensor time itself, 32,446 +
+     * 512 x !N + 16 x exposure machine cycles, is unchanged and matches Pan
+     * Docs).  $0400 gives the same speeds; $0500 lands exactly on Pan Docs'
+     * well-lit room.  Disproved by: a real Pocket Camera and this path on the
+     * same scene settling at clearly different exposures.  Gain and level
+     * control are not modelled (Pan Docs advises against it for a host image
+     * that is already exposed). */
+    long v = (long)gb->cam_src[y * CAM_W + x] * exposure / 0x0500;
     if (v > 255) v = 255;
     if (gb->cam_reg[4] & 0x08) v = 255 - v;     /* A004 bit 3: invert         */
     return (int)v;
@@ -13990,6 +14276,8 @@ static void rtc_tick(struct GB *gb, int cycles) {
  * 262 KHz row go wrong (13 -> 13 wrong cells; cgbE 5 -> 21), so the low
  * divider bits around the STOP are not modelled by a single reset point.
  * Reopen: a model of the divider's low bits across the switch. */
+/* Reopened and closed by SPSW_STALL: the one reset point is right,
+ * with the exact-cycle glitch (spsw_div_reset) and no second reset at the end. */
 #ifndef STOP_DIV_STOP_LAG
 #define STOP_DIV_STOP_LAG 0
 #endif
@@ -14281,7 +14569,11 @@ static void ppu_pay(struct GB *gb, int early) {
      * phase -- and those rows stay ADDRESSED AND NOT COVERED until the write-
      * phase table gains its mode/speed dimension. */
     gb->pend_dots = GB_DEV_SPLIT(gb, GB_G13, 4, 4 >> gb->double_speed) + early
-                    + ((RUN_IRQ_LOOK_DMG && n < 0 && gb->dev == GB_DEV_DMG) ? n : 0);
+                    + ((RUN_IRQ_LOOK_DMG && n < 0 && gb->dev == GB_DEV_DMG) ? n : 0)
+#if CGB_WRITE_LAG
+                    + ((n < 0 && gb->dev == GB_DEV_CGB) ? n : 0)   /* the lag's owed dots carry */
+#endif
+                    ;
 #else
     (void)gb; (void)early;
 #endif
@@ -14297,10 +14589,34 @@ static void ppu_settle(struct GB *gb) {
 #endif
 }
 
+static void spsw_div_reset(struct GB *gb);
+static void ct_switch_ppu(struct GB *gb);
+/* SPSW_STALL: the steps after an armed STOP, counted in machine cycles here, not
+ * in instructions: 3 = wait one cycle (the immediate-interrupt path on B/C, AGE
+ * spsw-interrupts: its handlers read the divider one machine cycle later than on
+ * E), 2 = the divider reset at the end of this cycle, 1 = the speed changes at the
+ * start of this one. */
+static inline void spsw_flip(struct GB *gb) {
+    if (SPSW_STALL && gb->speed_flip_in == 1) {
+        gb->speed_flip_in = 0;
+        gb->double_speed ^= 1;
+        ct_switch_ppu(gb);
+        apu_after_speed_switch(&gb->apu, gb->double_speed);
+        gb->apu.dev_speed = gb->double_speed;  /* APU_DIV_BIT_SPEED */
+    }
+}
+static inline void spsw_count(struct GB *gb) {
+    if (SPSW_STALL && gb->speed_flip_in >= 2) {
+        if (gb->speed_flip_in == 2) spsw_div_reset(gb);
+        gb->speed_flip_in--;
+    }
+}
 static void tick4(struct GB *gb) {
     gb->tima_reloaded = 0;   /* window is one M-cycle; a bus write after this
                               * tick sees whether a reload landed in it */
+    spsw_flip(gb);
     timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb);
+    spsw_count(gb);
 #ifndef DOCTOR
     /* Gameboy Doctor stubs LY to a constant and its reference raises no PPU
      * interrupts, so the PPU-lite is compiled out of the doctor build. */
@@ -14470,9 +14786,25 @@ static void hdma_service(struct GB *gb) {
 static void timer_write_div(struct GB *gb) {
     int enabled = (gb->tac & 0x04) ? 1 : 0;
     int old = gb->timer_last_bit;
+    apu_div_written(&gb->apu);
     gb->div_counter = 0;
     if (old && enabled) timer_increment_tima(gb);
     gb->timer_last_bit = 0;
+}
+
+/* SPSW_STALL: the divider reset of a speed switch.  MECHANISM (read in the AGE
+ * emulator; its tables): it lands with the machine cycle after STOP's two, the
+ * same moment the speed changes.  One glitch: when the bit that clocks a counter
+ * rose on EXACTLY this cycle, the reset's immediate increment does not happen.
+ * Which counters: on B/C the 4 KHz timer, on E all but the 262 KHz one; and the
+ * sound frame sequencer on every revision. */
+static void spsw_div_reset(struct GB *gb) {
+    int sel = gb->tac & 3;
+    int b = TIMER_BIT[sel];
+    int glitch = gb->model < GB_MODEL_CGB_D ? sel == 0 : sel != 1;
+    if (glitch && (gb->div_counter & ((2u << b) - 1)) == (1u << b)) gb->timer_last_bit = 0;
+    apu_stop_div_glitch(&gb->apu, gb->div_counter);
+    timer_write_div(gb);
 }
 
 static void timer_write_tac(struct GB *gb, u8 v) {
@@ -14763,7 +15095,9 @@ static u8 bus_read(struct GB *gb, u16 addr) {
             case 0x41: {
                 /* Bit 7 always 1; the mode bits read 0 with the LCD off, but the
                  * coincidence bit is retained across a power-off. */
-                u8 v = (u8)(0x80 | (gb->stat & 0x78) | (gb->lyc_flag ? 0x04 : 0));
+                u8 v = (u8)(0x80 | (gb->stat & 0x78) | ((gb->lyc_flag
+                    && !(LYC_BLANK_HOLD && gb->dev == GB_DEV_DMG && gb->lyc_blank
+                         && gb->ly_for_cmp != gb->lyc)) ? 0x04 : 0));
                 if (gb->lcdc & 0x80) v |= (CT_CGB(gb) && !gb->lcd_on_line) ? gb->ct_stat
                     : (CGB_ACC_DS && CGB_L0_DS_STAT && CT_CGB(gb) && gb->double_speed && gb->ly == 0) ? (u8)cgb_l0_ds_stat(gb)
                     : gb->mode_report;
@@ -14778,6 +15112,19 @@ static u8 bus_read(struct GB *gb, u16 addr) {
 #ifdef TRACE_RST
                 gb_trace_io(gb, 0x44, gb->ly_vis);
 #endif
+                if (SPSW_LY_GLITCH && CT_CGB(gb) && (gb->lcdc & 0x80) && !gb->lcd_on_line) {
+                    /* The read just before the visible LY moves sees old AND new:
+                     * LY & (LY + 1), two dots at single speed, one at double
+                     * (AGE's table, "glitch: LY & (LY + 1)"; only an alignment a
+                     * switch back to single speed can reach ever lands here). */
+                    int nx = gb->ct_ly_due ? gb->ly : gb->ly + 1;
+                    if (nx <= 153 && nx > 0) {
+                        int k = nx == 144 ? CT_V(gb, CT_LY144) : nx == 153 ? CT_V(gb, CT_LY153) : CT_V(gb, CT_LY);
+                        int dist = gb->ct_ly_due ? k - gb->ppu_dots : 456 - gb->ppu_dots + k;
+                        if (dist >= 1 && dist <= (gb->double_speed ? 1 : gb->model < GB_MODEL_CGB_D ? 2 : 1))
+                            return (u8)(gb->ly_vis & (gb->ly_vis + 1));
+                    }
+                }
                 return gb->ly_vis;
             case 0x45: return gb->lyc;
             case 0x46: return gb->dma_reg;              /* OAM DMA source (readable) */
@@ -15787,7 +16134,9 @@ static int lcdc_budget_cut(struct GB *gb, int deficit) {
 
 static void write8_core(struct GB *gb, u16 addr, u8 v) {
     gb->tima_reloaded = 0;
+    spsw_flip(gb);
     timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb);
+    spsw_count(gb);
 #ifndef DOCTOR
     /* G4 -- DMG ONLY.  Restricting the two-stage conflict to mode 3 is OURS,
      * not the oracles': SameBoy applies its conflict unconditionally.  The
@@ -16219,6 +16568,14 @@ static void write8(struct GB *gb, u16 addr, u8 v) {
         k = DMG_WRITE_LAG;
         for (int i = 0; i < k; i++) ppu_tick_1(gb);
     }
+#if CGB_WRITE_LAG
+    /* CGB_WRITE_LAG: the Color's writes, same scope, one machine cycle. */
+    else if (gb->dev == GB_DEV_CGB && (gb->lcdc & 0x80)
+             && (addr & 0xFFF0) == 0xFF40 && ((DMG_WRITE_LAG_MASK >> (addr & 15)) & 1)) {
+        k = gb->double_speed ? CGB_WRITE_LAG_DS : CGB_WRITE_LAG;
+        for (int i = 0; i < k; i++) ppu_tick_1(gb);
+    }
+#endif
     write8_core(gb, addr, v);
     gb->pend_dots -= k;
 #else
@@ -16477,9 +16834,16 @@ static u8 irq_visible(struct GB *gb) {
 
 /* CT_SWITCH_PPU: see e23.  Forward: run the dots now; back: owe them (the PPU waits). */
 static void ct_switch_ppu(struct GB *gb) {
+    if (SPSW_STALL) {
+        if (!(CT_ON && gb->dev == GB_DEV_CGB) || !(gb->lcdc & 0x80)) return;
+        int n = gb->double_speed ? (gb->lcd_on_line ? SPSW_PPU_FWD0 : SPSW_PPU_FWD) : SPSW_PPU_BACK;
+        if (n > 0) { for (int i = 0; i < n; i++) ppu_tick_1(gb); } else gb->pend_dots += n;
+        return;
+    }
     if (!(CT_ON && gb->dev == GB_DEV_CGB && CT_SWITCH_PPU) || !(gb->lcdc & 0x80) || gb->lcd_on_line) return;
     if (gb->double_speed) { for (int i = 0; i < CT_SWITCH_PPU; i++) ppu_tick_1(gb); }
-    else gb->pend_dots -= CT_SWITCH_PPU;
+    else if (CT_SWITCH_PPU_BACK > 0) { for (int i = 0; i < CT_SWITCH_PPU_BACK; i++) ppu_tick_1(gb); }
+    else gb->pend_dots += CT_SWITCH_PPU_BACK;
 }
 static void run_look(struct GB *gb);
 static int run_look_edge(struct GB *gb);
@@ -16597,7 +16961,8 @@ static void exec_one(struct GB *gb){
         if (armed) {
             GB_DEV_LIVE(gb, GB_G28);
 #if STOP_SPEED_DEFER
-            gb->speed_flip_in = STOP_SPEED_DEFER;
+            gb->speed_flip_in = !SPSW_STALL ? STOP_SPEED_DEFER
+                                : ((gb->reg_ie & gb->reg_if & 0x1F) && gb->model < GB_MODEL_CGB_D) ? 3 : 2;
 #else
             gb->double_speed ^= 1;
             gb->apu.dev_speed = gb->double_speed;  /* APU_DIV_BIT_SPEED */
@@ -16607,6 +16972,7 @@ static void exec_one(struct GB *gb){
                 gb->halt = 1;
                 gb->speed_stall = SPEED_SWITCH_MCYCLES;
                 if (CT_ON && gb->dev == GB_DEV_CGB) gb->speed_stall = (u32)(SPEED_SWITCH_MCYCLES - CT_SWITCH_SHORT);
+                if (SPSW_STALL) gb->speed_stall = 32769;
             }
         } else {
             GB_DMG_ONLY_STMT(gb, GB_G28);
@@ -16625,7 +16991,7 @@ static void exec_one(struct GB *gb){
         }
         /* STOP_DIV_STOP_LAG: on CPU CGB B/C a switch that halts resets the
          * divider one machine cycle later (in the first halted cycle). */
-        if (STOP_DIV_ORDER != 1
+        if (STOP_DIV_ORDER != 1 && !(SPSW_STALL && armed)
             && !(STOP_DIV_STOP_LAG && STOP_SPEED_DEFER == 4 && armed && gb->halt && gb->speed_stall
                  && gb->model < GB_MODEL_CGB_D))
             timer_write_div(gb);
@@ -16949,6 +17315,24 @@ void gb_step(struct GB *gb){
     /* ...and a HALTED sample does not see what a look raised (see the knob). */
     if (RUN_IRQ_LOOK_DMG && gb->halt && gb->pend_dots < 0 && g_look_gb == gb)
         pending &= (u8)~(gb->reg_if & (u8)~g_look_if_pre);
+    /* HALT_TIMA_LAG (8 Nov 2026): on the original Game Boy a HALTED
+     * processor sees a timer request one machine cycle after the TIMA overflow,
+     * at the TMA reload, not at the overflow itself.  Our IF bit is set at the
+     * overflow (the running processor's timing, rapid_toggle), so while the
+     * reload is still owed the halted sample does not see it.  Hardware tests:
+     * gbmicrotest int_timer_halt (wants 0F, was 0E) and int_timer_halt_div_b
+     * (wants 03, was 02) pass with it; int_timer_halt_div_a and int_timer_nops
+     * still pass.  SameBoy 1.0.5 agrees (it sets IF at the reload).  It was the
+     * first place Pinball Deluxe's run left SameBoy's, cycle for cycle (its
+     * first timer wake, frame 20); on its own it does not cure that game's
+     * crash (LYC_BLANK_HOLD does).  MECHANISM.  DMG only: the Color
+     * halt sample has its own arm (CT_HALT) and no test we hold covers it.
+     * Off arm: 0. */
+#ifndef HALT_TIMA_LAG
+#define HALT_TIMA_LAG 1
+#endif
+    if (HALT_TIMA_LAG && gb->halt && gb->dev == GB_DEV_DMG && gb->tima_reload_delay > 0)
+        pending &= (u8)~INT_TIMER;
     if (gb->halt) {
         /* The KEY1 speed-switch stall lives here rather than in a state of its
          * own, because that is what it IS on both oracles: an ordinary halt
@@ -16969,15 +17353,17 @@ void gb_step(struct GB *gb){
          * Note 18: caught by NOTHING -- no suite covers HALT granularity. */
         else {
             #if STOP_SPEED_DEFER
-            if (gb->speed_flip_in > 0 && --gb->speed_flip_in == 0) { gb->double_speed ^= 1; ct_switch_ppu(gb); }
+            if (!SPSW_STALL && gb->speed_flip_in > 0 && --gb->speed_flip_in == 0) { gb->double_speed ^= 1; ct_switch_ppu(gb); }
             gb->apu.dev_speed = gb->double_speed;  /* APU_DIV_BIT_SPEED */
 #endif
             if (gb->speed_stall > 0 && --gb->speed_stall == 0) {
                 gb->halt = 0;
                 /* STOP_DIV_ORDER 2: the divider comes out of reset when the
                  * switch completes, not when it begins. */
+                if (!SPSW_STALL) {
                 if (STOP_DIV_ORDER == 2 && !STOP_DIV_LATE) timer_write_div(gb);
                 if (STOP_DIV_ORDER == 2 && STOP_DIV_LATE) { tick4(gb); timer_write_div(gb); return; }
+                }
             }
             if (CT_CGB(gb)) GB_DEV_LIVE(gb, GB_G31); else GB_DMG_ONLY_STMT(gb, GB_G31);
 #if STOP_SPEED_DEFER == 4
@@ -17012,7 +17398,7 @@ void gb_step(struct GB *gb){
      * SOURCE-READ, reason ESTABLISHED.  The deferral LENGTH is unchanged.  The
      * halted path returns before this line, so a flip is never counted twice
      * in one step.  On DMG speed_flip_in is never set, so this is inert. */
-    if (gb->speed_flip_in > 0 && --gb->speed_flip_in == 0) {
+    if (!SPSW_STALL && gb->speed_flip_in > 0 && --gb->speed_flip_in == 0) {
         gb->double_speed ^= 1;
         ct_switch_ppu(gb);
         gb->apu.dev_speed = gb->double_speed;  /* APU_DIV_BIT_SPEED */
@@ -17109,7 +17495,11 @@ void gb_run_frame(struct GB *gb){
      * guards is worse than no cap. */
     int dot_shift = GB_DEV_SPLIT(gb, GB_G27, 0, gb->double_speed);
     gb->frame_done = 0;
-    while (!gb->locked) {
+    /* LOCK_RUNS_FRAME: a locked processor stops, the rest of the machine does
+     * not (Rule D.7/2): gb_step spends one machine cycle while locked, so the
+     * picture, timer and sound still run a whole frame. MECHANISM. Off arm: 0
+     * returns at once while locked (the frame freezes). */
+    while (LOCK_RUNS_FRAME || !gb->locked) {
         if (gb->frame_done) break;
         if (!(gb->lcdc & 0x80)
             && ((u32)(gb->cycle_acc - start) >> dot_shift) >= FRAME_TCYCLES) break;
@@ -18849,7 +19239,7 @@ int gb_link_run_frame(struct GB *a, struct GB *b, gb_px *fb_b) {
     u32 start = a->cycle_acc;
     int dot_shift = GB_DEV_SPLIT(a, GB_G27, 0, a->double_speed);
     a->frame_done = 0;
-    while (!a->locked) {
+    while (LOCK_RUNS_FRAME || !a->locked) {
         /* gb_run_frame's own three exits, unchanged */
         if (a->frame_done) break;
         if (!(a->lcdc & 0x80) && ((u32)(a->cycle_acc - start) >> dot_shift) >= FRAME_TCYCLES) break;
@@ -18857,7 +19247,7 @@ int gb_link_run_frame(struct GB *a, struct GB *b, gb_px *fb_b) {
         u32 c0 = a->cycle_acc;
         gb_step(a);
         a->link_bal += (int)((u32)(a->cycle_acc - c0) >> a->double_speed);
-        while (a->link_bal > 0 && !b->locked) {
+        while (a->link_bal > 0 && (LOCK_RUNS_FRAME || !b->locked)) {
             u32 d0 = b->cycle_acc;
             b->frame_done = 0;
             gb_step(b);
@@ -18868,7 +19258,7 @@ int gb_link_run_frame(struct GB *a, struct GB *b, gb_px *fb_b) {
                 ended++;
             }
         }
-        if (b->locked) a->link_bal = 0;
+        if (!LOCK_RUNS_FRAME && b->locked) a->link_bal = 0;
     }
     a->xflags &= (u8)~GBH_X_LINK; b->xflags &= (u8)~GBH_X_LINK;
     g_link[0] = g_link[1] = 0;

@@ -77,7 +77,7 @@
     servers: {},          // sid -> server record (see newServer)
     registry: { state: 'idle', msg: '', retryAt: 0, backoff: 5000, timer: 0 },
     bySha: {}, byId: {}, boot: {},  // merged library
-    added: { gb: {}, nes: {}, atari: {} },
+    added: { gb: {}, nes: {}, atari: {}, pm: {} },
     signature: '',
     epFail: {},           // 'host:port' -> until
     events: [],           // debug trail, no secrets
@@ -782,8 +782,8 @@
       var p = identify(it.sha256);
       if (p && p.kind === 'pm' && /^pm-/.test(p.device)) return { id: p.device, kind: 'pm' };
       /* Any other Pokemon mini file (the server unzips .zip games and lists the
-         .min inside): the PM page adopts a pm-x id when the variants table puts
-         it under a catalogue game, as it does for a content pack's extra dumps. */
+         .min inside): the PM page adopts every pm-x id, under its catalogue game
+         when the variants table puts it there, else as a tile of its own. */
       return { id: 'pm-x' + h12, kind: 'pm' };
     }
     /* Game & Watch: the server serves each device's zip whole; the G&W page asks
@@ -931,6 +931,7 @@
         : it.system === 'famicom' ? { n: it.title, z: e.size, m: null, c: 'famicom' }   // nes-console.js step 2: explicit console
         : { n: it.title, z: e.size, m: null };
       else if (kind === 'atari') out[id] = { s: it.system, n: it.title, z: e.size };
+      else if (kind === 'pm') out[id] = { n: it.title, z: e.size };
       else return;
       added[id] = true; n++;
     });
@@ -940,7 +941,7 @@
   function decorate(devices) {
     (devices || []).forEach(function (d) {
       var e = d && C.byId[d.id];
-      if (!e || !(C.added.gb[d.id] || C.added.nes[d.id] || C.added.atari[d.id])) return;
+      if (!e || !(C.added.gb[d.id] || C.added.nes[d.id] || C.added.atari[d.id] || C.added.pm[d.id])) return;
       var it = e.entry, names = Object.keys(e.holders).map(function (sid) { return label(C.servers[sid]); });
       d.fromServer = true;
       d.description = 'On your game server' + (names.length > 1 ? 's' : '') + ' ' + esc(names.join(' and ')) +
@@ -1627,9 +1628,11 @@
          certificate is trusted, so the CORS refusal is this site's address
          missing from the server's list;
        - no answer within the time limit is the network or a firewall;
-       - a quick refusal is an untrusted certificate or nothing on that port
-         (when this page comes from the same computer over HTTPS, the device
-         already trusts that computer's certificates, so it is the port). */
+       - a quick failure has several causes the browser will not separate: a
+         misspelt name, another network, nothing on that port, the browser's
+         local network permission, a plain http page, or (for a bare number,
+         which gets the server's own certificate) an untrusted certificate.
+         Only what can be told apart is stated; the rest is a list to check. */
   function isLoopName(h) { h = String(h || '').toLowerCase().replace(/^\[|\]$/g, ''); return h === 'localhost' || h === '127.0.0.1' || h === '::1' || /\.localhost$/.test(h); }
   function lanHint(port) {
     var h = location.hostname;
@@ -1640,6 +1643,19 @@
     return 'This address only works on the server\'s own computer, and only from a page opened there as localhost. Use ' + lanHint(a.port) +
            ' instead (the server\'s Dashboard lists its addresses under Connecting devices).';
   }
+  function isBareAddress(h) { h = String(h || ''); return /^\d{1,3}(\.\d{1,3}){3}$/.test(h) || h.indexOf(':') >= 0; }
+  function secureAddress() {
+    return 'https://' + hostPart(location.hostname) + (location.port ? ':8443' : '') + '/';
+  }
+  /* Whether the browser says this site may not reach the local network. Names differ
+     between browser versions and most browsers have neither: unknown is simply "no". */
+  function localNetworkDenied() {
+    if (!navigator.permissions || !navigator.permissions.query) return Promise.resolve(false);
+    return Promise.all(['local-network-access', 'local-network'].map(function (name) {
+      try { return navigator.permissions.query({ name: name }).then(function (p) { return p.state === 'denied'; }, function () { return false; }); }
+      catch (e) { return Promise.resolve(false); }
+    })).then(function (r) { return r[0] || r[1]; });
+  }
   function diagnose(a, scheme) {
     var lp = loopbackProblem(a); if (lp) return Promise.resolve(lp);
     var base = (scheme || 'https://') + hostPart(a.host) + ':' + a.port, where = hostPart(a.host) + ':' + a.port;
@@ -1647,20 +1663,26 @@
     return fetch(base + '/api/v1/health', { mode: 'no-cors', credentials: 'omit', cache: 'no-store', signal: ctl.signal }).then(function () {
       clearTimeout(timer);
       if (location.protocol !== 'https:') {
-        return 'The server at ' + where + ' answered, but it only accepts the secure site. Open this site as https:// (for example https://' +
-               hostPart(location.hostname) + ':8443/) on this device, then connect again.';
+        return 'The server at ' + where + ' answered, but it only accepts the secure version of this site. Open ' + secureAddress() + ' on this device, then connect again.';
       }
       return 'The server at ' + where + ' answered, but it does not accept this website\'s address (' + location.origin +
              '). Its owner adds it on the server\'s Security page, under Website addresses that may use this server.';
     }, function () {
       clearTimeout(timer);
       if (Date.now() - t0 >= 3500) {
-        return 'No answer from ' + where + ' (it timed out). This is usually the firewall on the server\'s computer: its owner allows inbound TCP port ' + a.port + ' for Private networks. Also check the address and that the server is running.';
+        return 'No answer from ' + where + ' (it timed out). Check that the address is spelt correctly, that this device is on the same network as the server (a home address does not work over mobile data), and that the server is running. If all of those are right, the usual cause is the firewall on the server\'s computer: its owner allows inbound TCP port ' + a.port + ' for Private networks.';
       }
       if (location.protocol === 'https:' && location.hostname.toLowerCase() === String(a.host).toLowerCase()) {
         return 'Nothing answered on port ' + a.port + ' at ' + hostPart(a.host) + '. Check that the game server is running and that the port is right.';
       }
-      return 'The server at ' + where + ' refused this device\'s secure connection straight away, so this device most likely does not trust the server\'s certificate. Install the home certificate in this device\'s Settings (on Android: Security, Install a certificate, CA certificate; opening the file in Files is not enough). If it already does, check that the server is running on port ' + a.port + '.';
+      if (location.protocol !== 'https:' && !isLoopName(location.hostname)) {
+        return 'Could not connect to ' + where + ' from this page, because it is open as http://. Browsers stop a plain http page from reaching a game server on your network. Open ' + secureAddress() + ' on this device, then connect again.';
+      }
+      return localNetworkDenied().then(function (denied) {
+        if (denied) return 'This browser is blocking this site from reaching devices on your network, so it could not connect to ' + where + '. Open the site settings from the icon beside the address bar, allow Local network access, reload the page and connect again.';
+        return 'Could not connect to ' + where + ', and the browser does not give a reason. Check that the address is spelt correctly, that this device is on the same network as the server (a home address does not work over mobile data), that the server is running and that the port is right. If the browser asked to reach devices on your network, allow it.' +
+               (isBareAddress(a.host) ? ' This address is a bare number, so this device must also trust the server\'s own certificate: install the home certificate in this device\'s Settings (on Android: Security, Install a certificate, CA certificate; opening the file in Files is not enough).' : '');
+      });
     });
   }
   function directConnect(text) {

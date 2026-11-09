@@ -477,7 +477,7 @@ const GAMES = {
   },
 
   helmet: {
-    title: 'Helmet', subtitle: 'CN-07 · 1981',
+    title: 'Helmet', subtitle: 'CN-17 · 1981',
     artPath: 'artwork/gnw_helmet/',
     svgPath: 'artwork/gnw_helmet/gnw_helmet.svg',
     // Same "only recognises GameA/GameB/Time from a fresh reset" program

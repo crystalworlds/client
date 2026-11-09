@@ -3,8 +3,8 @@
  "lists": {
   "nes": {
    "file": "nes.json",
-   "count": 984,
-   "sha256": "3595bf0997e911d9b03347b9655986c19ae8402586f4c95fb9eb0ad04b4cb73f",
+   "count": 833,
+   "sha256": "f1bdf2ffd4133a23b272abaf9fac6f8e612f097c1a602f29ccc534c44295992e",
    "label": "NES, Famicom and Famicom Disk System",
    "guards": [
     "nes",
@@ -94,6 +94,6 @@
    ]
   }
  },
- "total": 1092,
- "version": "73a45067ce1198c8dada2d1f67277feb9cb1f3bfac0afcae87536f1c89d0852f"
+ "total": 941,
+ "version": "40d6db870ecbf83a96ca3f9eca21604acbdecb9c30de7731a6fb58ce2dc1d02a"
 }

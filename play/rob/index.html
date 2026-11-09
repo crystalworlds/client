@@ -175,9 +175,9 @@ import * as THREE from 'three';
 import { OrbitControls } from './vendor/three/jsm/controls/OrbitControls.js';
 import { GLTFLoader }    from './vendor/three/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from './vendor/three/jsm/environments/RoomEnvironment.js';
-import { createAccessories } from './rob-accessories.mjs?v=2.0.0';   // the gyros, blocks, trays ... set up by the user (24 Oct 2026)
+import { createAccessories } from './rob-accessories.mjs?v=2.1.0';   // the gyros, blocks, trays ... set up by the user (24 Oct 2026)
 
-const MODEL = './rob.glb?v=2.0.0';   // the site's copy of the test bench's rob.glb
+const MODEL = './rob.glb?v=2.1.0';   // the site's copy of the test bench's rob.glb
 
 // Defaults; the .glb carries the same numbers (and the pivots it was built
 // with) in ROB_Root's glTF extras, and those win when present.
@@ -510,7 +510,7 @@ new GLTFLoader().load(MODEL, gltf => {
   applyPose();
   updateCord();
   applyUrl();
-  createAccessories({ THREE, GLTFLoader, scene, camera, controls, dom: renderer.domElement, node, RIG, log: accLog, url: './accessories.glb?v=2.0.0',
+  createAccessories({ THREE, GLTFLoader, scene, camera, controls, dom: renderer.domElement, node, RIG, log: accLog, url: './accessories.glb?v=2.1.0',
     getPose: () => ({ armsTarget: S.arms, armsFrac: cur.arms, movingArms: !!motions.arms, movingTurn: !!motions.turn, movingLift: !!motions.lift, lift: S.lift, turn: S.turn }),
     setHands: n => setHands(n), getHands: () => S.hands,
   }).then(w => { world = w; window.robAcc = w; w.onChange(accPaint); w.applyUrl(location.search); accPaint(); })
@@ -572,6 +572,11 @@ renderer.setAnimationLoop(() => {
     if (ro) ro.textContent = `stop ${S.lift + 1} of ${RIG.lift.stops}, ${(-cur.liftM / unit * 1000).toFixed(1)} mm down`; }
   if (world) { world.update(now, now - lastNow); }
   lastNow = now;
+  if (camTween) {   // robFit's smooth move (10 Nov 2026)
+    const k = Math.min(1, (performance.now() - camTween.s) / camTween.ms), e = k * k * (3 - 2 * k);
+    camera.position.lerpVectors(camTween.p0, camTween.p1, e); controls.target.lerpVectors(camTween.t0, camTween.t1, e); camera.lookAt(controls.target);
+    if (k >= 1) camTween = null;
+  }
   controls.update();
   draw();
 });
@@ -629,7 +634,9 @@ document.getElementById('acc-reset').onclick = () => { if (world) world.reset();
    own button (Swap tray caps, Gyromite set only), and Turn is greyed out while nothing is held. */
 const accHeld = () => { if (!world) return null; const c = world.cursor; if (c) return c.phase === 'targets' ? c.p.id : c.list[c.i].id; const d = world.state().parts.find(p => p.support === 'drag'); return d ? d.id : null; };
 document.getElementById('acc-turn').onclick = () => { if (!world) return; const c = world.cursor; if (c) { world.key({ key: 'ArrowUp' }); return; } const id = accHeld(); if (id) world.turn(id); };
-window.addEventListener('keydown', e => { if (world && !e.ctrlKey && !e.altKey && !e.metaKey && !(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) && world.key(e)) { e.preventDefault(); e.stopPropagation(); } }, true);
+/* 10 Nov 2026: Enter or Space (a controller's A) on Play again / Back in box presses it, even with Grab on, unless the hand
+   cursor is out; before, Grab took the key to bring the hand cursor out, so A on Play again did nothing. */
+window.addEventListener('keydown', e => { if (world && !e.ctrlKey && !e.altKey && !e.metaKey && !(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) && !((e.key === 'Enter' || e.key === ' ') && !world.cursor && e.target && e.target.closest && e.target.closest('#acc-reset')) && world.key(e)) { e.preventDefault(); e.stopPropagation(); } }, true);
 window.robWorld = () => (world ? world.state() : null);
 
 // ---------------------------------------------- scripted driving, no mouse
@@ -643,6 +650,10 @@ window.robCameraSet = (pos, target) => { camera.position.set(pos.x, pos.y, pos.z
    centre there (setViewOffset), so a panel over the window's edge does not cover the robot.
    The fit is kept, and redone on a resize or a change of set; robView() leaves it. */
 let fitLast = null;
+/* o.smooth (10 Nov 2026, the box leaving when the set is ready): the camera moves to the new fit over that many ms
+   instead of jumping; a touch, click or wheel on the picture, or any other fit or view, stops it where it is. */
+var camTween = null;
+for (const ev of ['pointerdown', 'wheel']) renderer.domElement.addEventListener(ev, () => { camTween = null; }, { passive: true });
 // points on everything showing (up to about 300 per mesh): the fit uses the shapes themselves,
 // not the corners of a box round them (those reach far past the parts in a perspective view)
 const visiblePoints = () => {
@@ -666,6 +677,7 @@ window.robFit = (o = {}) => {
   if (Math.abs(camera.aspect - W / H) > 1e-3 || sz.x !== W || sz.y !== H) { camera.aspect = W / H; renderer.setSize(W, H); }
   const R = o.rect || { x: 0, y: 0, w: W, h: H };
   const corners = visiblePoints(); if (!corners.length) return null;
+  camTween = null; const p0 = camera.position.clone(), t0 = controls.target.clone();
   const c = new THREE.Box3().setFromPoints(corners).getCenter(new THREE.Vector3());
   const a = rad(az), e = rad(el);
   const back = new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e));   // target to camera, as robView
@@ -693,12 +705,16 @@ window.robFit = (o = {}) => {
   if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) camera.setViewOffset(W, H, -dx, -dy, W, H); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
   fitLast = o;
+  if (o.smooth > 0 && p0.distanceTo(camera.position) + t0.distanceTo(t) > 1e-4) {
+    camTween = { p0, t0, p1: camera.position.clone(), t1: t.clone(), s: performance.now(), ms: o.smooth };
+    camera.position.copy(p0); controls.target.copy(t0); camera.lookAt(t0);
+  }
   draw();
   return { az, el, dist: +(D / height).toFixed(3), target: t.toArray().map(v => +v.toFixed(4)), rect: R };
 };
 addEventListener('resize', () => { if (fitLast) window.robFit(typeof fitLast.again === 'function' ? fitLast.again() : fitLast); });
 window.robView = ({ az = 34, el = 14, dist = 2.6, height: hf = 0.47, fwd = 0 } = {}) => {
-  fitLast = null; camera.clearViewOffset();
+  fitLast = null; camTween = null; camera.clearViewOffset();
   // the target sits on the column axis at hf heights up, moved fwd heights toward the hands
   const t = new THREE.Vector3(0, height * hf, -height * fwd);
   const a = rad(az), e = rad(el);
@@ -1030,7 +1046,19 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
 .rp-goals.rg-narrow .rg-btns button,.rp-goals.rg-narrow .rg-tools button{flex:1 1 100%}
 .rp-goals.rg-narrow .rg-tools{margin-top:auto}
 @media (prefers-reduced-motion:reduce){.rp-goals li{transition:none}.rp-goals .rg-step{animation:none}}
-@media (max-width:620px){.rp-goals{left:max(12px,env(safe-area-inset-left));width:auto;font-size:12.5px}.rp-goals li{padding:3px 0}}`;
+@media (max-width:620px){.rp-goals{left:max(12px,env(safe-area-inset-left));width:auto;font-size:12.5px}.rp-goals li{padding:3px 0}}
+/* Small screens (body.rp-small, set in gPlace by the site's own rule, narrow() below): the sizes the
+   620 px rules above give a phone, at every small size. A computer never has this class. */
+body.rp-small .rp-btn{padding:9px 8px;min-width:68px}
+body.rp-small .rp-padstrip{font-size:11px;gap:2px 10px}
+body.rp-small .rp-menu.rp-fit button small{display:none}
+body.rp-small .rp-menu.rp-fit > button{padding:6px 8px;font-size:13px}
+body.rp-small .rp-menu.rp-fit .rp-mh{padding:4px 8px 2px}
+body.rp-small .rp-goals{font-size:12.5px}
+body.rp-small .rp-goals li{padding:3px 0}
+body.rp-small .rp-goals .rg-help li{padding:1px 0;font-size:12px;line-height:1.28}
+body.rp-low .rp-bar{grid-template-columns:1fr 1fr 1fr}
+body.rp-low .rp-bar .rp-btn[data-menu="speed"]{grid-column:auto}`;
     document.head.appendChild(gst);
     const goals = document.createElement('div'); goals.className = 'rp-goals'; goals.setAttribute('role', 'region'); goals.setAttribute('aria-label', 'Play Time game');
     goals.innerHTML = '<div class="rg-h"><span class="rg-title"></span><b class="rg-count"></b></div><ol class="rg-help" hidden></ol><div class="rg-msg" hidden></div><ul aria-live="polite"></ul><div class="rg-btns"></div><div class="rg-tools" hidden></div>';
@@ -1086,15 +1114,33 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
       /* A NARROW WINDOW (4 Nov 2026: a phone, a folded phone): the game's box sits in the bottom
          left corner beside the panel, the same width and height, the two side by side at half the
          width each; R.O.B. is framed above them. */
-      goals.classList.toggle('rg-narrow', narrow());
-      if (narrow()) {
-        const half = Math.floor((innerWidth - 24 - 8) / 2);
-        if (bar.style.width !== half + 'px') bar.style.width = half + 'px';
+      /* 8 Nov 2026: this now holds at every small size, by the site's rule, not only up to 620 px wide.
+         Pick a set is on the left and the main controls to its right, sized as noted below,
+         the pair centred. Turned wide, where the room above the pair would be under 200 px,
+         the pair stays side by side but moves to the right of the window and R.O.B. stands to its left
+         (sideBySide). Too low for seven rows of buttons: three columns (rp-low). */
+      const small = narrow();
+      goals.classList.toggle('rg-narrow', small);
+      document.body.classList.toggle('rp-small', small);
+      if (small) {
+        const W = innerWidth, stripH = parseFloat(document.documentElement.style.getPropertyValue('--rp-strip')) || 0;
+        document.body.classList.toggle('rp-low', innerHeight - stripH < 276);
+        const wide = sideBySide();
+        /* The controls are only buttons, so they stop at the width they need (180 px, half of a phone);
+           Pick a set holds text and takes the rest, up to 560 px, the pair centred past that. */
+        const room = W - 24 - 8;
+        const half = wide ? Math.max(136, Math.min(156, Math.floor((W - 268) / 2))) : Math.min(180, Math.floor(room / 2));
+        const textW = wide ? half : Math.min(560, room - half);
+        const barW = wide && document.body.classList.contains('rp-low') ? 220 : half;
+        if (bar.style.width !== barW + 'px') bar.style.width = barW + 'px';
+        bar.style.right = !wide && textW === 560 ? Math.floor((W - barW - textW - 8) / 2) + 'px' : '';
         const nb = bar.getBoundingClientRect();
-        goals.style.left = 'max(12px,env(safe-area-inset-left))'; goals.style.width = half + 'px';
+        goals.style.left = Math.round(nb.left - 8 - textW) + 'px'; goals.style.width = textW + 'px';
         goals.style.bottom = (innerHeight - nb.bottom) + 'px'; goals.style.height = goals.style.maxHeight = Math.round(nb.height) + 'px';
         return;
       }
+      document.body.classList.remove('rp-low');
+      if (bar.style.right) bar.style.right = '';
       if (bar.style.width) bar.style.width = '';
       goals.style.left = ''; goals.style.height = '';
       const br = bar.getBoundingClientRect();
@@ -1149,6 +1195,9 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
           if (!game.allDone) return;
           gMsg.hidden = false; gMsg.innerHTML = '<b>All done!</b> Every part of the ' + SET_NAMES[set] + ' is in its place.';
           gBtns.textContent = ''; boxLabel(true); againShown = true; gPlace();
+          /* 10 Nov 2026: the set is ready, so the box goes, and the picture moves in on R.O.B. and his set. Play again or
+             Back in box brings it back (reset); a part taken out again leaves it away until then (no move mid-drag). */
+          if (w.boxAway) w.boxAway(true, () => { if (game.allDone && window.robReframe) window.robReframe({ smooth: 700 }); });
           const a = document.activeElement; if (!a || a === document.body) focusEl(boxB);
         }, fresh ? 0 : 1150);
       } else if (!all && game.allDone) { game.allDone = false; clearTimeout(game.doneTimer); gMsg.hidden = true; gBtns.textContent = ''; if (!boxClicking) { boxLabel(false); againShown = false; } }
@@ -1169,8 +1218,8 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
       /* 4 Nov 2026: as tall as the panel, level with it. Beside it on a wide window; on a narrow one
          it takes the game box's place, the same size, in the bottom left corner. */
       m.style.height = Math.round(br.height) + 'px'; m.style.bottom = (innerHeight - br.bottom) + 'px';
-      if (!narrow()) { m.style.left = 'auto'; m.style.right = (innerWidth - br.left + 8) + 'px'; m.style.width = ''; m.style.minWidth = ''; }
-      else { m.style.left = 'max(12px,env(safe-area-inset-left))'; m.style.right = 'auto'; m.style.width = Math.round(br.width) + 'px'; m.style.minWidth = '0'; m.style.maxWidth = 'none'; }
+      if (!narrow()) { m.style.left = 'auto'; m.style.right = (innerWidth - br.left + 8) + 'px'; m.style.width = ''; m.style.minWidth = ''; m.style.maxWidth = ''; }
+      else { const gr = goals.getBoundingClientRect(); m.style.left = Math.round(gr.left) + 'px'; m.style.right = 'auto'; m.style.width = Math.round(gr.width) + 'px'; m.style.minWidth = '0'; m.style.maxWidth = 'none'; }
       goals.style.visibility = narrow() ? 'hidden' : '';   // the menu stands in the game box's place; the box shows again when it closes (goalsBack)
     }
     /* Walking by position: the open menu's controls, else the pill's. */
@@ -1219,7 +1268,14 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
     });
 
     /* ---------------- 4 Nov 2026: the title bar, the credit, the hand pictures, the controller ---------------- */
-    function narrow() { return innerWidth <= 620; }   // a phone, a folded phone: the two boxes side by side
+    /* A small screen, by the site's own rule (html.cw-small, settings-ui.js: 760 px wide or 500 px tall
+       or less, or a handheld): the two boxes side by side. The page opened by itself uses the same sizes. */
+    function narrow() {
+      try { const p = window.parent; if (p !== window && p.gnwSmall) return p.document.documentElement.classList.contains('cw-small'); } catch (_) {}
+      return innerWidth <= 760 || innerHeight <= 500;
+    }
+    /* Turned wide with too little room above the pair: the pair goes to the right of the window, R.O.B. to its left. */
+    function sideBySide() { return narrow() && innerWidth > innerHeight && innerWidth >= 540 && bar.getBoundingClientRect().top - 52 < 200; }
     let padOn = false;                                 // the last input was a controller: focus shows its ring
     const nativeFocus = HTMLElement.prototype.focus;
     function focusEl(el) { if (!el) return; try { nativeFocus.call(el, padOn ? { focusVisible: true } : {}); } catch (_) { try { el.focus(); } catch (__) {} } }
@@ -1433,6 +1489,7 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
        wide window or above it on a tall one (robFit). */
     const freeRect = () => {
       const W = innerWidth, H = innerHeight, br = bar.getBoundingClientRect(), top = 44;
+      if (sideBySide()) return { x: 0, y: top, w: Math.max(120, goals.getBoundingClientRect().left - 8), h: Math.max(120, br.bottom - top) };
       if (narrow()) { const gt = goals.getBoundingClientRect(); return { x: 0, y: top, w: W, h: Math.max(120, Math.min(br.top, gt.height ? gt.top : br.top) - 8 - top) }; }   // the two boxes side by side at the bottom (4 Nov)
       const gr = goals.getBoundingClientRect(), gLeft = gr.width ? Math.min(gr.left, br.left) : br.left;   // the game's list above the panel (2 Nov)
       /* With a set, the room the box may grow to is kept free, so the picture does not
@@ -1442,16 +1499,26 @@ body.pill{font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
       if (W < H) return { x: 0, y: top, w: W, h: Math.max(120, gTop - 8 - top) };
       return { x: 0, y: top, w: Math.max(200, gLeft - 8), h: H - top - 8 };
     };
-    const frame = () => { if (!window.robReady) return setTimeout(frame, 100);
+    const frame = (o) => { if (!window.robReady) return setTimeout(frame, 100);
       const tall = innerWidth < innerHeight, withSet = !!(window.robAcc && window.robAcc.set !== 'none');
-      if (withSet) { window.robFit({ az: 22, el: 18, again: () => ({ az: 22, el: 18, rect: freeRect() }), rect: freeRect() }); return; }
+      if (withSet) { window.robFit({ az: 22, el: 18, again: () => ({ az: 22, el: 18, rect: freeRect() }), rect: freeRect(), smooth: (o && o.smooth) || 0 }); return; }
       /* On a tall window the game's set buttons sit above the panel (2 Nov): R.O.B. alone is fitted
          into the room left above them, so they never cover his base. */
-      if (tall) { window.robFit({ az: 22, el: 12, again: () => ({ az: 22, el: 12, rect: freeRect() }), rect: freeRect() }); return; }
+      if (tall || narrow()) { window.robFit({ az: 22, el: 12, again: () => ({ az: 22, el: 12, rect: freeRect() }), rect: freeRect() }); return; }
       window.robView({ az: 22, el: 12, dist: tall ? 5.0 : 2.5, height: tall ? 0.22 : 0.42 });
       if (tall) { camera.position.x -= height * 0.22; controls.target.x -= height * 0.22; camera.lookAt(controls.target); } };
     window.robReframe = frame;
     addEventListener('resize', () => { if (window.robReady) frame(); });
+    /* The site may set its small-screen class just after this window's resize: lay out again when the answer changes. */
+    try {
+      const p = window.parent;
+      if (p !== window && p.gnwSmall) {
+        let smallWas = narrow();
+        const mo = new MutationObserver(() => { if (!window.parent) { mo.disconnect(); return; } const n = narrow(); if (n === smallWas) return; smallWas = n; gPlace(); if (open) place(open); if (window.robReady) frame(); });
+        mo.observe(p.document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        addEventListener('pagehide', () => mo.disconnect());
+      }
+    } catch (_) {}
     frame();
     addEventListener('load', () => setTimeout(() => { const f = bar.querySelector('button'); if (f) f.focus({ focusVisible: false }); }, 0));
   }

@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   if (window.CwEmuCards) return;
-  const IMG = k => 'images/consoles/' + k + '.webp?v=2.1.0';
+  const IMG = k => 'images/consoles/' + k + '.webp?v=2.1.1';
   const P = (img, name) => ({ img, name });
   const N = name => ({ name });
 
@@ -91,7 +91,7 @@
   const SITE_VERSION = (() => {
     const el = document.querySelector('#vault-overlay .modal-title');
     const m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.1.0';
+    return m ? m[1] : '2.1.1';
   })();
   const COMPARE = {
     /* GB versions (2026-10-18): the board (gbdev.io/GBEmulatorShootout, run 'Updated On Thu, 04 Jun 2026')

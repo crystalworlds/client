@@ -120,9 +120,9 @@
   const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx']); // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
   const framed = window.parent && window.parent !== window;
   /* Screenshot -> phone photo library (play/shared/save-image.js), loaded now so it is ready before the tap. */
-  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.1.0', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
+  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.1.1', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
   /* The one save table (play/shared/save-table.js, 8 Nov 2026), loaded now; renderSaves waits for it. */
-  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.1.0', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
+  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.1.1', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
 
   /* ------------------------------------------------------------------ flag */
   /* One bar for every console, in the one play host (2026-10-15): the ?ui= switch is gone. */

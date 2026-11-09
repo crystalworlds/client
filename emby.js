@@ -6451,7 +6451,7 @@
   let _gameTypeOf = null;   // first 10 hex of the SHA-256 -> category; null until the table lands
   (function loadGameTypes() {
     if (typeof fetch !== 'function' || typeof DecompressionStream !== 'function') return;
-    fetch('firmware/compat/types.json.gz?v=2.1.0').then(r => {
+    fetch('firmware/compat/types.json.gz?v=2.1.1').then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();
     }).then(doc => {
@@ -15316,7 +15316,7 @@
     v.addEventListener('error', () => teardown('The stream started but the video couldn’t be decoded here. It’ll play in a media server app.'));
 
     try {
-      const mod = await import('./remux.js?v=2.1.0');
+      const mod = await import('./remux.js?v=2.1.1');
       if (!ov.classList.contains('open')) return;   // user bailed while it loaded
 
       // MPEG-4/AVI: no browser decoder, so libav decodes + we re-encode to H.264.

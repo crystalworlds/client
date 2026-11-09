@@ -33,10 +33,10 @@ import { GB_MODE } from './mode.mjs';
 /* 25 Oct: the Super Game Boy shelf. Opened with ?console=sgb, the game always plays as on
    a Super Game Boy; the border is the game's own, else Nintendo's default read from the player's own SNES
    program (firmware 'sgb', from the game server; sgb-border.mjs), else plain black; or fan art. */
-import { biosBorder, builtinBorders } from './sgb-border.mjs?v=2.1.0';
-import { cheatEngine } from '../cheats-core.mjs?v=2.1.0';
-import { TEAL, colourCorrectionTable } from './colour.mjs?v=2.1.0';
-import { PANELS, slowScreen } from './lcd.mjs?v=2.1.0';
+import { biosBorder, builtinBorders } from './sgb-border.mjs?v=2.1.1';
+import { cheatEngine } from '../cheats-core.mjs?v=2.1.1';
+import { TEAL, colourCorrectionTable } from './colour.mjs?v=2.1.1';
+import { PANELS, slowScreen } from './lcd.mjs?v=2.1.1';
 const ON_SGB_SHELF = (() => { try { return new URLSearchParams(globalThis.location.search).get('console') === 'sgb'; } catch (_) { return false; } })();
 const SGB_FANART = 'https://pub-5656d877345d49ae96626afa8d6ebd56.r2.dev';   // sgb-borders: <SHA-1 of the cartridge>.jpg, 1920x1080
 

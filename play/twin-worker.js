@@ -37,8 +37,8 @@ var FWMODE = (_params.get('fw') === 'custom') ? 'custom' : 'retail';
 //   twin-cfw.js  — adds custom firmware boot support. It's a
 //                  separate file because that build regresses Zelda's retail boot,
 //                  so retail (both units) stays on twin.js and only custom uses it.
-var TWINV  = 'twin.js?v=2.1.0';
-var CFWV   = 'twin-cfw.js?v=2.1.0';
+var TWINV  = 'twin.js?v=2.1.1';
+var CFWV   = 'twin-cfw.js?v=2.1.1';
 
 var _UNITS = {
   mario: { fw: 'mario/firmware_mario.js', key: 'mario' },
@@ -301,7 +301,7 @@ if (FWMODE === 'custom') {
   // That build exports no save states, so Save did nothing under custom firmware
   // (2026-10-11): take the retail engine's two functions from twin-state.js.
   if (!AT.snapshot || !AT.restore) {
-    importScripts('twin-state.js?v=2.1.0');
+    importScripts('twin-state.js?v=2.1.1');
     AT.snapshot = AT.snapshot || self.TwinState.snapshot;
     AT.restore = AT.restore || self.TwinState.restore;
   }

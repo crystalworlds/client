@@ -17,7 +17,7 @@ export function loadEngine() {
   if (window.KeysDiagram) return Promise.resolve(window.KeysDiagram);
   if (!kdP) kdP = new Promise(res => {
     const sc = document.createElement('script');
-    sc.src = new URL('keys-diagram.js?v=2.1.0', SITE).href;
+    sc.src = new URL('keys-diagram.js?v=2.1.1', SITE).href;
     sc.onload = () => res(window.KeysDiagram || null); sc.onerror = () => { kdP = null; res(null); };
     document.head.appendChild(sc);
   });

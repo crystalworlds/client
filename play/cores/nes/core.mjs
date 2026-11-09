@@ -23,7 +23,7 @@ import { LUT } from '../../nes/web/render.js';
 import { CoreError } from '../../host/core-api.mjs';
 /* The Study Box tape deck's feeder (mapper 186), the old NES page's own module: page-free (a tape
    source is any { name, size, read(offset, length) }), so the core runs it (2026-10-15). */
-import { TapeFeeder } from '../../nes/studybox-deck.js?v=2.1.0';
+import { TapeFeeder } from '../../nes/studybox-deck.js?v=2.1.1';
 /* Games on more than one disk, linked by hash, and the automatic
    disk change (the core's web/fds_sets.js and web/fds_autoswap.js, copied with the core). */
 import { fdsSetOf } from '../../nes/web/fds_sets.js';
@@ -36,9 +36,9 @@ import { decodeTape, encodeWav } from '../../nes/web/data-recorder.js';
 /* The Famicom expansion accessories: Hyper Shots, Party Tap, pachinko
    dial, punching bag, mahjong keypad, drawing tablet, Barcode World, mole mat, Top Rider, Subor keyboard,
    a second Arkanoid knob, two pads for one player, and the Turbo File / Battle Box save boxes. */
-import { ACCESSORIES, Accessory, isAccessory, deviceFor, help as accHelp } from './accessories.mjs?v=2.1.0';
-import { Rob, robKindOf } from './rob.mjs?v=2.1.0';
-import { cheatEngine } from '../cheats-core.mjs?v=2.1.0';
+import { ACCESSORIES, Accessory, isAccessory, deviceFor, help as accHelp } from './accessories.mjs?v=2.1.1';
+import { Rob, robKindOf } from './rob.mjs?v=2.1.1';
+import { cheatEngine } from '../cheats-core.mjs?v=2.1.1';
 
 const FDS_BIOS_BYTES = 8192, FDS_SWAP_GAP_FRAMES = 60, FDS_FIRST_INSERT_FRAMES = 8;
 const ZAP_HOLD_FRAMES = 6, VAUS_MIN = 0x54, VAUS_MAX = 0xF4;

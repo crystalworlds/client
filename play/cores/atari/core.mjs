@@ -31,7 +31,7 @@
  * and the turn (R). Paddles and wheels are turned by held keys (or a pad's d-pad).
  */
 import { CoreError } from '../../host/core-api.mjs';
-import { cheatEngine } from '../cheats-core.mjs?v=2.1.0';
+import { cheatEngine } from '../cheats-core.mjs?v=2.1.1';
 
 export const SYS = new URL(import.meta.url).searchParams.get('sys') || 'a2600';
 /* The wrapper's own version tag (its URL is built here, so the page's tags never reach it). */

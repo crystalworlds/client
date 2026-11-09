@@ -61,8 +61,8 @@
  * next frame starts.
  */
 import { CoreError } from '../../host/core-api.mjs';
-import { makeComposer } from './compose.mjs?v=2.1.0';
-import { makeJit } from './jit.mjs?v=2.1.0';
+import { makeComposer } from './compose.mjs?v=2.1.1';
+import { makeJit } from './jit.mjs?v=2.1.1';
 
 const UNITS = {
   mario: { label: 'Super Mario Bros. (HXA-001)', external: 1048576, readyCycles: 15000000 },
@@ -142,7 +142,7 @@ const CONSOLE = [
 let engine = null;
 async function loadEngine() {
   if (engine) return engine;
-  const r = await fetch(new URL('../../twin.js?v=2.1.0', import.meta.url));
+  const r = await fetch(new URL('../../twin.js?v=2.1.1', import.meta.url));
   if (!r.ok) throw new CoreError('unsupported', `the colour-unit engine did not load (HTTP ${r.status})`);
   const src = await r.text();
   // The WASM CPU core twin.js carries (its own build, not firmware), compiled off the main

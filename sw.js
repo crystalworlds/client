@@ -1,4 +1,4 @@
-/* sw.js: the offline page for the installed app (2.1.0, 8 Nov 2026).
+/* sw.js: the offline page for the installed app (2.1.1, 8 Nov 2026).
  *
  * Opened as an app on a phone with the site out of reach, the browser showed only the app icon. This worker
  * answers one kind of request, a top-level page load of this site (mode "navigate", destination "document",

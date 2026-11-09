@@ -366,7 +366,7 @@
   const metaSoon = () => { if (!metaT) metaT = setTimeout(meta, 0); };
   (function loadMeta() {
     if (typeof fetch !== 'function' || !/^https?:$/.test(location.protocol)) return;
-    fetch('site-routes.json?v=2.1.0', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
+    fetch('site-routes.json?v=2.1.1', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
     for (const k of ['pushState', 'replaceState']) {
       const orig = history[k];
       if (typeof orig !== 'function') continue;

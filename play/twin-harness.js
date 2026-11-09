@@ -394,7 +394,7 @@ registerProcessor('twin-sink', TwinSink);
     // worker posts {ready} -- i.e. once the clock is built (see onWorkerMsg).
     if (tap) { tap.classList.add('starting'); tap.disabled = true; }   // plain black cover (contents hidden via CSS)
     var fw = window.TWIN_FW || 'retail';               // 'retail' (default) | 'custom'
-    worker = new Worker('../twin-worker.js?v=2.1.0&unit=' + (window.TWIN_UNIT || 'mario') + '&fw=' + fw);
+    worker = new Worker('../twin-worker.js?v=2.1.1&unit=' + (window.TWIN_UNIT || 'mario') + '&fw=' + fw);
     worker.onmessage = onWorkerMsg;
     var off = canvas.transferControlToOffscreen();
     worker.postMessage({ canvas: off }, [off]);
@@ -448,7 +448,7 @@ registerProcessor('twin-sink', TwinSink);
      retail firmware's (2026-10-11, when custom-firmware saves began to work). */
   var SAVE_NS = UNIT + (window.TWIN_FW === 'custom' ? ':custom' : '');
   var SLOTS = 20;   // the one save table, as in every play window (play/shared/save-table.js, 8 Nov 2026)
-  var _tableReady = new Promise(function(res){ if (window.CwSaveTable) return res(); try { var sc = document.createElement('script'); var cs = document.currentScript; sc.src = (cs ? new URL('shared/save-table.js?v=2.1.0', cs.src) : new URL('../shared/save-table.js?v=2.1.0', location.href)).href; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); } catch (e) { res(); } });
+  var _tableReady = new Promise(function(res){ if (window.CwSaveTable) return res(); try { var sc = document.createElement('script'); var cs = document.currentScript; sc.src = (cs ? new URL('shared/save-table.js?v=2.1.1', cs.src) : new URL('../shared/save-table.js?v=2.1.1', location.href)).href; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); } catch (e) { res(); } });
   var _PAUSE_ICO = '<svg viewBox="0 0 24 24" style="fill:none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></svg>';
   var _PLAY_ICO  = '<svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>';
 

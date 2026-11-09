@@ -5,6 +5,8 @@ All notable changes to this project are recorded here. The format is based on
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-10
+
 ### Added
 
 - **Image and Play Time widgets.** Two new widgets in Settings, Widgets, both off until you turn them on. Image shows your own pictures in a tile among the others: pick one picture or a group, make as many Image tiles as you like, and each one turns through only its own pictures. The pictures are made smaller and kept in this browser on this device only, never uploaded or synced, and removing a tile removes its pictures. Each Image tile can show the whole picture, fill the tile, or slowly pan and zoom. Play Time shows the games you pick, three at a time, each with its logo or box and how long you have played it in this browser; press one to open it. Each has a frequency and a size: one tile, two tiles wide, or two by two. Every widget, old and new, can now be put in order in Settings, Widgets: drag a row by the handle at its end, or focus the handle and press Up or Down. When two widgets would land on the same tile, the one higher in the list gets it. On a phone, where the wall is one tile wide, every size is one tile.

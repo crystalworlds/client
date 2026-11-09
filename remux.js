@@ -49,7 +49,7 @@ const DOLBY_DECODER = {
      free(). A frame is libav's shape: { nb_samples, sample_rate, channels,
      data: [planar Float32Array per channel] } (or packed data, see the downmix).
    MP2 needs no WASM at all: the JS decoder is ~25 KB and lazy-imported. */
-const MP2DEC_URL = './vendor/mp2dec.mjs?v=2.1.0';
+const MP2DEC_URL = './vendor/mp2dec.mjs?v=2.1.1';
 
 /* A/V sync diagnostics for the decode-here audio path (2026-10-10). The
    re-encoded audio is timed by a running sample count from the first packet;

@@ -685,9 +685,9 @@
   var GB_INDEX_URL = (function () {
     try {
       var s = document.currentScript && document.currentScript.src;   // .../firmware/site/content_pack.js?v=…
-      if (s) return s.replace(/[^/]*$/, '') + 'gb_index.json.gz?v=2.1.0';   // cache tag: bump when the index is rebuilt (17 Oct: Sachen MMC2 boards are Color; 23 Oct: Binary Monsters II on the Game Boy shelf)
+      if (s) return s.replace(/[^/]*$/, '') + 'gb_index.json.gz?v=2.1.1';   // cache tag: bump when the index is rebuilt (17 Oct: Sachen MMC2 boards are Color; 23 Oct: Binary Monsters II on the Game Boy shelf)
     } catch (e) {}
-    return 'firmware/site/gb_index.json.gz?v=2.1.0';
+    return 'firmware/site/gb_index.json.gz?v=2.1.1';
   })();
   var GB_INDEX = null;         // { <sha256 prefix>: { s, b, n, name } } once loaded
   var GB_INDEX_PREFIX = 12;

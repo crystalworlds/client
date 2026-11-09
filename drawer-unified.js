@@ -275,7 +275,7 @@
      runs cheats (the others join when their cheat build is installed), so the drawer never offers
      what the player cannot run. A 404 shows nothing. */
   const CHEAT_SYSTEMS = new Set(['gnw', 'nes', 'gb', 'atari', 'pm']);   // NES, Game Boy and Atari cheat builds installed 28 Oct 2026; Pokemon mini (our own cheats, served core unchanged) 28 Oct
-  const CHEATS_MJS = './play/host/cheats.mjs?v=2.1.0';
+  const CHEATS_MJS = './play/host/cheats.mjs?v=2.1.1';
   async function cheatPlaces(d, p) {
     if (p === PROFILES.gb) {
       const sha = await gbSha1(d); if (!sha) return [];

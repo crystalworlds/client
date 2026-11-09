@@ -228,7 +228,7 @@
     el.innerHTML = '<div class="modal"><div class="modal-head"><div><div class="modal-sub">Robotic Operating Buddy</div><div class="modal-title">R.O.B. Play Time</div></div>' +
       '<div class="rob-tools" role="toolbar" aria-label="R.O.B. view">' + tool('reset', 'Reset pose', ICON.reset) + tool('led', 'LED', ICON.led) + tool('spin', 'Auto rotate', ICON.spin) + tool('info', 'Information', ICON.info) + '</div>' +
       '<button class="modal-close" type="button" aria-label="Close">&times;</button></div>' +
-      '<iframe title="R.O.B. Play Time" src="play/rob/index.html?v=2.1.0&ui=pill"></iframe></div>';
+      '<iframe title="R.O.B. Play Time" src="play/rob/index.html?v=2.1.1&ui=pill"></iframe></div>';
     el.querySelector('.modal-close').addEventListener('click', close);
     el.querySelectorAll('.rob-tool').forEach(b => b.addEventListener('click', e => {
       const w = pageWin(); if (!w || !w.robTop) return;

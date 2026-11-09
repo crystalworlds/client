@@ -37,7 +37,7 @@
   'use strict';
   if (window.CompatList) return;
 
-  const VERSION = '2.1.0';
+  const VERSION = '2.1.1';
   const BASE = 'firmware/compat/';
   /* Status 4 (28 Oct 2026): a known release (No-Intro) that has not been found, so it has never been
      tested. Listed and filterable, never counted: not in the bar, its percentages or "games tested". */

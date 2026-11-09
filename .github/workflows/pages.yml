@@ -1,0 +1,44 @@
+# Publishes the site to GitHub Pages: the repository's files as they are, with no build step.
+# The deploy waits up to 60 minutes for GitHub to copy the files (its default is 10).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+          # .nojekyll and .well-known/ start with a dot; .git and .github are always left out.
+          include-hidden-files: true
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+        with:
+          timeout: 3600000

@@ -59,7 +59,7 @@
   })();
   const LS = 'gnw.variants.v1';
   /* The tables' own cache tag: bump it whenever build_variants.mjs is re-run. */
-  const TABLES = '2.1.0';
+  const TABLES = '2.1.1';
   const T = {};           // sys -> { by12: Map(sha12 -> row), ids: {}, groups: [] }
   const loading = {};     // sys -> Promise
   let version = 0;        // bumps when a table lands

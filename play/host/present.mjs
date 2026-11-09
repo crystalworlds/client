@@ -13,7 +13,7 @@
  * or in front of opaque art (a render). Without art: the largest integer scale.
  * Full screen (A13): the screen alone, as large as fits, art off.
  */
-import { SegmentLayer } from './segments.mjs?v=2.1.0';
+import { SegmentLayer } from './segments.mjs?v=2.1.1';
 
 /* The whole device on a tall screen only if its game screen stays at least this large against the
    cropped band (1 = never smaller). 0.85: a portrait phone and a Fold cover screen are width-bound

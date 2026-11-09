@@ -175,9 +175,9 @@ import * as THREE from 'three';
 import { OrbitControls } from './vendor/three/jsm/controls/OrbitControls.js';
 import { GLTFLoader }    from './vendor/three/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from './vendor/three/jsm/environments/RoomEnvironment.js';
-import { createAccessories } from './rob-accessories.mjs?v=2.1.0';   // the gyros, blocks, trays ... set up by the user (24 Oct 2026)
+import { createAccessories } from './rob-accessories.mjs?v=2.1.1';   // the gyros, blocks, trays ... set up by the user (24 Oct 2026)
 
-const MODEL = './rob.glb?v=2.1.0';   // the site's copy of the test bench's rob.glb
+const MODEL = './rob.glb?v=2.1.1';   // the site's copy of the test bench's rob.glb
 
 // Defaults; the .glb carries the same numbers (and the pivots it was built
 // with) in ROB_Root's glTF extras, and those win when present.
@@ -510,7 +510,7 @@ new GLTFLoader().load(MODEL, gltf => {
   applyPose();
   updateCord();
   applyUrl();
-  createAccessories({ THREE, GLTFLoader, scene, camera, controls, dom: renderer.domElement, node, RIG, log: accLog, url: './accessories.glb?v=2.1.0',
+  createAccessories({ THREE, GLTFLoader, scene, camera, controls, dom: renderer.domElement, node, RIG, log: accLog, url: './accessories.glb?v=2.1.1',
     getPose: () => ({ armsTarget: S.arms, armsFrac: cur.arms, movingArms: !!motions.arms, movingTurn: !!motions.turn, movingLift: !!motions.lift, lift: S.lift, turn: S.turn }),
     setHands: n => setHands(n), getHands: () => S.hands,
   }).then(w => { world = w; window.robAcc = w; w.onChange(accPaint); w.applyUrl(location.search); accPaint(); })

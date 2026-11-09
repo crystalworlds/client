@@ -52,7 +52,7 @@
     if (started) return;
     started = 1;
     var s = document.createElement('script');
-    s.src = 'stories.js?v=2.1.0';
+    s.src = 'stories.js?v=2.1.1';
     s.onload = function () { while (q.length) { try { q.shift()(window.CwStories); } catch (e) {} } };
     s.onerror = function () { started = 0; q = []; };
     document.head.appendChild(s);
@@ -188,9 +188,9 @@
      sign-ins from being lost, says so when they were, and records a storage
      check (?diag=1, ?diag=storage, Settings). Loaded first so it sees the
      storage before anything writes to it. -->
-<script src="keep.js?v=2.1.0"></script>
+<script src="keep.js?v=2.1.1"></script>
 <!-- Links anyone can paste (#/compatibility, #/media/about, #/<system>/hardware ...): deeplinks.js, 2026-10-21. In the head so the first applyHashRoute can ask it. -->
-<script src="deeplinks.js?v=2.1.0"></script>
+<script src="deeplinks.js?v=2.1.1"></script>
 <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report anything at
      all. Without it the platform letterboxes the page into the safe area and
      the insets come back as 0, so the TV overscan rules (body.gnw-tv, in the
@@ -350,12 +350,12 @@
      The measurement record and the reasoning are in the file. See the block
      headed "THE SCREEN APERTURE, DECLARED ONCE" below for the mechanism this
      plugs into, and WASM_Source/nes-artwork/verify.sh for what re-checks it. -->
-<link rel="stylesheet" href="nes-screen.css?v=2.1.0">
+<link rel="stylesheet" href="nes-screen.css?v=2.1.1">
 <!-- Which of the three NES-family consoles (NES / Famicom / Disk System) a title
      is shown on. Tiny and synchronous, because the NES catalogue reads it as it
      adopts titles and content_pack.js reads it while it still has the bytes. -->
-<script src="nes-console-hash.js?v=2.1.0"></script>
-<script src="nes-console.js?v=2.1.0"></script>
+<script src="nes-console-hash.js?v=2.1.1"></script>
+<script src="nes-console.js?v=2.1.1"></script>
 <!-- The four Atari apertures, on exactly the same footing and for exactly the
      same reason: play/atari2600/index.html and its three siblings are separate
      documents putting a picture on the same glass. One file rather than four
@@ -365,16 +365,16 @@
      properties. A mapping is a reference, not a copy.
      Re-checked by WASM_Source/atari-artwork/verify.sh, which also runs the
      detector against nes.png as a control. -->
-<link rel="stylesheet" href="atari-screen.css?v=2.1.0">
-<link rel="stylesheet" href="page-audio.css?v=2.1.0">
+<link rel="stylesheet" href="atari-screen.css?v=2.1.1">
+<link rel="stylesheet" href="page-audio.css?v=2.1.1">
 <!-- The Features window (31 Oct): features.js draws it, emby.js opens it from the button right of Home. -->
-<link rel="stylesheet" href="features.css?v=2.1.0">
+<link rel="stylesheet" href="features.css?v=2.1.1">
 <!-- On a small screen there is no red frame, so every window follows the light theme (7 Nov 2026). -->
-<link rel="stylesheet" href="small-light.css?v=2.1.0">
+<link rel="stylesheet" href="small-light.css?v=2.1.1">
 <!-- Which Lynx cartridges are held on their side (2026-10-07): one per-hash list,
      read here for the one-column turned tile and by play/atarilynx/app.js for
      the play window's turn. -->
-<script src="play/atarilynx/turned.js?v=2.1.0"></script>
+<script src="play/atarilynx/turned.js?v=2.1.1"></script>
 <style>
   :root {
     --cover-inset: 8%;   /* box-art border, the Game & Watch tiles' measured median; see "CARTRIDGE BOXES" */
@@ -5526,7 +5526,7 @@
      a 256 px tile over the same flat colour, which still shows if the picture fails to load. */
   .gw-frame-bezel,
   html body .about-pop .gw-frame-bezel {
-    background-image: url('./frame/linen.png?v=2.1.0');
+    background-image: url('./frame/linen.png?v=2.1.1');
     background-size: 256px 256px;
     background-repeat: repeat;
   }
@@ -6558,20 +6558,20 @@
             <ul class="sys-logos" aria-label="Movies, shows and the 14 consoles and handhelds you can play here">
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="2.5" y1="8" x2="7" y2="8"/><line x1="2.5" y1="16" x2="7" y2="16"/><line x1="17" y1="8" x2="21.5" y2="8"/><line x1="17" y1="16" x2="21.5" y2="16"/></svg><span>Movies</span></li>
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-3)" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><polyline points="7.5 3 12 7 16.5 3"/></svg><span>Shows</span></li>
-              <li><img src="images/consoles/gameandwatch.webp?v=2.1.0" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
-              <li><img src="images/consoles/tft_mario.webp?v=2.1.0" alt="" loading="lazy"><span>Mario Bros.</span></li>
-              <li><img src="images/consoles/tft_zelda.webp?v=2.1.0" alt="" loading="lazy"><span>Legend of Zelda</span></li>
-              <li><img src="images/consoles/tetrisjr.webp?v=2.1.0" alt="" loading="lazy"><span>Tetris Jr.</span></li>
-              <li><img src="images/consoles/gb.webp?v=2.1.0" alt="" loading="lazy"><span>Game Boy</span></li>
-              <li><img src="images/consoles/gbc.webp?v=2.1.0" alt="" loading="lazy"><span>Game Boy Color</span></li>
-              <li><img src="images/consoles/pokemini.webp?v=2.1.0" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
-              <li><img src="images/consoles/nes.webp?v=2.1.0" alt="" loading="lazy"><span>NES</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.1.0" alt="" loading="lazy"><span>Famicom</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.1.0" alt="" loading="lazy"><span>Disk System</span></li>
-              <li><img src="images/consoles/atari2600.webp?v=2.1.0" alt="" loading="lazy"><span>Atari 2600</span></li>
-              <li><img src="images/consoles/atari5200.webp?v=2.1.0" alt="" loading="lazy"><span>Atari 5200</span></li>
-              <li><img src="images/consoles/atari7800.webp?v=2.1.0" alt="" loading="lazy"><span>Atari 7800</span></li>
-              <li><img src="images/consoles/atarilynx.webp?v=2.1.0" alt="" loading="lazy"><span>Atari Lynx</span></li>
+              <li><img src="images/consoles/gameandwatch.webp?v=2.1.1" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
+              <li><img src="images/consoles/tft_mario.webp?v=2.1.1" alt="" loading="lazy"><span>Mario Bros.</span></li>
+              <li><img src="images/consoles/tft_zelda.webp?v=2.1.1" alt="" loading="lazy"><span>Legend of Zelda</span></li>
+              <li><img src="images/consoles/tetrisjr.webp?v=2.1.1" alt="" loading="lazy"><span>Tetris Jr.</span></li>
+              <li><img src="images/consoles/gb.webp?v=2.1.1" alt="" loading="lazy"><span>Game Boy</span></li>
+              <li><img src="images/consoles/gbc.webp?v=2.1.1" alt="" loading="lazy"><span>Game Boy Color</span></li>
+              <li><img src="images/consoles/pokemini.webp?v=2.1.1" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
+              <li><img src="images/consoles/nes.webp?v=2.1.1" alt="" loading="lazy"><span>NES</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.1.1" alt="" loading="lazy"><span>Famicom</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.1.1" alt="" loading="lazy"><span>Disk System</span></li>
+              <li><img src="images/consoles/atari2600.webp?v=2.1.1" alt="" loading="lazy"><span>Atari 2600</span></li>
+              <li><img src="images/consoles/atari5200.webp?v=2.1.1" alt="" loading="lazy"><span>Atari 5200</span></li>
+              <li><img src="images/consoles/atari7800.webp?v=2.1.1" alt="" loading="lazy"><span>Atari 7800</span></li>
+              <li><img src="images/consoles/atarilynx.webp?v=2.1.1" alt="" loading="lazy"><span>Atari Lynx</span></li>
             </ul>
           </div>
         </div>
@@ -7422,7 +7422,7 @@
     <div class="modal-head">
       <div>
         <div class="modal-sub">Settings</div>
-        <div class="modal-title">Version 2.1.0</div>
+        <div class="modal-title">Version 2.1.1</div>
       </div>
       <button class="modal-close" onclick="closeOverlay('vault-overlay')" aria-label="Close">×</button>
     </div>
@@ -8350,57 +8350,57 @@
      its builder as a window global; the call sites below are unchanged.
      Placed BEFORE the main script purely so they are defined before
      anything can run; they are only ever CALLED from a drawer render. -->
-<script src="emulation-tab.js?v=2.1.0"></script>
-<script src="emulation-links.js?v=2.1.0"></script>
-<script src="tft-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-machine-emulation-tab.js?v=2.1.0"></script>
-<script src="emu-score-box.js?v=2.1.0"></script>
-<script src="gb-cpu-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-memory-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-ppu-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-apu-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-mappers-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-sgb-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-acceptance-emulation-tab.js?v=2.1.0"></script>
-<script src="gbc-emulation-tab.js?v=2.1.0"></script>
-<script src="gbc-machine-emulation-tab.js?v=2.1.0"></script>
-<script src="gbc-timing-emulation-tab.js?v=2.1.0"></script>
-<script src="gbc-ppu-emulation-tab.js?v=2.1.0"></script>
-<script src="gbc-apu-emulation-tab.js?v=2.1.0"></script>
-<script src="pm-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-machine-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-cpu-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-ppu-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-apu-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-mappers-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-fds-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-peripherals-emulation-tab.js?v=2.1.0"></script>
-<script src="nes-acceptance-emulation-tab.js?v=2.1.0"></script>
-<script src="gb-hardware-tab.js?v=2.1.0"></script>
-<script src="hw-diagram.js?v=2.1.0"></script>
-<script src="nes-hardware-tab.js?v=2.1.0"></script>
-<script src="nes-emulation-index-tab.js?v=2.1.0"></script>
+<script src="emulation-tab.js?v=2.1.1"></script>
+<script src="emulation-links.js?v=2.1.1"></script>
+<script src="tft-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-machine-emulation-tab.js?v=2.1.1"></script>
+<script src="emu-score-box.js?v=2.1.1"></script>
+<script src="gb-cpu-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-memory-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-ppu-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-apu-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-mappers-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-sgb-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-acceptance-emulation-tab.js?v=2.1.1"></script>
+<script src="gbc-emulation-tab.js?v=2.1.1"></script>
+<script src="gbc-machine-emulation-tab.js?v=2.1.1"></script>
+<script src="gbc-timing-emulation-tab.js?v=2.1.1"></script>
+<script src="gbc-ppu-emulation-tab.js?v=2.1.1"></script>
+<script src="gbc-apu-emulation-tab.js?v=2.1.1"></script>
+<script src="pm-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-machine-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-cpu-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-ppu-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-apu-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-mappers-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-fds-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-peripherals-emulation-tab.js?v=2.1.1"></script>
+<script src="nes-acceptance-emulation-tab.js?v=2.1.1"></script>
+<script src="gb-hardware-tab.js?v=2.1.1"></script>
+<script src="hw-diagram.js?v=2.1.1"></script>
+<script src="nes-hardware-tab.js?v=2.1.1"></script>
+<script src="nes-emulation-index-tab.js?v=2.1.1"></script>
 <!-- The four Atari build guides (2026-10-18): generated in the Atari emulator's source tree by
      tools/build_emulation_tabs.mjs from docs/emulation*, copied unchanged (--check green
      2026-10-18, tab_name_check green). The dispatcher composes each drawer from its own guide plus the
      chapters it borrows from another Atari guide, so all five files load together. -->
-<script src="atari2600-emulation-tab.js?v=2.1.0"></script>
-<script src="atari5200-emulation-tab.js?v=2.1.0"></script>
-<script src="atari7800-emulation-tab.js?v=2.1.0"></script>
-<script src="atarilynx-emulation-tab.js?v=2.1.0"></script>
-<script src="atari-emulation-index-tab.js?v=2.1.0"></script>
-<script src="gnw-emulation-shared-tab.js?v=2.1.0"></script>
-<script src="gnw-sm510-emulation-tab.js?v=2.1.0"></script>
-<script src="gnw-sm5a-emulation-tab.js?v=2.1.0"></script>
-<script src="gnw-sm511-emulation-tab.js?v=2.1.0"></script>
-<script src="atari-hardware-tab.js?v=2.1.0"></script>
-<script src="gamemeta.js?v=2.1.0"></script>
+<script src="atari2600-emulation-tab.js?v=2.1.1"></script>
+<script src="atari5200-emulation-tab.js?v=2.1.1"></script>
+<script src="atari7800-emulation-tab.js?v=2.1.1"></script>
+<script src="atarilynx-emulation-tab.js?v=2.1.1"></script>
+<script src="atari-emulation-index-tab.js?v=2.1.1"></script>
+<script src="gnw-emulation-shared-tab.js?v=2.1.1"></script>
+<script src="gnw-sm510-emulation-tab.js?v=2.1.1"></script>
+<script src="gnw-sm5a-emulation-tab.js?v=2.1.1"></script>
+<script src="gnw-sm511-emulation-tab.js?v=2.1.1"></script>
+<script src="atari-hardware-tab.js?v=2.1.1"></script>
+<script src="gamemeta.js?v=2.1.1"></script>
 <!-- Home-page narration (2026-10-12): recorded narration on R2 (site-audio bucket),
      per-word timings generated offline; see page-audio.js. -->
-<script src="page-audio-timings.js?v=2.1.0"></script>
-<script src="page-audio.js?v=2.1.0"></script>
+<script src="page-audio-timings.js?v=2.1.1"></script>
+<script src="page-audio.js?v=2.1.1"></script>
 
 <script>
 /* === Image data === Since 2026-10-24 device pictures are single files under
@@ -19380,7 +19380,7 @@ function _tftInjectScript(src) {
 }
 function _tftLoadEngine() {
   if (window.ArmTwin) return Promise.resolve();
-  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.1.0');
+  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.1.1');
   return _tftEnginePromise;
 }
 function _tftLoadFirmware(unit) {
@@ -19886,7 +19886,7 @@ let _pmPreviewLastError = null;
 function _pmPreviewLoad() {
   if (_pmPreviewLoadPromise) return _pmPreviewLoadPromise;
   if (!_pmWasmModulePromise) {
-    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.1.0')
+    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.1.1')
       .then(r => { if (!r.ok) throw new Error('pokemini.wasm HTTP ' + r.status); return r.arrayBuffer(); })
       .then(b => WebAssembly.compile(b))
       .then(m => { _pmWasmModule = m; return m; });
@@ -20964,7 +20964,7 @@ const _gbCartBytes = new Map();   // slot -> Uint8Array, held in memory this vis
 // The ONE place the served Game Boy core's URL and ?v= tag live. gbrec.js reads
 // window.GB_WASM_URL for its build stamp, so a core install bumps this line only
 // and the stamp follows it (22 Oct 2026).
-var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.1.0';
+var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.1.1';
 
 // Lazy: nothing below is fetched until a Game Boy tile actually needs it, so a
 // visitor who never opens the catalogue pays nothing.
@@ -23454,7 +23454,7 @@ function renderTimeline() {
       : "routeToMediaSeries('" + t.series + "')";
     // A row may name its own device picture (`ic`, 2026-10-18): Tetris Jr. and the
     // two colour units show their own unit, switched off, not the Game & Watch one.
-    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.1.0' : (iconSrc ? iconSrc(keys[0]) : '');
+    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.1.1' : (iconSrc ? iconSrc(keys[0]) : '');
     // Decorative: the series name beside it already says which system it is.
     const ic = src ? `<img class="tl-ic" src="${src}" alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" data-tl-sys="${keys[0]}">` : '';
     return `<div class="tl-item clickable" style="--c:${s.color}" onclick="${go}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${go}}">
@@ -25493,7 +25493,7 @@ function bootApp() {
      Built by WASM_Source/art-files/build.py (BUILD.md, "Device pictures as single files");
      ?v= is the index's own hash, and art-files/verify.sh fails if it is not. It must load
      before the script below, whose init() boots the page (imgSrc reads it at first use). -->
-<script src="images/art/art-index.js?v=2.1.0"></script>
+<script src="images/art/art-index.js?v=2.1.1"></script>
 <script>
 /* THE PICTURE ARCHIVES ARE RETIRED (2026-10-24).
    Until today eleven files (images_b64.json ... images_gbc_shells_b64.json, 59.9 MB on 23 Oct,
@@ -25686,46 +25686,46 @@ function _hideLoadingOverlay() {
      caching can serve a stale copy for up to Cache-Control's max-age after
      a deploy. -->
 <!-- Data sources switched off in Settings, kept set up (28 Oct): read by content_pack.js, cws.js and emby.js. -->
-<script src="source-switch.js?v=2.1.0"></script>
-<script src="firmware/site/sha.js?v=2.1.0"></script>
+<script src="source-switch.js?v=2.1.1"></script>
+<script src="firmware/site/sha.js?v=2.1.1"></script>
 <!-- The unsupported list (2026-10-05): hashes of games and firmware that are refused
      at load, with a reason each. Read by every play window, the tiles (variants.js),
      the Continue row and Settings; generated by tools/unsupported/build.mjs. -->
-<script src="firmware/site/unsupported.js?v=2.1.0"></script>
-<script src="firmware/site/content_pack.js?v=2.1.0"></script>
-<script src="firmware/site/cloud_storage.js?v=2.1.0"></script>
-<script src="keys-diagram.js?v=2.1.0"></script>
-<script src="play/gnw/gwc-core.js?v=2.1.0"></script>
-<script src="play/gnw/gwc-saves.js?v=2.1.0"></script>
-<script src="play/play-pill.js?v=2.1.0"></script>
-<script src="play/gnw/gnw-host.js?v=2.1.0"></script>
+<script src="firmware/site/unsupported.js?v=2.1.1"></script>
+<script src="firmware/site/content_pack.js?v=2.1.1"></script>
+<script src="firmware/site/cloud_storage.js?v=2.1.1"></script>
+<script src="keys-diagram.js?v=2.1.1"></script>
+<script src="play/gnw/gwc-core.js?v=2.1.1"></script>
+<script src="play/gnw/gwc-saves.js?v=2.1.1"></script>
+<script src="play/play-pill.js?v=2.1.1"></script>
+<script src="play/gnw/gnw-host.js?v=2.1.1"></script>
 <!-- Subtitles: the player's own subtitle engine (subs.js) loads before emby.js so the
      Settings panel emby.js draws at load can include its section. subsync.js is
      lazy-loaded by subs.js on the first Auto-sync. -->
-<script src="subs.js?v=2.1.0"></script>
+<script src="subs.js?v=2.1.1"></script>
 <!-- Server conversion (Emby A): Emby's transcoder for files the browser can't play, picture
      subtitles burned in, and /Sessions/Playing reports. After subs.js (it registers the
      picture-subtitle handler there), before emby.js (its Settings section draws at load).
      Loads hls.js from vendor/hls.js-1.6.13/ only when a conversion actually starts. -->
-<script src="embytranscode.js?v=2.1.0"></script>
+<script src="embytranscode.js?v=2.1.1"></script>
 <!-- Player add-ons (Emby B): seek bar with preview thumbnails and chapters, and Up Next.
      Before emby.js so its Settings panel can include the Up Next card at load. -->
-<script src="embytrick.js?v=2.1.0"></script>
-<script src="embyupnext.js?v=2.1.0"></script>
-<script src="embytitle.js?v=2.1.0"></script>
+<script src="embytrick.js?v=2.1.1"></script>
+<script src="embyupnext.js?v=2.1.1"></script>
+<script src="embytitle.js?v=2.1.1"></script>
 <!-- variants.js: one tile per game, variants grouped by file hash (firmware/variants/). Before emby.js, which collapses its pools through it. -->
-<script src="variants.js?v=2.1.0"></script>
+<script src="variants.js?v=2.1.1"></script>
 <!-- drawer-unified.js: ONE game drawer for every system, the default since 2026-10-14; ?drawer=default (or old) brings back the old drawers (docs/UNIFIED-BUILD-PLAN.md phase 7). Before keys.js, so its B-in-a-version-submenu key comes first. -->
-<script src="emulation-test-carts.js?v=2.1.0"></script>
-<script src="drawer-unified.js?v=2.1.0"></script>
-<script src="widgets-extra.js?v=2.1.0"></script>
-<script src="emby.js?v=2.1.0"></script>
-<script src="features.js?v=2.1.0"></script>
-<script src="checked-rebuilding.js?v=2.1.0"></script>
+<script src="emulation-test-carts.js?v=2.1.1"></script>
+<script src="drawer-unified.js?v=2.1.1"></script>
+<script src="widgets-extra.js?v=2.1.1"></script>
+<script src="emby.js?v=2.1.1"></script>
+<script src="features.js?v=2.1.1"></script>
+<script src="checked-rebuilding.js?v=2.1.1"></script>
 <!-- R.O.B.: the Play Time tile, his drawer and window (rob-shelf.js, 2026-10-21); his Systems menu entry is emby.js ROB_SYSTEM (22 Oct). -->
-<script src="rob-shelf.js?v=2.1.0"></script>
+<script src="rob-shelf.js?v=2.1.1"></script>
 <!-- The compatibility list window (compat.js, 2026-10-21): opened by the toolbar button left of Timeline. Before keys.js and nav.js, so its row keys come first. -->
-<script src="compat.js?v=2.1.0"></script>
+<script src="compat.js?v=2.1.1"></script>
 <!-- In-browser Game Boy recorder for the Video page. TURNED OFF 2026-09-24
      (GBREC.ENABLED = false): clips are being published for the whole
      library, so the wall plays those and boots the real machine for titles that
@@ -25737,7 +25737,7 @@ function _hideLoadingOverlay() {
      run before this file simply reads no GBREC and builds `data-gb` tiles,
      which is today's behaviour anyway — so re-enabling the recorder takes a
      re-render (any route change) or a reload, as gbrec.js's setEnabled says. -->
-<script src="gbrec.js?v=2.1.0"></script>
+<script src="gbrec.js?v=2.1.1"></script>
 <!-- Published Game Boy clips, served from R2 and keyed by cartridge SHA-1. It
      owns `.gb-emu[data-gb]`, which since 2026-09-24 means the MEDIA WALL as
      well as the catalogue grids: a claimed tile never builds a core at all (see
@@ -25745,31 +25745,31 @@ function _hideLoadingOverlay() {
      gbrec.js above owns `#video-grid .gb-emu[data-gbrec]` and is turned off, so
      that selector matches nothing. Same load position and for the same reasons
      — after emby.js, after the inline script. -->
-<script src="gbvideo.js?v=2.1.0"></script>
+<script src="gbvideo.js?v=2.1.1"></script>
 <!-- Recorded NES / Famicom / FDS tiles (`.nes-emu[data-nes]`), the NES
      counterpart of gbvideo.js. OFF until its LIST_URL names a published clip
      list (NES_Capture tools/clip_list.mjs); until then it claims nothing and
      every NES tile is live or a photograph exactly as before. Always muted. -->
-<script src="nesvideo.js?v=2.1.0"></script>
+<script src="nesvideo.js?v=2.1.1"></script>
 <!-- Recorded Atari 2600 / 5200 / 7800 / Lynx tiles (`.atari-emu[data-atari]`), the
      Atari counterpart of nesvideo.js: one R2 bucket per machine, `<id>.webm`, no
      list; a 404 hands the tile back to the live sweep. Always muted. -->
-<script src="atarivideo.js?v=2.1.0"></script>
+<script src="atarivideo.js?v=2.1.1"></script>
 <!-- The Media page's Continue row: Emby resume + Up Next + the games closed here,
      one save per game in this browser's IndexedDB. After emby.js (it reads window.Emby)
      and after the inline script (it wraps closePlayModal / closePmPlay and is called
      from closeOverlay). Silent: its cards are still pictures. -->
-<script src="play/host/save-purge.js?v=2.1.0"></script>
-<script src="continuerow.js?v=2.1.0"></script>
+<script src="play/host/save-purge.js?v=2.1.1"></script>
+<script src="continuerow.js?v=2.1.1"></script>
 <!-- The Control Bar's host side (play/shared/host-bridge.js, docs/UNIFIED-PLAY-INTERFACE.md):
      the ?ui=unified flag, the title bar with only the title and x (A14), Last closed,
      the Variant item, full screen (A13). After continuerow.js and variants.js. Silent. -->
-<script src="play/shared/host-bridge.js?v=2.1.0"></script>
+<script src="play/shared/host-bridge.js?v=2.1.1"></script>
 <!-- The one game-file relay for the play host (play/host/site-relay.js, 2026-10-14): {cwNeed} from a host frame, answered from the content pack, the site files, then a game server. -->
-<script src="play/host/site-relay.js?v=2.1.0"></script>
+<script src="play/host/site-relay.js?v=2.1.1"></script>
 <!-- Settings > Play a file: a game file from this device, played from memory (28 Oct). -->
-<script src="loadbar.js?v=2.1.0"></script>
-<script src="play-file.js?v=2.1.0"></script>
+<script src="loadbar.js?v=2.1.1"></script>
+<script src="play-file.js?v=2.1.1"></script>
 <!-- Keyboard first, phase 1 (docs/tv-controller-support.md): one Back, focus into and
      out of every overlay, the pause menu in play windows, the Play key, the player's
      keys and Media Session, Settings -> Display -> TV mode. After emby.js. -->
@@ -25777,50 +25777,50 @@ function _hideLoadingOverlay() {
      that keys.js, nav.js and shortcuts.js dispatch through. Before keys.js. -->
 <!-- The System Switcher (30 Oct 2026): the carousel panel for LB / RB and [ ] , . over the wall.
      Before actions.js and keys.js: its keys are caught first, only while it is open. -->
-<script src="system-switcher.js?v=2.1.0"></script>
-<script src="actions.js?v=2.1.0"></script>
-<script src="keys.js?v=2.1.0"></script>
+<script src="system-switcher.js?v=2.1.1"></script>
+<script src="actions.js?v=2.1.1"></script>
+<script src="keys.js?v=2.1.1"></script>
 <!-- Keyboard first, phase 2 (docs/tv-controller-support.md): arrow keys everywhere -- zones,
      nearest-by-position movement, one Tab stop per row, Settings as a tablist; the TV tile
      lift. After keys.js. -->
-<script src="nav.js?v=2.1.0"></script>
+<script src="nav.js?v=2.1.1"></script>
 <!-- Keyboard first, phase 3: quick jump (/ or Ctrl+K), the ? key list, g-then-letter jumps,
      focus mode, [ and ] (also , and .) through libraries and systems. After nav.js. Silent. -->
-<script src="shortcuts.js?v=2.1.0"></script>
+<script src="shortcuts.js?v=2.1.1"></script>
 <!-- Keyboard first, phase 4: gamepads site-wide (pad buttons are keys of registry actions) and TV
      remote keys; play/play-pad.js is the play windows' pad layer (in-page G&W and Pokemon mini). -->
-<script src="play/play-pad.js?v=2.1.0"></script>
-<script src="gamepad.js?v=2.1.0"></script>
+<script src="play/play-pad.js?v=2.1.1"></script>
+<script src="gamepad.js?v=2.1.1"></script>
 <!-- Keyboard first, phase 5: Settings -> Keyboard & controllers -- rebind the site's keys and pad
      buttons and each system's game controls, saved per viewer (actions.js applies the saved keys
      as it loads). After gamepad.js. Silent. -->
-<script src="keybind.js?v=2.1.0"></script>
+<script src="keybind.js?v=2.1.1"></script>
 <!-- Settings, reorganised into four pages and a phone sheet (docs/SETTINGS-REDESIGN.md).
      After keybind.js: it gathers the panels the other files mount. -->
-<script src="settings-ui.js?v=2.1.0"></script>
+<script src="settings-ui.js?v=2.1.1"></script>
 <!-- Settings > Media and content: a tile per source (media server, game server, content pack)
      and one shared set-up / change panel (2026-10-24; docs/SETTINGS-REDESIGN.md 9). -->
-<script src="settings-sources.js?v=2.1.0"></script>
-<script src="settings-config.js?v=2.1.0"></script>
+<script src="settings-sources.js?v=2.1.1"></script>
+<script src="settings-config.js?v=2.1.1"></script>
 <!-- Settings > Look and feel > Home screen: phones only (2026-10-17). -->
-<script src="install-app.js?v=2.1.0"></script>
-<script src="notify.js?v=2.1.0"></script>
+<script src="install-app.js?v=2.1.1"></script>
+<script src="notify.js?v=2.1.1"></script>
 <!-- Home: the 11 emulators, chip by chip (2026-10-18). -->
-<script src="emulators-table.js?v=2.1.0"></script>
-<script src="docterms.js?v=2.1.0"></script>
+<script src="emulators-table.js?v=2.1.1"></script>
+<script src="docterms.js?v=2.1.1"></script>
 <!-- The Control Bar in the site's own document (2026-10-11), for the Pokemon mini window,
      which plays in this page rather than in a frame: the on-screen buttons, the bar, and
      the Pokemon mini's adapter (docs/UNIFIED-PLAY-INTERFACE.md). After keys.js, shortcuts.js
      and play-pad.js, so their Back, help and pad listeners keep their order. ?ui=legacy
      keeps the old window. Silent. -->
-<script src="play/shared/overlay.js?v=2.1.0"></script>
-<script src="play/shared/control-bar.js?v=2.1.0"></script>
+<script src="play/shared/overlay.js?v=2.1.1"></script>
+<script src="play/shared/control-bar.js?v=2.1.1"></script>
 <!-- Crystal Worlds Game Server client: discovery, pairing, PIN, merged library
      and verified downloads from the player's own servers. After the inline
      script (it wraps logoutVault/importVaultCode/rotateVaultCode and reads
      vaultCode) and after content_pack.js (identify()). -->
-<script src="cws.js?v=2.1.0"></script>
-<script src="sgb-shelf.js?v=2.1.0"></script>
+<script src="cws.js?v=2.1.1"></script>
+<script src="sgb-shelf.js?v=2.1.1"></script>
 <script>
 /* Settings → Content: open/clear a content pack (.zip). Talks to window.__GNW_PACK
    (firmware/site/content_pack.js); the emulators pick it up on the next reload. */
@@ -26038,12 +26038,12 @@ function _hideLoadingOverlay() {
 </script>
 <!-- Same manual-cache-buster convention as gnw.js above -- bump whenever
      manual_booklet.js changes. -->
-<script src="manual_booklet.js?v=2.1.0"></script>
+<script src="manual_booklet.js?v=2.1.1"></script>
 <!-- The recording director (director.js, not part of the public copy): fetched only with ?director=1
      in the address or the local setting cw.director=1; a normal visit never loads it. -->
-<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.1.0'; document.body.appendChild(s); } catch (e) {} })();</script>
+<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.1.1'; document.body.appendChild(s); } catch (e) {} })();</script>
 <!-- The offline page for the installed app (sw.js, offline.html): registered once the page has loaded, never
      on file:, silent if the browser refuses. sw.js handles top-level page loads only. -->
-<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.1.0', { scope: './' }).catch(function () {}); } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
+<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.1.1', { scope: './' }).catch(function () {}); } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
 </body>
 </html>

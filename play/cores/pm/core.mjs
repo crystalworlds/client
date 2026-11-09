@@ -44,11 +44,11 @@
  * exactly as before: nothing in that path changed.
  */
 import { CoreError } from '../../host/core-api.mjs';
-import { Link, linkable, LINK_GAP, LINK_W, LINK_H } from './link.mjs?v=2.1.0';
-import { cheatEngine } from '../cheats-core.mjs?v=2.1.0';
+import { Link, linkable, LINK_GAP, LINK_W, LINK_H } from './link.mjs?v=2.1.1';
+import { cheatEngine } from '../cheats-core.mjs?v=2.1.1';
 
 const BASE = new URL('../../pokemini/', import.meta.url);
-const WASM = new URL('pokemini.wasm?v=2.1.0', BASE);     // index.html _pmLaunchCart's tag
+const WASM = new URL('pokemini.wasm?v=2.1.1', BASE);     // index.html _pmLaunchCart's tag
 const STATES = new URL('pm-states.json', BASE);
 const SCRIPTS = new URL('demo-scripts.json', BASE);
 

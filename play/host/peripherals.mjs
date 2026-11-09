@@ -355,7 +355,7 @@ export class MatPanel {
    HTTP Range: a tape is 150 to 180 MB and is never copied whole) and the tapes chosen from this
    device this visit, and offers "Choose a tape file…" and Eject. Key Y ejects or inserts. The
    tape's sound plays through the console's own audio. */
-import * as LF from './local-files.mjs?v=2.1.0';
+import * as LF from './local-files.mjs?v=2.1.1';
 export const TAPE_EXT = /\.(study|studybox)$/i;
 const tapeTidy = n => String(n).replace(TAPE_EXT, '').replace(/\s*\((Japan|Unl)\)/g, '');
 /* TAPES REMEMBERED ON THIS DEVICE (2026-10-19; the old NES page's 'tape:handles'): a tape
@@ -905,7 +905,7 @@ export class Printer {
     if (!url) return false;
     window.__cwPrintJob = { url, scale: k, rows: this.rows };
     if (this.printOnTop(url, k)) return true;
-    const page = new URL('./print.html?v=2.1.0', import.meta.url).href;
+    const page = new URL('./print.html?v=2.1.1', import.meta.url).href;
     if (/Android/i.test(navigator.userAgent || '')) {
       const w = window.open(page, '_blank');
       if (w) { this.lastPrintTab = w; return true; }

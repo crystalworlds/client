@@ -42,7 +42,7 @@
   const SPONSOR_URL = 'https://github.com/sponsors/crystalworlds';
   const INVITE_URL = 'https://github.com/crystalworlds/insider/invitations';
   const KEY = 'cw-stories-auth', FLOW = 'cw-stories-flow';
-  const CSS = 'stories.css?v=2.1.0';
+  const CSS = 'stories.css?v=2.1.1';
   const SOON_MS = 60000;   // a key this close to its end is swapped first
 
   const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;

@@ -11,7 +11,7 @@
  *
  * Users' files stay in their browser: nothing here leaves this machine.
  */
-import { isEnvelope, open as openEnvelope } from './save-envelope.mjs?v=2.1.0';
+import { isEnvelope, open as openEnvelope } from './save-envelope.mjs?v=2.1.1';
 /* THE COMMON SAVE FORMAT (2026-10-18, play/host/save-envelope.mjs): every slot and battery save in
    cw-play is an envelope; nothing else is read as a save (decided 2026-10-18, below). */
 const DB = 'cw-play', VER = 1, STORES = ['slots', 'battery', 'firmware'];

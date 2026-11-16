@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   if (window.CwEmuCards) return;
-  const IMG = k => 'images/consoles/' + k + '.webp?v=2.2.0';
+  const IMG = k => 'images/consoles/' + k + '.webp?v=2.2.1';
   const P = (img, name) => ({ img, name });
   const N = name => ({ name });
 

@@ -5,6 +5,12 @@ All notable changes to this project are recorded here. The format is based on
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-11-16
+
+### Added
+
+- **A Game Boy test page at /gbtest/.** It runs the same Game Boy emulator the site plays games on, with nothing else in the way: choose Game Boy, Game Boy Color or Super Game Boy, then a test file, and the picture appears on a plain 160 x 144 screen, one pixel per Game Boy pixel, with no colour correction, blending or border. Our own start-up programs run first, so a test starts from the same state as on the console. Public test boards can drive it to score the emulator.
+
 ## [2.2.0] - 2026-11-16
 
 ### Added

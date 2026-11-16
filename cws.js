@@ -52,7 +52,7 @@
   function loadReach() {
     if (_reachP) return _reachP;
     /* Through Function, so a browser that cannot read import() still reads this file. */
-    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.2.0'); })
+    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.2.1'); })
       .then(function (m) { R = m && m.default; return R; }, function (e) { warn('reach not loaded', e && e.message); return null; });
     return _reachP;
   }

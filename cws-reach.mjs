@@ -32,7 +32,7 @@
    functions as the protocol says. Servers and the introducer see public keys,
    signatures and per-server PIN proofs only.
    ======================================================================== */
-import * as P from './cws-proto.mjs?v=2.2.0';
+import * as P from './cws-proto.mjs?v=2.2.1';
 
 const SUPPORTED = !!(globalThis.crypto && crypto.subtle && window.isSecureContext && window.RTCPeerConnection && window.WebSocket && window.indexedDB);
 

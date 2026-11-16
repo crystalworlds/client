@@ -37,10 +37,10 @@ this repository.
 
 ---
 
-## Version 2.0.0
+## Version 2.2.1
 
-The first release of CrystalWorlds.Media. The full notes are in
-[`CHANGELOG.md`](CHANGELOG.md); in short:
+This is version 2.2.1. What changed in each release is in
+[`CHANGELOG.md`](CHANGELOG.md). The first release, 2.0.0, in short:
 
 - **Emulators and systems.** Eleven emulators written for this project, plus
   the rebuilt Tetris Jr. prototype, cover fourteen consoles and handhelds. The

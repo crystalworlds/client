@@ -24,7 +24,7 @@
 (function () {
   'use strict';
   if (window.CwSiteRelay) return;
-  const BUILD = '2.2.0';
+  const BUILD = '2.2.1';
 
   /* Per console: how a game id and a firmware id are found. Each `pack` / `site` / `server`
      returns base64 or null. Added to per phase (the build plan, section 5). */

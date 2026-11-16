@@ -89,6 +89,9 @@
     e.preventDefault();
     e.stopImmediatePropagation();
     if (e.repeat) return;
+    /* The mouse held by a Trak-Ball or mouse (pointer lock): Escape gives it back and does nothing more,
+       where the browser leaves that key to the page. */
+    if (document.pointerLockElement && e.key === 'Escape') { try { document.exitPointerLock(); } catch (_) {} return; }
     if (closeSub()) { toldClosed(); return; }
     if (framed) { try { window.parent.postMessage({ gnwBack: 1, key: e.key || String(e.keyCode) }, '*'); } catch (_) {} }
   }, true);

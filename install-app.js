@@ -66,16 +66,16 @@
   const B = 'color:var(--text); font-weight:700;';
 
   function body() {
-    if (installed) return '<p style="' + P + '">Added. Open Crystal Worlds from its icon on your home screen.</p>';
+    if (installed) return '<p style="' + P + '">Added. Open CrystalWorlds from its icon on your home screen.</p>';
     if (deferred) {
-      return '<p style="' + P + '">Put a <strong style="' + B + '">Crystal Worlds</strong> icon on your home screen. It opens full screen, without the address bar, like an app.</p>' +
+      return '<p style="' + P + '">Put a <strong style="' + B + '">CrystalWorlds</strong> icon on your home screen. It opens full screen, without the address bar, like an app.</p>' +
         '<button type="button" id="gnw-install-btn" style="display:inline-flex; gap:8px; align-items:center; background:var(--accent); color:var(--on-accent,#0a0e14); border:0; padding:10px 16px; border-radius:9px; font-weight:700; cursor:pointer; font-size:13px;">' + ICON + 'Add to home screen</button>';
     }
     if (isIos()) {
-      return '<p style="' + P + '">Put a <strong style="' + B + '">Crystal Worlds</strong> icon on your home screen: tap ' + SHARE +
+      return '<p style="' + P + '">Put a <strong style="' + B + '">CrystalWorlds</strong> icon on your home screen: tap ' + SHARE +
         ' <strong style="' + B + '">Share</strong>, then <strong style="' + B + '">Add to Home Screen</strong>, then <strong style="' + B + '">Add</strong>. It opens full screen, like an app.</p>';
     }
-    return '<p style="' + P + '">Put a <strong style="' + B + '">Crystal Worlds</strong> icon on your home screen: open the browser menu (&#8942;) and choose <strong style="' + B + '">Add to home screen</strong> or <strong style="' + B + '">Install app</strong>. A button appears here as well once the browser is ready to add it.</p>';
+    return '<p style="' + P + '">Put a <strong style="' + B + '">CrystalWorlds</strong> icon on your home screen: open the browser menu (&#8942;) and choose <strong style="' + B + '">Add to home screen</strong> or <strong style="' + B + '">Install app</strong>. A button appears here as well once the browser is ready to add it.</p>';
   }
 
   function render() {

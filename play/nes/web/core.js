@@ -131,6 +131,16 @@ export const DEVICE_FAMILY_KEYBOARD = 0x23;
  * only the CRCs the table has rows for -- has the part the core routes to.
  * MECHANISM (NESdev wiki, each mapper's page).  enabled = false turns it off. */
 export const CHR_MIX_DEFAULT = { enabled: true, size: { 119: 8192, 74: 2048, 191: 2048, 194: 2048, 192: 4096, 195: 4096, 544: 2048, 547: 8192 } };
+/* THE NES 2.0 HEADER'S CHARACTER RAM BESIDE CHARACTER FIRMWARE (NES-D971).  Byte 11
+ * gives the RAM's size even when the file carries firmware; a board with both
+ * (the Waixing FS005 RPGs on mapper 176, which keep their font in the RAM and
+ * switch it in with $A001 D2) needs that part.  Used only when the header table
+ * and CHR_MIX_DEFAULT gave none.  MECHANISM (NESdev wiki "NES 2.0": byte 11 is
+ * the CHR-RAM size; "INES Mapper 176": the first 8 KiB of character space on
+ * CHR-RAM).  Failure mode without it: the font uploads go nowhere and the
+ * title and menus draw from the firmware's tiles (garbled).  The same rule as
+ * test/hdr_fix.h hdr_nes2_chr_ram2().  enabled = false turns it off. */
+export const NES2_CHR_RAM2 = { enabled: true };
 
 /* NES 2.0 exponent-multiplier sizes decoded; false restores the old reading. */
 export const NES2_EXPONENT_SIZES = true;
@@ -271,6 +281,8 @@ export function parseINES(bytes) {
   if (mapper === 30 && ciram === CIRAM.FOUR && !(f6 & 1)) ciram = CIRAM.LOW;
   if (CHR_MIX_DEFAULT.enabled && !chrRam2Size && chrSize && CHR_MIX_DEFAULT.size[mapper])
     chrRam2Size = CHR_MIX_DEFAULT.size[mapper];
+  if (NES2_CHR_RAM2.enabled && nes2 && !chrRam2Size && chrSize && bytes[11])
+    chrRam2Size = ((bytes[11] & 0x0f) ? 64 << (bytes[11] & 0x0f) : 0) + ((bytes[11] >> 4) ? 64 << (bytes[11] >> 4) : 0);
   /* a file shorter than its header.  Refused unless TRUNC_LOAD is
    * on; then padded to the declared size (FITTED, see TRUNC_LOAD). */
   let truncated = 0;
@@ -326,6 +338,11 @@ export function parseINES(bytes) {
   /* Mapper 535 (LH53): the wiki gives the board 8 KB of RAM at $B800-$D7FF; the
    * one known NES 2.0 file declares none, a wrong header, not a smaller board. */
   if (mapper === 535 && prgRamSize < 8192) prgRamSize = 8192;
+  /* Mapper 195 (Waixing FS303): the board that carries 4 KB of RAM at $5000-$5FFF beside the 8 KB at $6000
+   * (W "INES Mapper 195": God Slayer's translation) cannot say so in an iNES 1.0 container, and the game
+   * database's row gives it 9 KB.  12 KB on iNES 1.0, so the core finds the 4 KB (src/nes_mapper.inc
+   * m195_low); an NES 2.0 header that declares its RAM is believed. */
+  if (mapper === 195 && !nes2 && prgRamSize < 12288) prgRamSize = 12288;
   /* A TRAINER NEEDS $7000-$71FF TO EXIST -- see loadCartridge(). */
   if (trainer && prgRamSize < 8192) prgRamSize = 8192;
   /* The table's work+save RAM, raised and never lowered, iNES 1.0 only. */

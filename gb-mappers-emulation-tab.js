@@ -308,7 +308,7 @@ function gbMappersEmulationTabHTML(d) {
     '<tr><td><code>4000</code>&ndash;<code>5FFF</code></td><td>write</td><td>RAM bank, 2 bits (<code>v &amp; 3</code>), then Rule H.2/4</td></tr>' +
     '<tr><td><code>6000</code>&ndash;<code>7FFF</code></td><td>write</td><td>no effect</td></tr>' +
     '<tr><td><code>A000</code>&ndash;<code>BFFF</code>, RAM selected</td><td>read, write</td><td>cartridge RAM (<code>0xFF</code> on a read with no RAM)</td></tr>' +
-    '<tr><td><code>A000</code>&ndash;<code>BFFF</code>, infrared selected</td><td>read</td><td><code>0xC0</code> (no light; <code>0xC1</code> when a linked partner&rsquo;s light arrives, appendix <a href="#gbe-extra-hw">A.1.3</a>)</td></tr>' +
+    '<tr><td><code>A000</code>&ndash;<code>BFFF</code>, infrared selected</td><td>read</td><td><code>0xC0</code> (no light; <code>0xC1</code> when light arrives, from a linked partner or from the cartridge&rsquo;s own LED, appendix <a href="#gbe-extra-hw">A.1.3</a>)</td></tr>' +
     '<tr><td><code>A000</code>&ndash;<code>BFFF</code>, infrared selected</td><td>write</td><td>bit 0 written is the LED</td></tr>' +
     '</tbody></table></div>' +
     '<div class="gbemu-example"><b>Example.</b> A write of <code>0x0E</code> or <code>0x1E</code> to <code>0x0000</code> selects the infrared register; a following write of <code>0x0A</code> selects RAM again (it is not a RAM enable).</div>' +
@@ -322,7 +322,7 @@ function gbMappersEmulationTabHTML(d) {
     '<tr><td><code>B</code></td><td><code>0xFF</code></td><td>the <b>mailbox</b>: bit 7 is not connected; bits 4 to 6 the command, bits 0 to 3 the argument</td></tr>' +
     '<tr><td><code>C</code></td><td>the <b>response</b>: <code>0x80 OR (mailbox command bits 4-6) OR result nibble</code>, composed at each read from the mailbox as last written (executed or not) and the result of the last execution</td><td>ignored</td></tr>' +
     '<tr><td><code>D</code></td><td>the <b>semaphore</b>: <code>0xFF</code> (always ready)</td><td>a write with bit 0 clear executes the mailbox command (Rule H.10/4); bit 0 set does nothing</td></tr>' +
-    '<tr><td><code>E</code></td><td>infrared: <code>0xC0</code> (<code>0xC1</code> when a linked partner&rsquo;s light arrives)</td><td>bit 0 is the LED</td></tr>' +
+    '<tr><td><code>E</code></td><td>infrared: <code>0xC0</code> (<code>0xC1</code> when light arrives, from a linked partner or from the cartridge&rsquo;s own LED)</td><td>bit 0 is the LED</td></tr>' +
     '<tr><td>any other</td><td><code>0xFF</code></td><td>ignored</td></tr>' +
     '</tbody></table></div>' +
     '<div class="gbemu-rule" id="gbr-H-10-4"><b>Rule H.10/4.</b> Behind the mailbox sit 256 nibbles of controller memory with an auto-incrementing 8-bit address. Executing a command (a mode-<code>D</code> write with bit 0 clear) does, by command:' +

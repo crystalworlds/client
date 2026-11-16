@@ -3,8 +3,8 @@
  "lists": {
   "nes": {
    "file": "nes.json",
-   "count": 833,
-   "sha256": "f1bdf2ffd4133a23b272abaf9fac6f8e612f097c1a602f29ccc534c44295992e",
+   "count": 76,
+   "sha256": "6a917ef5b59a747b52573437159ccba30d66a42e797c725bcb4344615f40eb16",
    "label": "NES, Famicom and Famicom Disk System",
    "guards": [
     "nes",
@@ -14,8 +14,8 @@
   },
   "gb": {
    "file": "gb.json",
-   "count": 13,
-   "sha256": "e912dc9810ca61bb0dce4ccbe474fc184b2d9c8cb386c8a1609a638857fcd676",
+   "count": 3,
+   "sha256": "b4ea1ef72c8c3935f6f642626740af432d0359c47fa910c82fbd3044019ea180",
    "label": "Game Boy",
    "guards": [
     "game-boy"
@@ -23,8 +23,8 @@
   },
   "gbc": {
    "file": "gbc.json",
-   "count": 17,
-   "sha256": "708e494f43eafeffc160651fd5727f6b6df8c6ef2b1dfd0702229f8561b25227",
+   "count": 13,
+   "sha256": "1c402a6f4df866f330c4a5ea7d7ca349839a25df6ed3b3545d16f8bb42e350bb",
    "label": "Game Boy Color",
    "guards": [
     "game-boy"
@@ -32,8 +32,8 @@
   },
   "atari2600": {
    "file": "atari2600.json",
-   "count": 4,
-   "sha256": "2a095339dc9ba6c03ab7bf50589ba487688de2e47aa5bf4e0460c79508f7af82",
+   "count": 21,
+   "sha256": "560bb70077e62b04ed5bd15c23ffaf1a71c8d7426c5e8a861cd7e4360ff2f206",
    "label": "Atari 2600",
    "guards": [
     "atari2600"
@@ -41,8 +41,8 @@
   },
   "atari5200": {
    "file": "atari5200.json",
-   "count": 18,
-   "sha256": "75c5c8f29a50fd7919a89bc7148ba72c8cec17734612062f9c7e99313ab7f20a",
+   "count": 21,
+   "sha256": "138fae8dfcb664e6971f0038265ebba91001e8a31381a3ee65a3953054bcab78",
    "label": "Atari 5200",
    "guards": [
     "atari5200"
@@ -50,8 +50,8 @@
   },
   "atari7800": {
    "file": "atari7800.json",
-   "count": 3,
-   "sha256": "1c17bc2506791af923706b1328d0fac61bff837d78c4212e001ca958ed43ffb0",
+   "count": 4,
+   "sha256": "ece048e8536a59fa8b7cb62b290f385ca29c3ab91f70ba90421bdba7e0157cca",
    "label": "Atari 7800",
    "guards": [
     "atari7800"
@@ -59,8 +59,8 @@
   },
   "atarilynx": {
    "file": "atarilynx.json",
-   "count": 53,
-   "sha256": "84e2912b34df07347ce583302089795d8255597282d5ea7d6546e5018de98180",
+   "count": 40,
+   "sha256": "16f87d23a4ba6fc0774590d9b17afa088a485d3eef43d7b3ac502cf043a4b334",
    "label": "Atari Lynx",
    "guards": [
     "atarilynx"
@@ -92,8 +92,110 @@
    "guards": [
     "twin"
    ]
+  },
+  "nesrejected": {
+   "file": "nesrejected.json",
+   "count": 1417,
+   "sha256": "85ff0135330857470922c425b2b58448da8d16ad44ad7df05c5311b688ff1033",
+   "label": "NES, Famicom and Famicom Disk System: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "nes",
+    "famicom",
+    "fds"
+   ],
+   "internal": true
+  },
+  "gbrejected": {
+   "file": "gbrejected.json",
+   "count": 10,
+   "sha256": "6f3650eccb22c805c68602761c8b4cfbf5e2d4629fb38037700b4647bd6f9449",
+   "label": "Game Boy: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "game-boy"
+   ],
+   "internal": true
+  },
+  "gbcrejected": {
+   "file": "gbcrejected.json",
+   "count": 7,
+   "sha256": "b8bdb0a336d264f8f801bdd3039370c9c671e92364278953a6853ca1dd2ad039",
+   "label": "Game Boy Color: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "game-boy"
+   ],
+   "internal": true
+  },
+  "atari2600rejected": {
+   "file": "atari2600rejected.json",
+   "count": 0,
+   "sha256": "13c6ae32c81ee987045b5b184cf36ee538b5c26d16b4b17dd595e80eb437e761",
+   "label": "Atari 2600: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "atari2600"
+   ],
+   "internal": true
+  },
+  "atari5200rejected": {
+   "file": "atari5200rejected.json",
+   "count": 26,
+   "sha256": "11e0d5c312b4ee10b4422a620cb0300c2d9fe07d2c124efd5a36cf057b107a08",
+   "label": "Atari 5200: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "atari5200"
+   ],
+   "internal": true
+  },
+  "atari7800rejected": {
+   "file": "atari7800rejected.json",
+   "count": 5,
+   "sha256": "532f4bc61f826edf17e62b4cd364d8f85bb8c87d0df5aba06a81bc5d9be8f870",
+   "label": "Atari 7800: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "atari7800"
+   ],
+   "internal": true
+  },
+  "atarilynxrejected": {
+   "file": "atarilynxrejected.json",
+   "count": 36,
+   "sha256": "4d7a01d1d132c2a17b6f574faa505485faba919f05b22748366a24ffed1d9134",
+   "label": "Atari Lynx: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "atarilynx"
+   ],
+   "internal": true
+  },
+  "pokeminirejected": {
+   "file": "pokeminirejected.json",
+   "count": 0,
+   "sha256": "f33e6ee843e7c50b45300e1d6eef7fee9e51ab1bfbe39fee15c075db857408c7",
+   "label": "Pokémon mini: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "pokemon-mini"
+   ],
+   "internal": true
+  },
+  "gnwrejected": {
+   "file": "gnwrejected.json",
+   "count": 0,
+   "sha256": "42b94cfbade496665ae9e29bdb71c0793c16933e7f78b3d92341a183e46f43b8",
+   "label": "Game & Watch: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "gnw"
+   ],
+   "internal": true
+  },
+  "tftrejected": {
+   "file": "tftrejected.json",
+   "count": 0,
+   "sha256": "868c2fa544d6b5413a7ca1a7b5a0c43aa43dfc2027dba10f2c882d05c63314c3",
+   "label": "Game & Watch colour screen units: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+   "guards": [
+    "twin"
+   ],
+   "internal": true
   }
  },
- "total": 941,
- "version": "40d6db870ecbf83a96ca3f9eca21604acbdecb9c30de7731a6fb58ce2dc1d02a"
+ "total": 1679,
+ "version": "37892ffff452ce64e8c3e8057778a8884ecf2085c25fec8a3443db3a7529802b"
 }

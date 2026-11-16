@@ -1,0 +1,11 @@
+{
+ "format": 1,
+ "list": "tftrejected",
+ "label": "Game & Watch colour screen units: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "twin"
+ ],
+ "internal": true,
+ "count": 0,
+ "entries": {}
+}

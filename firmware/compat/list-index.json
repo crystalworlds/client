@@ -28,8 +28,8 @@
    "tested": "2026-11-09",
    "counts": [
     1321,
-    2,
-    7,
+    0,
+    1,
     0
    ]
   },
@@ -39,8 +39,8 @@
    "tested": "2026-11-09",
    "counts": [
     1484,
-    9,
-    2,
+    8,
+    0,
     0
    ]
   },
@@ -58,21 +58,21 @@
   {
    "key": "nes",
    "file": "list-nes.json.gz",
-   "tested": "2026-11-08",
+   "tested": "2026-11-15",
    "counts": [
-    3039,
-    56,
-    16,
+    3043,
+    44,
+    5,
     0
    ]
   },
   {
    "key": "famicom",
    "file": "list-nes.json.gz",
-   "tested": "2026-11-08",
+   "tested": "2026-11-14",
    "counts": [
-    1128,
-    4,
+    1127,
+    1,
     0,
     0
    ]
@@ -80,11 +80,11 @@
   {
    "key": "fds",
    "file": "list-nes.json.gz",
-   "tested": "2026-11-09",
+   "tested": "2026-11-14",
    "counts": [
-    273,
+    268,
     13,
-    1,
+    0,
     0
    ]
   },
@@ -113,7 +113,7 @@
   {
    "key": "atari2600",
    "file": "list-a2600.json.gz",
-   "tested": "2026-10-29",
+   "tested": "2026-11-15",
    "counts": [
     805,
     3,
@@ -124,18 +124,18 @@
   {
    "key": "atari5200",
    "file": "list-a5200.json.gz",
-   "tested": "2026-10-28",
+   "tested": "2026-11-15",
    "counts": [
-    484,
-    10,
-    1,
+    482,
+    9,
+    0,
     0
    ]
   },
   {
    "key": "atari7800",
    "file": "list-a7800.json.gz",
-   "tested": "2026-10-29",
+   "tested": "2026-11-15",
    "counts": [
     314,
     3,
@@ -146,10 +146,10 @@
   {
    "key": "atarilynx",
    "file": "list-alynx.json.gz",
-   "tested": "2026-10-29",
+   "tested": "2026-11-15",
    "counts": [
     812,
-    48,
+    17,
     0,
     0
    ]

@@ -67,7 +67,7 @@
   'use strict';
   if (window.cwNotify) return;
 
-  const BUILD = '20261101-fix4a';
+  const BUILD = '20261113-old1';
   const DEFAULT_MS = 10000;
   const MAX_SHOWN = 4;
 
@@ -758,6 +758,31 @@
     else if (src.reshow) { src.reshow = false; setTimeout(srcShow, 1200); }
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dropOldNotices, { once: true }); else dropOldNotices();
+
+  /* ------------------------------------------------------------ an older browser (13 Nov 2026) */
+  // A Chromium-based browser (Chrome, Edge, Opera, Samsung Internet, webOS and other Chromium
+  // shells: the "Chrome/<major>" token in the user agent) older than OLD_CHROMIUM_BELOW gets one
+  // calm message, once per browser session (sessionStorage), closed with its x or Back, or gone by
+  // itself after its countdown. Nothing else changes in those browsers. Firefox, Safari and Chrome
+  // on iOS (WebKit, no Chrome/ token) never see it.
+  // THE CUT-OFF: about 12 months behind the current stable release (13 Nov 2026: current stable is
+  // 157, released 3 Nov 2026; 142 reached stable 28 Oct 2025, over 12 months ago, and 143 on 2 Dec
+  // 2025; dates from chromiumdash.appspot.com). Chromium ships a major version about every 4 weeks,
+  // so raise this by about 13 a year.
+  const OLD_CHROMIUM_BELOW = 143;
+  const OLD_KEY = 'cw.oldBrowser.shown';
+  (function oldBrowser() {
+    if (window.top !== window) return;
+    const m = /Chrome\/(\d+)\./.exec(navigator.userAgent || '');
+    if (!m || Number(m[1]) >= OLD_CHROMIUM_BELOW) return;
+    try { if (sessionStorage.getItem(OLD_KEY) === '1') return; } catch (_) {}
+    const show = () => setTimeout(() => {
+      try { sessionStorage.setItem(OLD_KEY, '1'); } catch (_) {}
+      window.cwNotify('This browser is an older version. Parts of CrystalWorlds may not work properly, and older versions miss recent security updates. Updating your browser is recommended.',
+        { id: 'old-browser', kind: 'info', duration: 15000 });
+    }, 2000);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show, { once: true }); else show();
+  })();
 
   /* ------------------------------------------------------------ when to measure */
   // Only in the top window: 3 s after the page is read (not after 'load', which a busy wall can

@@ -31,7 +31,7 @@
  * and the turn (R). Paddles and wheels are turned by held keys (or a pad's d-pad).
  */
 import { CoreError } from '../../host/core-api.mjs';
-import { cheatEngine } from '../cheats-core.mjs?v=2.1.1';
+import { cheatEngine } from '../cheats-core.mjs?v=2.2.0';
 
 export const SYS = new URL(import.meta.url).searchParams.get('sys') || 'a2600';
 /* The wrapper's own version tag (its URL is built here, so the page's tags never reach it). */
@@ -501,7 +501,7 @@ export const manifest = {
     : SYS === 'a5200' ? ((bytes, id) => (id === 'bios' && twoPort5200(bytes)) ? 'boot-2port' : 'boot') : undefined,
   video: {
     kind: 'raster',
-    maxWidth: { a2600: 320, a5200: 336, a7800: 320, alynx: 160 }[SYS],
+    maxWidth: { a2600: 320, a5200: 336, a7800: 320, alynx: 160 * 2 + 16 }[SYS],   // the Lynx: two linked screens (LYNX_GAP)
     maxHeight: { a2600: 274, a5200: 240, a7800: 293, alynx: 160 }[SYS],
     screens: 1,
   },
@@ -519,7 +519,7 @@ export const manifest = {
     /* The Lynx's cartridge EEPROM, which its old page kept in localStorage per cartridge. */
     batteryLocal: SYS === 'alynx' ? { key: (game, hash12) => (hash12 ? 'atarilynx:eeprom:' + hash12 : null) } : null,
   },
-  modelLabel: () => LABEL[SYS],
+  modelLabel: md => (md === 'alynx-link' ? 'two Atari Lynx consoles on one cable' : LABEL[SYS]),
 };
 
 async function gunzipRec(s) {
@@ -535,6 +535,10 @@ async function gunzipRec(s) {
 const btn = (id, label, keys, pad) => ({ id, label, type: 'button', defaults: { key: keys || [], pad: pad || [] } });
 const P1 = { up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'] };
 const P2 = { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'] };
+const LYNX_GAP = 16;           // the two linked Lynx screens, side by side, this far apart
+const LYNX_LINK_MAGIC = 0x324B4E4C;   // 'LNK2': a save state of two linked Lynx consoles
+const LYNX_LINK_NOTE = "Two Lynxes on one cable. Player 2 uses a second controller, or I J K L with G (A), F (B), T (Pause), 7 (Option 1) and 8 (Option 2). Pick the game's link or multi-player mode on both consoles, as its instructions say.";
+const LYNX_P2 = { up: ['KeyI'], down: ['KeyK'], left: ['KeyJ'], right: ['KeyL'] };   // the second Lynx (TWO LYNXES ON ONE CABLE)
 const dirs = (K, pad) => [btn('up', 'Up', K.up, pad && ['Up']), btn('down', 'Down', K.down, pad && ['Down']),
   btn('left', 'Left', K.left, pad && ['Left']), btn('right', 'Right', K.right, pad && ['Right'])];
 const KEYPAD_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
@@ -569,6 +573,72 @@ function portDevice(kind, who, opts = {}) {
     default:
       return dirs(K, pad).concat(opts.buttons || [btn('fire', 'Fire', fire, pad && ['A', 'B', 'X', 'Y'])]);
   }
+}
+/* THE LIGHT GUN (2600 and 7800). Aimed like the NES Zapper: the mouse or a finger over the picture
+   (a press aims and pulls the trigger), or the aim keys and a trigger key. `who` 0 = the left
+   port's keys (the arrows, X), 1 = the right port's (W A S D, F). */
+function gunControls(who) {
+  const K = who ? P2 : P1;
+  return [btn('trigger', 'Trigger', who ? ['KeyF'] : ['KeyX', 'Space'], ['A', 'B']),
+    btn('aim-up', 'Aim up', K.up, ['Up']), btn('aim-down', 'Aim down', K.down, ['Down']),
+    btn('aim-left', 'Aim left', K.left, ['Left']), btn('aim-right', 'Aim right', K.right, ['Right']),
+    { id: 'aim', label: 'Aim and fire (point at the picture)', type: 'pointer', defaults: {} }];
+}
+/* THE 7800'S SUPER NES PAD through the SNES2Atari adaptor (a7800_set_snes; the cartridge header's
+   controller code 11, or Settings). The pad's twelve buttons in the core's bit order: 1 B, 2 Y,
+   4 Select, 8 Start, 16 up, 32 down, 64 left, 128 right, 256 A, 512 X, 1024 L, 2048 R. A gamepad's
+   printed A and B reach the pad's B and A by position (bottom and right, as on a Super NES pad), and
+   its Start and Select reach the pad's own (alias: the 7800's Reset and Select stay on F1 and F2). */
+const SNES_BITS = [['up', 16], ['down', 32], ['left', 64], ['right', 128], ['snes-b', 1], ['snes-a', 256], ['snes-y', 2], ['snes-x', 512],
+  ['snes-l', 1024], ['snes-r', 2048], ['select', 4], ['start', 8]];
+function snesControls(who) {
+  const K = who ? P2 : P1, k = who ? ['KeyF', 'KeyG', 'KeyR', 'KeyT', 'KeyH', 'KeyJ', 'KeyN', 'KeyM'] : ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyQ', 'KeyE', 'ShiftRight', 'Space'];
+  const c = dirs(K, true).concat([btn('snes-b', 'B', [k[0]], ['A']), btn('snes-a', 'A', [k[1]], ['B']), btn('snes-y', 'Y', [k[2]], ['X']), btn('snes-x', 'X', [k[3]], ['Y']),
+    btn('snes-l', 'L', [k[4]], ['LB']), btn('snes-r', 'R', [k[5]], ['RB']), btn('select', 'Select', [k[6]], ['Select']), btn('start', 'Start', [k[7]], ['Start'])]);
+  if (!who) { c[c.length - 2].defaults.alias = ['F2']; c[c.length - 1].defaults.alias = ['Enter']; }
+  return c;
+}
+/* THE 2600'S OTHER CONTROLLERS (atari_set_controller types; the joystick's bits 32 and 64 are the
+   buttons on pins 5 and 9). */
+const T2600 = { joystick: 0, paddles: 1, driving: 2, keypad: 3, booster: 5, genesis: 6, joy2b: 7, trakball: 8, stmouse: 9,
+  amigamouse: 10, savekey: 11, lightgun: 13, mindlink: 14, quadtari: 15 };
+const POINTING_2600 = new Set(['trakball', 'stmouse', 'amigamouse']);
+const POINTING_OPTS_2600 = [{ v: 'trakball', label: 'Trak-Ball' }, { v: 'stmouse', label: 'Atari mouse' }, { v: 'amigamouse', label: 'Amiga mouse' }];
+const EXTRA_KINDS_2600 = [
+  { v: 'genesis', label: 'Sega Genesis pad', needs: 'atari_set_controller' },
+  { v: 'booster', label: 'CBS Booster Grip', needs: 'atari_set_controller' },
+  { v: 'joy2b', label: 'Joy 2B+', needs: 'atari_set_controller' },
+  { v: 'trakball', label: 'Trak-Ball', needs: 'atari_move_pointer' },
+  { v: 'stmouse', label: 'Atari mouse', needs: 'atari_move_pointer' },
+  { v: 'amigamouse', label: 'Amiga mouse', needs: 'atari_move_pointer' },
+  { v: 'lightgun', label: 'Light gun', needs: 'atari_set_lightgun' },
+  { v: 'mindlink', label: 'MindLink', needs: 'atari_set_mindlink', hidden: true },   // hidden until it is checked against the games: neither offered nor chosen; the code below stays
+  { v: 'quadtari', label: 'QuadTari (two joysticks)', needs: 'atari_set_controller' }];
+/* The 2600 has no header to name its controller: these games are known by identity (the first 12
+   hex digits of the file's SHA-256), the library's files whose own instructions name the device.
+   "As the game wants" plugs it in; the viewer can choose another. */
+const GAME_CTRL_2600 = {
+  'b8c649ec20e9': ['lightgun'],     // Sentinel
+  '7ba010fded9d': ['lightgun'],     // Shooting Arcade (prototype)
+  '75f33d6ce81d': ['lightgun'],     // Shooting Arcade (prototype, PAL)
+  '9ea4361fac5c': ['lightgun'],     // Shooting Arcade (an earlier prototype), and the prototypes' other screens:
+  'c47b31ee0337': ['lightgun'], '5366523c5234': ['lightgun'], '96bcbfa41b1e': ['lightgun'], 'f132d47a658f': ['lightgun'], 'e063087c6787': ['lightgun'],
+  'bff49aa4c6b4': ['lightgun'], 'ceefa35ca872': ['lightgun'], 'c185dd85dab5': ['lightgun'], 'b85bd0103a0d': ['lightgun'], 'e1c7e691972b': ['lightgun'],
+  '03421b617b27': ['booster'],      // Omega Race (Booster Grip)
+  '56e312df61ac': ['booster'],      // Omega Race (prototype)
+  'cc2761a74d6a': ['mindlink'],     // Bionic Breakthrough
+  '01720a56ff5a': ['mindlink'],     // Bionic Breakthrough (an earlier prototype)
+  'afcca1af5b8c': ['mindlink'],     // Telepathy
+  'a32beea483f9': ['mindlink'],     // Mind Maze
+};
+function extraButtons2600(kind, who) {
+  const fire = FIRE_2600[who];
+  if (kind === 'genesis') return [btn('fire', 'Button B (fire)', fire, ['A', 'X']), btn('b5', 'Button C', who ? ['KeyE'] : ['KeyX'], ['B', 'Y'])];
+  if (kind === 'booster') return [btn('fire', 'Fire (stick button)', fire, ['A']), btn('b9', 'Trigger', who ? ['KeyE'] : ['KeyX'], ['B']),
+    btn('b5', 'Booster', who ? ['KeyR'] : ['KeyC'], ['X', 'Y'])];
+  if (kind === 'joy2b') return [btn('fire', 'Button 1', fire, ['A']), btn('b5', 'Button 2', who ? ['KeyE'] : ['KeyX'], ['B']),
+    btn('b9', 'Button 3', who ? ['KeyR'] : ['KeyC'], ['X', 'Y'])];
+  return null;
 }
 const bitOf = (port, id) => port.controls.findIndex(c => c.id === id);
 const held = (port, s, id) => { const i = bitOf(port, id); return i >= 0 && !!(s.buttons & (1 << i)); };
@@ -640,7 +710,14 @@ export async function create(env) {
   const paddle = [32768, 32768, 32768, 32768];
   const wheel = [0, 0], wheelTick = [0, 0];
   const keypadSent = [0, 0];
+  const snesSent = [0, 0];       // the 7800's Super NES pad: the buttons last handed the core (diag)
   let turn = 0;                // Lynx: 0 upright, 1 turned left, 2 turned right
+  /* TWO LYNXES ON ONE CABLE (ComLynx; Settings, Machine, ComLynx cable). The second console is a second
+     context in the same core instance (the wrapper's Core over the same exports, so the two share one
+     memory, as lynx_link needs), with the same cartridge and boot program and its own cartridge EEPROM
+     (battery 'eeprom2'). The core runs the pair in lockstep (lynx_link_run_frame); the sound is both
+     consoles', mixed; a save state holds both (LYNX_LINK_MAGIC). Untouched with one console. */
+  let m2 = null, eepromSeen2 = 0, p2Wait = 0;
   let firmwareUsed = null;
   let kv = null;               // the Kid Vid's tape audio for this cartridge: { files: [audio data by file] }
   let arTape = null;           // the Supercharger tape recording in, { bytes } (THE SUPERCHARGER'S TAPE)
@@ -661,9 +738,11 @@ export async function create(env) {
       toggle('diffL', 'Left difficulty', 64, ['B', 'A'], '0');
       toggle('diffR', 'Right difficulty', 128, ['B', 'A'], '0');
       if (opts.console !== '5200vcs') toggle('colour', 'TV type', 8, ['B&W', 'Colour'], '1');   // the adapter has no TV type switch
-      const kinds = [{ v: 'joystick', label: 'Joystick' }, { v: 'paddles', label: 'Paddles' }, { v: 'driving', label: 'Driving controller' }, { v: 'keypad', label: 'Keypad' }];
-      ctl('ctrlL', 'Left controller', kinds, 'joystick');
-      ctl('ctrlR', 'Right controller', [{ v: 'auto', label: 'As the game wants' }].concat(kinds, [{ v: 'savekey', label: 'SaveKey' }]), 'auto');
+      const kinds = [{ v: 'joystick', label: 'Joystick' }, { v: 'paddles', label: 'Paddles' }, { v: 'driving', label: 'Driving controller' }, { v: 'keypad', label: 'Keypad' }]
+        .concat(EXTRA_KINDS_2600.filter(k => !k.hidden && (!m || typeof m.X[k.needs] === 'function')));
+      const auto = [{ v: 'auto', label: 'As the game wants' }];
+      ctl('ctrlL', 'Left controller', auto.concat(kinds), 'auto');
+      ctl('ctrlR', 'Right controller', auto.concat(kinds, [{ v: 'savekey', label: 'SaveKey' }]), 'auto');
       o.push({ id: 'region', label: 'Television', help: 'Applies when the game restarts.', type: 'enum',
         values: [{ v: '0', label: 'NTSC (60 Hz)' }, { v: '1', label: 'PAL (50 Hz)' }, { v: '2', label: 'SECAM' }],
         default: '0', scope: 'game', live: false, group: 'machine' });
@@ -671,7 +750,9 @@ export async function create(env) {
       toggle('diffL', 'Left difficulty', 64, ['B', 'A'], '0');
       toggle('diffR', 'Right difficulty', 128, ['B', 'A'], '0');
       const kinds = [{ v: 'auto', label: 'As the cartridge says' }, { v: 'proline', label: 'ProLine joystick' }, { v: 'paddles', label: 'Paddles' },
-        { v: 'driving', label: 'Driving controller' }, { v: 'keypad', label: 'Keypad' }];
+        { v: 'driving', label: 'Driving controller' }, { v: 'keypad', label: 'Keypad' }]
+        .concat(!m || typeof m.X.a7800_set_lightgun === 'function' ? [{ v: 'lightgun', label: 'Light gun (XG-1)' }] : [])
+        .concat(!m || typeof m.X.a7800_set_snes === 'function' ? [{ v: 'snes', label: 'Super NES pad (SNES2Atari)' }] : []);
       ctl('ctrlL', 'Left controller', kinds, 'auto');
       ctl('ctrlR', 'Right controller', kinds.concat([{ v: 'savekey', label: 'SaveKey' }]), 'auto');
       o.push({ id: 'bios', label: 'Console BIOS', help: 'Applies when the game restarts. Your own BIOS is used when a game server or content pack has it; without it the cartridge starts directly.', type: 'enum',
@@ -688,6 +769,9 @@ export async function create(env) {
       o.push({ id: 'turn', label: 'Screen turn', type: 'enum',
         values: [{ v: 'auto', label: 'As the cartridge says' }, { v: '0', label: 'Upright' }, { v: '1', label: 'Turned left' }, { v: '2', label: 'Turned right' }],
         default: 'auto', scope: 'game', live: true, group: 'display', key: 'atarilynx:turn:{hash12}' });
+      if (!m || lynxLinkable(m)) o.push({ id: 'link', label: 'ComLynx cable', type: 'enum',
+        help: 'Applies when the game restarts. Two Lynxes play side by side on one cable, for the games made for two or more players. Player 2 uses a second controller, or the keys shown in Keys.',
+        values: [{ v: '1', label: 'One Lynx' }, { v: '2', label: 'Two Lynxes on one cable' }], default: '1', scope: 'game', live: false, group: 'machine' });
     }
     return o;
   }
@@ -698,6 +782,12 @@ export async function create(env) {
   const skTwoPlayer = () => !!(req && req.game && req.game.sha256 && SK_TWO_PLAYER[String(req.game.sha256).slice(0, 12)]);
   function kindOf2600(v, port) {
     if (port === 1 && (v === 'savekey' || ((v || 'auto') === 'auto' && sk2600 && !skTwoPlayer()))) return typeof m.X.atari_eeprom === 'function' ? 'savekey' : 'joystick';
+    if ((v || 'auto') === 'auto') {
+      const g = GAME_CTRL_2600[String((req && req.game && req.game.sha256) || '').slice(0, 12)];
+      v = g ? g[port] : 'joystick';
+    }
+    const x = EXTRA_KINDS_2600.find(k => k.v === v);
+    if (x) return !x.hidden && typeof m.X[x.needs] === 'function' ? v : 'joystick';
     return ['joystick', 'paddles', 'driving', 'keypad'].includes(v) ? v : 'joystick';
   }
   const CTRL7800 = () => W.CTRL || {};
@@ -724,9 +814,14 @@ export async function create(env) {
   function kind7800(port, chosen) {
     const v = chosen !== undefined ? chosen : opts['ctrl' + (port ? 'R' : 'L')];
     if (port === 1 && sk7800Wanted(v || 'auto')) return 'savekey';
+    const gunOk = typeof m.X.a7800_set_lightgun === 'function', snesOk = typeof m.X.a7800_set_snes === 'function';
+    if (v === 'lightgun') return gunOk ? 'lightgun' : 'proline';
+    if (v === 'snes') return snesOk ? 'snes' : 'proline';
     if (v && v !== 'auto' && v !== 'savekey') return v;
     const t = m.headerController(port), C = CTRL7800();
     if (m.inTwoSixHundredMode && m.inTwoSixHundredMode()) return 'proline';
+    if (t === C.LIGHTGUN && gunOk) return 'lightgun';
+    if (t === C.SNES && snesOk) return 'snes';   // header code 11: the SNES2Atari adaptor
     if (t === C.PADDLES) return 'paddles';
     if (t === C.DRIVING) return 'driving';
     if (t === C.KEYPAD) return 'keypad';
@@ -753,18 +848,50 @@ export async function create(env) {
           const sets = who === 0 ? [KEYPAD_DIGITS, kR === 'keypad' ? null : KEYPAD_NUMPAD].filter(Boolean) : (kL === 'keypad' ? [KEYPAD_NUMPAD] : [KEYPAD_DIGITS, KEYPAD_NUMPAD]);
           return { device: SYS + '-keypad', controls: portDevice('keypad', who, { keysets: sets }) };
         }
+        if (k === 'lightgun') return { device: SYS + '-lightgun', label: 'Light gun', controls: gunControls(who) };
+        if (k === 'snes') return { device: SYS + '-snes', label: 'Super NES pad', controls: snesControls(who) };
+        const extra = SYS === 'a2600' ? extraButtons2600(k, who) : null;
+        if (extra) return { device: SYS + '-' + k, controls: dirs(who ? P2 : P1, true).concat(extra) };
+        if (SYS === 'a2600' && POINTING_2600.has(k)) {
+          // Moved by the mouse or a finger over the picture (its motion, not where it is), or by the
+          // direction keys; the button is the fire button (a press on the picture presses it too).
+          return { device: SYS + '-' + k, controls: dirs(who ? P2 : P1, true).concat([btn('fire', 'Button', FIRE_2600[who], ['A', 'B']),
+            { id: 'move', label: 'Move (the mouse or a finger over the picture)', type: 'pointer', defaults: {} }]) };
+        }
+        if (k === 'mindlink') {
+          // The headband's position: turned by held keys or the left stick, or set by the mouse or a
+          // finger across the picture (left edge to right edge), as the paddles.
+          return { device: SYS + '-mindlink', controls: [btn('ml-less', 'Lower', (who ? P2 : P1).left, ['Left']), btn('ml-more', 'Higher', (who ? P2 : P1).right, ['Right']),
+            btn('ml-button', 'Start (the headband’s button)', FIRE_2600[who], ['A', 'B']),
+            { id: 'ml-pointer', label: 'Position (the mouse or a finger across the picture)', type: 'pointer', defaults: {} }] };
+        }
+        if (k === 'quadtari') return { device: SYS + '-quadtari', label: 'QuadTari, first joystick', controls: portDevice('joystick', who) };
         return { device: SYS + '-driving', controls: portDevice('driving', who) };
       };
       const L = dev(kL, 0), R = dev(kR, 1);
+      // One port takes the pointer: a pointer device on the right keeps it from left paddles.
+      if (kL === 'paddles' && R.controls.some(c => c.type === 'pointer')) L.controls = L.controls.filter(c => c.type !== 'pointer');
       // Left paddles take player 2's Left / Right for their second paddle: the right port's
       // device then gets no keys of its own (a paddle title does not use it).
       if (kL === 'paddles' && (kR === 'joystick' || kR === 'proline')) R.controls = R.controls.map(c => Object.assign({}, c, { defaults: { key: [], pad: [] } }));
       // Paddles and the driving controller are analogue: the pad's left stick turns them in proportion
       // (its x axis, read by the host as for the 5200), never as D-pad presses (2026-10-17).
-      const an = k => (k === 'paddles' || k === 'driving') ? { axes: [0] } : {};
+      const an = k => (k === 'paddles' || k === 'driving' || k === 'mindlink') ? { axes: [0] } : {};
       out.push(Object.assign({ port: 0, kind: 'player', device: L.device, kindName: kL, controls: L.controls }, an(kL)));
       out.push(Object.assign({ port: 1, kind: 'player', device: R.device, kindName: kR, controls: R.controls }, an(kR)));
-      out.push({ port: 2, kind: 'console', device: SYS + '-switches', controls: SYS === 'a2600'
+      if (L.label) out[0].label = L.label;
+      if (R.label) out[1].label = R.label;
+      /* A Trak-Ball or mouse asks the host to hold the pointer (a double click on the picture; Escape gives it back). */
+      if (SYS === 'a2600') [kL, kR].forEach((k, side) => { const o = POINTING_OPTS_2600.find(x => x.v === k); if (o) out[side].pointerLock = o.label; });
+      /* A QuadTari's second joysticks (the core's ports 2 and 3), next after the two ports so that a
+         third and fourth pad reach them; no keys of their own, like a Four Score's players 3 and 4. */
+      [kL, kR].forEach((k, side) => {
+        if (k !== 'quadtari') return;
+        const c = portDevice('joystick', 0).map(x => Object.assign({}, x, { defaults: { key: [], pad: x.defaults.pad } }));
+        out.push({ port: out.length, kind: 'player', device: SYS + '-quadtari', kindName: 'quad-b', quad: side + 2,
+          label: 'QuadTari, second joystick (' + (side ? 'right' : 'left') + ' port)', controls: c });
+      });
+      out.push({ port: out.length, kind: 'console', device: SYS + '-switches', controls: SYS === 'a2600'
         ? [Object.assign(btn('reset', 'Game Reset', ['F1'], ['Start']), { short: 'Reset' }), Object.assign(btn('select', 'Game Select', ['F2'], ['Select']), { short: 'Select' })]   // short: the bar's name when it is short of room
         : [btn('reset', 'Reset', ['Enter', 'F1'], ['Start']), btn('select', 'Select', ['F2'], ['Select']), btn('pause', 'Pause', ['F3'], ['RB']),
            Object.assign(btn('diffLToggle', 'Left difficulty (switch)', ['F4']), { type: 'toggle' })] });
@@ -777,9 +904,14 @@ export async function create(env) {
       out.push({ port: 2, kind: 'console', device: 'a5200-keys', controls: [btn('start', 'Start', ['Enter', 'NumpadEnter'], ['Start']),
         btn('pause', 'Pause', ['F3'], ['Select']), btn('reset', 'Reset', ['F1'], ['LB'])] });
     } else {
-      out.push({ port: 0, kind: 'player', device: 'lynx-pad', controls: dirs(P1, true).concat([
-        btn('a', 'A', ['KeyX', 'Space'], ['A', 'X']), btn('b', 'B', ['KeyZ'], ['B', 'Y'])   /* printed A = the Lynx's A (decided 2026-10-16; play-pad.js alynx) */]) });
-      out.push({ port: 1, kind: 'console', device: 'lynx-keys', controls: [Object.assign(btn('opt1', 'Option 1', ['Digit1'], ['LB']), { short: 'Opt 1' }),
+      out.push(Object.assign({ port: 0, kind: 'player', device: 'lynx-pad', controls: dirs(P1, true).concat([
+        btn('a', 'A', ['KeyX', 'Space'], ['A', 'X']), btn('b', 'B', ['KeyZ'], ['B', 'Y'])   /* printed A = the Lynx's A (decided 2026-10-16; play-pad.js alynx) */]) }, m2 ? { label: 'Player 1' } : {}));
+      /* TWO LYNXES ON ONE CABLE: player 2's console, next after player 1's so that a second pad
+         reaches it (input.mjs padFeed, by the controls' names); the other half of the keyboard. */
+      if (m2) out.push({ port: 1, kind: 'player', device: 'lynx-pad', label: 'Player 2 (second Lynx)', controls: dirs(LYNX_P2, true).concat([
+        btn('a', 'A', ['KeyG'], ['A', 'X']), btn('b', 'B', ['KeyF'], ['B', 'Y']), btn('opt1', 'Option 1', ['Digit7'], ['LB']),
+        btn('pause', 'Pause', ['KeyT'], ['Start']), btn('opt2', 'Option 2', ['Digit8'], ['RB'])]) });
+      out.push({ port: out.length, kind: 'console', device: 'lynx-keys', controls: [Object.assign(btn('opt1', 'Option 1', ['Digit1'], ['LB']), { short: 'Opt 1' }),
         btn('pause', 'Pause', ['Enter', 'KeyP'], ['Start']), Object.assign(btn('opt2', 'Option 2', ['Digit2'], ['RB']), { short: 'Opt 2' }), Object.assign(btn('turn', 'Turn the screen', ['KeyR']), { type: 'toggle' })] });
     }
     return out;
@@ -789,17 +921,21 @@ export async function create(env) {
   function applyInputs(midFrame) {
     const s = i => inputs[i] || { buttons: 0 };
     if (SYS === 'a2600') {
-      for (let p = 0; p < 2; p++) {
+      for (let p = 0; p < ports.length; p++) {
         const port = ports[p], st = s(p), k = port.kindName;
-        if (k === 'joystick') {
-          let b = 0; ['up', 'down', 'left', 'right', 'fire'].forEach((id, i) => { if (held(port, st, id)) b |= 1 << i; });
-          m.setJoystick(p, b);
-        } else if (midFrame) continue;                    // paddles, wheels, keypads turn once a frame
+        if (port.kind !== 'player') continue;
+        if (k === 'joystick' || k === 'quadtari' || k === 'quad-b' || k === 'genesis' || k === 'booster' || k === 'joy2b') {
+          let b = 0; ['up', 'down', 'left', 'right', 'fire', 'b5', 'b9'].forEach((id, i) => { if (held(port, st, id)) b |= 1 << i; });
+          m.setJoystick(k === 'quad-b' ? port.quad : p, b);
+        } else if (midFrame) continue;                    // paddles, wheels, keypads, guns and mice once a frame
         else if (k === 'paddles') turnPaddles(port, st, p * 2);
         else if (k === 'driving') turnWheel(port, st, p);
         else if (k === 'keypad') keypad(port, st, p);
+        else if (k === 'lightgun') gunStep(port, st, p);
+        else if (POINTING_2600.has(k)) pointerStep(port, st, p);
+        else if (k === 'mindlink') mindStep(port, st, p);
       }
-      const c = s(2), cp = ports[2];
+      const ci = ports.findIndex(x => x.kind === 'console'), c = s(ci), cp = ports[ci];
       let bits = sw.bits & ~3;
       if (held(cp, c, 'reset')) bits |= 1;
       if (held(cp, c, 'select')) bits |= 2;
@@ -813,10 +949,14 @@ export async function create(env) {
           if (held(port, st, 'b1')) b |= 16; if (held(port, st, 'b2')) b |= 32; if (held(port, st, 'both')) b |= 48;
           m.setJoystick(p, b);
           if (m.ctrlType && m.ctrlType[p] === C.MEGA7800 && m.setMega7800) m.setMega7800(p, b);
-        } else if (midFrame) continue;                    // paddles, wheels, keypads turn once a frame
+        } else if (k === 'snes') {
+          let b = 0; SNES_BITS.forEach(([id, bit]) => { if (held(port, st, id)) b |= bit; });
+          m.X.a7800_set_snes(m.ctx, p, b); snesSent[p] = b;
+        } else if (midFrame) continue;                    // paddles, wheels, keypads, guns turn once a frame
         else if (k === 'paddles') turnPaddles(port, st, p * 2);
         else if (k === 'driving') turnWheel(port, st, p);
         else if (k === 'keypad') keypad(port, st, p);
+        else if (k === 'lightgun') gunStep(port, st, p);
       }
       const c = s(2), cp = ports[2];
       let bits = sw.bits & ~(1 | 2 | 8);
@@ -856,7 +996,7 @@ export async function create(env) {
         m.setKeypad(p, key);
       }
     } else {
-      const B = W.B, port = ports[0], st = s(0), cp = ports[1], c = s(1);
+      const B = W.B, port = ports[0], st = s(0), ci = ports.findIndex(x => x.kind === 'console'), cp = ports[ci], c = s(ci);
       const TURN = { 0: { up: 'UP', down: 'DOWN', left: 'LEFT', right: 'RIGHT' }, 1: { up: 'RIGHT', right: 'DOWN', down: 'LEFT', left: 'UP' }, 2: { up: 'LEFT', left: 'DOWN', down: 'RIGHT', right: 'UP' } }[turn];
       let b = 0;
       for (const d of ['up', 'down', 'left', 'right']) if (held(port, st, d)) b |= B[TURN[d]];
@@ -869,6 +1009,17 @@ export async function create(env) {
       if (t && !(sw.lastConsole & 1)) env.emit('option', { id: 'turn', v: String((turn + 1) % 3) });
       sw.lastConsole = t ? 1 : 0;
       m.setButtons(b);
+      if (m2 && ports[1] && ports[1].kind === 'player') {
+        const q = ports[1], t2 = s(1);
+        let b2 = 0;
+        for (const d of ['up', 'down', 'left', 'right']) if (held(q, t2, d)) b2 |= B[TURN[d]];
+        if (held(q, t2, 'a')) b2 |= B.A;
+        if (held(q, t2, 'b')) b2 |= B.B;
+        if (held(q, t2, 'opt1')) b2 |= B.OPT1;
+        if (held(q, t2, 'opt2')) b2 |= B.OPT2;
+        if (held(q, t2, 'pause')) b2 |= B.PAUSE;
+        m2.setButtons(b2);
+      }
     }
   }
   /* Paddles: Left turns anticlockwise (towards 65535), Right clockwise (towards 0), at a
@@ -895,6 +1046,82 @@ export async function create(env) {
       else X.a7800_set_paddle(m.ctx, n, paddle[n], f ? 1 : 0);
     });
   }
+  /* THE LIGHT GUN (gunControls above). The aim is kept as a place on the picture (0..1 each way); the
+     core is handed the raster pixel (0..159) and raster row under it, plus GUN_ADJ (the site's own
+     correction, none so far). Off the picture the gun aims at no line, so it sees nothing. A pull
+     shorter than a frame is held for GUN_HOLD frames, so a quick click always reaches the game. */
+  const GUN_HOLD = 4, GUN_ADJ = { a2600: { x: -2, y: -7 }, a7800: { x: 4, y: -8 } }[SYS] || { x: 0, y: 0 };
+  const gun = [0, 1].map(() => ({ x: -1, y: -1, down: false, hold: 0, sig: '' }));
+  const clamp01 = v => Math.max(0, Math.min(0.9999, v));
+  function gunWindow() {
+    if (SYS === 'a2600') return W.WINDOW[region] || W.WINDOW[0];
+    return ((m.inTwoSixHundredMode() ? W.WIN2600 : W.WIN7800)[m.region()]) || W.WIN7800[0];
+  }
+  function gunStep(port, st, p) {
+    const g = gun[p], pt = st.pointer, win = gunWindow();
+    if (pt) {
+      const sig = `${pt.x},${pt.y},${pt.inside ? 1 : 0}`;
+      if (sig !== g.sig) { g.sig = sig; if (pt.inside) { g.x = clamp01(pt.x); g.y = clamp01(pt.y); } else g.x = g.y = -1; }
+    }
+    const ax = (held(port, st, 'aim-right') ? 1 : 0) - (held(port, st, 'aim-left') ? 1 : 0);
+    const ay = (held(port, st, 'aim-down') ? 1 : 0) - (held(port, st, 'aim-up') ? 1 : 0);
+    const down = held(port, st, 'trigger') || !!(pt && pt.buttons & 1);
+    if ((ax || ay || down) && g.x < 0) { g.x = 0.5; g.y = 0.5; }
+    if (ax) g.x = clamp01(g.x + ax * 2 / 160);
+    if (ay) g.y = clamp01(g.y + ay * 3 / win.h);
+    g.hold = down ? GUN_HOLD : Math.max(0, g.hold - 1);
+    g.down = down;
+    const trig = down || g.hold > 0 ? 1 : 0;
+    const on = g.x >= 0;
+    const x = on ? Math.floor(g.x * 160) + GUN_ADJ.x : 0, y = on ? win.y + Math.floor(g.y * win.h) + GUN_ADJ.y : 4000;
+    if (SYS === 'a2600') m.X.atari_set_lightgun(m.ctx, p, x, y, trig); else m.X.a7800_set_lightgun(m.ctx, p, x, y, trig);
+  }
+  /* Where the light gun is aimed (0..1 of the picture), for the host's crosshair; null when no gun is aimed. */
+  function crosshair() {
+    if (!m || !ports) return null;
+    for (let p = 0; p < 2; p++) if (ports[p] && ports[p].kindName === 'lightgun' && gun[p].x >= 0) {
+      const win = gunWindow();
+      return { x: (Math.floor(gun[p].x * 160) + 0.5) / 160, y: (Math.floor(gun[p].y * win.h) + 0.5) / win.h };
+    }
+    return null;
+  }
+  /* THE 2600'S TRAK-BALL AND MICE. The mouse's (or a finger's) motion over the picture since the last
+     frame, in the device's steps: the picture's width is POINTER_STEPS.x steps, its height
+     POINTER_STEPS.y. The direction keys move it POINTER_KEY steps a frame. The core repeats a frame's
+     motion until it is given another, so a frame without motion gives it none. */
+  const POINTER_STEPS = { x: 160, y: 160 }, POINTER_KEY = 2;
+  const ptr = [0, 1].map(() => ({ x: null, y: null, fx: 0, fy: 0 }));
+  /* Held by the host (pointer lock): the mouse's own motion, POINTER_LOCK steps a pixel, on the first
+     port that asked for it; the left button is the device's button. */
+  const POINTER_LOCK = 0.25, held2600 = { on: false, dx: 0, dy: 0, b: 0, lb: 0 };
+  function pointerStep(port, st, p) {
+    const q = ptr[p], lockedHere = held2600.on && ports.findIndex(x => x.pointerLock) === p, pt = lockedHere ? null : st.pointer;
+    let dx = 0, dy = 0;
+    if (lockedHere) { q.fx += held2600.dx * POINTER_LOCK; q.fy += held2600.dy * POINTER_LOCK; held2600.dx = held2600.dy = 0; }
+    if (pt && pt.inside) {
+      if (q.x !== null) { q.fx += (pt.x - q.x) * POINTER_STEPS.x; q.fy += (pt.y - q.y) * POINTER_STEPS.y; }
+      q.x = pt.x; q.y = pt.y;
+    } else q.x = q.y = null;
+    q.fx += ((held(port, st, 'right') ? 1 : 0) - (held(port, st, 'left') ? 1 : 0)) * POINTER_KEY;
+    q.fy += ((held(port, st, 'down') ? 1 : 0) - (held(port, st, 'up') ? 1 : 0)) * POINTER_KEY;
+    dx = Math.trunc(q.fx); dy = Math.trunc(q.fy); q.fx -= dx; q.fy -= dy;
+    m.X.atari_move_pointer(m.ctx, p, dx, dy);
+    const lockFire = lockedHere && !!((held2600.b | held2600.lb) & 1); if (lockedHere) held2600.lb = 0;
+    m.setJoystick(p, held(port, st, 'fire') || !!(pt && pt.buttons & 1) || lockFire ? 16 : 0);
+  }
+  /* THE MINDLINK. The headband's position on its own scale (MIND_MIN..MIND_MAX), kept per port. */
+  const MIND_MIN = 0x0B00, MIND_MAX = 0x6500, MIND_BUTTON = 0x8000, mind = [(MIND_MIN + MIND_MAX) >> 1, (MIND_MIN + MIND_MAX) >> 1], mindHeld = [0, 0], mindPtr = [null, null];
+  function mindStep(port, st, p) {
+    const pt = st.pointer;
+    if (pt && (pt.inside || pt.buttons) && pt.x !== mindPtr[p]) { mindPtr[p] = pt.x; mind[p] = Math.round(MIND_MIN + clamp01(pt.x) * (MIND_MAX - MIND_MIN)); }
+    const dir = (held(port, st, 'ml-more') ? 1 : 0) - (held(port, st, 'ml-less') ? 1 : 0);
+    mindHeld[p] = dir ? Math.min(mindHeld[p] + 1, 12) : 0;
+    if (dir) mind[p] += dir * (60 + 20 * mindHeld[p]);
+    const sx = !dir && st.axes ? +st.axes[0] || 0 : 0;
+    if (Math.abs(sx) > 0.15) mind[p] += Math.round(sx * 300);
+    mind[p] = Math.max(MIND_MIN, Math.min(MIND_MAX, mind[p]));
+    m.X.atari_set_mindlink(m.ctx, p, mind[p] | (held(port, st, 'ml-button') || (pt && pt.buttons & 1) ? MIND_BUTTON : 0));
+  }
   /* Driving controller: one step of the wheel every third frame while Left or Right is held. */
   function turnWheel(port, st, p) {
     let dir = (held(port, st, 'right') ? 1 : 0) - (held(port, st, 'left') ? 1 : 0), every = 3;
@@ -913,13 +1140,12 @@ export async function create(env) {
   }
   function setControllers() {
     if (SYS === 'a2600') {
-      const T = { joystick: 0, paddles: 1, driving: 2, keypad: 3, savekey: 11 };
       // The joystick is the core's default, and a cartridge may choose its own device at load
       // (a CompuMate selects its keyboard): the port is set only when the viewer plugged
       // something else, or plugs the joystick back after it.
       m._plugged = m._plugged || [false, false];
       for (let p = 0; p < 2; p++) {
-        const t = T[ports[p].kindName] || 0;
+        const t = T2600[ports[p].kindName] || 0;
         if (t || m._plugged[p]) { m.setController(p, t); m._plugged[p] = !!t; }
       }
     } else if (SYS === 'a7800') {
@@ -929,12 +1155,37 @@ export async function create(env) {
         const k = ports[p].kindName, hdr = m.headerController(p);
         // Paddles, wheel and keypad by the port's device; otherwise what the header names
         // (the old page's rule), unless the viewer chose the ProLine.
-        const t = k === 'savekey' ? C.SAVEKEY : k === 'paddles' ? C.PADDLES : k === 'driving' ? C.DRIVING : k === 'keypad' ? C.KEYPAD
-          : (opts['ctrl' + (p ? 'R' : 'L')] || 'auto') === 'auto' ? hdr : C.PROLINE;
+        const t = k === 'savekey' ? C.SAVEKEY : k === 'lightgun' ? C.LIGHTGUN : k === 'snes' ? C.SNES : k === 'paddles' ? C.PADDLES : k === 'driving' ? C.DRIVING : k === 'keypad' ? C.KEYPAD
+          : (opts['ctrl' + (p ? 'R' : 'L')] || 'auto') === 'auto' && hdr !== C.SNES ? hdr : C.PROLINE;   // a SNES header without the pad's export: a ProLine
         m.ctrlType[p] = t;
         m.setController(p, t);
       }
     }
+  }
+
+  /* TWO LYNXES ON ONE CABLE: what the served core needs for it; the two consoles' sound, mixed. */
+  const lynxLinkable = mm => SYS === 'alynx' && !!mm && ['lynx_link', 'lynx_link_run_frame', 'lynx_unlink', 'lynx_linked'].every(k => typeof mm.X[k] === 'function');
+  function mixLink(a, b) {
+    if (!b || !b.length) return a;
+    if (!a || !a.length) return b;
+    const n = Math.min(a.length, b.length);
+    for (let i = 0; i < n; i++) { const v = a[i] + b[i]; a[i] = v > 1 ? 1 : v < -1 ? -1 : v; }
+    return a;
+  }
+
+  /* Two consoles switched on at the same instant run the same program in step: each sends the same
+     bytes at the same moment, hears them as its own on the shared wire, and decides it is alone. So
+     player 2's console is switched on LYNX_P2_DELAY frames after player 1's, as two people would (and
+     as the core project's own link check does: its second console starts later). Then the cable. */
+  const LYNX_P2_DELAY = 30;
+  function runLynx() {
+    if (!m2) { m.runFrame(); return; }
+    if (p2Wait > 0) {
+      m.runFrame();
+      if (--p2Wait === 0) { m2.powerOn(); if (m.X.lynx_link(m.ctx, m2.ctx) !== 0) env.log('warn', 'the second Lynx could not be linked'); }
+      return;
+    }
+    m.X.lynx_link_run_frame(m.ctx);
   }
 
   /* ---------------------------------------------------------------- clocks and frames */
@@ -1004,9 +1255,10 @@ export async function create(env) {
       if (guard > 1 && performance.now() - t0 > 250) { owed = 0; break; }
       applyInputs();
       if (timedQ.length) { const before = clockOf(); runTimed(); owed -= clockOf() - before; }
-      else if (clockOf) { const before = clockOf(); m.runFrame(); owed -= clockOf() - before; }
+      else if (clockOf) { const before = clockOf(); runLynx(); owed -= clockOf() - before; }
       else { m.runFrame(); owed -= perFrame; }
-      const a = m.drainAudio();
+      let a = m.drainAudio();
+      if (m2) a = mixLink(a, m2.drainAudio());
       if (kv && a) kvMix(a);
       if (a && a.length) audioParts.push(a);
     }
@@ -1059,28 +1311,34 @@ export async function create(env) {
       const key = (in26 ? '26' : '78') + r;
       framePal = pal7800[key] || (pal7800[key] = palOf((in26 ? P.a2600 : P.a7800)[r ? 'PAL' : 'NTSC']));
     } else {
-      const src = m.raster(), Wd = W.W, Hd = W.H;
-      if (!frame || frame.length !== Wd * Hd) frame = new Uint16Array(Wd * Hd);
-      if (turn === 0) { frame.set(src); frameW = Wd; frameH = Hd; }
-      else if (turn === 1) {           // turned left: the picture rotated a quarter anticlockwise
-        for (let y = 0; y < Wd; y++) for (let x = 0; x < Hd; x++) frame[y * Hd + x] = src[x * Wd + (Wd - 1 - y)];
-        frameW = Hd; frameH = Wd;
-      } else {                         // turned right: a quarter clockwise
-        for (let y = 0; y < Wd; y++) for (let x = 0; x < Hd; x++) frame[y * Hd + x] = src[(Hd - 1 - x) * Wd + y];
-        frameW = Hd; frameH = Wd;
-      }
+      /* One screen, turned as the console is held; two linked consoles side by side, LYNX_GAP apart. */
+      const Wd = W.W, Hd = W.H, sw1 = turn ? Hd : Wd, sh = turn ? Wd : Hd, n = m2 ? 2 : 1, fw = sw1 * n + (n - 1) * LYNX_GAP;
+      if (!frame || frame.length !== fw * sh) frame = new Uint16Array(fw * sh);
+      const put = (src, x0) => {
+        if (turn === 0) { for (let y = 0; y < Hd; y++) frame.set(src.subarray(y * Wd, y * Wd + Wd), y * fw + x0); }
+        else if (turn === 1) {         // turned left: the picture rotated a quarter anticlockwise
+          for (let y = 0; y < Wd; y++) for (let x = 0; x < Hd; x++) frame[y * fw + x0 + x] = src[x * Wd + (Wd - 1 - y)];
+        } else {                       // turned right: a quarter clockwise
+          for (let y = 0; y < Wd; y++) for (let x = 0; x < Hd; x++) frame[y * fw + x0 + x] = src[(Hd - 1 - x) * Wd + y];
+        }
+      };
+      put(m.raster(), 0);
+      if (m2) { put(m2.raster(), sw1 + LYNX_GAP); for (let y = 0; y < sh; y++) frame.fill(0, y * fw + sw1, y * fw + sw1 + LYNX_GAP); }
+      frameW = fw; frameH = sh;
       frameFmt = 'index16'; framePal = lynxPalette();
     }
   }
   function videoInfo() {
     if (frameDirty || !frame) { buildFrame(); frameDirty = false; }
-    return { width: frameW, height: frameH, format: frameFmt, pixelAspect: 1, rotation: SYS === 'alynx' ? [0, 270, 90][turn] : 0, palette: framePal };
+    return Object.assign({ width: frameW, height: frameH, format: frameFmt, pixelAspect: 1, rotation: SYS === 'alynx' ? [0, 270, 90][turn] : 0, palette: framePal },
+      m2 ? { fill: true } : {});   // two linked screens wear no console photograph: the plain screen fills the stage
   }
 
   /* ---------------------------------------------------------------- battery */
   let eepromSeen = 0, nvClean = null, hscClean = null, hscLast = null, hscFw = false, sk2600 = false, skClean = null, skLast = null;
   function batteryList() {
-    if (SYS === 'alynx' && m.eepromSize && m.eepromSize() > 0) return [{ id: 'eeprom', kind: 'eeprom', bytes: m.eepromRead().length, ext: '.eep' }];
+    if (SYS === 'alynx' && m.eepromSize && m.eepromSize() > 0) return [{ id: 'eeprom', kind: 'eeprom', bytes: m.eepromRead().length, ext: '.eep' }]
+      .concat(m2 && m2.eepromSize() > 0 ? [{ id: 'eeprom2', kind: 'eeprom', bytes: m2.eepromRead().length, ext: '.p2.eep' }] : []);
     const out = [];
     if (SYS === 'a2600' && nvOn()) out.push({ id: 'nvram', kind: 'flash', bytes: m.X.atari_nvram_size(m.ctx), ext: '.nv' });
     if (SYS === 'a7800' && hscOn()) out.push({ id: 'hsc', kind: 'sram', bytes: HSC_BYTES, ext: '.hsc' });
@@ -1177,6 +1435,8 @@ export async function create(env) {
     if (!m) throw new CoreError('unsupported', `The ${LABEL[SYS]} core did not load.`);
     firmwareUsed = null; jammed = false; owed = 0; frame = null; frameDirty = true; audioParts.length = 0;
     paddle.fill(32768); wheel.fill(0); sw.lastConsole = 0;
+    for (const g of gun) { g.x = g.y = -1; g.hold = 0; g.sig = ''; }
+    for (const q of ptr) { q.x = q.y = null; q.fx = q.fy = 0; }
     try {
       if (SYS === 'a2600') {
         region = opts.console === '5200vcs' ? 0 : Math.max(0, Math.min(2, (+opts.region) | 0));
@@ -1238,6 +1498,21 @@ export async function create(env) {
           else m.X.lynx_set_firmware(m.ctx, 0, 0);
         }
         m.loadCartridge(bytes);
+        /* TWO LYNXES ON ONE CABLE: the second console, made once in this machine instance, the same
+           cartridge and boot program, then the cable. */
+        m2 = null;
+        if (lynxLinkable(m) && opts.link === '2') {
+          if (!m._m2) m._m2 = new W.Core({ exports: m.X });
+          m2 = m._m2;
+          if (typeof m.X.lynx_set_firmware === 'function') {
+            const fw = firmwareUsed ? pickFirmware(true, [512]) : null;
+            if (fw) { m2.u8(m2.scratch, fw.length).set(fw); m.X.lynx_set_firmware(m2.ctx, m2.scratch, fw.length); }
+            else m.X.lynx_set_firmware(m2.ctx, 0, 0);
+          }
+          m2.loadCartridge(bytes);
+          if (m.X.lynx_linked(m.ctx)) m.X.lynx_unlink(m.ctx);
+          p2Wait = LYNX_P2_DELAY;          // switched on a moment after player 1's (runLynx)
+        } else if (m._m2 && lynxLinkable(m) && m.X.lynx_linked(m.ctx)) m.X.lynx_unlink(m.ctx);
       }
     } catch (e) {
       if (e instanceof CoreError) throw e;
@@ -1254,7 +1529,7 @@ export async function create(env) {
     inputs = ports.map(() => ({ buttons: 0 }));
     setControllers();
     sw.bits = switchBits();
-    if (SYS === 'alynx') { turn = turnFor(); eepromSeen = m.eepromChanges(); }
+    if (SYS === 'alynx') { turn = turnFor(); eepromSeen = m.eepromChanges(); eepromSeen2 = m2 ? m2.eepromChanges() : 0; }
     if (SYS === 'a2600') nvClean = nvOn() ? nvRead() : null;
     if (SYS === 'a7800') { hscClean = hscOn() ? hscRead() : null; hscLast = null; }
     skClean = skOn() ? skMem().slice() : null; skLast = null;
@@ -1296,7 +1571,7 @@ export async function create(env) {
       battery: batteryList(),
       options: optionDefs(),
       extensions: SYS === 'alynx' ? { options: true, rotation: true } : { options: true },
-      model: SYS,
+      model: SYS === 'alynx' && m2 ? 'alynx-link' : SYS,
       usedFirmware: firmwareUsed,
       /* No visitor note (2026-10-21): the board, region and header reasoning
          read as developer notes. It goes to the developer log instead (details() below, which
@@ -1304,7 +1579,7 @@ export async function create(env) {
       note: '',
       /* A player's instruction, not a developer note: shown once per game on this device, in
          the play window (host.mjs noticeOnce). TWO-PLAYER SAVEKEY GAMES above. */
-      notice: skTwoPlayerApplied() ? { id: 'savekey-2p', text: SK_TWO_PLAYER_NOTE } : null,
+      notice: skTwoPlayerApplied() ? { id: 'savekey-2p', text: SK_TWO_PLAYER_NOTE } : m2 ? { id: 'lynx-link', text: LYNX_LINK_NOTE } : null,
     };
   }
   function loadDetails() {
@@ -1319,7 +1594,7 @@ export async function create(env) {
       if (m.xm) parts.push(`the XM module (header byte 63; ${hscFw ? 'your own High Score Cartridge program' : 'no High Score Cartridge program'}, its high-score memory kept as this game's save)`);
       return `${parts.join(' + ')}, ${m.region() ? 'PAL' : 'NTSC'}${firmwareUsed ? ', your own BIOS' : ''}${sk}: ${m.reason}`;
     }
-    return `${m.reason}, through ${m.bootFirmware()}`;
+    return `${m.reason}, through ${m.bootFirmware()}${m2 ? '; a second Lynx on the ComLynx cable' : ''}`;
   }
 
   const audioOut = { data: new Float32Array(0), frames: 0 };
@@ -1333,6 +1608,7 @@ export async function create(env) {
     reset() {
       if (!m) return;
       m.powerOn();
+      if (m2) { m2.powerOn(); if (m.X.lynx_linked(m.ctx)) m.X.lynx_unlink(m.ctx); p2Wait = LYNX_P2_DELAY; }
       if (kv) m.X.atari_kidvid_set_tapes(m.ctx, 1);   // given again after each power on (atari.h)
       owed = 0; frameDirty = true; audioParts.length = 0; jammed = false;
       timedQ = []; slowSlices = 0; timedOut = false;
@@ -1348,7 +1624,7 @@ export async function create(env) {
     video() {
       if (!m) return null;
       const v = videoInfo();
-      return { format: v.format, width: v.width, height: v.height, stride: v.width, data: frame, palette: v.palette, rotation: v.rotation };
+      return { format: v.format, width: v.width, height: v.height, stride: v.width, data: frame, palette: v.palette, rotation: v.rotation, fill: !!v.fill };
     },
     audio() {
       if (!audioParts.length) { audioOut.frames = 0; return audioOut; }
@@ -1362,17 +1638,35 @@ export async function create(env) {
     serialize() {
       if (!m || !stateBuf) throw new CoreError('unsupported', 'nothing is running');
       m.X[PREFIX[SYS] + '_state_save'](m.ctx, stateBuf);
-      return m.u8(stateBuf, stateSize).slice();
+      if (!m2) return m.u8(stateBuf, stateSize).slice();
+      const out = new Uint8Array(8 + 2 * stateSize), dv = new DataView(out.buffer);
+      dv.setUint32(0, LYNX_LINK_MAGIC, true); dv.setUint32(4, stateSize, true);
+      out.set(m.u8(stateBuf, stateSize), 8);
+      m.X.lynx_state_save(m2.ctx, stateBuf);
+      out.set(m.u8(stateBuf, stateSize), 8 + stateSize);
+      return out;
     },
     check(b) {
       if (!m || !stateBuf) throw new CoreError('unsupported', 'nothing is running');
-      if (!b || b.length !== stateSize) throw new CoreError('wrong-core', `This save was made by another build of the ${LABEL[SYS]} core (${b ? b.length : 0} bytes, this core's states are ${stateSize}).`);
+      const two = !!b && b.length === 8 + 2 * stateSize && new DataView(b.buffer, b.byteOffset, 8).getUint32(0, true) === LYNX_LINK_MAGIC;
+      if (SYS === 'alynx' && two && !m2) throw new CoreError('wrong-core', 'This save holds two linked Lynx consoles. Choose Two Lynxes on one cable in Settings, Machine, ComLynx cable to load it.');
+      if (SYS === 'alynx' && m2 && b && b.length === stateSize) throw new CoreError('wrong-core', 'This save holds one Lynx. Choose One Lynx in Settings, Machine, ComLynx cable to load it.');
+      if (!b || (b.length !== stateSize && !(two && m2))) throw new CoreError('wrong-core', `This save was made by another build of the ${LABEL[SYS]} core (${b ? b.length : 0} bytes, this core's states are ${stateSize}).`);
       return true;
     },
     unserialize(b) {
       core.check(b);
-      m.u8(stateBuf, stateSize).set(b);
-      if (m.X[PREFIX[SYS] + '_state_load'](m.ctx, stateBuf) !== 0) throw new CoreError('damaged', 'The core refused this save.');
+      if (m2) {
+        m.u8(stateBuf, stateSize).set(b.subarray(8, 8 + stateSize));
+        if (m.X.lynx_state_load(m.ctx, stateBuf) !== 0) throw new CoreError('damaged', 'The core refused this save.');
+        m.u8(stateBuf, stateSize).set(b.subarray(8 + stateSize, 8 + 2 * stateSize));
+        if (m.X.lynx_state_load(m2.ctx, stateBuf) !== 0) throw new CoreError('damaged', 'The core refused this save.');
+        eepromSeen2 = -1;
+        if (p2Wait > 0 || !m.X.lynx_linked(m.ctx)) { p2Wait = 0; m.X.lynx_link(m.ctx, m2.ctx); }   // a saved pair plays on linked
+      } else {
+        m.u8(stateBuf, stateSize).set(b);
+        if (m.X[PREFIX[SYS] + '_state_load'](m.ctx, stateBuf) !== 0) throw new CoreError('damaged', 'The core refused this save.');
+      }
       owed = 0; frameDirty = true; audioParts.length = 0;
       // The host sends what is held now; nothing is assumed held by the restored machine.
       inputs = ports.map(() => ({ buttons: 0 }));
@@ -1382,6 +1676,7 @@ export async function create(env) {
       read(id) {
         if (!m) return null;
         if (id === 'eeprom' && SYS === 'alynx') return m.eepromRead();
+        if (id === 'eeprom2' && SYS === 'alynx') return m2 ? m2.eepromRead() : null;
         if (id === 'nvram' && SYS === 'a2600') return nvRead();
         if (id === 'hsc' && SYS === 'a7800' && hscOn()) return (hscLast = hscRead());
         if (id === 'savekey' && skOn()) return (skLast = skMem().slice());
@@ -1390,6 +1685,7 @@ export async function create(env) {
       write(id, b) {
         if (!m || !b) return false;
         if (id === 'eeprom' && SYS === 'alynx') { m.eepromWrite(b); eepromSeen = m.eepromChanges(); return true; }
+        if (id === 'eeprom2' && SYS === 'alynx') { if (!m2) return false; m2.eepromWrite(b); eepromSeen2 = m2.eepromChanges(); return true; }
         if (id === 'nvram' && SYS === 'a2600') {
           const n = m.X.atari_nvram_size(m.ctx); if (b.length !== n) return false;
           m.u8(m.scratch, n).set(b);
@@ -1410,7 +1706,8 @@ export async function create(env) {
       },
       dirty() {
         if (!m) return [];
-        if (SYS === 'alynx' && m.eepromSize() > 0) return m.eepromChanges() !== eepromSeen ? ['eeprom'] : [];
+        if (SYS === 'alynx' && m.eepromSize() > 0) return (m.eepromChanges() !== eepromSeen ? ['eeprom'] : [])
+          .concat(m2 && m2.eepromSize() > 0 && m2.eepromChanges() !== eepromSeen2 ? ['eeprom2'] : []);
         const out = [];
         if (SYS === 'a2600' && nvClean) {
           const c = nvRead();
@@ -1429,6 +1726,7 @@ export async function create(env) {
       clean(id) {
         if (!m) return;
         if (id === 'eeprom' && SYS === 'alynx') eepromSeen = m.eepromChanges();
+        if (id === 'eeprom2' && SYS === 'alynx' && m2) eepromSeen2 = m2.eepromChanges();
         if (id === 'nvram' && SYS === 'a2600') nvClean = nvRead();
         /* What was last read (and so saved) becomes the clean copy, not the memory now: a write
            between the read and this call then still shows as a change. */
@@ -1452,7 +1750,7 @@ export async function create(env) {
         return 'ports';
       }
       if (id === 'turn') { if (m) { turn = turnFor(); frameDirty = true; env.emit('video', { art: true }); } return 'art'; }
-      if (id === 'region' || id === 'bios' || id === 'console') return 'reload';
+      if (id === 'region' || id === 'bios' || id === 'console' || id === 'link') return 'reload';
       return 'unknown';
     },
     options: optionDefs,
@@ -1465,6 +1763,16 @@ export async function create(env) {
       },
     }, SYS === 'alynx' ? {
       rotation: { current: () => turn, next: () => String((turn + 1) % 3), option: 'turn' },
+    } : SYS === 'a2600' ? {
+      crosshair,
+      /* The host holds the pointer for a port that says pointerLock (a Trak-Ball or a mouse) and hands over its motion. */
+      trackball: {
+        lock(on) { held2600.on = !!on; held2600.dx = held2600.dy = 0; held2600.b = held2600.lb = 0; },
+        move(dx, dy) { if (held2600.on) { held2600.dx += dx; held2600.dy += dy; } },
+        button(bit, down) { if (!held2600.on) return; if (down) { held2600.b |= bit; held2600.lb |= bit; } else held2600.b &= ~bit; },
+      },
+    } : SYS === 'a7800' ? {
+      crosshair,
     } : SYS === 'a5200' ? {
       /* The host locks the pointer (a double click on the picture) and hands over its motion. */
       trackball: {
@@ -1473,7 +1781,7 @@ export async function create(env) {
         button(bit, down) { if (!ball.on) return; if (down) { ball.b |= bit; ball.lb |= bit; } else ball.b &= ~bit; },
       },
     } : {}),
-    get model() { return SYS; },
+    get model() { return SYS === 'alynx' && m2 ? 'alynx-link' : SYS; },
     details() { try { return 'cartridge: ' + loadDetails(); } catch (_) { return ''; } },
     get note() { return ''; },
     noteGroup: 'machine',
@@ -1481,7 +1789,8 @@ export async function create(env) {
     get turn() { return turn; },
     get machine() { return m; },
     /* For tests and diagnosis: what the controllers last handed the core (read only). */
-    get diag() { return { paddle: paddle.slice(), wheel: wheel.slice(), keypad: keypadSent.slice(), switches: sw.bits, turn, owed: Math.round(owed) }; },
+    get diag() { return { paddle: paddle.slice(), wheel: wheel.slice(), keypad: keypadSent.slice(), switches: sw.bits, turn, owed: Math.round(owed),
+      gun: gun.map(g => ({ x: g.x, y: g.y, down: g.down })), mindlink: mind.slice(), snes: snesSent.slice() }; },
     destroy() { m = null; spare = null; },
   };
   return core;

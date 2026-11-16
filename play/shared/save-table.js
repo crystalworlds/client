@@ -78,6 +78,20 @@
   .cb-sv-full{border:1px dashed var(--cw-bar-line,#2a2e36);border-radius:10px;padding:10px 14px;color:var(--cw-bar-dim,#9aa1ad);font-size:12.5px}
   .cb-sv-hint{color:var(--cw-bar-dim,#9aa1ad);font-size:12px;text-align:center;width:min(100%,880px)}
   @media (pointer:coarse){.cb-sv-hint .kb{display:none}}
+  /* The game's own save (the cartridge's battery save), under the saves. */
+  .cb-gs{width:min(100%,880px);display:flex;flex-direction:column;gap:6px;border:1px solid var(--cw-bar-line,#2a2e36);border-radius:10px;padding:10px 12px;box-sizing:border-box}
+  .cb-gs-head{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--cw-bar-dim,#9aa1ad)}
+  .cb-gs-head b{font-size:13.5px;font-weight:600;color:var(--cw-bar-ink,#e6e8ec)}
+  .cb-gs-row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}
+  .cb-gs-nm{font-size:13px;color:var(--cw-bar-ink,#e6e8ec)}
+  .cb-gs-nm small{color:var(--cw-bar-dim,#9aa1ad);font-size:12px}
+  .cb-gs-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .cb-gs-acts button{background:var(--cw-bar-slot-act,#141619);border:1px solid var(--cw-bar-line,#2a2e36);color:var(--cw-bar-ink,#e6e8ec);border-radius:8px;padding:7px 14px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+  .cb-gs-acts button.main{border-color:var(--cw-bar-accent-edge,#9bbc0f);color:var(--cw-bar-accent-ink,#d8f08a);font-weight:600}
+  .cb-gs-acts button:hover,.cb-gs-acts button:focus-visible{border-color:var(--cw-bar-accent,#9be15d);color:var(--cw-bar-accent-ink,#d8f08a);outline:3px solid var(--cw-bar-accent,#9be15d);outline-offset:1px}
+  .cb-gs-acts button:hover{outline:none}
+  body.cb-tv .cb-gs{width:min(100%,1180px)}
+  body.cb-tv .cb-gs-head,body.cb-tv .cb-gs-nm,body.cb-tv .cb-gs-acts button{font-size:16px}
   body.cb-tv .cb-sv-hint .kb{display:none}
   /* A narrow window: the picture, then the words under each other; still one list. */
   @media (max-width:600px){
@@ -141,7 +155,7 @@
    *   opts.rows      [{ i, ts, thumb, thumbWhy, playSeconds, note, machine, older, damaged }]: saves only
    *   opts.autos     [{ key, label, sub, ts, thumb, playSeconds, machine }]
    *   opts.selected  'new' | 'auto:<key>' | a save's index
-   *   opts.can       { note, transfer, del }
+   *   opts.can       { note, transfer, del, foreign }: foreign names a file kind other emulators read (the Game Boy's 'BESS')
    *   opts.on        { select(sel), load(i), loadAuto(key), save(i | null), del(i), note(i, text), exportRow(i), importRow(i | null) }
    *   opts.focus     'row' | 'act': after drawing, the selected row (or its first button) takes the focus
    *   opts.ownKeys   true: Up / Down / Enter / Escape handled here (a page without the Control Bar), with
@@ -238,6 +252,7 @@
         button(acts, 'Save', () => ask(row), r.damaged ? 'main' : '');
         if (!r.damaged && can.note && on.note) button(acts, r.note ? 'Edit note' : 'Note', () => editNote(row), 'minor');
         if (!r.damaged && can.transfer && on.exportRow) button(acts, 'Export', () => on.exportRow(r.i), 'minor');
+        if (!r.damaged && can.transfer && can.foreign && on.exportForeign) button(acts, 'Export ' + can.foreign, () => on.exportForeign(r.i), 'minor').title = 'Export for other emulators (' + can.foreign + ')';
         if (can.del !== false && on.del) button(acts, 'Delete', () => (o.askDelete ? ask(row, 'delete') : on.del(r.i)), 'minor');
       }
     }

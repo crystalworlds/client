@@ -146,7 +146,7 @@
     const textSubs = ['vtt', 'srt', 'subrip', 'ass', 'ssa', 'smi', 'sub', 'ttml', 'mov_text'];
     const picSubs = ['pgssub', 'pgs', 'dvdsub', 'vobsub', 'dvbsub', 'sup'];
     return {
-      Name: 'Crystal Worlds browser',
+      Name: 'CrystalWorlds browser',
       MaxStreamingBitrate: 120000000, MaxStaticBitrate: 120000000, MusicStreamingTranscodingBitrate: 192000,
       DirectPlayProfiles: [
         { Container: 'mp4,m4v,mov', Type: 'Video', VideoCodec: d.video.join(','), AudioCodec: d.audio.join(',') },

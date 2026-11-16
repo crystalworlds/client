@@ -1,0 +1,11 @@
+{
+ "format": 1,
+ "list": "pokeminirejected",
+ "label": "Pokémon mini: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "pokemon-mini"
+ ],
+ "internal": true,
+ "count": 0,
+ "entries": {}
+}

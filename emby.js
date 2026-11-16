@@ -2934,6 +2934,9 @@
       html.cw-small #video-about.video-about { top:var(--about-top, 160px); }
       html.cw-small #video-about .about-xbar { display:block; position:fixed; left:auto; right:max(8px, env(safe-area-inset-right, 0px)); top:calc(var(--about-top, 160px) + 8px);
         width:auto; height:auto; z-index:20; padding:0; margin:0; background:none; border:0; pointer-events:none; }
+      /* The notices keep clear of the close box (15 Nov 2026: right after a vault was saved, "Saved. Welcome"
+         sat over it, so the page looked as if it could not be closed). */
+      html.cw-small.cw-about-open #cw-notify-host.cw-notify-host { right:calc(max(8px, env(safe-area-inset-right, 0px)) + 56px) !important; }
       html.cw-small #video-about .about-x { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; padding:0; margin:0; pointer-events:auto;
         border-radius:50%; border:1px solid rgba(255,255,255,.34); background:#1a212e; color:#e7ecf2; cursor:pointer; -webkit-tap-highlight-color:transparent;
         box-shadow:0 2px 10px rgba(0,0,0,.55); }
@@ -4123,6 +4126,18 @@
        crystalworlds.media (index.html's first script sets __cwOffsite) has no Home, Compatibility,
        Timeline or About window; their buttons are hidden (CSS) and nothing opens them. */
     if (open && window.__cwOffsite) open = false;
+    /* NO VAULT, NO WALL (15 Nov 2026): until a vault is saved the pages stay open (cws-reach.mjs holds
+       them); a visitor moves between them but cannot close them. Keyboard shortcuts steps back to Home. */
+    if (!open && aboutOpen && typeof window.cwVaultHoldsPages === 'function' && window.cwVaultHoldsPages()) {
+      if (aboutKind !== 'keys') {
+        /* The address stays the page's (Back, or a typed address, already moved it: put it back), and a
+           press inside the page that would leave it for the wall slides the welcome out (cws-reach.mjs). */
+        try { if (window.CwDeepLink) window.CwDeepLink.windowChanged(true, aboutKind); } catch {}
+        try { if (typeof window.cwVaultPageRefused === 'function') window.cwVaultPageRefused(); } catch {}
+        return;
+      }
+      open = true; kind = 'home';
+    }
     const _dlWas = aboutOpen + ':' + aboutKind;   // deeplinks.js: the address bar follows the window
     aboutOpen = !!open;
     if (kind) aboutKind = kind;
@@ -6451,7 +6466,7 @@
   let _gameTypeOf = null;   // first 10 hex of the SHA-256 -> category; null until the table lands
   (function loadGameTypes() {
     if (typeof fetch !== 'function' || typeof DecompressionStream !== 'function') return;
-    fetch('firmware/compat/types.json.gz?v=2.1.1').then(r => {
+    fetch('firmware/compat/types.json.gz?v=2.2.0').then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();
     }).then(doc => {
@@ -7590,7 +7605,7 @@
      the card's series. A tile asks its own shelf's bucket first, then the other
      shelves' (the same id names the same game in every bucket, and covers.py
      never writes a second cover for an id another set already covers), then
-     the second source. '' = no bucket for that shelf and mode. */
+     the generic cover. '' = no bucket for that shelf and mode. */
   const NES_ART_SHELVES = {
     nes:     { boxart: 'https://pub-fa0fac80b3c14d358007e922389cdcd0.r2.dev' /* nes-covers-2d */, boxart3d: '' },
     famicom: { boxart:   'https://pub-ddbcec209bb34b41807958a690510c73.r2.dev',   // famicom-covers-2d
@@ -7617,7 +7632,7 @@
   /* POKEMON MINI (2026-10-11): Box Art from the pm-covers-2d bucket, named by
      the game's CATALOGUE id, so every language or regional variant's tile (a
      copy of that entry, pmVariantOf) shares one cover. 3D Box Art keeps the
-     bundled boxes; a miss falls to the second source, as the others do. */
+     bundled boxes; a miss falls to the generic cover, as the others do. */
   const PM_ART_SEL = '#video-grid .device-card[data-series="pokemon-mini"]:not([data-gbart])';
   const PM_ART_BASE = Object.assign({ boxart: 'https://pub-eee982432b794252aea6267b28610d68.r2.dev', boxart3d: 'https://pub-b7ce84cc08af4c94a360b8f95ea6c99e.r2.dev' /* pm-covers-3d */ },
     (window.__coverArtBase && window.__coverArtBase.pm) || {});
@@ -7651,8 +7666,9 @@
      missed; a v1 miss is permanent, so a new key lets every tile ask once more. Bump it
      again after any upload that fills earlier gaps (drawer-unified.js shares it).
      v3 (same day): source2 + community covers uploaded.
-     v4 (28 Oct): the Super Game Boy shelf's own pictures copied into gb/gbc-covers. */
-  const GB_ART_MISS_KEY = 'gnw.gb.artMiss.v4';    // { "boxart:SHA1": 1 }
+     v4 (28 Oct): the Super Game Boy shelf's own pictures copied into gb/gbc-covers.
+     v5 (13 Nov 2026): the back-up source's pictures uploaded into gb/gbc-covers (libretro-fill.py). */
+  const GB_ART_MISS_KEY = 'gnw.gb.artMiss.v5';    // { "boxart:SHA1": 1 }
 
   const _lsJson = (k) => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch { return {}; } };
   /* Read through a memo, so the map is parsed once per session and a full disk
@@ -7709,19 +7725,17 @@
     return _gbArtObserver;
   }
 
-  /* OUR BUCKET HAS NO COVER: the second source (gamemeta.js, libretro's
-     thumbnail server, named by the No-Intro name). The name stays the floor if
-     that misses too. */
+  /* OUR BUCKET HAS NO COVER: the system's generic cover. (Until 13 Nov 2026 a second source,
+     libretro's thumbnail server, was asked first; its pictures for our tiles are now in our own
+     buckets, WASM_Source/cover-art/libretro-fill.py.) The name stays the floor if that misses too. */
   function gmArtFallback(card, box, mode) {
-    const generic = () => paintGenericArt(card, box, mode);
-    try { if (window.GameMeta) return GameMeta.fallbackArt(card, box, () => card.dataset.gbart === mode, generic); } catch {}
-    generic();
+    paintGenericArt(card, box, mode);
   }
 
   /* THE LAST SOURCE (2026-10-21): one generic cover per system, a real box of that
      system with the game painted out (WASM_Source/cover-art/generated-art.py), served from
-     each system's own 2D bucket as generic.png. Asked only after our bucket and the second
-     source have both missed, and only in Box Art (there is no generic 3D box); a tile with
+     each system's own 2D bucket as generic.png. Asked only after our buckets have missed,
+     and only in Box Art (there is no generic 3D box); a tile with
      no record anywhere therefore still shows its system's box rather than a bare name.
      Memory-only misses, per URL, this page load. */
   const GENERIC_ART_NAME = 'generic.png';
@@ -7834,26 +7848,34 @@
   function genericLocalUrl(card, mode) {
     return mode === 'boxart' ? 'images/generic-covers/' + genericShelfOfCard(card) + '.png?v=' + GENERIC_LOCAL_V : '';
   }
-  function paintGenericArt(card, box, mode) {
+  /* `isCurrent` (13 Nov 2026): whether the tile still wants this mode; the tiles of emby.js's own
+     mounts carry it in data-gbart, gamemeta.js mountBoxArt's in data-gmart (window.cwGenericArt). */
+  function paintGenericArt(card, box, mode, isCurrent) {
+    const cur = isCurrent || (() => card.dataset.gbart === mode);
     const url = [genericArtUrl(card, mode), genericLocalUrl(card, mode)].find(u => u && !_genericArtMissed.has(u)) || '';
     /* No cover is coming: tell the load blur (index.html _tileRevealCheck) to stop waiting. */
-    const none = () => { try { if (box && card.dataset.gbart === mode) box.setAttribute('data-art-done', '1'); } catch {} };
+    const none = () => { try { if (box && cur()) box.setAttribute('data-art-done', '1'); } catch {} };
     if (!url) return none();
-    if (!box || !card.isConnected || card.dataset.gbart !== mode) return;
+    if (!box || !card.isConnected || !cur()) return;
     if (box.querySelector('img.gb-art-img')) return;          // a cover arrived after all
     const img = new Image();
     img.decoding = 'async';
     img.alt = '';
     img.className = 'gb-art-img gb-art-generic';
     img.onload = () => {
-      if (!card.isConnected || card.dataset.gbart !== mode || box.querySelector('img.gb-art-img')) return;
+      if (!card.isConnected || !cur() || box.querySelector('img.gb-art-img')) return;
       box.appendChild(img);
       try { window.cwGenericLabel(box, genericShelfOfCard(card), card.dataset.id, 0.08); } catch {}   // the type word, in the panel
       requestAnimationFrame(() => box.classList.add('gb-art-loaded'));
     };
-    img.onerror = () => { _genericArtMissed.add(url); paintGenericArt(card, box, mode); };   // next: the site's copy, then none
+    img.onerror = () => { _genericArtMissed.add(url); paintGenericArt(card, box, mode, isCurrent); };   // next: the site's copy, then none
     img.src = url;
   }
+  /* For gamemeta.js mountBoxArt: true when a generic cover is being painted. */
+  window.cwGenericArt = (card, box, mode, isCurrent) => {
+    if (!card || !box || !(genericArtUrl(card, mode) || genericLocalUrl(card, mode))) return false;
+    paintGenericArt(card, box, mode, isCurrent); return true;
+  };
 
   function gmMarkSource(box, img) {
     try { if (window.GameMeta && GameMeta.markCoverSource) GameMeta.markCoverSource(box, img); } catch {}
@@ -7881,7 +7903,7 @@
     if (!card.isConnected || card.dataset.gbart !== mode) return;
     if (!sha) return gmArtFallback(card, box, mode);   // no bytes to hash: the id still names it
     const key = pre + mode + ':' + sha;
-    if (gbArtMissed(key)) return gmArtFallback(card, box, mode);   // known absent: try the second source
+    if (gbArtMissed(key)) return gmArtFallback(card, box, mode);   // known absent: the generic cover
     const img = new Image();
     img.decoding = 'async';
     img.alt = '';
@@ -8400,9 +8422,9 @@
     /* FIRST, and it has to be: it removes the recorder mount that the very next
        line would otherwise claim. See mountGbBoxArt(). */
     mountGbBoxArt();
-    /* Box art for the shelves with no bucket of ours (Game Boy Color, Atari,
-       the NES family until its buckets exist): gamemeta.js, same name-floor
-       shape, and also before anything arms the tiles. */
+    /* Box art for a game tile no mount above claimed (normally none: every shelf has
+       buckets of ours): gamemeta.js, same name-floor shape, and also before anything
+       arms the tiles. */
     try { if (window.GameMeta) GameMeta.mountBoxArt(videoState.artMode); } catch {}
     /* Image and Play time tiles (8 Nov 2026): filled as they come into view; a 4x one is kept off
        the far-tile list before the next line hands the tiles to it. */
@@ -15316,7 +15338,7 @@
     v.addEventListener('error', () => teardown('The stream started but the video couldn’t be decoded here. It’ll play in a media server app.'));
 
     try {
-      const mod = await import('./remux.js?v=2.1.1');
+      const mod = await import('./remux.js?v=2.2.0');
       if (!ov.classList.contains('open')) return;   // user bailed while it loaded
 
       // MPEG-4/AVI: no browser decoder, so libav decodes + we re-encode to H.264.

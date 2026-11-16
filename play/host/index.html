@@ -68,6 +68,7 @@
   #lcdWrap { position:relative; line-height:0; overflow:hidden; }
   #lcdWrap.has-art { box-shadow:0 14px 34px #0007; }
   #lcdWrap.art-off { box-shadow:none; }
+  #lcdWrap.has-art.art-cutout { box-shadow:none; }   /* a cut-out device shown whole carries its own shadow (the Game Boy Advance) */
   #lcdWrap.art-off #art, #lcdWrap:not(.has-art) #art { display:none; }
   /* The art's glass: a photograph's screen is translucent, so the game goes BEHIND it
      and the glare falls on the picture; an opaque render puts the game in front. */
@@ -239,13 +240,16 @@
 <script>/* Every key physically held, seen before any other listener (the Control Bar and play-keys.js take
    the keyboard while a panel is open): the Keys diagram lights from it (input.mjs litSet). Codes only. */
 (function(){var s=window.__cwRawKeys=new Set();addEventListener('keydown',function(e){s.add(e.code);},true);addEventListener('keyup',function(e){s.delete(e.code);},true);addEventListener('blur',function(){s.clear();});})();</script>
-<script src="../../firmware/site/sha.js?v=2.1.1"></script>
-<script src="../../firmware/site/unsupported.js?v=2.1.1"></script>
-<script src="./cw-audio.js?v=2.1.1"></script>
-<script src="../play-keys.js?v=2.1.1"></script>
-<script src="../shared/overlay.js?v=2.1.1"></script>
-<script src="../play-pill.js?v=2.1.1"></script>
-<script src="../shared/control-bar.js?v=2.1.1"></script>
-<script type="module" src="./host.mjs?v=2.1.1"></script>
+<script src="../shared/select-list.js?v=2.2.0"></script>
+<script src="../../firmware/site/sha.js?v=2.2.0"></script>
+<script src="../../firmware/repairs/alias.js?v=2.2.0"></script>
+<script src="../../firmware/site/repairs.js?v=2.2.0"></script>
+<script src="../../firmware/site/unsupported.js?v=2.2.0"></script>
+<script src="./cw-audio.js?v=2.2.0"></script>
+<script src="../play-keys.js?v=2.2.0"></script>
+<script src="../shared/overlay.js?v=2.2.0"></script>
+<script src="../play-pill.js?v=2.2.0"></script>
+<script src="../shared/control-bar.js?v=2.2.0"></script>
+<script type="module" src="./host.mjs?v=2.2.0"></script>
 </body>
 </html>

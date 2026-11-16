@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Crystal Worlds",
-  "short_name": "Crystal Worlds",
+  "name": "CrystalWorlds",
+  "short_name": "CrystalWorlds",
   "description": "Video and game preservation",
   "start_url": "../",
   "scope": "../",

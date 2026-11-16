@@ -24,7 +24,7 @@
 (function () {
   'use strict';
   if (window.CwSiteRelay) return;
-  const BUILD = '20261101-relay22-biospref1';
+  const BUILD = '2.2.0';
 
   /* Per console: how a game id and a firmware id are found. Each `pack` / `site` / `server`
      returns base64 or null. Added to per phase (the build plan, section 5). */
@@ -38,6 +38,18 @@
       server: what => {
         const cid = (what === 'bios' || what === 'biosCgb') ? 'gb:' + what : what;
         return (window.CWS && CWS.has(cid)) ? CWS.fetchB64(cid) : null;
+      },
+      /* (14 Nov) the Advance's own Color-mode program: the game server's generic file of role 'agb' (system gbc) */
+      /* (14 Nov, GBFW2) and each Game Boy model's own: the first model's (gb role dmg0, 15 Nov), the Pocket's (gb role mgb), the Super Game Boy's (sgb role
+         boot) and the Super Game Boy 2's (sgb role boot2); the core names the role (core.mjs firmwareRole) */
+      serverRole: { cgb: ['agb'], dmg: ['dmg0', 'mgb', 'sgb', 'sgb2'] },
+      byRole: async (id, role) => {
+        const at = ({ cgb: { agb: ['gbc', 'agb'] }, dmg: { dmg0: ['gb', 'dmg0'], mgb: ['gb', 'mgb'], sgb: ['sgb', 'boot'], sgb2: ['sgb', 'boot2'] } })[id];
+        const sr = at && at[role]; if (!sr) return null;
+        const g = window.CWS && typeof CWS.bootGeneric === 'function' ? CWS.bootGeneric(sr[0], sr[1], false) : null;
+        if (!g || typeof CWS.fetchBootSha !== 'function') return null;
+        const u = await CWS.fetchBootSha(g.sha256);
+        return u ? { b64: b64of(u), source: serverName(id === 'cgb' ? 'gb:biosCgb' : 'gb:bios') } : null;
       },
     },
     /* Pokemon mini (Phase 2): the site's one loader, ensurePmFiles(), takes ONE source for the
@@ -238,8 +250,7 @@
   const GNW_TWIN = { smb: 'smbn', climber: 'climbern', bfight: 'bfightn', smbspecial: 'smbn', dkjrt: 'dkjrp', snoopyt: 'snoopyp', popeyet: 'popeyep' };
   let gnwBuilt = null;
   function gnwPick(files, key) {
-    /* `rom` is the key a gnw_games.json built before 24 Oct 2026 used; read it too. */
-    const prog = x => x && (x.program || x.rom);
+    const prog = x => x && x.program;
     /* ANOTHER PROGRAM REVISION OF A DEVICE (8 Nov 2026): 'helmet~cn07' is Helmet's CN-07 program,
        picked in the drawer. Its own file only (never the usual program in its place); the unit,
        its artwork and its controls stay the device's, so the container names the device's key. */
@@ -313,20 +324,32 @@
      default ('want'; a game may need another, e.g. 'boot-pal'). The Atari slot's system is the server's
      id (a5200), not the site's long name: before this the 5200, 7800 and Lynx lists were always empty. */
   const FW_SLOT = { gb: { dmg: 'gb:bios', cgb: 'gb:biosCgb', sgb: 'sgb:snes' }, pm: { bios: 'pm:bios' }, nes: { fds: 'fds:bios' } };
-  const FW_ROLES = { 'gb:bios': ['boot'], 'gb:biosCgb': ['boot'], 'sgb:snes': ['snes', 'snes2'], 'pm:bios': ['boot'], 'fds:bios': ['disk'] };
+  /* (14 Nov, GBFW2) the Game Boy slot holds four kinds, named system:role (the Super Game Boy's role "boot" is
+     not the Game Boy's): every one is listed, the model's own first (FW_ROLE_LISTS) */
+  const GB_DMG_KINDS = ['gb:boot', 'gb:dmg0', 'gb:mgb', 'sgb:boot', 'sgb:boot2'];
+  const FW_ROLES = { 'gb:bios': GB_DMG_KINDS, 'gb:biosCgb': ['boot'], 'sgb:snes': ['snes', 'snes2'], 'pm:bios': ['boot'], 'fds:bios': ['disk'] };
   const ATARI_ROLES = { a5200: ['boot', 'boot-2port'], a7800: ['boot', 'boot-pal'], alynx: ['boot'] };
-  function fwSlot(sys, id) {
-    if (FW_SLOT[sys]) { const slot = FW_SLOT[sys][id]; return slot ? { slot, roles: FW_ROLES[slot], want: FW_ROLES[slot][0] } : null; }
+  /* (14 Nov) The Game Boy Advance's Color-mode program (server role 'agb', in the gbc boot folder) shares the
+     Color slot. Only an Advance asks for it (play/cores/gb/core.mjs firmwareRole); its list then holds the Advance's
+     programs first and Nintendo's Color programs as choices. A Color model's list never holds the Advance's. */
+  const FW_ROLE_LISTS = { 'gb:biosCgb': { agb: { roles: ['agb', 'boot'], want: 'agb' } },
+    'gb:bios': { dmg0: { roles: GB_DMG_KINDS, want: 'gb:dmg0' }, mgb: { roles: GB_DMG_KINDS, want: 'gb:mgb' }, sgb: { roles: GB_DMG_KINDS, want: 'sgb:boot' }, sgb2: { roles: GB_DMG_KINDS, want: 'sgb:boot2' } } };
+  function fwSlot(sys, id, role) {
+    if (FW_SLOT[sys]) {
+      const slot = FW_SLOT[sys][id]; if (!slot) return null;
+      const alt = role && FW_ROLE_LISTS[slot] && FW_ROLE_LISTS[slot][role];
+      return alt ? { slot, roles: alt.roles, want: alt.want, named: true } : { slot, roles: FW_ROLES[slot], want: FW_ROLES[slot][0] };
+    }
     if (ATARI_FW[sys] && id === 'bios') return { slot: 'atari-bios', system: sys, roles: ATARI_ROLES[sys] || ['boot'], want: 'boot' };
     if (sys === 'a2600' && (id === 'arfw' || id === 'arfwpal')) { const r = id === 'arfw' ? 'supercharger' : 'supercharger-pal'; return { slot: 'atari-bios', system: 'a2600', roles: [r], want: r }; }
     if (sys === 'a7800' && id === 'hsc') return { slot: 'atari-bios', system: 'a7800', roles: ['highscore'], want: 'highscore' };
     return null;
   }
   function firmwareChoices(sys, id, role) {
-    const s = fwSlot(sys, id);
+    const s = fwSlot(sys, id, role);
     if (!s || !window.CWS || typeof CWS.bootChoices !== 'function') return [];
     try {
-      return CWS.bootChoices(s.slot, s.system, s.roles, role || s.want).map(c => ({ sha256: c.sha256, size: c.size, name: c.name,
+      return CWS.bootChoices(s.slot, s.system, s.roles, s.named ? s.want : (role || s.want)).map(c => ({ sha256: c.sha256, size: c.size, name: c.name,
         role: c.role || '', roleName: c.roleName || '', generic: !!c.generic, auto: !!c.auto, source: serverName(s.slot) }));
     } catch (_) { return []; }
   }
@@ -343,6 +366,12 @@
     if (S.combined) { try { return (await S.combined(kind, id)) || { b64: null, source: null }; } catch (_) { return { b64: null, source: null }; } }
     const what = S.key(kind, id, role);
     if (!what) return { b64: null, source: null, why: 'unknown ' + kind + ' ' + id };
+    /* (14 Nov) a role only a game server holds (the Advance's Color-mode program): its generic file, by hash,
+       never the pack's or the site's file for the slot's usual role */
+    if (kind === 'firmware' && S.serverRole && S.serverRole[id] && S.serverRole[id].indexOf(role) >= 0) {
+      try { const g = await S.byRole(id, role); if (g) return g; } catch (_) {}
+      return { b64: null, source: null };
+    }
     try { if (window.__GNW_PACK && window.__GNW_PACK.ready) await window.__GNW_PACK.ready; } catch (_) {}
     try { const p = await S.pack(what); if (p) return { b64: p, source: 'content pack' }; } catch (_) {}
     try { const s = await S.site(what); if (s) return { b64: s, source: 'site files' }; } catch (_) {}

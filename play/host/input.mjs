@@ -19,6 +19,13 @@
  * which is each control's first default key here.
  */
 const KEY_STORE = 'gnw.keys.games.v1';
+/* AUTO-FIRE (15 Nov 2026): a button the player marks presses itself again and again while it is held,
+   2 frames down and 2 up (15 presses a second at 60 frames a second), the same on every console. Counted
+   in the machine's own frames, so fast forward speeds it up with the game and a pause stops it. It is
+   input only: a save state, rewind and the cheats never see it. Kept per console in localStorage
+   'cw.autofire.v1' as { <console>: ['<port>:<control id>', ...] }. Off for every button by default. */
+const AF_STORE = 'cw.autofire.v1', AF_DOWN = 2, AF_PERIOD = 4;
+const AF_NOT = /^(up|down|left|right|start|select|pause|reset|power)$/i;
 const BACKISH = new Set(['Escape', 'Backspace', 'Tab']);
 
 function storedJson(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (_) { return null; } }
@@ -51,6 +58,9 @@ export class Input {
     this.padLast = []; this.padChord = [];
     this.enabled = true;
     this.pointers = new Map();    // port index -> { x, y, inside, buttons } (light guns, paddles)
+    this.af = new Set();          // `${port index}:${bit}` with auto-fire on
+    this.afStart = new Map();     // `${port index}:${bit}` -> the frame its press began
+    this.afTick = 0;
     this.kb = null;               // a keyboard device: { port, codes: Set, toggle, typing, held: Set }
     this.raw = new Set();
     this._kbd = e => this.onKbDevice(e, true); this._kbu = e => this.onKbDevice(e, false);
@@ -78,6 +88,42 @@ export class Input {
     }));
     window.gnwKbTyping = !!this.kb;      // play-keys.js and the remap stand aside while typing
     this.rebuildKeys();
+    this.loadAutofire();
+  }
+  /* AUTO-FIRE (see AF_STORE): the buttons a player may mark, the marks, and the change of one. */
+  afCan(p, c) { return p.kind === 'player' && (c.type || 'button') === 'button' && !AF_NOT.test(c.id || '') && !/^aim/.test(c.id || '') && !/^keypad|^key /i.test(c.label || ''); }   // a keypad's keys are for choosing, not firing
+  loadAutofire() {
+    this.af.clear(); this.afStart.clear();
+    const all = storedJson(AF_STORE), mine = new Set((all && Array.isArray(all[this.sys]) && all[this.sys]) || []);
+    this.ports.forEach((p, pi) => p.controls.forEach((c, bit) => { if (this.afCan(p, c) && mine.has(p.port + ':' + c.id)) this.af.add(pi + ':' + bit); }));
+    this.dirty = true;
+  }
+  autofireList() {
+    const out = [];
+    this.ports.forEach((p, pi) => p.controls.forEach((c, bit) => {
+      if (this.afCan(p, c)) out.push({ key: p.port + ':' + c.id, player: p.label || ('Player ' + (pi + 1)), label: c.label || c.id, on: this.af.has(pi + ':' + bit) });
+    }));
+    return out;
+  }
+  setAutofire(key, on) {
+    let all = storedJson(AF_STORE); if (!all || typeof all !== 'object') all = {};
+    const mine = new Set(Array.isArray(all[this.sys]) ? all[this.sys] : []);
+    if (on) mine.add(key); else mine.delete(key);
+    if (mine.size) all[this.sys] = Array.from(mine); else delete all[this.sys];
+    try { localStorage.setItem(AF_STORE, JSON.stringify(all)); } catch (_) {}
+    this.loadAutofire();
+    this.log(`auto-fire ${on ? 'on' : 'off'} for ${key}`);
+    return this.af.size;
+  }
+  /* held is the set for this frame: a marked button held is let go on the off frames of its beat */
+  afFilter(held) {
+    if (!this.af.size) { if (this.afStart.size) this.afStart.clear(); return held; }
+    for (const k of this.af) {
+      if (!held.has(k)) { this.afStart.delete(k); continue; }
+      if (!this.afStart.has(k)) this.afStart.set(k, this.afTick);
+      if ((this.afTick - this.afStart.get(k)) % AF_PERIOD >= AF_DOWN) held.delete(k);
+    }
+    return held;
   }
   /* The keyboard device, in the capture phase, before the pads and the site's keys. */
   onKbDevice(e, down) {
@@ -265,7 +311,7 @@ export class Input {
         this.ports.forEach((p, pi) => {
           if (this.pointers.get(pi) || (this.kb && this.kb.port === pi) || Array.isArray(p.axes)) return;
           let m = 0;
-          p.controls.forEach((c, bit) => { const k = pi + ':' + bit; if (mk.held.has(k) && !this.out.has(k)) m |= (1 << bit); });
+          p.controls.forEach((c, bit) => { const k = pi + ':' + bit; if (mk.held.has(k) && !this.out.has(k) && !(this.af.has(k) && this.afStart.has(k) && (this.afTick - this.afStart.get(k)) % AF_PERIOD >= AF_DOWN)) m |= (1 << bit); });
           const was = this.sent[pi] > 0 ? this.sent[pi] : 0;
           pressed[pi] |= m & ~was;
           m |= pressed[pi];                               // pressed in this window: held to its end
@@ -279,6 +325,7 @@ export class Input {
     for (const k of this.latched) held.add(k);        // a tap shorter than a frame still counts once
     this.latched.clear();
     for (const k of this.out) held.delete(k);
+    this.afFilter(held); this.afTick++;
     /* A port that declares `axes` (the 5200's analogue stick) gets its player's pad axes,
        read here as the old 5200 page read them (the site's pad feed carries buttons only). */
     let pads = null, player = 0;

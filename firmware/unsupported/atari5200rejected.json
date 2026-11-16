@@ -1,0 +1,142 @@
+{
+ "format": 1,
+ "list": "atari5200rejected",
+ "label": "Atari 5200: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "atari5200"
+ ],
+ "internal": true,
+ "count": 26,
+ "entries": {
+  "06b250f18983d058c0f156ce7ee88ae48b6eaf11e6f10f21dccf6ac7ffb6a6af": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Atari 5200 console firmware, not a game cartridge."
+  },
+  "08a12183e8f1ea0c4b37474ebde88c069eda95ab78fe4ae499fdb11e11d0010e": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "1c265df8bd261ef9453ecb39c520cabd9fc6bb231b51ef1c3d5efe4adbb35d62": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "1cdbb39da5772d71d2c71058159f594a4632f3794399d2167ef55fba7c57079d": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "1feabdbeb01f0399d44d598d2f4863c562862abcbbb1e1956549c120e0194332": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "23ef8681a09872ec130dd3632175bc93e19fca49e5acb75a2278f003483fbb78": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "27b5309a419727c3c71084638d3769c88fbccb10946bdd0ec96240ba955a1108": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "3c73bc353340dc3fa994db1b68fee08a36c0e52b604c58ee2e09d5c2467de360": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Atari 5200 console firmware, not a game cartridge."
+  },
+  "459b29a02017971addb9c2baf419e155658393c005bcca5fb5cffca79a2c24a2": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "60395f93c3956401abac2cd85dc1e4355307640af676ad7981c3313e0c0459b1": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "681a68fabb332fa2fc952c0ac7895740b7e89f826d83101b53642a7b4213f7b4": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "711349c3225a7cb51dc5b46f9fd96c818284a5b8e728037c9c59c05e7b700b15": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "73a73ec997288e80e4f429be45a0a90ae11ac42185cf497b2544c585bd12c564": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "78586707d1949f00068afa566f4edf5cd9fea9e00c1a499667744df39ea788aa": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "8e36c7d0a87b89c19e79b15f2a1344dcd041321bc94c0796cb5f3605a2b862b3": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "8e74cf39fe5ccce71a1f9d58dfd6356acd1aab2da21f0afa22de777769da1992": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "918b39f47aa77bc1f6871e577639dda5647b510f1381159d3f453fbde31ed580": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made."
+  },
+  "a2c93825f99d35550399021b9d622f2dfedbbbe9a316d3865f156812ff456886": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "a458856344a9987381dce2af7ade98a73e85c7fec6db6e6d03741a29de59fb7a": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "b0b1b157649ec32788c3131559bd66c39422de248b8997ef88dd6bb779ede385": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "b35c8793636bce8b8eae0d50f05c1ff7a415288b1668aaf00b13d304cca3b491": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "b653e46d7cb7a6d26f1b0f7d336bc33dc11f24f0dd0600c3e0e0a378faa505f3": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "baf603713dfd911cefe226b1b8b4b28c144a970b3b6b508e06018b31667d2c90": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "c329b5a04abce2c7aa55869286f2fcf1af98436c523dc4e8d10de5e65b630094": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Atari 5200 console firmware, not a game cartridge."
+  },
+  "c577207fb48c1fb52e3eac4e1b01442ce0bae2aec4b95c70a6c305bb0bd8ab7a": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  },
+  "dcc44af0d2f1cb64bae7eff2fdedf8957ef71a347bc1e6f5f0e990877178898e": {
+   "kind": "cartridge",
+   "code": "ALTERED_COPY",
+   "reason": "This file is an altered copy: extra data was added to it when it was copied from its cartridge, so it is not the game as it was made. A clean copy of the same game plays."
+  }
+ }
+}

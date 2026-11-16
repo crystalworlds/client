@@ -100,7 +100,7 @@ build fails with a red `NOT WRITTEN - OVER CAP` message naming the folders, and
 the current output is left exactly as it was. (For the Atari systems, which
 share a manifest, nothing is written for any of them.) It never keeps an
 arbitrary subset. A full library belongs
-on the game server (Crystal Worlds Server: Library & folders), which sends one
+on the game server (CrystalVault Server: Library & folders), which sends one
 game at a time. Disk System (`.fds`) images are not built into the output; they
 also play through the game server or a content pack.
 

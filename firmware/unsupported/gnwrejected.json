@@ -1,0 +1,11 @@
+{
+ "format": 1,
+ "list": "gnwrejected",
+ "label": "Game & Watch: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "gnw"
+ ],
+ "internal": true,
+ "count": 0,
+ "entries": {}
+}

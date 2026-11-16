@@ -216,8 +216,8 @@
      manual where there is one. On narrow screens only the big console picture stays hidden.
      COVERS: the same R2 buckets and the same order the Media tiles use (emby.js GB_ART_BASE,
      GBC_ART_BASE, NES_ART_SHELVES, PM_ART_BASE; mirrored here because they are private there),
-     then the second source the tiles fall back to (gamemeta.js: libretro's thumbnail server, by
-     the No-Intro name). A picture that does not load is simply not in the strip. */
+     then the system's generic cover, as the tiles (13 Nov 2026: no second source; every cover is in
+     our own buckets). A picture that does not load is simply not in the strip. */
   const COVERS = {
     gb:  { '2d': 'https://pub-7bac68f21888416fb5ee42bfaf371e77.r2.dev', '3d': 'https://pub-ddda4c6d7b424e05992d8ebc8154278a.r2.dev' },
     gbc: { '2d': 'https://pub-ab3708bbc6714c41a7e8d73418133064.r2.dev', '3d': 'https://pub-eedf2c3c07734780add44aa475a609de.r2.dev' },
@@ -238,7 +238,7 @@
   /* GAME MAPS (2026-10-23): bucket site-images, maps/<shelf>/<cover key>-map.jpg (Game Boy:
      the cartridge's SHA-1, as its covers). NO LIST: the drawer asks directly; a 404 means no map. */
   const MAPS = 'https://pub-cdfcabf7a7fd40d5a0e9cb551d68599e.r2.dev';
-  const GB_SHA1_KEY = 'gnw.gb.cartSha1.v1', GB_MISS_KEY = 'gnw.gb.artMiss.v4';   /* v4 28 Oct: SGB pictures copied into gb/gbc */   // shared with emby.js's tiles (v2/v3 2026-10-21: new covers uploaded)
+  const GB_SHA1_KEY = 'gnw.gb.cartSha1.v1', GB_MISS_KEY = 'gnw.gb.artMiss.v5';   /* v5 13 Nov 2026: the back-up source's pictures uploaded into gb/gbc; v4 28 Oct: SGB pictures copied into gb/gbc */   // shared with emby.js's tiles (v2/v3 2026-10-21: new covers uploaded)
   const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (_) { return {}; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
   const missed = new Set();   // url -> failed this page load
@@ -275,7 +275,7 @@
      runs cheats (the others join when their cheat build is installed), so the drawer never offers
      what the player cannot run. A 404 shows nothing. */
   const CHEAT_SYSTEMS = new Set(['gnw', 'nes', 'gb', 'atari', 'pm']);   // NES, Game Boy and Atari cheat builds installed 28 Oct 2026; Pokemon mini (our own cheats, served core unchanged) 28 Oct
-  const CHEATS_MJS = './play/host/cheats.mjs?v=2.1.1';
+  const CHEATS_MJS = './play/host/cheats.mjs?v=2.2.0';
   async function cheatPlaces(d, p) {
     if (p === PROFILES.gb) {
       const sha = await gbSha1(d); if (!sha) return [];
@@ -330,16 +330,6 @@
     try { const r = window.Variants && Variants.repOf('nes', d.id); if (r) return 'nes-x' + String(r).slice(0, 12); } catch (_) {}
     return d.id;
   }
-  let _mdIndex = null;
-  function secondSource(d) {
-    const GM = window.GameMeta; if (!GM || !GM.lookup || !GM.thumbUrl) return Promise.resolve(null);
-    if (!_mdIndex) _mdIndex = fetch('metadata/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
-    return Promise.all([GM.lookup(d), _mdIndex]).then(([hit, ix]) => {
-      const lr = hit && ix && ix.shelves && ix.shelves[hit.shelf] && ix.shelves[hit.shelf].lr;
-      if (lr && hit.rec && hit.rec.n && GM.refusedArt && GM.refusedArt(lr, hit.rec.n)) return null;
-      return lr && hit.rec && hit.rec.n ? GM.thumbUrl(lr, hit.rec.n) : null;
-    }).catch(() => null);
-  }
   /* The URLs to try for one cover, in the tiles' order. mode '2d' | '3d'. */
   async function coverUrls(d, p, mode) {
     const src = k => k ? call('imgSrc', k) : '';
@@ -373,7 +363,6 @@
       const id = atariArtId(d), b = id && COVERS[id.slice(0, 5)] && COVERS[id.slice(0, 5)][mode];
       if (b) out.push(b + '/' + id + '.png');
     }
-    if (mode === '2d') out.push(await secondSource(d));   // the tiles' fallback (there is none for 3D)
     /* THE LAST SOURCE (21 Oct): the system's generic box, generic.png in its 2D bucket, as
        the tiles show it (emby.js paintGenericArt); the strip then always shows what the tile shows.
        No generic 3D box. */

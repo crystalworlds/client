@@ -2,6 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+/* After a log out (index.html logoutVault): before any other script runs, clear what the page may have
+   written while it closed, and delete the databases it could not delete while they were open. A
+   database deleted here is gone before any later script can open it (the browser runs open and delete
+   requests for one name in order). Plain ES5: it runs first. */
+(function () {
+  /* Logged out in another tab of this site (every key cleared at once): this tab follows. */
+  try { window.addEventListener('storage', function (e) { if (e.key === null && e.storageArea === window.localStorage) location.reload(); }); } catch (e) {}
+  var names = null;
+  try { names = JSON.parse(sessionStorage.getItem('cw.wipe.v1') || 'null'); } catch (e) { names = null; }
+  if (!names) return;
+  try { localStorage.clear(); } catch (e) {}
+  try { sessionStorage.clear(); } catch (e) {}
+  try { for (var i = 0; i < names.length; i++) if (typeof names[i] === 'string') indexedDB.deleteDatabase(names[i]); } catch (e) {}
+})();
+</script>
 <!-- REAL PAGE ADDRESSES (22 Oct 2026: real paths (History API) with old # links
      forwarding). The site server (tools/localserver routes.go) answers /about, /compatibility,
      /nes/hardware, /device/<id> ... with this page and says so (Server-Timing: cw-paths); the public
@@ -52,7 +68,7 @@
     if (started) return;
     started = 1;
     var s = document.createElement('script');
-    s.src = 'stories.js?v=2.1.1';
+    s.src = 'stories.js?v=2.2.0';
     s.onload = function () { while (q.length) { try { q.shift()(window.CwStories); } catch (e) {} } };
     s.onerror = function () { started = 0; q = []; };
     document.head.appendChild(s);
@@ -188,27 +204,29 @@
      sign-ins from being lost, says so when they were, and records a storage
      check (?diag=1, ?diag=storage, Settings). Loaded first so it sees the
      storage before anything writes to it. -->
-<script src="keep.js?v=2.1.1"></script>
+<!-- Every drop-down's opened list (select-list.js, 14 Nov 2026): the current choice in the accent. First of the key handlers, so an open list keeps its keys. -->
+<script src="play/shared/select-list.js?v=2.2.0"></script>
+<script src="keep.js?v=2.2.0"></script>
 <!-- Links anyone can paste (#/compatibility, #/media/about, #/<system>/hardware ...): deeplinks.js, 2026-10-21. In the head so the first applyHashRoute can ask it. -->
-<script src="deeplinks.js?v=2.1.1"></script>
+<script src="deeplinks.js?v=2.2.0"></script>
 <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report anything at
      all. Without it the platform letterboxes the page into the safe area and
      the insets come back as 0, so the TV overscan rules (body.gnw-tv, in the
      stylesheet) would have nothing to honour. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Crystal Worlds</title>
+<title>CrystalWorlds</title>
 <meta name="description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
 <link rel="canonical" href="./">
 <link rel="icon" type="image/svg+xml" href="./FavIcon/favicon.svg">
 <link rel="icon" type="image/x-icon" href="./FavIcon/favicon.ico">
 <link rel="icon" type="image/png" sizes="96x96" href="./FavIcon/favicon-96x96.png">
 <link rel="apple-touch-icon" href="./FavIcon/apple-touch-icon.png">
-<link rel="manifest" href="./FavIcon/site.webmanifest?v=2.0.0">
+<link rel="manifest" href="./FavIcon/site.webmanifest?v=2.2.0">
 <!-- The name under the home-screen icon (2026-10-17: it said
      "Game & Watch", it should say Crystal Worlds). Android takes it from the
      manifest's short_name; iPhone and iPad from apple-mobile-web-app-title. -->
-<meta name="application-name" content="Crystal Worlds">
-<meta name="apple-mobile-web-app-title" content="Crystal Worlds">
+<meta name="application-name" content="CrystalWorlds">
+<meta name="apple-mobile-web-app-title" content="CrystalWorlds">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0e14">
@@ -219,7 +237,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="./">
 <meta property="og:site_name" content="CrystalWorlds.Media">
-<meta property="og:title" content="Crystal Worlds">
+<meta property="og:title" content="CrystalWorlds">
 <meta property="og:description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
 <meta property="og:image" content="./FavIcon/web-app-manifest-512x512.png">
 <meta property="og:image:width" content="512">
@@ -227,7 +245,7 @@
 <meta property="og:image:alt" content="Game &amp; Watch device icon">
 <!-- Twitter / X cards -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Crystal Worlds">
+<meta name="twitter:title" content="CrystalWorlds">
 <meta name="twitter:description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
 <meta name="twitter:image" content="./FavIcon/web-app-manifest-512x512.png">
 <!-- The page's own address goes into the links above, so every copy of the site names
@@ -350,12 +368,15 @@
      The measurement record and the reasoning are in the file. See the block
      headed "THE SCREEN APERTURE, DECLARED ONCE" below for the mechanism this
      plugs into, and WASM_Source/nes-artwork/verify.sh for what re-checks it. -->
-<link rel="stylesheet" href="nes-screen.css?v=2.1.1">
+<link rel="stylesheet" href="nes-screen.css?v=2.2.0">
 <!-- Which of the three NES-family consoles (NES / Famicom / Disk System) a title
      is shown on. Tiny and synchronous, because the NES catalogue reads it as it
      adopts titles and content_pack.js reads it while it still has the bytes. -->
-<script src="nes-console-hash.js?v=2.1.1"></script>
-<script src="nes-console.js?v=2.1.1"></script>
+<script src="nes-console-hash.js?v=2.2.0"></script>
+<!-- Bad copies repaired on load (13 Nov 2026): the alias table first, before any title is classified or grouped. -->
+<script src="firmware/repairs/alias.js?v=2.2.0"></script>
+<script src="firmware/site/repairs.js?v=2.2.0"></script>
+<script src="nes-console.js?v=2.2.0"></script>
 <!-- The four Atari apertures, on exactly the same footing and for exactly the
      same reason: play/atari2600/index.html and its three siblings are separate
      documents putting a picture on the same glass. One file rather than four
@@ -365,16 +386,16 @@
      properties. A mapping is a reference, not a copy.
      Re-checked by WASM_Source/atari-artwork/verify.sh, which also runs the
      detector against nes.png as a control. -->
-<link rel="stylesheet" href="atari-screen.css?v=2.1.1">
-<link rel="stylesheet" href="page-audio.css?v=2.1.1">
+<link rel="stylesheet" href="atari-screen.css?v=2.2.0">
+<link rel="stylesheet" href="page-audio.css?v=2.2.0">
 <!-- The Features window (31 Oct): features.js draws it, emby.js opens it from the button right of Home. -->
-<link rel="stylesheet" href="features.css?v=2.1.1">
+<link rel="stylesheet" href="features.css?v=2.2.0">
 <!-- On a small screen there is no red frame, so every window follows the light theme (7 Nov 2026). -->
-<link rel="stylesheet" href="small-light.css?v=2.1.1">
+<link rel="stylesheet" href="small-light.css?v=2.2.0">
 <!-- Which Lynx cartridges are held on their side (2026-10-07): one per-hash list,
      read here for the one-column turned tile and by play/atarilynx/app.js for
      the play window's turn. -->
-<script src="play/atarilynx/turned.js?v=2.1.1"></script>
+<script src="play/atarilynx/turned.js?v=2.2.0"></script>
 <style>
   :root {
     --cover-inset: 8%;   /* box-art border, the Game & Watch tiles' measured median; see "CARTRIDGE BOXES" */
@@ -5504,6 +5525,32 @@
     min-height: 0;
   }
 
+  /* OLD TV ENGINES (LG webOS 22 = Chromium 87, Samsung Tizen 6.5 = Chromium 85). They do not
+     know :where(), so the three tile-view rules above are thrown away whole and the Media page
+     stays inside the device frame's 168 px logo column. The same rules again without :where(),
+     only where :where() is missing; a current browser never reads this block. The child
+     combinators reach the page's own frame only: not the loading shell, not the About window. */
+  @supports not selector(:where(a)) {
+    body.tile-view-active main > .gw-frame-outer { margin: 24px 0 40px; padding: 0; background: none; box-shadow: none; border-radius: 0; }
+    body.tile-view-active main > .gw-frame-outer > .gw-frame-bezel { background: none; padding: 0; display: block; }
+    body.tile-view-active main > .gw-frame-outer .gw-screen-wrap > .gw-frame-screen { background: none; padding: 0; min-height: 0; }
+  }
+  /* No aspect-ratio before Chromium 88: a tile's picture box has no height and the tile shrinks
+     to its caption. The old padding-top box instead (a percentage of the width). */
+  @supports not (aspect-ratio: 1 / 1) {
+    .device-card .img { height: 0; padding-top: 80%; }                                 /* 5/4 */
+    .device-card.tile-tall .img, .video-card .img { padding-top: 120%; }               /* 5/6 */
+    .device-card.tile-tall-2x .img { padding-top: 160%; }                              /* 5/8 */
+    .device-card.tile-wide .img { padding-top: 53.333%; }                              /* 15/8 */
+    .device-card.tile-wide.tile-tall-2x .img { padding-top: 80%; }                     /* 5/4 */
+    .device-card.tile-wide.tile-tall-2x[data-tile-ratio] .img { padding-top: 60%; }    /* 5/3 */
+    .device-card .img[style*="height"] { padding-top: 0; }                              /* sizeWideTiles set it */
+    .video-card.trailer .img { height: auto; padding-top: 0; }
+    .video-card.trailer .tr-sizer { height: 0; padding-top: calc((50% - 9px) * 1.2); }
+    .video-card .img.missing .video-noart { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; }
+    #video-grid .vw-main { height: 0; padding-top: 120%; }
+  }
+
   /* THE ABOUT WINDOW ON THE MEDIA PAGE (19 Oct). emby.js draws the About
      text under the toolbar inside .gw-frame-outer.about-pop. The Media page sets
      body.tile-view-active, which strips the device frame; these rules draw it
@@ -5526,7 +5573,7 @@
      a 256 px tile over the same flat colour, which still shows if the picture fails to load. */
   .gw-frame-bezel,
   html body .about-pop .gw-frame-bezel {
-    background-image: url('./frame/linen.png?v=2.1.1');
+    background-image: url('./frame/linen.png?v=2.2.0');
     background-size: 256px 256px;
     background-repeat: repeat;
   }
@@ -6558,20 +6605,20 @@
             <ul class="sys-logos" aria-label="Movies, shows and the 14 consoles and handhelds you can play here">
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="2.5" y1="8" x2="7" y2="8"/><line x1="2.5" y1="16" x2="7" y2="16"/><line x1="17" y1="8" x2="21.5" y2="8"/><line x1="17" y1="16" x2="21.5" y2="16"/></svg><span>Movies</span></li>
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-3)" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><polyline points="7.5 3 12 7 16.5 3"/></svg><span>Shows</span></li>
-              <li><img src="images/consoles/gameandwatch.webp?v=2.1.1" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
-              <li><img src="images/consoles/tft_mario.webp?v=2.1.1" alt="" loading="lazy"><span>Mario Bros.</span></li>
-              <li><img src="images/consoles/tft_zelda.webp?v=2.1.1" alt="" loading="lazy"><span>Legend of Zelda</span></li>
-              <li><img src="images/consoles/tetrisjr.webp?v=2.1.1" alt="" loading="lazy"><span>Tetris Jr.</span></li>
-              <li><img src="images/consoles/gb.webp?v=2.1.1" alt="" loading="lazy"><span>Game Boy</span></li>
-              <li><img src="images/consoles/gbc.webp?v=2.1.1" alt="" loading="lazy"><span>Game Boy Color</span></li>
-              <li><img src="images/consoles/pokemini.webp?v=2.1.1" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
-              <li><img src="images/consoles/nes.webp?v=2.1.1" alt="" loading="lazy"><span>NES</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.1.1" alt="" loading="lazy"><span>Famicom</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.1.1" alt="" loading="lazy"><span>Disk System</span></li>
-              <li><img src="images/consoles/atari2600.webp?v=2.1.1" alt="" loading="lazy"><span>Atari 2600</span></li>
-              <li><img src="images/consoles/atari5200.webp?v=2.1.1" alt="" loading="lazy"><span>Atari 5200</span></li>
-              <li><img src="images/consoles/atari7800.webp?v=2.1.1" alt="" loading="lazy"><span>Atari 7800</span></li>
-              <li><img src="images/consoles/atarilynx.webp?v=2.1.1" alt="" loading="lazy"><span>Atari Lynx</span></li>
+              <li><img src="images/consoles/gameandwatch.webp?v=2.2.0" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
+              <li><img src="images/consoles/tft_mario.webp?v=2.2.0" alt="" loading="lazy"><span>Mario Bros.</span></li>
+              <li><img src="images/consoles/tft_zelda.webp?v=2.2.0" alt="" loading="lazy"><span>Legend of Zelda</span></li>
+              <li><img src="images/consoles/tetrisjr.webp?v=2.2.0" alt="" loading="lazy"><span>Tetris Jr.</span></li>
+              <li><img src="images/consoles/gb.webp?v=2.2.0" alt="" loading="lazy"><span>Game Boy</span></li>
+              <li><img src="images/consoles/gbc.webp?v=2.2.0" alt="" loading="lazy"><span>Game Boy Color</span></li>
+              <li><img src="images/consoles/pokemini.webp?v=2.2.0" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
+              <li><img src="images/consoles/nes.webp?v=2.2.0" alt="" loading="lazy"><span>NES</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.2.0" alt="" loading="lazy"><span>Famicom</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.2.0" alt="" loading="lazy"><span>Disk System</span></li>
+              <li><img src="images/consoles/atari2600.webp?v=2.2.0" alt="" loading="lazy"><span>Atari 2600</span></li>
+              <li><img src="images/consoles/atari5200.webp?v=2.2.0" alt="" loading="lazy"><span>Atari 5200</span></li>
+              <li><img src="images/consoles/atari7800.webp?v=2.2.0" alt="" loading="lazy"><span>Atari 7800</span></li>
+              <li><img src="images/consoles/atarilynx.webp?v=2.2.0" alt="" loading="lazy"><span>Atari Lynx</span></li>
             </ul>
           </div>
         </div>
@@ -7422,7 +7469,7 @@
     <div class="modal-head">
       <div>
         <div class="modal-sub">Settings</div>
-        <div class="modal-title">Version 2.1.1</div>
+        <div class="modal-title">Version 2.2.0</div>
       </div>
       <button class="modal-close" onclick="closeOverlay('vault-overlay')" aria-label="Close">×</button>
     </div>
@@ -7433,14 +7480,14 @@
           <div>
             <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:.01em;">No passwords. No accounts. Just a vault code.</div>
             <p style="color:var(--muted); font-size:12.5px; line-height:1.55; margin:0;">
-              This site doesn't use logins or sign-ups. Instead, this browser holds a single random <strong style="color:var(--text); font-weight:700;">vault code</strong> (a UUID). The vault itself keeps only that code and, if you add one, a recovery email. Your play time, saves and settings stay in this browser, not in the vault. Anyone who knows the code can change or delete the vault; nobody else can. Save it in a password manager. If you lose the code and saved no recovery email, it cannot be found again: there's no password reset, because there's no password. Sponsors can choose to sign in with GitHub to read the Stories; nothing else here needs it.
+              This site doesn't use logins or sign-ups. Instead, this browser holds a single random <strong style="color:var(--text); font-weight:700;">vault code</strong> (a UUID). The vault itself keeps only that code and, if you add one, a recovery email. Your play time, saves and settings stay in this browser, not in the vault. Anyone who knows the code can change or delete the vault; nobody else can. Save it in a password manager. If you lose the code, a saved recovery email together with your PIN gets it back; without them it cannot be found again: there's no password reset, because there's no password. Sponsors can choose to sign in with GitHub to read the Stories; nothing else here needs it.
             </p>
           </div>
         </div>
       </div>
       <div class="settings-layout">
         <div class="settings-tabs" role="tablist">
-          <button class="settings-tab active" data-tab="code" role="tab" aria-selected="true" onclick="switchSettingsTab('code')">Access Code</button>
+          <button class="settings-tab active" data-tab="code" role="tab" aria-selected="true" onclick="switchSettingsTab('code')">Your vault</button>
           <button class="settings-tab" data-tab="appearance" role="tab" aria-selected="false" onclick="switchSettingsTab('appearance')">Appearance</button>
           <button class="settings-tab" data-tab="content" role="tab" aria-selected="false" onclick="switchSettingsTab('content');gnwRenderContentStatus()">Content</button>
           <button class="settings-tab" data-tab="data" role="tab" aria-selected="false" onclick="switchSettingsTab('data')">Data &amp; Recovery</button>
@@ -7521,6 +7568,8 @@
 
           <!-- ACCESS CODE tab: the code itself, switching vaults, rotating it -->
           <div class="settings-panel active" data-panel="code" role="tabpanel">
+            <!-- Your name and picture (filled by cws-reach.mjs): picture, name and PIN, above the code. -->
+            <section class="vault-section" id="cw-me-section" hidden></section>
             <section class="vault-section">
               <label style="display:block; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Current code</label>
               <p style="color:var(--muted); font-size:12px; margin:0 0 10px; line-height:1.5;">
@@ -7579,7 +7628,7 @@
             <section class="vault-section">
               <label style="display:block; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Recovery email <span style="text-transform:none; letter-spacing:0; color:var(--muted); font-weight:400;">(optional)</span></label>
               <p style="color:var(--muted); font-size:12px; margin:0 0 10px; line-height:1.5;">
-                Stored against this vault only so <em>Lost your code?</em> below can mail the code to you. Not used for login. You can leave this blank.
+                Stored against this vault only so <em>Lost your code?</em> below can mail the code to you, once you also enter this vault's PIN. Not used for login. You can leave this blank.
               </p>
               <div style="display:flex; gap:8px; align-items:center;">
                 <input id="vault-email-input" type="email" placeholder="you@example.com" style="flex:1; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--text); font-size:13px;">
@@ -7591,11 +7640,12 @@
             <section class="vault-section">
               <label style="display:block; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Lost your code? <span style="text-transform:none; letter-spacing:0; color:var(--muted); font-weight:400;">(email recovery)</span></label>
               <p style="color:var(--muted); font-size:12px; margin:0 0 10px; line-height:1.5;">
-                If you saved a recovery email against a vault, enter that address and we'll mail the code to it. Pasting the received code into <em>Switch to a different vault</em> (Access Code tab) gives you back in.
+                If you saved a recovery email against a vault, enter that address and the vault's PIN. When both match, we'll mail the code to that address. Pasting the received code into <em>Switch to a different vault</em> (Your vault) gives you back in.
               </p>
-              <div style="display:flex; gap:8px; align-items:center;">
-                <input id="vault-recover-input" type="email" placeholder="you@example.com" style="flex:1; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--text); font-size:13px;">
-                <button class="btn-tiny" onclick="recoverByEmail()">Send recovery</button>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <input id="vault-recover-input" type="email" placeholder="you@example.com" aria-label="Recovery email" style="flex:1; min-width:180px; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--text); font-size:13px;">
+                <input id="vault-recover-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="PIN" aria-label="The vault's PIN" style="width:110px; box-sizing:border-box; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--text); font-size:13px; font-family:ui-monospace,Consolas,monospace; letter-spacing:.15em;">
+                <button class="btn-tiny" onclick="recoverByEmail()">Send my code</button>
               </div>
               <div id="vault-recover-msg" style="margin-top:8px; font-size:12px; color:var(--muted); min-height:18px;"></div>
             </section>
@@ -8350,57 +8400,57 @@
      its builder as a window global; the call sites below are unchanged.
      Placed BEFORE the main script purely so they are defined before
      anything can run; they are only ever CALLED from a drawer render. -->
-<script src="emulation-tab.js?v=2.1.1"></script>
-<script src="emulation-links.js?v=2.1.1"></script>
-<script src="tft-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-machine-emulation-tab.js?v=2.1.1"></script>
-<script src="emu-score-box.js?v=2.1.1"></script>
-<script src="gb-cpu-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-memory-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-ppu-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-apu-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-mappers-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-sgb-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-acceptance-emulation-tab.js?v=2.1.1"></script>
-<script src="gbc-emulation-tab.js?v=2.1.1"></script>
-<script src="gbc-machine-emulation-tab.js?v=2.1.1"></script>
-<script src="gbc-timing-emulation-tab.js?v=2.1.1"></script>
-<script src="gbc-ppu-emulation-tab.js?v=2.1.1"></script>
-<script src="gbc-apu-emulation-tab.js?v=2.1.1"></script>
-<script src="pm-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-machine-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-cpu-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-ppu-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-apu-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-mappers-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-fds-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-peripherals-emulation-tab.js?v=2.1.1"></script>
-<script src="nes-acceptance-emulation-tab.js?v=2.1.1"></script>
-<script src="gb-hardware-tab.js?v=2.1.1"></script>
-<script src="hw-diagram.js?v=2.1.1"></script>
-<script src="nes-hardware-tab.js?v=2.1.1"></script>
-<script src="nes-emulation-index-tab.js?v=2.1.1"></script>
+<script src="emulation-tab.js?v=2.2.0"></script>
+<script src="emulation-links.js?v=2.2.0"></script>
+<script src="tft-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-machine-emulation-tab.js?v=2.2.0"></script>
+<script src="emu-score-box.js?v=2.2.0"></script>
+<script src="gb-cpu-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-memory-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-ppu-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-apu-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-mappers-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-sgb-emulation-tab.js?v=2.2.0"></script>
+<script src="gb-acceptance-emulation-tab.js?v=2.2.0"></script>
+<script src="gbc-emulation-tab.js?v=2.2.0"></script>
+<script src="gbc-machine-emulation-tab.js?v=2.2.0"></script>
+<script src="gbc-timing-emulation-tab.js?v=2.2.0"></script>
+<script src="gbc-ppu-emulation-tab.js?v=2.2.0"></script>
+<script src="gbc-apu-emulation-tab.js?v=2.2.0"></script>
+<script src="pm-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-emulation-tab.js?v=2.2.0-acc220"></script>
+<script src="nes-machine-emulation-tab.js?v=2.2.0-acc220"></script>
+<script src="nes-cpu-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-ppu-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-apu-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-mappers-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-fds-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-peripherals-emulation-tab.js?v=2.2.0"></script>
+<script src="nes-acceptance-emulation-tab.js?v=2.2.0-acc220"></script>
+<script src="gb-hardware-tab.js?v=2.2.0"></script>
+<script src="hw-diagram.js?v=2.2.0"></script>
+<script src="nes-hardware-tab.js?v=2.2.0"></script>
+<script src="nes-emulation-index-tab.js?v=2.2.0"></script>
 <!-- The four Atari build guides (2026-10-18): generated in the Atari emulator's source tree by
      tools/build_emulation_tabs.mjs from docs/emulation*, copied unchanged (--check green
      2026-10-18, tab_name_check green). The dispatcher composes each drawer from its own guide plus the
      chapters it borrows from another Atari guide, so all five files load together. -->
-<script src="atari2600-emulation-tab.js?v=2.1.1"></script>
-<script src="atari5200-emulation-tab.js?v=2.1.1"></script>
-<script src="atari7800-emulation-tab.js?v=2.1.1"></script>
-<script src="atarilynx-emulation-tab.js?v=2.1.1"></script>
-<script src="atari-emulation-index-tab.js?v=2.1.1"></script>
-<script src="gnw-emulation-shared-tab.js?v=2.1.1"></script>
-<script src="gnw-sm510-emulation-tab.js?v=2.1.1"></script>
-<script src="gnw-sm5a-emulation-tab.js?v=2.1.1"></script>
-<script src="gnw-sm511-emulation-tab.js?v=2.1.1"></script>
-<script src="atari-hardware-tab.js?v=2.1.1"></script>
-<script src="gamemeta.js?v=2.1.1"></script>
+<script src="atari2600-emulation-tab.js?v=2.2.0"></script>
+<script src="atari5200-emulation-tab.js?v=2.2.0"></script>
+<script src="atari7800-emulation-tab.js?v=2.2.0"></script>
+<script src="atarilynx-emulation-tab.js?v=2.2.0"></script>
+<script src="atari-emulation-index-tab.js?v=2.2.0"></script>
+<script src="gnw-emulation-shared-tab.js?v=2.2.0"></script>
+<script src="gnw-sm510-emulation-tab.js?v=2.2.0"></script>
+<script src="gnw-sm5a-emulation-tab.js?v=2.2.0"></script>
+<script src="gnw-sm511-emulation-tab.js?v=2.2.0"></script>
+<script src="atari-hardware-tab.js?v=2.2.0"></script>
+<script src="gamemeta.js?v=2.2.0"></script>
 <!-- Home-page narration (2026-10-12): recorded narration on R2 (site-audio bucket),
      per-word timings generated offline; see page-audio.js. -->
-<script src="page-audio-timings.js?v=2.1.1"></script>
-<script src="page-audio.js?v=2.1.1"></script>
+<script src="page-audio-timings.js?v=2.2.0"></script>
+<script src="page-audio.js?v=2.2.0"></script>
 
 <script>
 /* === Image data === Since 2026-10-24 device pictures are single files under
@@ -8474,7 +8524,7 @@ const SERIES = [
   // of the cartridge's own label. Kept OUT of the Game & Watch series dropdown like the two above.
   { id:'super-game-boy', name:'Super Game Boy', short:'Super Game Boy', years:'1994 – 1998', color:'#e0457b',
     blurb:'A Game Boy inside a Super NES cartridge: the same games on a television, with colours, a picture frame around the screen and up to four players.',
-    long:'The Super Game Boy (SHVC-027) shipped in June 1994: a Super NES cartridge holding a whole Game Boy, whose picture the Super NES shows on a television. A game made for it can send its own colours and a picture frame (the border) to the Super NES, and ask for up to four controllers. The Super Game Boy 2 (Japan, 1998) added a link port and the correct Game Boy clock. Here the shelf plays those games in the Game Boy core with the Super NES side emulated at a high level: borders, colours and multiplayer.' },
+    long:'The Super Game Boy (SHVC-027) shipped in June 1994: a Super NES cartridge holding a whole Game Boy, whose picture the Super NES shows on a television. A game made for it can send its own colours and a picture frame (the border) to the Super NES, and ask for up to four controllers. The Super Game Boy 2 (Japan, 1998) added a link port and the correct Game Boy clock. Here the shelf plays those games in the Game Boy core with the Super NES side emulated: borders, colours and multiplayer at a high level, and its own sound chip in full.' },
   // NES — the third parallel catalogue, and the first that is not a handheld.
   // The accent is the console's own front-panel red, sampled from the
   // photograph in images_nes_b64.json rather than picked.
@@ -13161,7 +13211,7 @@ function pmDemoScriptFor(id) {
 }
 
 // Pre-captured per-title MAIN-SCREEN boot states (play/pokemini/pm-states.json):
-// titleId -> { rom, lands, size, state:base64 }. Loaded once, cached. Rendering
+// titleId -> { lands, size, state:base64 }. Loaded once, cached. Rendering
 // the live slot-in animation to this PRC frame, then loadBootState(), lands the
 // game on its main screen instantly. 66 is the measured boundary — the BIOS
 // slot-in ends ~frame 68 and the first setup screen appears ~frame 74, so 66
@@ -19380,7 +19430,7 @@ function _tftInjectScript(src) {
 }
 function _tftLoadEngine() {
   if (window.ArmTwin) return Promise.resolve();
-  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.1.1');
+  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.2.0');
   return _tftEnginePromise;
 }
 function _tftLoadFirmware(unit) {
@@ -19886,7 +19936,7 @@ let _pmPreviewLastError = null;
 function _pmPreviewLoad() {
   if (_pmPreviewLoadPromise) return _pmPreviewLoadPromise;
   if (!_pmWasmModulePromise) {
-    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.1.1')
+    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.2.0')
       .then(r => { if (!r.ok) throw new Error('pokemini.wasm HTTP ' + r.status); return r.arrayBuffer(); })
       .then(b => WebAssembly.compile(b))
       .then(m => { _pmWasmModule = m; return m; });
@@ -20964,7 +21014,7 @@ const _gbCartBytes = new Map();   // slot -> Uint8Array, held in memory this vis
 // The ONE place the served Game Boy core's URL and ?v= tag live. gbrec.js reads
 // window.GB_WASM_URL for its build stamp, so a core install bumps this line only
 // and the stamp follows it (22 Oct 2026).
-var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.1.1';
+var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.2.0';
 
 // Lazy: nothing below is fetched until a Game Boy tile actually needs it, so a
 // visitor who never opens the catalogue pays nothing.
@@ -23454,7 +23504,7 @@ function renderTimeline() {
       : "routeToMediaSeries('" + t.series + "')";
     // A row may name its own device picture (`ic`, 2026-10-18): Tetris Jr. and the
     // two colour units show their own unit, switched off, not the Game & Watch one.
-    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.1.1' : (iconSrc ? iconSrc(keys[0]) : '');
+    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.2.0' : (iconSrc ? iconSrc(keys[0]) : '');
     // Decorative: the series name beside it already says which system it is.
     const ic = src ? `<img class="tl-ic" src="${src}" alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" data-tl-sys="${keys[0]}">` : '';
     return `<div class="tl-item clickable" style="--c:${s.color}" onclick="${go}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${go}}">
@@ -23610,7 +23660,7 @@ async function rotateVaultCode() {
     sub:          'Rotate access code',
     title:        'Generate a new vault code?',
     body:         'A brand-new code will replace the current one. Your recovery email stays with the vault and this browser\'s play time carries over; only the code changes.\n\n' +
-                  'The old code stops working immediately. Make sure you can save the new one somewhere safe (password manager) before closing this window. If you lose it, only a saved recovery email can get it back.',
+                  'The old code stops working immediately. Make sure you can save the new one somewhere safe (password manager) before closing this window. If you lose it, only a saved recovery email, with your PIN, can get it back.',
     confirmLabel: 'Rotate code',
     danger:       true,
   });
@@ -23710,40 +23760,18 @@ async function saveVaultEmail() {
   }
 }
 
-/* Email recovery — calls the recover-vault Edge Function. Always shows a
-   generic success message regardless of whether the email actually
-   matches a vault, so the page can't be used to enumerate registered
-   addresses. */
+/* Email recovery. Lost your code? needs the recovery email and the
+   vault's PIN, which the vault checks before anything is mailed.
+   cws-reach.mjs replaces this function with the one that does it when
+   the page starts; it needs the browser's crypto, which only the secure
+   (https) site has. This one only says why it cannot run. */
 async function recoverByEmail() {
-  const input = $('#vault-recover-input');
-  const msg   = $('#vault-recover-msg');
-  if (!input) return;
-  const email = (input.value || '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    msg.textContent = 'Enter a valid email address.';
-    msg.style.color = '#f08a5d';
-    return;
-  }
-  if (!supa) {
-    msg.textContent = 'The vault service cannot be reached right now.';
-    msg.style.color = '#f08a5d';
-    return;
-  }
-  msg.textContent = 'Sending…';
-  msg.style.color = 'var(--muted)';
-  try {
-    const { data, error } = await supa.functions.invoke('recover-vault', {
-      body: { email },
-    });
-    if (error) throw error;
-    if (data && data.ok === false) throw new Error(data.error || 'Recovery failed');
-    msg.innerHTML = '<strong style="color:var(--accent)">Sent.</strong> If a vault is registered to this email, you\'ll have it within a minute. Check spam if it doesn\'t arrive.';
-    msg.style.color = 'var(--muted)';
-    input.value = '';
-  } catch (e) {
-    msg.textContent = 'Recovery failed: ' + (e.message || e);
-    msg.style.color = '#f08a5d';
-  }
+  const msg = $('#vault-recover-msg');
+  if (!msg) return;
+  msg.textContent = window.isSecureContext && window.crypto && crypto.subtle
+    ? 'The page is still starting. Try again in a moment.'
+    : 'Lost your code? needs the secure (https) version of this site. Open it there and try again.';
+  msg.style.color = '#f08a5d';
 }
 function toggleVaultSwitch() {
   const section = $('#vault-switch-section');
@@ -23771,36 +23799,68 @@ function copyVaultCode() {
   }
 }
 
-/* Logout — forget this browser's stored vault code and reset to a logged-out
- * state. The vault itself is NOT deleted (it stays on the server, reachable
- * again by pasting the code into "Switch to a different vault"); we only clear
- * the local cache. Mirrors delete_vault's local wipe + reload, minus the
- * server-side delete. Reloading re-runs boot, which mints a fresh empty vault. */
+/* LOG OUT LEAVES THE BROWSER FRESH AND CLEAN (12 Nov 2026). Everything the site keeps in this
+ * browser goes: every localStorage and sessionStorage key, every IndexedDB database (the play
+ * windows' saves and states, the game files, the vault key), Cache Storage, the OPFS game files and
+ * the site's cookies, so media sign-ins and server lists, game server passes, play history and
+ * totals, the vault code and the settings all go. Each game server this browser joined is told it
+ * left (best effort, cws.js leaveAll, never waited on for long). The vault itself is not touched: it
+ * stays in CrystalWorlds. The page then reloads to a first visit; the first script in <head>
+ * finishes the job there before any other script can open a database or write a setting. */
+const CW_WIPE_KEY = 'cw.wipe.v1';
+async function cwWipeBrowser() {
+  let names = [];
+  try { if (indexedDB.databases) names = (await indexedDB.databases()).map((d) => d && d.name).filter(Boolean); } catch (e) {}
+  ['cws-cache', 'cws-reach', 'gnw-subsync'].forEach((n) => { if (names.indexOf(n) < 0) names.push(n); });
+  try { localStorage.clear(); } catch (e) {}
+  try { sessionStorage.clear(); } catch (e) {}
+  cwClearCookies();
+  const jobs = names.map((n) => new Promise((res) => { try { const r = indexedDB.deleteDatabase(n); r.onsuccess = r.onerror = r.onblocked = () => res(); } catch (e) { res(); } }));
+  try { if (window.caches) jobs.push(caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))))); } catch (e) {}
+  try {
+    if (navigator.storage && navigator.storage.getDirectory) {
+      jobs.push(navigator.storage.getDirectory().then(async (root) => {
+        const ks = []; for await (const k of root.keys()) ks.push(k);
+        await Promise.all(ks.map((k) => root.removeEntry(k, { recursive: true }).catch(() => {})));
+      }).catch(() => {}));
+    }
+  } catch (e) {}
+  await Promise.race([Promise.all(jobs), new Promise((r) => setTimeout(r, 3000))]);
+  /* Anything that stayed open (a database another part of the page still holds) is deleted after the
+     reload, before any script opens it again. */
+  try { sessionStorage.setItem(CW_WIPE_KEY, JSON.stringify(names)); } catch (e) {}
+}
+function cwClearCookies() {
+  try {
+    const host = location.hostname, parts = host.split('.');
+    const domains = [''];
+    for (let i = 0; i < parts.length - 1; i++) domains.push('; domain=' + parts.slice(i).join('.'));
+    (document.cookie || '').split(';').forEach((c) => {
+      const name = c.split('=')[0].trim(); if (!name) return;
+      domains.forEach((d) => { document.cookie = name + '=; Max-Age=0; Path=/' + d; });
+    });
+  } catch (e) {}
+}
 async function logoutVault() {
   const msg = $('#vault-msg');
   const proceed = await confirmModal({
     sub:          'Log out',
-    title:        'Log out of this vault?',
-    body:         'This browser will forget the vault code' + (vaultCode ? ' (' + vaultCode + ')' : '') + ' and start fresh.\n\n' +
-                  'Your vault is NOT deleted: you can get back in any time by pasting the code into "Switch to a different vault".\n\n' +
-                  'Make sure you have saved the code first: it is the only key to your vault and to this browser\'s play time.',
+    title:        'Log out of this browser?',
+    body:         'Everything CrystalWorlds keeps on this browser is removed: your vault code, your media server sign-ins and server lists, your game servers and their passes, play history and play time, saves and states, downloaded games and your settings. Your game servers are told this browser has left.\n\n' +
+                  'Your vault itself stays safe in CrystalWorlds. To come back, choose Existing member and enter your vault code, then your PIN.\n\n' +
+                  'Save your vault code first (above, under Current code): it is the only way back into your vault.',
     confirmLabel: 'Log out',
-    danger:       false,
+    danger:       true,
   });
   if (!proceed) {
     if (msg) { msg.textContent = 'Cancelled: still logged in.'; msg.style.color = 'var(--muted)'; }
     return;
   }
-  // Clear the local cache of the vault code (+ collection cache + touched flag)
-  // and reset in-memory state, then reload into a fresh, logged-out session.
-  try { localStorage.removeItem(VAULT_CODE_KEY); } catch (_) {}
-  clearVaultTouched();
+  if (msg) { msg.innerHTML = '<strong style="color:var(--accent)">Logging out.</strong> Clearing this browser…'; msg.style.color = 'var(--accent)'; }
+  try { if (window.CWS && CWS.leaveAll) await CWS.leaveAll(1500); } catch (e) {}
   vaultCode = null;
-  if (msg) {
-    msg.innerHTML = '<strong style="color:var(--accent)">Logged out.</strong> Reloading…';
-    msg.style.color = 'var(--accent)';
-  }
-  setTimeout(() => { location.reload(); }, 900);
+  await cwWipeBrowser();
+  location.replace(window.__cwPaths ? '/' : location.pathname);
 }
 
 /* Repaint after the vault code changes. The vault holds no device data any
@@ -25493,7 +25553,7 @@ function bootApp() {
      Built by WASM_Source/art-files/build.py (BUILD.md, "Device pictures as single files");
      ?v= is the index's own hash, and art-files/verify.sh fails if it is not. It must load
      before the script below, whose init() boots the page (imgSrc reads it at first use). -->
-<script src="images/art/art-index.js?v=2.1.1"></script>
+<script src="images/art/art-index.js?v=2.2.0"></script>
 <script>
 /* THE PICTURE ARCHIVES ARE RETIRED (2026-10-24).
    Until today eleven files (images_b64.json ... images_gbc_shells_b64.json, 59.9 MB on 23 Oct,
@@ -25686,46 +25746,46 @@ function _hideLoadingOverlay() {
      caching can serve a stale copy for up to Cache-Control's max-age after
      a deploy. -->
 <!-- Data sources switched off in Settings, kept set up (28 Oct): read by content_pack.js, cws.js and emby.js. -->
-<script src="source-switch.js?v=2.1.1"></script>
-<script src="firmware/site/sha.js?v=2.1.1"></script>
+<script src="source-switch.js?v=2.2.0"></script>
+<script src="firmware/site/sha.js?v=2.2.0"></script>
 <!-- The unsupported list (2026-10-05): hashes of games and firmware that are refused
      at load, with a reason each. Read by every play window, the tiles (variants.js),
      the Continue row and Settings; generated by tools/unsupported/build.mjs. -->
-<script src="firmware/site/unsupported.js?v=2.1.1"></script>
-<script src="firmware/site/content_pack.js?v=2.1.1"></script>
-<script src="firmware/site/cloud_storage.js?v=2.1.1"></script>
-<script src="keys-diagram.js?v=2.1.1"></script>
-<script src="play/gnw/gwc-core.js?v=2.1.1"></script>
-<script src="play/gnw/gwc-saves.js?v=2.1.1"></script>
-<script src="play/play-pill.js?v=2.1.1"></script>
-<script src="play/gnw/gnw-host.js?v=2.1.1"></script>
+<script src="firmware/site/unsupported.js?v=2.2.0"></script>
+<script src="firmware/site/content_pack.js?v=2.2.0"></script>
+<script src="firmware/site/cloud_storage.js?v=2.2.0"></script>
+<script src="keys-diagram.js?v=2.2.0"></script>
+<script src="play/gnw/gwc-core.js?v=2.2.0"></script>
+<script src="play/gnw/gwc-saves.js?v=2.2.0"></script>
+<script src="play/play-pill.js?v=2.2.0"></script>
+<script src="play/gnw/gnw-host.js?v=2.2.0"></script>
 <!-- Subtitles: the player's own subtitle engine (subs.js) loads before emby.js so the
      Settings panel emby.js draws at load can include its section. subsync.js is
      lazy-loaded by subs.js on the first Auto-sync. -->
-<script src="subs.js?v=2.1.1"></script>
+<script src="subs.js?v=2.2.0"></script>
 <!-- Server conversion (Emby A): Emby's transcoder for files the browser can't play, picture
      subtitles burned in, and /Sessions/Playing reports. After subs.js (it registers the
      picture-subtitle handler there), before emby.js (its Settings section draws at load).
      Loads hls.js from vendor/hls.js-1.6.13/ only when a conversion actually starts. -->
-<script src="embytranscode.js?v=2.1.1"></script>
+<script src="embytranscode.js?v=2.2.0"></script>
 <!-- Player add-ons (Emby B): seek bar with preview thumbnails and chapters, and Up Next.
      Before emby.js so its Settings panel can include the Up Next card at load. -->
-<script src="embytrick.js?v=2.1.1"></script>
-<script src="embyupnext.js?v=2.1.1"></script>
-<script src="embytitle.js?v=2.1.1"></script>
+<script src="embytrick.js?v=2.2.0"></script>
+<script src="embyupnext.js?v=2.2.0"></script>
+<script src="embytitle.js?v=2.2.0"></script>
 <!-- variants.js: one tile per game, variants grouped by file hash (firmware/variants/). Before emby.js, which collapses its pools through it. -->
-<script src="variants.js?v=2.1.1"></script>
+<script src="variants.js?v=2.2.0"></script>
 <!-- drawer-unified.js: ONE game drawer for every system, the default since 2026-10-14; ?drawer=default (or old) brings back the old drawers (docs/UNIFIED-BUILD-PLAN.md phase 7). Before keys.js, so its B-in-a-version-submenu key comes first. -->
-<script src="emulation-test-carts.js?v=2.1.1"></script>
-<script src="drawer-unified.js?v=2.1.1"></script>
-<script src="widgets-extra.js?v=2.1.1"></script>
-<script src="emby.js?v=2.1.1"></script>
-<script src="features.js?v=2.1.1"></script>
-<script src="checked-rebuilding.js?v=2.1.1"></script>
+<script src="emulation-test-carts.js?v=2.2.0"></script>
+<script src="drawer-unified.js?v=2.2.0"></script>
+<script src="widgets-extra.js?v=2.2.0"></script>
+<script src="emby.js?v=2.2.0"></script>
+<script src="features.js?v=2.2.0-feats220"></script>
+<script src="checked-rebuilding.js?v=2.2.0-gbsweep"></script>
 <!-- R.O.B.: the Play Time tile, his drawer and window (rob-shelf.js, 2026-10-21); his Systems menu entry is emby.js ROB_SYSTEM (22 Oct). -->
-<script src="rob-shelf.js?v=2.1.1"></script>
+<script src="rob-shelf.js?v=2.2.0"></script>
 <!-- The compatibility list window (compat.js, 2026-10-21): opened by the toolbar button left of Timeline. Before keys.js and nav.js, so its row keys come first. -->
-<script src="compat.js?v=2.1.1"></script>
+<script src="compat.js?v=2.2.0-smb5200"></script>
 <!-- In-browser Game Boy recorder for the Video page. TURNED OFF 2026-09-24
      (GBREC.ENABLED = false): clips are being published for the whole
      library, so the wall plays those and boots the real machine for titles that
@@ -25737,7 +25797,7 @@ function _hideLoadingOverlay() {
      run before this file simply reads no GBREC and builds `data-gb` tiles,
      which is today's behaviour anyway — so re-enabling the recorder takes a
      re-render (any route change) or a reload, as gbrec.js's setEnabled says. -->
-<script src="gbrec.js?v=2.1.1"></script>
+<script src="gbrec.js?v=2.2.0"></script>
 <!-- Published Game Boy clips, served from R2 and keyed by cartridge SHA-1. It
      owns `.gb-emu[data-gb]`, which since 2026-09-24 means the MEDIA WALL as
      well as the catalogue grids: a claimed tile never builds a core at all (see
@@ -25745,31 +25805,31 @@ function _hideLoadingOverlay() {
      gbrec.js above owns `#video-grid .gb-emu[data-gbrec]` and is turned off, so
      that selector matches nothing. Same load position and for the same reasons
      — after emby.js, after the inline script. -->
-<script src="gbvideo.js?v=2.1.1"></script>
+<script src="gbvideo.js?v=2.2.0"></script>
 <!-- Recorded NES / Famicom / FDS tiles (`.nes-emu[data-nes]`), the NES
      counterpart of gbvideo.js. OFF until its LIST_URL names a published clip
      list (NES_Capture tools/clip_list.mjs); until then it claims nothing and
      every NES tile is live or a photograph exactly as before. Always muted. -->
-<script src="nesvideo.js?v=2.1.1"></script>
+<script src="nesvideo.js?v=2.2.0"></script>
 <!-- Recorded Atari 2600 / 5200 / 7800 / Lynx tiles (`.atari-emu[data-atari]`), the
      Atari counterpart of nesvideo.js: one R2 bucket per machine, `<id>.webm`, no
      list; a 404 hands the tile back to the live sweep. Always muted. -->
-<script src="atarivideo.js?v=2.1.1"></script>
+<script src="atarivideo.js?v=2.2.0"></script>
 <!-- The Media page's Continue row: Emby resume + Up Next + the games closed here,
      one save per game in this browser's IndexedDB. After emby.js (it reads window.Emby)
      and after the inline script (it wraps closePlayModal / closePmPlay and is called
      from closeOverlay). Silent: its cards are still pictures. -->
-<script src="play/host/save-purge.js?v=2.1.1"></script>
-<script src="continuerow.js?v=2.1.1"></script>
+<script src="play/host/save-purge.js?v=2.2.0"></script>
+<script src="continuerow.js?v=2.2.0"></script>
 <!-- The Control Bar's host side (play/shared/host-bridge.js, docs/UNIFIED-PLAY-INTERFACE.md):
      the ?ui=unified flag, the title bar with only the title and x (A14), Last closed,
      the Variant item, full screen (A13). After continuerow.js and variants.js. Silent. -->
-<script src="play/shared/host-bridge.js?v=2.1.1"></script>
+<script src="play/shared/host-bridge.js?v=2.2.0"></script>
 <!-- The one game-file relay for the play host (play/host/site-relay.js, 2026-10-14): {cwNeed} from a host frame, answered from the content pack, the site files, then a game server. -->
-<script src="play/host/site-relay.js?v=2.1.1"></script>
+<script src="play/host/site-relay.js?v=2.2.0"></script>
 <!-- Settings > Play a file: a game file from this device, played from memory (28 Oct). -->
-<script src="loadbar.js?v=2.1.1"></script>
-<script src="play-file.js?v=2.1.1"></script>
+<script src="loadbar.js?v=2.2.0"></script>
+<script src="play-file.js?v=2.2.0"></script>
 <!-- Keyboard first, phase 1 (docs/tv-controller-support.md): one Back, focus into and
      out of every overlay, the pause menu in play windows, the Play key, the player's
      keys and Media Session, Settings -> Display -> TV mode. After emby.js. -->
@@ -25777,50 +25837,50 @@ function _hideLoadingOverlay() {
      that keys.js, nav.js and shortcuts.js dispatch through. Before keys.js. -->
 <!-- The System Switcher (30 Oct 2026): the carousel panel for LB / RB and [ ] , . over the wall.
      Before actions.js and keys.js: its keys are caught first, only while it is open. -->
-<script src="system-switcher.js?v=2.1.1"></script>
-<script src="actions.js?v=2.1.1"></script>
-<script src="keys.js?v=2.1.1"></script>
+<script src="system-switcher.js?v=2.2.0"></script>
+<script src="actions.js?v=2.2.0"></script>
+<script src="keys.js?v=2.2.0"></script>
 <!-- Keyboard first, phase 2 (docs/tv-controller-support.md): arrow keys everywhere -- zones,
      nearest-by-position movement, one Tab stop per row, Settings as a tablist; the TV tile
      lift. After keys.js. -->
-<script src="nav.js?v=2.1.1"></script>
+<script src="nav.js?v=2.2.0"></script>
 <!-- Keyboard first, phase 3: quick jump (/ or Ctrl+K), the ? key list, g-then-letter jumps,
      focus mode, [ and ] (also , and .) through libraries and systems. After nav.js. Silent. -->
-<script src="shortcuts.js?v=2.1.1"></script>
+<script src="shortcuts.js?v=2.2.0"></script>
 <!-- Keyboard first, phase 4: gamepads site-wide (pad buttons are keys of registry actions) and TV
      remote keys; play/play-pad.js is the play windows' pad layer (in-page G&W and Pokemon mini). -->
-<script src="play/play-pad.js?v=2.1.1"></script>
-<script src="gamepad.js?v=2.1.1"></script>
+<script src="play/play-pad.js?v=2.2.0"></script>
+<script src="gamepad.js?v=2.2.0"></script>
 <!-- Keyboard first, phase 5: Settings -> Keyboard & controllers -- rebind the site's keys and pad
      buttons and each system's game controls, saved per viewer (actions.js applies the saved keys
      as it loads). After gamepad.js. Silent. -->
-<script src="keybind.js?v=2.1.1"></script>
+<script src="keybind.js?v=2.2.0"></script>
 <!-- Settings, reorganised into four pages and a phone sheet (docs/SETTINGS-REDESIGN.md).
      After keybind.js: it gathers the panels the other files mount. -->
-<script src="settings-ui.js?v=2.1.1"></script>
+<script src="settings-ui.js?v=2.2.0"></script>
 <!-- Settings > Media and content: a tile per source (media server, game server, content pack)
      and one shared set-up / change panel (2026-10-24; docs/SETTINGS-REDESIGN.md 9). -->
-<script src="settings-sources.js?v=2.1.1"></script>
-<script src="settings-config.js?v=2.1.1"></script>
+<script src="settings-sources.js?v=2.2.0"></script>
+<script src="settings-config.js?v=2.2.0"></script>
 <!-- Settings > Look and feel > Home screen: phones only (2026-10-17). -->
-<script src="install-app.js?v=2.1.1"></script>
-<script src="notify.js?v=2.1.1"></script>
+<script src="install-app.js?v=2.2.0"></script>
+<script src="notify.js?v=2.2.0"></script>
 <!-- Home: the 11 emulators, chip by chip (2026-10-18). -->
-<script src="emulators-table.js?v=2.1.1"></script>
-<script src="docterms.js?v=2.1.1"></script>
+<script src="emulators-table.js?v=2.2.0-feats220-acc220"></script>
+<script src="docterms.js?v=2.2.0"></script>
 <!-- The Control Bar in the site's own document (2026-10-11), for the Pokemon mini window,
      which plays in this page rather than in a frame: the on-screen buttons, the bar, and
      the Pokemon mini's adapter (docs/UNIFIED-PLAY-INTERFACE.md). After keys.js, shortcuts.js
      and play-pad.js, so their Back, help and pad listeners keep their order. ?ui=legacy
      keeps the old window. Silent. -->
-<script src="play/shared/overlay.js?v=2.1.1"></script>
-<script src="play/shared/control-bar.js?v=2.1.1"></script>
-<!-- Crystal Worlds Game Server client: discovery, pairing, PIN, merged library
+<script src="play/shared/overlay.js?v=2.2.0"></script>
+<script src="play/shared/control-bar.js?v=2.2.0"></script>
+<!-- CrystalVault Server client: discovery, pairing, PIN, merged library
      and verified downloads from the player's own servers. After the inline
      script (it wraps logoutVault/importVaultCode/rotateVaultCode and reads
      vaultCode) and after content_pack.js (identify()). -->
-<script src="cws.js?v=2.1.1"></script>
-<script src="sgb-shelf.js?v=2.1.1"></script>
+<script src="cws.js?v=2.2.0"></script>
+<script src="sgb-shelf.js?v=2.2.0"></script>
 <script>
 /* Settings → Content: open/clear a content pack (.zip). Talks to window.__GNW_PACK
    (firmware/site/content_pack.js); the emulators pick it up on the next reload. */
@@ -26038,12 +26098,12 @@ function _hideLoadingOverlay() {
 </script>
 <!-- Same manual-cache-buster convention as gnw.js above -- bump whenever
      manual_booklet.js changes. -->
-<script src="manual_booklet.js?v=2.1.1"></script>
+<script src="manual_booklet.js?v=2.2.0"></script>
 <!-- The recording director (director.js, not part of the public copy): fetched only with ?director=1
      in the address or the local setting cw.director=1; a normal visit never loads it. -->
-<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.1.1'; document.body.appendChild(s); } catch (e) {} })();</script>
+<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.2.0'; document.body.appendChild(s); } catch (e) {} })();</script>
 <!-- The offline page for the installed app (sw.js, offline.html): registered once the page has loaded, never
      on file:, silent if the browser refuses. sw.js handles top-level page loads only. -->
-<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.1.1', { scope: './' }).catch(function () {}); } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
+<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.2.0', { scope: './' }).catch(function () {}); } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
 </body>
 </html>

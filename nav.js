@@ -160,7 +160,8 @@
   /* id, root(), items(root), roving, preferred (the item to hold the tab stop
      when nothing is remembered). In order from the top of the page. */
   const MEDIA_ZONES = [
-    { id: 'nav', root: () => document.querySelector('header'), items: r => focusablesIn(r) },
+    /* The top line: the old top bar (gone), else the person's picture at the right of the site's mark (cws-reach.mjs, 12 Nov). */
+    { id: 'nav', root: () => document.querySelector('header') || document.getElementById('cw-me'), items: r => focusablesIn(r) },
     { id: 'toolbar', root: toolbarRow, roving: true, prefer: '.view-mode-icon-btn.active',
       items: r => Array.from(r.querySelectorAll('button')).filter(b => !b.disabled && !b.closest('.vgames-menu, .vtb-menu') && !b.classList.contains('vg-tab') && visible(b)) },   // an open Views/Sorting/Display menu keeps its own items; the Systems tab (right edge) is reached from the wall (29 Oct)
     { id: 'search', root: () => document.querySelector('#view-media .collection-toolbar .filter-bar'), items: r => focusablesIn(r) },

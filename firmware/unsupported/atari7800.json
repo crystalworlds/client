@@ -5,7 +5,7 @@
  "guards": [
   "atari7800"
  ],
- "count": 3,
+ "count": 4,
  "entries": {
   "469ae455c6a996325576e87dbafec7843ac1caca2db1e4c0d096a734473fa3a2": {
    "kind": "cartridge",
@@ -18,6 +18,12 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "Ninjish Guy - Perilous Island"
+  },
+  "79c22ac99910611e505a88360f0a8f7179a9d48ffe0f5975c5482c728285b7e5": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Double Dragon"
   },
   "7f010e1ce168ebfa0ea095f63e34e467e57d9fd424ec835c4122fd92e9d8f5a0": {
    "kind": "cartridge",

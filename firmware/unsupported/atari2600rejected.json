@@ -1,0 +1,11 @@
+{
+ "format": 1,
+ "list": "atari2600rejected",
+ "label": "Atari 2600: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "atari2600"
+ ],
+ "internal": true,
+ "count": 0,
+ "entries": {}
+}

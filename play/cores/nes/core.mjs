@@ -23,11 +23,11 @@ import { LUT } from '../../nes/web/render.js';
 import { CoreError } from '../../host/core-api.mjs';
 /* The Study Box tape deck's feeder (mapper 186), the old NES page's own module: page-free (a tape
    source is any { name, size, read(offset, length) }), so the core runs it (2026-10-15). */
-import { TapeFeeder } from '../../nes/studybox-deck.js?v=2.1.1';
+import { TapeFeeder } from '../../nes/studybox-deck.js?v=2.2.0';
 /* Games on more than one disk, linked by hash, and the automatic
    disk change (the core's web/fds_sets.js and web/fds_autoswap.js, copied with the core). */
 import { fdsSetOf } from '../../nes/web/fds_sets.js';
-import { FdsAutoSwap } from '../../nes/web/fds_autoswap.js';
+import { FdsAutoSwap } from '../../nes/web/fds_autoswap.js?v=2.2.0';
 /* The Famicom Data Recorder's file side (WAV in, WAV out), the core's
    web/data-recorder.js, copied with the core. The deck itself is the core's (nes_dr_*). */
 import { decodeTape, encodeWav } from '../../nes/web/data-recorder.js';
@@ -36,11 +36,29 @@ import { decodeTape, encodeWav } from '../../nes/web/data-recorder.js';
 /* The Famicom expansion accessories: Hyper Shots, Party Tap, pachinko
    dial, punching bag, mahjong keypad, drawing tablet, Barcode World, mole mat, Top Rider, Subor keyboard,
    a second Arkanoid knob, two pads for one player, and the Turbo File / Battle Box save boxes. */
-import { ACCESSORIES, Accessory, isAccessory, deviceFor, help as accHelp } from './accessories.mjs?v=2.1.1';
-import { Rob, robKindOf } from './rob.mjs?v=2.1.1';
-import { cheatEngine } from '../cheats-core.mjs?v=2.1.1';
+import { ACCESSORIES, Accessory, isAccessory, deviceFor, help as accHelp } from './accessories.mjs?v=2.2.0';
+import { Rob, robKindOf } from './rob.mjs?v=2.2.0';
+import { cheatEngine } from '../cheats-core.mjs?v=2.2.0';
 
 const FDS_BIOS_BYTES = 8192, FDS_SWAP_GAP_FRAMES = 60, FDS_FIRST_INSERT_FRAMES = 8;
+/* FAST DISK LOADING (the machine setting 'fdsFastLoad', on unless switched off): the host runs FDS_FAST_X
+   frames for each normal one (host.mjs fastLoadNow), with no sound, while the drive is loading:
+     - the head is running: the motor on, the transfer released, the head not yet off the end of the side,
+       a disk in (nes_fds_state bits 0, 1, 9 and 10), or the program took a byte from the drive this frame;
+     - the drive firmware's start-up, from power-on or a reset until the game's own program first runs
+       (the processor below $E000 at the end of a frame; MEASURED on Zelda no Densetsu: the firmware
+       loads for 4 s and then waits 5 s on a black screen before the game starts), and never longer than
+       FDS_FAST_BOOT_MAX frames without a load;
+     - the gap of a disk change, automatic or by hand (no disk in for FDS_SWAP_GAP_FRAMES).
+   It keeps on for FDS_FAST_HOLD frames after the last of these, so the short pause between two loads
+   (MEASURED: 30 frames on Bodycon Quest I between the firmware's load and the game's own) does not switch
+   it off and on. Never during a trial insertion (web/fds_autoswap.js, ASK FIRST), which runs a few frames
+   of a saved copy after each real frame. The game sees the same frames as at normal speed: only the wall
+   clock is faster. FDS_FAST_X: chosen from the MEASURED cost of a frame (4 to 7 ms on its own, 11 to 15 ms in
+   a browser on a busy machine): at 4x a machine that runs a frame in 4 ms keeps up, and a slower one runs as
+   fast as it can, so a larger number gains nothing there (8x measured the same as 4x) and only makes each
+   catch-up longer. FDS_FAST_HOLD: FITTED. */
+const FDS_FAST_X = 4, FDS_FAST_HOLD = 40, FDS_FAST_BOOT_MAX = 600;
 const ZAP_HOLD_FRAMES = 6, VAUS_MIN = 0x54, VAUS_MAX = 0xF4;
 const REGION_TIMING = [
   { fps: 60.0988, cpu: 1789773 },        /* 0 NTSC */
@@ -94,7 +112,28 @@ export function isDiskImage(b) {
   return true;
 }
 const headerless = b => (b.length >= 16 && b[0] === 0x46 && b[1] === 0x44 && b[2] === 0x53 && b[3] === 0x1a) ? b.subarray(16) : b;
-const sideName = i => `Disk ${(i >> 1) + 1} side ${'AB'[i & 1]}`;
+/* Where drive side i sits: disk k (mount order), side j of that disk's count, and the disk's
+   first drive side. A mounted set gives each disk's side count (web/fds_sets.js `sides`); a
+   disk alone, or a set whose counts do not reach i, is taken as two sides a disk. */
+function sideAt(i, set) {
+  if (set && Array.isArray(set.sides)) {
+    let first = 0;
+    for (let k = 0; k < set.sides.length; k++) {
+      const count = set.sides[k] | 0;
+      if (i < first + count) return { k, j: i - first, count, first };
+      first += count;
+    }
+  }
+  return { k: i >> 1, j: i & 1, count: 2, first: i & ~1 };
+}
+/* "Disk 1 (Zenpen) side A" from the set's part names (`parts`); a part that is itself a disk's
+   name ("Disk 2", "Program disk") stands alone; no part name keeps "Disk N side A". */
+function sideName(i, set) {
+  const { k, j } = sideAt(i, set);
+  const part = set && Array.isArray(set.parts) && typeof set.parts[k] === 'string' ? set.parts[k].trim() : '';
+  const disk = !part ? `Disk ${k + 1}` : /\bdisk\b/i.test(part) ? part : `Disk ${k + 1} (${part})`;
+  return `${disk} side ${'ABCDEFGH'[j] || String(j + 1)}`;
+}
 /* The set a disk file belongs to (by the sha256 of the file as given), or null. */
 const setOfBytes = b => (isDiskImage(b) ? fdsSetOf(hex(sha256(b))) : null);
 
@@ -245,6 +284,7 @@ export async function create(env) {
   const DR_EMPTY = { pcm: null, rate: 0, name: '' };
   let drTitle = false, drBuiltIn = false, drLive = DR_EMPTY, drRec = null;
   let auto = null, autoOn = true, diskSet = null;       // the automatic disk change, the mounted set
+  let fastOn = true, fl = { r1: 0, hold: 0, boot: false, bootEnd: 0, startedAt: Infinity, lastRead: -1e9 };   // fast disk loading (FDS_FAST_X)
   const ins = new Map();                    // port -> latest InputState
   const zap = { x: -1, y: -1, down: false, relFrame: -1e9, lastPtr: '' };
   const vaus = { knob: 0xA4 };
@@ -338,6 +378,7 @@ export async function create(env) {
     }
     if (drTitle && !drBuiltIn) o.push({ id: 'keyboard', label: 'Family BASIC keyboard and Data Recorder', type: 'bool', group: 'machine', scope: 'game', live: true, default: false });
     if (disk) o.push({ id: 'fdsAutoSwap', label: 'Change disks automatically', type: 'bool', group: 'machine', scope: 'global', live: true, default: true });
+    if (disk) o.push({ id: 'fdsFastLoad', label: 'Load disks faster', help: 'Runs fast while the disk drive is loading, with the sound off, then returns to normal speed.', type: 'bool', group: 'machine', scope: 'global', live: true, default: true });
     if (acc && acc.dev === 0x19) o.push({ id: 'midiIn', label: 'Play the Miracle Piano from a MIDI keyboard (the browser may ask once)', type: 'bool', group: 'machine', scope: 'global', live: true, default: false });   // expansion accessories
     if (vs && has('nes_vs_set_dip')) {
       // The old NES page's two cabinet presets (2026-10-15): the factory DIPs (free play where the
@@ -404,7 +445,12 @@ export async function create(env) {
         n.fdsEject();
         fdsPending = { frame: n.frame + FDS_FIRST_INSERT_FRAMES, side: 0 };
         autoOn = !(r.options && r.options.fdsAutoSwap === false);
+        fastOn = !(r.options && r.options.fdsFastLoad === false);
         auto = typeof n.x.nes_fds_reads === 'function' ? new FdsAutoSwap(n.x, n.ctx, { disks: diskSet ? diskSet.sides : [n.fdsSides], enabled: autoOn,
+          /* the machine and the swap gap, for a trial insertion on a saved copy before a guessed change
+             (web/fds_autoswap.js, ASK FIRST); the copy is put back, sound included, before the frame's sound is taken */
+          machine: n, gap: FDS_SWAP_GAP_FRAMES,
+          members: diskSet ? diskSet.members : null,      /* the set's disk hashes, for a recorded side order (web/fds_autoswap.js) */
           log: m => env.log('info', 'disk: ' + m) }) : null;
       } else {
         cart = n.loadCartridge(bytes, REGION.AUTO);
@@ -416,6 +462,7 @@ export async function create(env) {
       throw new CoreError('unsupported', (e && e.plain) || String(e && e.message || e));
     }
     nes = n;
+    if (disk) flStart();
     ports();                                   // the console controls' order, for periphStep
     region = nes.region | 0;
     timing = REGION_TIMING[region] || REGION_TIMING[0];
@@ -519,7 +566,7 @@ export async function create(env) {
     if (disk) {
       const f = bit('flip');
       if (f && !flipPrev && !fdsPending && nes.fdsSides > 1) {
-        const cur = nes.fdsInserted ? nes.fdsSide : 0, next = Math.min(nes.fdsSides - 1, cur ^ 1);
+        const cur = nes.fdsInserted ? nes.fdsSide : 0, at = sideAt(cur, diskSet), next = Math.min(nes.fdsSides - 1, at.count > 1 ? at.first + (at.j + 1) % at.count : cur);
         nes.fdsEject(); fdsPending = { frame: nes.frame + FDS_SWAP_GAP_FRAMES, side: next }; if (auto) auto.reset(); env.emit('media');
       }
       flipPrev = f;
@@ -537,6 +584,24 @@ export async function create(env) {
     }
   }
 
+  /* Fast disk loading (FDS_FAST_X): the drive's read count taken as it is now (after a load or a state
+     load), the firmware's start-up begun (power-on, reset), and once a frame whether the drive is loading. */
+  function flSync() { fl.r1 = disk && has('nes_fds_reads') ? nes.x.nes_fds_reads(nes.ctx, 1) : 0; }
+  function flStart() { flSync(); fl.lastRead = -1e9; fl.boot = true; fl.bootEnd = nes.frame + FDS_FAST_BOOT_MAX; fl.hold = 0; fl.startedAt = Infinity; }
+  /* After a state load (a save, or a rewind step): back inside this start-up only if the state is from
+     before the frame the game started in this session, with the firmware running; otherwise never. */
+  function flLoaded() { flSync(); fl.hold = 0; fl.boot = isFinite(fl.startedAt) && nes.frame < fl.startedAt && has('nes_pc') && nes.x.nes_pc(nes.ctx) >= 0xE000; fl.bootEnd = nes.frame + FDS_FAST_BOOT_MAX; }
+  function flStep() {
+    const x = nes.x, c = nes.ctx, s = has('nes_fds_state') ? x.nes_fds_state(c) : 0;
+    const r = has('nes_fds_reads') ? x.nes_fds_reads(c, 1) : fl.r1, took = r > fl.r1; fl.r1 = r;
+    const head = (s & 0x001) && !(s & 0x002) && (s & 0x200) && (s & 0x400);
+    if (head || took) { fl.bootEnd = nes.frame + FDS_FAST_BOOT_MAX; fl.lastRead = nes.frame; }
+    /* the start-up ends when the game's own program runs (below $E000, the firmware's own space) */
+    const started = fl.boot && (nes.frame >= fl.bootEnd || (has('nes_pc') ? x.nes_pc(c) < 0xE000 : head || took));
+    if (started) { fl.boot = false; if (!isFinite(fl.startedAt)) fl.startedAt = nes.frame; }
+    /* the game's start is not a pause between two loads: the hold after it counts from the last load only */
+    fl.hold = head || took || fl.boot || fdsPending ? FDS_FAST_HOLD : started ? Math.max(0, FDS_FAST_HOLD - (nes.frame - fl.lastRead)) : Math.max(0, fl.hold - 1);
+  }
   function drainAudio() {
     const from = audioN;                     // theMiracle Piano's synthesizer adds to what the console made
     for (let k = 0; k < 4; k++) {
@@ -582,7 +647,7 @@ export async function create(env) {
       };
     },
     reset(kind) {
-      if (kind === 'soft' && nes) { nes.reset(); return; }
+      if (kind === 'soft' && nes) { nes.reset(); if (disk) flStart(); return; }
       const keepSram = nes && !disk && nes.batterySize ? nes.batterySave() : null;
       const keepDisk = disk ? new Uint8Array(fdsImage()) : null;
       build(Object.assign({}, req, { battery: Object.assign({}, req.battery || {}, keepDisk ? { disk: keepDisk } : {}) }));
@@ -605,6 +670,7 @@ export async function create(env) {
         const side = auto.step(nes.framebuffer());
         if (side !== null) { nes.fdsEject(); fdsPending = { frame: nes.frame + FDS_SWAP_GAP_FRAMES, side }; env.emit('media'); }
       }
+      if (disk) flStep();                      // after any trial slice: the real machine's drive
       drainAudio();
       if (nes.jammed && !this._jamTold) { this._jamTold = true; env.log('warn', 'the CPU jammed (a KIL opcode); a fault for the core if it is the core\'s'); }
     },
@@ -619,12 +685,14 @@ export async function create(env) {
       }
       fdsPending = null;
       if (auto) auto.resync();
+      if (disk) flLoaded();                   // fast again on the next frame only if the drive is loading
       drAfterLoad();
     },
     check(b) {
       const keep = nes.saveState();
       core.unserialize(b);
       nes.loadState(keep);
+      if (disk) flSync();
       drAfterLoad();
     },
     /* The old page's Continue history: whole states of this board, equal-sized. */
@@ -683,6 +751,7 @@ export async function create(env) {
         return 'ports';
       }
       if (id === 'midiIn') { if (acc) acc.midiOn(!!v); if (req) req.options.midiIn = !!v; return 'live'; }   // expansion accessories
+      if (id === 'fdsFastLoad') { fastOn = !!v; if (req) req.options.fdsFastLoad = fastOn; return 'live'; }
       if (id === 'fdsAutoSwap') { autoOn = !!v; if (auto) { auto.enabled = autoOn; auto.reset(); } if (req) req.options.fdsAutoSwap = autoOn; return 'live'; }
       if (id === 'dipPreset' && vs) {
         if (v === 'factory' || v === 'coin') {
@@ -703,6 +772,8 @@ export async function create(env) {
     get note() { return note; },
     get frames() { return nes ? nes.frame : 0; },
     ext: {
+      /* Fast disk loading (FDS_FAST_X): the frames to run for each normal one while the drive is loading, else 0. */
+      fastLoad: () => (disk && nes && fastOn && fl.hold > 0 && !(auto && auto.trial) ? FDS_FAST_X : 0),
       /* Cheats: the kinds this build runs ([] before the cheat build is installed) and the codes switched on. */
       cheats: {
         kinds: () => { const e = cheatEng(); return e ? e.kinds() : []; },
@@ -717,10 +788,10 @@ export async function create(env) {
         eject: () => { if (tape) tape.eject(); },
       },
       media: {
-        list: () => (disk && nes ? Array.from({ length: nes.fdsSides }, (_, i) => ({ id: String(i), label: sideName(i), kind: 'disk-side' })) : []),
+        list: () => (disk && nes ? Array.from({ length: nes.fdsSides }, (_, i) => ({ id: String(i), label: sideName(i, diskSet), kind: 'disk-side' })) : []),
         current: () => (disk && nes ? (fdsPending ? null : (nes.fdsInserted ? String(nes.fdsSide) : null)) : null),
         pending: () => (fdsPending ? String(fdsPending.side) : null),
-        label: () => (!disk || !nes ? '' : fdsPending ? 'Changing disk' : nes.fdsInserted ? sideName(nes.fdsSide) : 'No disk'),
+        label: () => (!disk || !nes ? '' : fdsPending ? 'Changing disk' : nes.fdsInserted ? sideName(nes.fdsSide, diskSet) : 'No disk'),
         insert(id) {
           const side = +id;
           if (!disk || !nes || fdsPending || !(side >= 0 && side < nes.fdsSides)) return false;

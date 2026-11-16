@@ -1,0 +1,37 @@
+{
+ "format": 1,
+ "list": "atari7800rejected",
+ "label": "Atari 7800: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "atari7800"
+ ],
+ "internal": true,
+ "count": 5,
+ "entries": {
+  "3913d1ae3aeb4601bafeb140199c94fc83815168c91c92fd784443cd3a43286f": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "4aadc34da1d584c7a86cd8f1095416e01956b7a709db72dc3a323f4f9e9355ca": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "5a372c6850febac8b86bc0f7f38e8cf422f48ea59e3d03ec851ac66919a4c957": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "b04a81c7a51ad1b78d140602cccfc3a05c5dbcd89b80d8700d8b8d2abd4c513b": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "b869cff8cff4e444c3851e9b3cce4e4d0e08a8d1daa30b0db254310f9fff4fec": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  }
+ }
+}

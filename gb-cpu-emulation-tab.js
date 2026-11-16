@@ -262,8 +262,8 @@ function gbCpuEmulationTabHTML(d) {
     '<b>READ FROM SOURCE</b>: <code>src/gb.c</code>, ' +
     '<code>exec_cb()</code> for the eight, and the <code>0x07</code> <code>0x0F</code> ' +
     '<code>0x17</code> <code>0x1F</code> <code>0x2F</code> cases of the main decoder for the other ' +
-    'five. <b>Falsifier:</b> Blargg&rsquo;s <code>cpu_instrs</code> members checksum every one of ' +
-    'these against hardware, so a single wrong fill bit fails a scored row; and if this table and ' +
+    'five. <b>This would be wrong if:</b> Blargg&rsquo;s <code>cpu_instrs</code> members, which checksum every one of ' +
+    'these against hardware, failed a scored row, as a single wrong fill bit would make them do. If this table and ' +
     '<code>src/gb.c</code> ever disagree, the code is what ships and this table is what is ' +
     'wrong.</div>' +
 
@@ -308,8 +308,8 @@ function gbCpuEmulationTabHTML(d) {
         'than 8 bits with the threshold changed to <code>&gt; 0x9F</code> (0 disagreements over the ' +
         'same 1024 inputs); on the 8-bit A this machine has it is simply wrong, and a core taking ' +
         'the reversed order fails <code>01-special</code>, which checksums this exhaustively. ' +
-        '<b>Falsifier, and it runs on every gate pass:</b> the gate brute-forces both orders and ' +
-        'fails if they ever stop diverging, or if the counts above stop matching.</div>' +
+        '<b>This would be wrong if:</b> the two orders stopped diverging, or the counts above stopped matching. The gate checks this on every pass: it brute-forces both orders and ' +
+        'fails if either happens.</div>' +
     '<div class="gbemu-example"><b>Example.</b> <code>0x61 + 0x99</code> leaves ' +
         '<code>A=0xFA H=0 C=0</code>; as listed above DAA gives <code>A=0x60 C=1</code> (160 ' +
         'decimal, correct) and the swapped order gives <code>A=0x00 C=0</code>, wrong value ' +
@@ -431,9 +431,9 @@ function gbCpuEmulationTabHTML(d) {
     '<div class="gbemu-why"><b>Why.</b> MECHANISM: the enable an <code>EI</code> schedules is already in force when IME ' +
     'is set, so there is nothing left for it to do. No hardware test we hold separates the two readings: ' +
     'the other one (the enable survives and sets IME again once the handler&rsquo;s first instruction ' +
-    'completes) moves none of the 66 original Mooneye acceptance rows either. Falsifier: a cartridge that ' +
+    'completes) moves none of the 66 original Mooneye acceptance rows either. This would be wrong if: a cartridge that ' +
     'runs <code>EI</code> with IME set, takes an interrupt at the next boundary, and tests whether a ' +
-    'second request can pre-empt the handler&rsquo;s second instruction.</div>' +
+    'second request can pre-empt the handler&rsquo;s second instruction, showed that it can.</div>' +
     '<div class="gbemu-why"><b>The flexibility and its invariant.</b> How you represent &ldquo;an ' +
     'enable is in flight&rdquo; is yours: this core uses a small counter that <code>EI</code> ' +
     'sets and the step loop advances, but a flag plus a one-instruction deferral is equally correct. ' +
@@ -783,7 +783,7 @@ function gbCpuEmulationTabHTML(d) {
     '<div class="gbemu-why"><b>Why.</b> Read from our source (<code>service_interrupt</code>, <code>run_look</code>, <code>ppu_pay</code>).</div>' +
     '<div class="gbemu-rule" id="gbr-D-12-2-3"><b>Rule D.12.2/3.</b> The vector is the lowest bit set at the re-sample, ' +
     'whichever bit started the dispatch: a higher-priority request that rose during M1 to M3 takes it, ' +
-    'and only that bit&rsquo;s IF is cleared. <b>When it is cleared</b>: after M4&rsquo;s bus access (the low-byte push) and before M5. If no bit was left at the re-sample, nothing is cleared and the vector is <code>0x0000</code>. The re-sample sees IF through E.6&rsquo;s line-0 and ' +
+    'and only that bit&rsquo;s IF is cleared. <b>When it is cleared</b>: after M4&rsquo;s bus access (the low-byte push) and before M5 (on the original, two T-cycles into M5: Rule D.12.2/4). If no bit was left at the re-sample, nothing is cleared and the vector is <code>0x0000</code>. The re-sample sees IF through E.6&rsquo;s line-0 and ' +
     'coincidence holds, exactly as the test at the boundary does (Rule D.10.1/2).' +
     '<table class="gbemu-table"><thead><tr><th>A second request for the same source as the vector taken</th><th>After the dispatch</th></tr></thead><tbody>' +
       '<tr><td>A timer or serial request raised in M4&rsquo;s ticks (the timer ticks before the access in every cycle, E.5)</td><td>Cleared with it</td></tr>' +
@@ -791,6 +791,8 @@ function gbCpuEmulationTabHTML(d) {
       '<tr><td>A picture request whose dot is processed in M5 (M4&rsquo;s own dots are paid at the start of M5)</td><td>Survives in IF</td></tr>' +
     '</tbody></table></div>' +
     '<div class="gbemu-why"><b>Why.</b> Read from our source (the dispatch routine).</div>' +
+    '<div class="gbemu-rule" id="gbr-D-12-2-4"><b>Rule D.12.2/4. The original only: the request bit is cleared two T-cycles into M5.</b> On the original Game Boy the dispatched interrupt&rsquo;s request bit is cleared two T-cycles into the dispatch&rsquo;s last machine cycle, not before it. So a request for the same source that rises inside those two T-cycles is cleared by the same dispatch: the one that matters is line 0&rsquo;s mode-2 request. The table of Rule D.12.2/3 holds for M5 from its third T-cycle on.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> SOURCE-READ: SameBoy 1.0.5. With it, Pinball Deluxe&rsquo;s 7:1 top-up rhythm runs to 18,000 frames in step with SameBoy, as its other 11 rhythms do; without it, that rhythm ran its interrupt twice. The line-0 timing that Mooneye and AGE check is not touched.</div>' +
 
 
     '<h4 class="gbemu-sub">D.12.3: Where you may put the delay somewhere else</h4>' +

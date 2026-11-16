@@ -5,8 +5,20 @@
  "guards": [
   "atari2600"
  ],
- "count": 4,
+ "count": 21,
  "entries": {
+  "047ff432abc066586d51854ab4caa66176750bbd7742ca12d1fd02ea09d5dbda": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Escape from the Mindmaster"
+  },
+  "0bb63e5ce24f6d96acc6b8789106f7ef2fc748bd6ec6319cc36dc1de15b86728": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Dragonstomper"
+  },
   "1e13dce6c877de6d7f627a4fb9b82f06bcd520e3ffcc5b3e02fdae0bb0ca50c6": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -19,17 +31,107 @@
    "reason": "this prototype was never finished: it is only a title screen with the golden arches, and that still picture is all a real console shows too.",
    "title": "McDonald's - Golden Arches Adventure"
   },
+  "2ac191a2bf8c068ab7a05b812db2aaef05c0b8536e1dc00e9edbfba23792b175": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Escape from the Mindmaster"
+  },
+  "4df4ea1d87f16b9d54ed8bc7d45dc65115464d306659010a1ce57cc632b330f7": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Survival Island"
+  },
+  "552f8f348200edc81a750495b43c8a669418b62731af52081353cba94c77908b": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Elf Adventure"
+  },
+  "57957a88f315a9adc08a86f5411acc19a51c2401732bcb221f56e62bf73bfbf6": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Survival Island"
+  },
+  "5b86d11301e19fc0e1c1e00c70fcde664eb6d16c514496c8a2be53058e2c4c64": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Escape from the Mindmaster"
+  },
+  "6f4b8f31f2050205e5fe92b1a7d7ee9545714fc38b27c5cb06a8a0ef112d96a2": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Survival Island"
+  },
+  "72f9755896ca74dfe1fed2728b64c38255c055597ccbc6c184b2640f90fa2920": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Escape from the Mindmaster"
+  },
+  "761fc7709ba385faaf3cd628a8566df90c03e1a10181c8396a95e1fba8100dc7": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Dragonstomper"
+  },
+  "81e2cf217bbe90f779749e97834613f2d2cf2d78dd8e2d211d1059bad3269d66": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Escape from the Mindmaster"
+  },
+  "870696c3fd91568815b899bb0d306ad77eaee3e852815b537429d83c8d7690c7": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Dragonstomper"
+  },
+  "9b9638048f3c69490cfae8de8c7b9075485de39597d0ecf5e51032c1a0526077": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Survival Island"
+  },
+  "a8a3c2c8e1a7ebabcb9d0471210404234bbf4f830f3e2b824518d5a3259c5c56": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Oscar's Trash Race"
+  },
   "a924d20f04e320b9b45e22a0207a86f8ede38f5311457e828a509f5528a3155b": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
    "reason": "it needs ExerVision's exercise bike, which plugs into the left joystick port. Without the bike it waits and shows nothing, on a real console too.",
    "title": "Video Cartridge Bicycle Trainer"
   },
+  "a9970de8973586a41007ed61d864ad1135ca86fb3b758c6f7118321df03a50fc": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Escape from the Mindmaster"
+  },
   "d3dd7b9bdb000e2fa6c48956a8f2ef6ed85525adc8c5a5096a123992ed600c4c": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
    "reason": "this is an early build of Dark Chambers that is only a title screen, and that still picture is all a real console shows too. The finished Dark Chambers plays.",
    "title": "Dungeon"
+  },
+  "e755fcb4b96ff7cb663f9cefe29328f0e3e603d04fc9b077464c8b64e9b11fc3": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Q-bert's Qubes"
+  },
+  "f99410639217091e3d43a2d94ea7469172bad6e1c43439bb50992334f0af1d75": {
+   "kind": "cartridge",
+   "code": "LOAD_REFUSED",
+   "reason": "this is a later part of a Supercharger game that loads in parts. A real Supercharger takes it only after the earlier parts too, so start the game from its first part.",
+   "title": "Dragonstomper"
   }
  }
 }

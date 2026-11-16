@@ -5,14 +5,8 @@
  "guards": [
   "atari5200"
  ],
- "count": 18,
+ "count": 21,
  "entries": {
-  "06b250f18983d058c0f156ce7ee88ae48b6eaf11e6f10f21dccf6ac7ffb6a6af": {
-   "kind": "cartridge",
-   "code": "LOAD_REFUSED",
-   "reason": "it is the console's firmware, not a cartridge.",
-   "title": "Atari 5200"
-  },
   "28ff13b0587f9e5f9d0a9f1a07e6285cb717a557c881cc159cb6512d9f799d17": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -31,17 +25,23 @@
    "reason": "it crashes.",
    "title": "MULE"
   },
-  "3c73bc353340dc3fa994db1b68fee08a36c0e52b604c58ee2e09d5c2467de360": {
+  "35fc81c81a66d20bc35757de3c0b2cb4b89528902565c002ad9d6405d62c0a44": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
-   "reason": "it is console firmware, not a cartridge.",
-   "title": "5200_alt"
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Popeye"
   },
   "3cf6d633113fe2e8aeda02bf398bffaf25d73c05d59175febe4ead5ac58fc576": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes.",
    "title": "frogstar_robot_spiderman"
+  },
+  "3d476d2430032f9932c36d6e59bc3ae5c4aa38fc767bd201c795441074eac306": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Burger Time For The 5200"
   },
   "4e4750a2127d79fb3afb6b09af8e213e1f9d044f3506fd37b166be18a0a0859a": {
    "kind": "cartridge",
@@ -73,6 +73,12 @@
    "reason": "it needs a cartridge board that isn't built yet.",
    "title": "Adventure II demos"
   },
+  "8dc75711a9fd9897abb6059ea773830ba79e890c01b5c14c66cb46acee161f89": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "this copy's header names the wrong cartridge board, so it shows nothing, and other emulators show nothing with it either. Other copies of the game play.",
+   "title": "Star Wars - The Arcade Game"
+  },
   "a9e833ab56512edadbe787ad119509b71367c84be2ec3ebdd18d8533b598a802": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -91,17 +97,29 @@
    "reason": "it is one of three parts of a split copy; the complete file plays.",
    "title": "Bounty Bob Strikes Back!"
   },
-  "c329b5a04abce2c7aa55869286f2fcf1af98436c523dc4e8d10de5e65b630094": {
+  "c60469569b52daee0e60d863ba4d6965d5f231cb1becad29a161582d66277893": {
    "kind": "cartridge",
-   "code": "LOAD_REFUSED",
-   "reason": "it is replacement console firmware, not a cartridge.",
-   "title": "altfirmware-2.50-test26"
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Burger Time For The 5200"
+  },
+  "c64e83e1fb265c01679558839e697b6823dde83e837085ab1af6826954c1ac84": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Pastfinder"
   },
   "c8f5482c454ded660a96b089600291b473230c27cb6f6d59029aff94aebdcad0": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
    "reason": "it needs a cartridge board that isn't built yet.",
    "title": "Adventure II demos"
+  },
+  "e5887440c38969974c345e1ca42f668949396e0606bb58c5900eb682e5d26838": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "title": "Rampage"
   },
   "e6651911339c01efd4890012502b0c33eb0e1bb7035a7bde5cde8307150e1aea": {
    "kind": "cartridge",

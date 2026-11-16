@@ -74,6 +74,10 @@ html:root[data-theme="light"].cw-small #video-about .about-x:focus-visible { out
 :root[data-theme="light"].cw-small .cl-st.lad-plays { color: #ffffff; }
 :root[data-theme="light"].cw-small .cl-root .lad-notfound { box-shadow: inset 0 0 0 1.5px #6a7a8c; }
 :root[data-theme="light"].cw-small .cl-st.lad-notfound { color: #3d4655; }
+:root[data-theme="light"].cw-small .cl-root .lad-unseen { box-shadow: inset 0 0 0 1.5px #7a6290; }
+:root[data-theme="light"].cw-small .cl-st.lad-unseen { color: #4a3a5a; }
+:root[data-theme="light"].cw-small .cl-root .lad-datatools { box-shadow: inset 0 0 0 1.5px #3f6f86; }
+:root[data-theme="light"].cw-small .cl-st.lad-datatools { color: #23485a; }
 /* A generic box's small printed label sits on the box's own black. */
 :root[data-theme="light"].cw-small .cl-art:has(.gb-art-generic-label) { background: #0a0e14; }
 

@@ -82,7 +82,7 @@
  * BYTE-INERT ACROSS ALL 31 RENDERS -- which reads exactly like the strongest
  * possible negative result.
  *
- * MEASURED 2026-09-02, and nearly reported as a finding: `-DWX_ORIGIN=6` and
+ * MEASURED, and nearly reported as a finding: `-DWX_ORIGIN=6` and
  * `-DWX_ORIGIN=8` both gave 0 of 31 renders differing.  Swept properly, BY
  * EDITING THE LITERAL, the same two values move SIX renders and take the board
  * from 433 to 15927 and 16551 -- 7194 px on m3_wx_4_change alone.  ***THE NULL
@@ -168,6 +168,15 @@ void *memcpy(void *d, const void *s, unsigned long n) {
 #ifndef LCD_OFF_BLANK
 #define LCD_OFF_BLANK 1
 #endif
+/* LINK_LCDOFF_SHOW -- THE SECOND SCREEN OF TWO LINKED GAME BOYS WHILE ITS LCD IS OFF
+ * 1 = it shows that machine's own frame store, as the
+ * machine would alone (blank on the original Game Boy, LCD_OFF_BLANK); 0 = the old
+ * behaviour, the last picture it finished stays up.  MECHANISM: the second screen
+ * is a copy made when its machine ends a frame, and a machine with its LCD off ends
+ * none, so the copy must also be made while the LCD is off. */
+#ifndef LINK_LCDOFF_SHOW
+#define LINK_LCDOFF_SHOW 1
+#endif
 
 #ifndef STOP_BLANKS_LCD
 #define STOP_BLANKS_LCD 1
@@ -239,7 +248,7 @@ void *memcpy(void *d, const void *s, unsigned long n) {
 #define SERIAL_CLOCK 1
 #endif
 /* SERIAL_EXT_WAITS -- AN EXTERNAL-CLOCK TRANSFER WITH NO PARTNER NEVER COMPLETES
- * (2026-10-17).  The deviation stated above SERIAL_CLOCK
+ * The deviation stated above SERIAL_CLOCK
  * ("an external transfer ... on hardware would never complete; keeping its
  * immediate completion preserves the text channel") was a HARNESS CONVENIENCE,
  * and the GB tab says so (A.1).  It broke a real title: Hiryuu no Ken Gaiden and
@@ -257,8 +266,8 @@ void *memcpy(void *d, const void *s, unsigned long n) {
 #ifndef SERIAL_EXT_WAITS
 #define SERIAL_EXT_WAITS 1
 #endif
-/* SERIAL_FAST_CGB -- SC BIT 1, THE COLOR'S FAST SERIAL CLOCK (2026-10-17;
- * gb-statdocs r4/gbc NOTES 4: "FF02 bit 1 (fast serial clock) is
+/* SERIAL_FAST_CGB -- SC BIT 1, THE COLOR'S FAST SERIAL CLOCK (our
+ * notes: "FF02 bit 1 (fast serial clock) is
  * not modelled: read always returns bit 1 set").  Pan Docs (Serial Data
  * Transfer, FF02): bit 1 selects the clock speed in Color mode only, 8192 Hz
  * normal or 262,144 Hz fast (16,384 / 524,288 Hz in double speed).  The internal
@@ -273,7 +282,7 @@ void *memcpy(void *d, const void *s, unsigned long n) {
 #define SERIAL_FAST_CGB 1
 #endif
 /* RP_CGB -- FF56, THE COLOR'S INFRARED PORT, AS A REGISTER WITH NO LIGHT
- * (2026-10-17; gb-statdocs r4/gbc NOTES 4: "FF56
+ * (our notes: "FF56
  * (infrared) not modelled: reads 0xFF in both modes").  Pan Docs (CGB Registers,
  * FF56 RP): Color mode only; bit 0 the LED (read/write), bits 6-7 the read
  * enable (read/write), bit 1 the received signal, read only, 0 = light received,
@@ -434,7 +443,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * m3_bgp_change reads 41 at OUT_PIPE 0 against 4658 at 6. It was a compensator
  * for the missing mechanism, which is what the SameBoy comparison suspected.
  *
- * PROMOTED TO A GUARDED KNOB 2026-09-02 in the literals review, at exactly its
+ * PROMOTED TO A GUARDED KNOB in the literals review, at exactly its
  * shipped value, so the promotion is behaviour-neutral by construction.  It was
  * a bare `#define` with NO `#ifndef`, so `-DOUT_PIPE=N` did not reach it and
  * this value could not be varied from a build line -- the same defect class as
@@ -447,7 +456,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * unreachable while this was unguarded.
  *
  * ===========================================================================
- * THE THREE KNOBS ARE ONE QUANTITY.  Measured 2026-09-02 in the literals review
+ * THE THREE KNOBS ARE ONE QUANTITY.  Measured in the literals review
  * once BGP_OR and OUT_PIPE were both reachable, at base ec20aa36db48b1f1.
  *
  *     D = BGP_OR + BGP_LEAD + OUT_PIPE          OPTIMUM D = 3
@@ -523,7 +532,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * and STAT's mode bits change at its end, so mode 3 begins at dot 84 rather
  * than 80. Mode 3's LENGTH is untouched -- all 117 probes are byte-identical
  * across every value of LINE_PRE -- so it is pure phase.  (Subject named
- * 2026-09-02: the block said "every value of this" and named no knob, so a
+ * the block said "every value of this" and named no knob, so a
  * completeness claim over ALL VALUES, backed by a specific 117, was
  * UNAUDITABLE -- nothing could check what it was a claim about.) */
 #ifndef LINE_PRE
@@ -540,7 +549,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * arms, so no value of these two can unbalance the dot budget.  Same SHAPE as
  * LCDC_LEAD, which is not safe to sweep alone -- see the note at the LCDC guard
  * for the four-line difference. */
-/* ***G6's CGB ARM -- DISCHARGED 2026-09-03.  THE ROW WAS HONESTLY MARKED
+/* ***G6's CGB ARM -- DISCHARGED.  THE ROW WAS HONESTLY MARKED
  * BREACHING AND NOBODY HAD EVER COSTED THE BREACH.  IT COSTS 874 PX.***
  *
  * G6 was `GB_DMG_ONLY`, so every CGB run returned the DMG value and recorded a
@@ -630,6 +639,28 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef BGP_LEAD_CGB
 #define BGP_LEAD_CGB 3   /* MECHANISM (D preserved) -- G6, CGB single */
 #endif
+/* BGP_EARLY_CGB_D (P2).  1 = on, 0 = off (every Color revision takes
+ * BGP_LEAD_CGB, as before).  On a Color of revision D or later a BGP write in
+ * compatibility mode lands one dot sooner (BGP_LEAD_CGB + 1).  Two independent
+ * hardware sources put it one dot earlier than revision C: the AGE test
+ * m3-bg-bgp, photographed by its author on CPU CGB B/C (ncmBC) and on CPU CGB E
+ * (ncmE), whose two pictures differ by exactly that dot (lead 3: ncmBC 0 px,
+ * ncmE 104 px; lead 4: ncmBC 104 px, ncmE 0 px); and mealybug's CPU CGB D
+ * column, whose five BGP / window cells move from the C picture to the D
+ * picture with the lead at 4.  daid ppu_scanline_bgp (GBC) passes with it on
+ * revision E (576 -> 0 px), so it is a revision D/E picture; DocBoy (MIT),
+ * which passes that row, matches mealybug's D column on those cells.  SameBoy
+ * moves all three palette registers at "model >= CGB_D" (its palette write
+ * conflict).  LABEL: the revision split MEASURED (two sets of photographs); the
+ * one dot FITTED; why the later revisions take the palette a dot sooner is NOT
+ * ESTABLISHED.  OBP_EARLY_CGB_D: the same for OBP0 / OBP1 (SameBoy's split;
+ * mealybug m3_obp0_change differs between its C and D pictures). */
+#ifndef BGP_EARLY_CGB_D
+#define BGP_EARLY_CGB_D MDL_PAL
+#endif
+#ifndef OBP_EARLY_CGB_D
+#define OBP_EARLY_CGB_D MDL_PAL
+#endif
 #ifndef OBP_LEAD_CGB
 #define OBP_LEAD_CGB 3   /* CGB arm = DMG value; swept, no better value exists */
 #endif
@@ -663,7 +694,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * phenomenon).  What shipped it is one cartridge's residual optimum plus
  * self-consistency, and m3_obp0_change provably CANNOT distinguish the OR from
  * one dot of lead -- OR=0/lead L and OR=1/lead L-1 are byte-identical.
- * See the PPU design "OBP_OR PROVENANCE, restated 2026-08-27", which
+ * See the PPU design "OBP_OR PROVENANCE, restated", which
  * re-verifies that degeneracy at board 1138, measures this knob's signature as
  * GROWTH rather than replacement, and records the evidence as weakened. */
 #ifndef OBP_OR
@@ -673,7 +704,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * BGP_OR AND NOTHING ELSE (our method: a block that does not name the value is
  * not that value's account).
  *
- * PROMOTED FROM A BARE LITERAL 2026-09-02 in the literals review, at exactly its
+ * PROMOTED FROM A BARE LITERAL in the literals review, at exactly its
  * shipped value, so the promotion is behaviour-neutral by construction.  Until
  * today the use site read `with_or = is_bgp ? 1 : OBP_OR`: the object arm was a
  * knob and the background arm was a `1` that no `-D` could reach, so EVERY
@@ -693,7 +724,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * and states the bug does not happen on CGB in DMG mode).
  *
  * ===========================================================================
- * SWEPT 2026-09-02, THE FIRST MEASUREMENT EVER TAKEN OF THIS ARM, and the
+ * SWEPT, THE FIRST MEASUREMENT EVER TAKEN OF THIS ARM, and the
  * sweep is EXHAUSTIVE: `with_or` is compared only against zero (`if
  * (!with_or)` at the use site), so the boolean closes at two arms and 0 is the
  * only other one.  BGP_OR = 0, byte-compared over all 31 renders:
@@ -738,7 +769,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * LCDC_PEND owed must equal the 4 dots this cycle contributes plus what was
  * owed).
  *
- * SHIPPED 2026-08-20 on the maintainer's ruling: PEND 4 -> 5, LEAD unchanged at 2, so
+ * SHIPPED on the maintainer's ruling: PEND 4 -> 5, LEAD unchanged at 2, so
  * the budget BALANCES.  The old 4 was one short and dropped one dot on every
  * LCDC write -- stated in this comment for as long as it shipped, and measured
  * from outside as a one-dot-per-write deficit before the connection was made.
@@ -750,7 +781,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * objslope flat at 142 on all eighteen bands, ladder step 11 not 10.
  * See our notes. */
 /* ***THE VARIANT'S RIGHT-EDGE BAND IS A WRITE-DELIVERY PHENOMENON, AND THIS IS
- * THE LEVER THAT REACHES IT.***  Localised 2026-09-02, base 28ef39b2.
+ * THE LEVER THAT REACHES IT.***  Localised, base 28ef39b2.
  *
  * m3_lcdc_obj_en_change_variant's 98 px is NOT one residual.  It is 2 px at x=0
  * on lines 17 and 22 (see OBJ_EN_EXC -- refuted) plus 96 px in a BAND at
@@ -769,7 +800,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  *
  *     LCDC_LEAD 1 / PEND 4    band   0 px moved
  *     LCDC_LEAD 3 / PEND 6    band  96 px moved -- ***ALL 96 FIXED, 0 CREATED***
- *         *** STALE AT HEAD, 2026-09-02.  RE-MEASURED: 98 FIXED / 56 CREATED,
+ *         *** STALE AT HEAD.  RE-MEASURED: 98 FIXED / 56 CREATED,
  *         *** 13 of 31 renders moving.  The figure was correct at base 28ef39b2
  *         *** and was not re-derived across the day's ships.  It may NOT be
  *         *** cited as evidence that one dot early is the right amount; that
@@ -800,7 +831,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* ===========================================================================
  * ***THE WRITE-DELIVERY AXIS IS CLOSED FOR THE 178. READ THIS BEFORE SWEEPING
  * ANY LEAD, SPAN OR WLEAD KNOB AT m3_lcdc_tile_sel_win_change.***
- * Closed 2026-09-02 at base 81494cd, byte comparison of all 31 renders.
+ * Closed at base 81494cd, byte comparison of all 31 renders.
  *
  * THE 178 IS REACHABLE ON THIS AXIS AND IS NOT CHEAP.  Best arm found:
  *
@@ -831,8 +862,8 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define LCDC_LEAD 2
 #endif
 /* LCDC_BUDGET_SPEED -- THE LCDC WRITE REPAYS A TWO-DOT CYCLE IN DOUBLE SPEED
- * (2026-10-17; gb-statdocs section 4.3, r3/lcdc NOTES
- * 9).  LCDC_PEND is a four-dot-machine-cycle number (G3's own note says so), and
+ * (our notes on the
+ * LCDC write).  LCDC_PEND is a four-dot-machine-cycle number (G3's own note says so), and
  * the two-stage LCDC path repaid it unchanged at double speed, where a machine
  * cycle is two dots: every LCDC write landing in mode 3 at double speed left the
  * picture unit two dots AHEAD of the processor for good (our STAT probes
@@ -1036,9 +1067,9 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * count POSHOLD lines per cartridge; a matching score with a wrong count is not
  * this mechanism.
  *
- * NOTE 2026-10-17 (gb-statdocs r4/dmg NOTES 14): the 80 / 80 / 160 above
+ * NOTE (our notes): the 80 / 80 / 160 above
  * are WHOLE-RUN counts from the section-22 era.  Measured per DISPLAYED FRAME on
- * the core of 15 October they are 8 / 8 / 0 (m3_wx_4_change_sprites no longer
+ * an earlier core they are 8 / 8 / 0 (m3_wx_4_change_sprites no longer
  * fires on its scored frame after later changes); the GB tab prints the
  * per-frame census.  The figures above are kept as the record of that ship.
  *
@@ -1148,7 +1179,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  *   2   mealybug DMG  0 px / 24-of-24     dmg-acid2  PIXEL-PERFECT
  *
  * ***THE COMMENT THAT STOOD HERE SAID "SHIPPED AT 0" AND THE DEFINE BELOW IT
- * SAID 2.***  It was written for the maintainer's 2026-09-06 ruling, which chose 0 when
+ * SAID 2.***  It was written for the maintainer's ruling, which chose 0 when
  * only 0 and 1 existed, and it was not updated when 2 landed at 9eec934.  A
  * block that states the opposite of the line beneath it is worse than no block,
  * and this one stood for a whole cycle.  Left corrected rather than deleted,
@@ -1581,7 +1612,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* ===========================================================================
  * LX0_LIVE -- ***THE FIRST VISIBLE PIXEL'S MERGE CONSULT.***  This is the
  * import the MERGE_EN_LAG block immediately above registered and declined to
- * make in flight.  Landed 2026-09-05 from our notes.
+ * make in flight.  Landed from our notes.
  *
  * ***ORACLE-DERIVED.***  Not MECHANISM.  Derived from docboy's construction,
  * read at docboy revision
@@ -1732,7 +1763,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * moved; and the scope was re-established afterwards BY A DIFFERENT ROUTE,
  * deriving the alignment per boundary rather than testing residual form.  The
  * first scope claim being wrong is why the second is credible. */
-/* 2026-10-28: 3, not 4.  The running look (RUN_IRQ_LOOK_EDGES 3)
+/* 3, not 4.  The running look (RUN_IRQ_LOOK_EDGES 3)
  * samples two dots ahead, so a 4-dot hold hid the line-0 raise from the sample
  * that must see it and line 0 dispatched one machine cycle late against every
  * other line (mealybug: line 0 alone wrong in 12 cells).  At 3 the raise is
@@ -1772,7 +1803,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * still fire one machine cycle apart.
  *
  * LYC_DISPATCH_LAG -- FITTED-TO-REFERENCE, under the maintainer's bounded exception for
- * this row (2026-09-17), which permits OUR fit at a site where it costs
+ * this row, which permits OUR fit at a site where it costs
  * nothing.  It is the SAME CLAUSE as LINE0_DISPATCH_LAG above, in the same
  * units, at the same stage -- the dispatch eligibility sample, never the raise
  * -- applied to the LYC source instead of to line 0.  The derivation of the
@@ -1819,7 +1850,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef LYC_CARRY
 #define LYC_CARRY 1
 #endif
-/* LYC_BLANK_HOLD (8 Nov 2026) -- MECHANISM, original Game Boy only.
+/* LYC_BLANK_HOLD -- MECHANISM, original Game Boy only.
  * At the start of a line the comparator is blind for one machine cycle and LY
  * already holds the new line.  That blind spot is what STAT bit 2 READS (0);
  * it is not a falling edge on the interrupt line.  A match from the line
@@ -1847,7 +1878,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef LYC_BLANK_HOLD
 #define LYC_BLANK_HOLD 1
 #endif
-/* 2026-10-28: 1, not 4.  The same correction as LINE0_DISPATCH_LAG:
+/* 1, not 4.  The same correction as LINE0_DISPATCH_LAG:
  * with the running look at the line start (RUN_IRQ_LOOK_EDGES 3) a 4-dot hold
  * hid the coincidence raise from the look's sample and daid/ppu_scanline_bgp
  * (DMG) failed (55 checkpoints moved).  Swept 3, 2, 1: only 1 gives that row
@@ -1856,7 +1887,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define LYC_DISPATCH_LAG 1
 #endif
 /* IRQ_HOLD_FRESH_ONLY -- THE LINE-0 / LYC HOLD DELAYS ONLY A NEW REQUEST
- * (2026-10-25).
+ *
  * LINE0_DISPATCH_LAG and LYC_DISPATCH_LAG hide a fresh STAT raise from the
  * processor for a few dots: the request bit is set, the processor's sample
  * misses it.  They were armed on every rising edge of the STAT line, even when
@@ -1875,7 +1906,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define IRQ_HOLD_FRESH_ONLY 1
 #endif
 /* ===========================================================================
- *  CT -- THE COLOR'S CPU-VISIBLE TIMING (2026-10-24).
+ *  CT -- THE COLOR'S CPU-VISIBLE TIMING.
  *
  *  WHAT IT IS.  On the Color, every time the CPU can SEE -- when LY changes,
  *  when STAT's mode bits change, when each STAT / vertical-blank request rises,
@@ -1887,7 +1918,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  *  which every VRAM / OAM access window keys off, keeps its master timing.
  *
  *  WHY.  Magical Drop (USA) rewrites one colour 46 times per line from an LYC
- *  interrupt and a STAT poll at double speed (22 Oct).  Its writes land
+ *  interrupt and a STAT poll at double speed.  Its writes land
  *  in the palette's busy window only if the CPU reaches them on the same dot as
  *  on the hardware the reference models.  Fixing the palette window alone
  *  (CGB_PAL_BLOCK) moved it further from the reference because our STAT edges,
@@ -1972,7 +2003,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef CT_LY153_SS            /* LY reads 153 on line 153 ...                    */
 #define CT_LY153_SS (SPSW_LY_GLITCH ? 2 : 0)
 #endif
-/* CT_LY153_DS / CT_LY153Z_DS (2026-11-01): HARDWARE OVERRULES THE
+/* CT_LY153_DS / CT_LY153Z_DS: HARDWARE OVERRULES THE
  * REFERENCE.  AGE ly-dmgC-cgbBC, verified by its author on CPU CGB B and C,
  * double-speed rows, the 152/153 edge: line 153 dot 2 still reads 152, dots 4-8
  * read 153, dot 10 reads 0 (traced).  The reference's 2 / 8 read 153 at dot 2
@@ -2001,9 +2032,9 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef CT_M3R_DS
 #define CT_M3R_DS 84
 #endif
-/* CT_M0_OWED (7 Nov 2026; Mooneye intr_2_mode0_timing_sprites on the
+/* CT_M0_OWED (Mooneye intr_2_mode0_timing_sprites on the
  * Color, test 0x20, ten objects at X = 167, verified on hardware by its author;
- * it failed from 22 Oct).  The report and the request lead the last pixel by a
+ * it had been failing).  The report and the request lead the last pixel by a
  * count that left out an object not yet fetched, so an object in the line's last
  * two pixels reported mode 0 before its own fetch.  The count is now the dots of
  * object work still owed, which is what OBJ_M0_LEAD has always used.  This one
@@ -2036,7 +2067,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef CT_M0IO_DS
 #define CT_M0IO_DS -1
 #endif
-/* CT_M0I_DS_EXTRA (29 Oct 2026): at double speed the Color's
+/* CT_M0I_DS_EXTRA: at double speed the Color's
  * mode-0 REQUEST rises this many dots later than CT_M0I_DS's one dot after the
  * last pixel; the report does not move.  AGE stat-int-dmgC-cgbBCE (verified on
  * CPU CGB B, C and E), double-speed mode-0 rows: a running processor takes the
@@ -2119,7 +2150,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* CT_SWITCH_PPU_BACK: the same at a switch back to single speed, dots the PPU
  * runs ahead (negative: dots it falls behind).  Default: the original arm
  * (-CT_SWITCH_PPU), i.e. no change.  MEASURED AND DECLINED (measured
- * 2026-11-07): AGE spsw-mode0 (its author's table) reads our LY and STAT a
+ * AGE spsw-mode0 (its author's table) reads our LY and STAT a
  * quarter line late after every switch back to single speed; a sweep of this
  * knob gives 36 -> 1 wrong cells of 120 at 15 (and lcd-align-ly 27 -> 6 of 72),
  * 13 at 14, 15 at 16, with CT_SWITCH_PPU 1 or 3 and CT_SWITCH_SHORT 3 or 5
@@ -2127,14 +2158,14 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * at 15 is the line after the THIRD switch (ours a line early), so the stall's
  * end is not a constant offset.  Reopen: a model of how the switch's stall
  * ends relative to the PPU (see the CT doc, section 4).
- * CORRECTION (7 Nov 2026): "not a constant offset" was wrong.  The
+ * CORRECTION: "not a constant offset" was wrong.  The
  * pair of switches is one constant, 149 dots mod 456, and the one cell left at 15
  * was the LY glitch (SPSW_LY_GLITCH), not a position.  This knob only applies with
  * SPSW_STALL 0. */
 #ifndef CT_SWITCH_PPU_BACK
 #define CT_SWITCH_PPU_BACK (-CT_SWITCH_PPU)
 #endif
-/* SPSW_STALL (7 Nov 2026): 1 = THE MODEL OF THE SWITCH'S STALL.
+/* SPSW_STALL: 1 = THE MODEL OF THE SWITCH'S STALL.
  * 0 = the old stall (32766 cycles, deferred flip, a second divider reset at its
  * end, and CT_SWITCH_SHORT / CT_SWITCH_PPU* above).
  * MECHANISM, read in the AGE emulator's source (its author's own tests, Apache
@@ -2187,7 +2218,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define LYC_DISPATCH_LAG_CGB LYC_DISPATCH_LAG
 #endif
 /* LYC_DISPATCH_LAG_CGB_DS -- THE SAME HOLD AT DOUBLE SPEED
- * (2026-10-22).  DEFAULT -1 = INHERIT the single-speed 4 dots (two machine
+ * DEFAULT -1 = INHERIT the single-speed 4 dots (two machine
  * cycles at double speed), i.e. NO CHANGE.  0 is the research arm: it is what
  * Magical Drop needs (with M0_LEAD_CGB_DS 2) and it is REFUTED as a ship by
  * Demotronic (demo), which goes 3 -> 297 unmatched frames of 1500 against the
@@ -2310,7 +2341,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * 1 = SHIPPED, the same exception with the positional condition dropped.
  *
  * KNOWING DEVIATION from the oracle, on the REFERENCE's evidence -- a score,
- * tier 2, not a photograph. [TIER CORRECTED 2026-08-20; see the tier note in
+ * tier 2, not a photograph. [TIER CORRECTED; see the tier note in
  * our run_mealybug test.]  Mealybug
  * writes LCDC at positions where the positional condition is false, so under
  * SameBoy's form the exception never fires for those tests and the bit is held
@@ -2326,7 +2357,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * shipped because it is the one with a hardware statement behind it. */
 /* See ppu_fetch_object.  0 = the signed row arithmetic this core shipped with,
  * 1 = SHIPPED, the modular field the hardware can actually build.  RE-DERIVED
- * 2026-08-20 after LCDC_PEND 4 -> 5 moved the board: worth 460 px
+ * after LCDC_PEND 4 -> 5 moved the board: worth 460 px
  * (m3_lcdc_obj_size_change 330 -> 30, m3_lcdc_obj_size_change_scx 190 -> 30).
  * It previously read "worth 376 px (310 -> 34, 230 -> 130)" at the old base --
  * the conclusion is unchanged and the figure grew
@@ -2399,7 +2430,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * write path, changes the STORED intermediate, and is live.  Two mechanisms,
  * confusingly similar names.
  *
- * RETIRED BY NAME.  It read: "RE-DERIVED 2026-08-20 from 1 to 0 ... releasing
+ * RETIRED BY NAME.  It read: "RE-DERIVED from 1 to 0 ... releasing
  * the window's moves ONLY m3_lcdc_tile_sel_win_change and holding the
  * background's moves ONLY m3_lcdc_tile_sel_change ... Neither released is 190 px
  * better and is also the SYMMETRIC configuration."  Whatever base that was taken
@@ -2423,7 +2454,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  *      MEASURED PROPERTY of this consumer, not an inherited default.  See
  *      the PPU design, "The run: the scope held, the direction did not".
  *
- *      *** REASON 1 DOES NOT REPRODUCE, 2026-08-31.  THE ORIGINAL IS LEFT
+ *      *** REASON 1 DOES NOT REPRODUCE.  THE ORIGINAL IS LEFT
  *      *** ABOVE DELIBERATELY; THIS IS A CORRECTION, NOT A DELETION.
  *
  *      Under the shipped LCDC_PERBIT=1, `w == 7` in lcdc_cw is EXACTLY the
@@ -2470,7 +2501,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * value CLEARS bit 5, and the old value when it SETS it.
  *
  * ===========================================================================
- * WHAT THIS IS, AND WHAT IT IS NOT.  The maintainer's ruling, 2026-08-29.
+ * WHAT THIS IS, AND WHAT IT IS NOT.  The maintainer's ruling.
  *
  * THE ABOVE IS A DESCRIPTION OF THIS CODE.  IT IS NOT A CLAIM ABOUT HARDWARE,
  * AND IT USED TO BE WRITTEN AS ONE.  The previous wording sourced the direction
@@ -2548,7 +2579,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #endif
 #ifndef REL_MERGE
 #define REL_MERGE  1      /* pixel merge, LCDC.0 and LCDC.1 */
-/* The two LCDC.1 consumers UPSTREAM of the merge, wired 2026-08-20.  Both read
+/* The two LCDC.1 consumers UPSTREAM of the merge, wired.  Both read
  * the register raw until now, so LCDC_W_MERGE1 reached one of bit 1's three
  * consumers and no width applied to bit 1 meant what it said.  rel 0 and width
  * 8 reproduce a raw read EXACTLY -- lcdc_cw skips the w==9 branch and the
@@ -2573,7 +2604,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * restricted to two values: REL = 1 releases the bit during the conflict dot
  * (width 7) and REL = 0 holds it (width 8).  What it cannot express is width 9,
  * a bit held for ONE DOT MORE.  This adds the third value and nothing else.
- *      *** VOID AS WRITTEN, 2026-09-02: THE WIDTH DOMAIN IS {6,7,8,9}, FOUR
+ *      *** VOID AS WRITTEN: THE WIDTH DOMAIN IS {6,7,8,9}, FOUR
  *      *** MEMBERS.  Width 6 -- delivery across the whole lead window -- was
  *      *** added to lcdc_cw later the same day.  "The third value" enumerates a
  *      *** three-member domain that has four.  The mechanism described is
@@ -2583,7 +2614,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * DERIVED FROM THE CONSUMER TABLE, COMMITTED BEFORE ANY SCORE (see the F4 table
  * in the PPU design).
  *
- * RETIRED BY NAME, NOT DELETED -- 2026-08-28, at the bit-3 width ship
+ * RETIRED BY NAME, NOT DELETED, at the bit-3 width ship
  * (the PPU design section 67/68).  The sentence that stood here read:
  *
  *     "The defaults below are the SHIPPED assignment written in width form --
@@ -2615,7 +2646,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* ===========================================================================
  * ***BEFORE YOU SWEEP ANY LCDC_W_* KNOB ON THESE CELLS, READ THIS.  178 PX OF
  * THE OPEN BOARD ARE PROVEN BEYOND THE REACH OF THIS ENTIRE FAMILY.***
- * Measured 2026-09-02 at base 28ef39b2, byte comparison of all 31 renders.
+ * Measured at base 28ef39b2, byte comparison of all 31 renders.
  *
  *   BIT 1 (OBJ_EN) -- m3_lcdc_obj_en_change (2 px) + _variant (98 px) = 100 px
  *       All THREE consumers swept to BOTH alternatives: LCDC_W_OBJSEL 8->7 and
@@ -2637,7 +2668,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * 2 OF 31 RENDERS.  The corpus reaches bit 0's merge consumer and never bit 1's.
  *
  *
- * *** CORRECTION, 2026-09-02: "CANNOT REACH" IS FALSE ON BOTH BITS. THE
+ * *** CORRECTION: "CANNOT REACH" IS FALSE ON BOTH BITS. THE
  * *** ORIGINAL IS LEFT ABOVE DELIBERATELY; THIS IS A CORRECTION, NOT A DELETION.
  *
  * THE EXHAUSTIVENESS ARGUMENT WAS TRUE WHEN WRITTEN AND FALSE BY THE END OF THE
@@ -2769,7 +2800,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef LCDC_W_MERGE1
 #define LCDC_W_MERGE1 7   /* LCDC.1 OBJ_EN,  read at the LCD write  */
 #endif
-/* SHIPPED at 9 on the maintainer's ruling, 2026-08-20.  THE REASON IS THE CONSTRAINT,
+/* SHIPPED at 9 on the maintainer's ruling.  THE REASON IS THE CONSTRAINT,
  * not the score.
  *
  * 9 is the UNIQUE width at which BOTH of bit 2's tests are minimised:
@@ -2790,7 +2821,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * others.
  *
  * It was also worth -20 px, and that was already called the least important
- * thing about it.  RE-DERIVED 2026-08-20 after LCDC_PEND 4 -> 5: this bit is now
+ * thing about it.  RE-DERIVED after LCDC_PEND 4 -> 5: this bit is now
  * INERT ON THE BOARD at w7, w8 and w9 alike -- 2896 px at all three.  RE-DERIVED
  * AT BASE 1892 after cycle 1 shipped: 1892 px at all three, so the INERTNESS is
  * what survives and the number is not the claim.  The 2896 is retired by name.
@@ -2845,7 +2876,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * reading "not refuted" as "checked and fine" has the wrong end of it. */
 /* ===========================================================================
  * ***THE obj_size 60 PX IS REAL AS GEOMETRY AND FALSE AS A MECHANISM.***
- * Located and refuted 2026-09-02, base d7657f4.  Read before sweeping here.
+ * Located and refuted, base d7657f4.  Read before sweeping here.
  *
  * THE GEOMETRY IS SOUND AND STILL TRUE.  All 60 px of m3_lcdc_obj_size_change
  * and m3_lcdc_obj_size_change_scx are FOUR INSTANCES OF ONE 15-px, 6x5 diagonal
@@ -2880,7 +2911,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef LCDC_W_OBJ
 #define LCDC_W_OBJ 9      /* LCDC.2 OBJ_SIZE */
 #endif
-/* *** THE PARAGRAPH ABOVE IS WRONG AT w7, MEASURED 2026-09-02 AT BASE 0d5dea7.
+/* *** THE PARAGRAPH ABOVE IS WRONG AT w7, MEASURED AT BASE 0d5dea7.
  * It says bit 2 is "INERT on the board at w7, w8 and w9 alike".  Half of that is
  * right and half is false, and the false half is the one a cycle reaches for:
  *
@@ -2910,7 +2941,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * If that holds, SCAN alone is byte-inert and FETCH alone reproduces the whole
  * 20 px -- in which case THIS SPLIT OFFERS NO GAIN and that is the finding.
  *
- * MEASURED 2026-09-02, base 0d5dea7, clean build per point, BYTE COMPARISON of
+ * MEASURED, base 0d5dea7, clean build per point, BYTE COMPARISON of
  * all 31 renders.  ALL THREE PREDICTIONS HELD, AND THE REGISTERED NEGATIVE FIRED:
  *
  *   P0  defaults vs pre-split shipped      31/31 BYTE-IDENTICAL   knob-turns OK
@@ -2930,7 +2961,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * is kept as INSTRUMENTATION -- it makes bit 2's two consumers separately
  * askable, and it is behaviour-neutral at defaults by P0 -- NOT as an adoption. */
 /* ***THIS SPLIT SHIPPED AS A REGISTERED NULL AND HAS NOW DISCRIMINATED.***
- * It was added 2026-09-02 proving nothing: at defaults byte-identical, and its
+ * It was added proving nothing: at defaults byte-identical, and its
  * own pre-registration predicted no gain, which is what it measured.  The case
  * for keeping behaviour-neutral instrumentation that proves nothing on the day
  * was thin at the time.  THIS IS THE EVIDENCE IT WAS RIGHT:
@@ -2949,7 +2980,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef LCDC_W_OBJ_FETCH
 #define LCDC_W_OBJ_FETCH LCDC_W_OBJ   /* LCDC.2 at the mode-3 object fetch */
 #endif
-/* BIT 3 AT WIDTH 9 IS REFUSED -- 2026-08-20 -- and this is a refusal, not
+/* BIT 3 AT WIDTH 9 IS REFUSED -- and this is a refusal, not
  * a pending item.  It has NO MECHANISM: no consistency constraint selects it,
  * nothing but a better number.  His reason, so that whoever finds the number
  * finds the ruling with it: "Bit 3's 510 px goes where the global knob's went --
@@ -2960,7 +2991,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * times the bit-2 ship" and "Re-derived at the post-ship base: 5121 -> 4611,
  * still 510".  That "post-ship" meant the SEAM ship and the base 5121, and the
  * board has moved again since -- which is why a re-derivation stamp must name
- * the BASE, not the date.  2026-08-20 saw three different boards.
+ * the BASE, not the date.  One day saw three different boards.
  *
  * AT BASE 1138 (fourth and fifth ships): w7 1138 (shipped), w8 822 at 12/24,
  * w9 1014 -- w8 STILL worth exactly 316 px and a pass, w9 STILL exactly 124.
@@ -3016,7 +3047,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * closed list at OBJ_FETCH_FINISH = 2 -- bg map select, win map select,
  * tile-data select, SCX, SCY, with lcdc_wincmp() deliberately excluded -- ships
  * the assertion that the two background selects are one class, and it shipped
- * AFTER the 2026-08-20 refusal whose stated ground was "no consistency
+ * AFTER the refusal whose stated ground was "no consistency
  * constraint selects it".  772 is the CONSEQUENCE of the principle and is not
  * the argument for it.  The old "at most 60 on both tests" criterion is VOID
  * (our method) and NOTHING here is derived from it.
@@ -3025,9 +3056,9 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * THE CLASS IS NOW BROKEN ON BIT 4, AND BIT 1 IS NOT A PRECEDENT FOR IT.
  * Recorded here, in the closed list's own text, because this is where the
  * reach for a precedent happens -- not in a register a reader may not open.
- * Placed 2026-09-02.
+ * Placed.
  *
- * LCDC_W_WINDATA was adopted at 7 on 2026-08-31 under the maintainer's policy of that
+ * LCDC_W_WINDATA was adopted at 7 under the maintainer's policy of that
  * date while LCDC_W_BGDATA stays at 8.  That is one bit carrying two settling
  * widths on two paths -- exactly what the list above denies -- and it is
  * labelled FITTED at its own site and in our provenance record for that reason.
@@ -3059,7 +3090,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #endif
 /* ===========================================================================
  * LCDC_W_BGMAP_CGB = 9 -- ***`G1`'s CGB ARM FOR THIS CONSUMER ALONE.***
- * Landed 2026-09-05 from our notes;
+ * Landed from our notes;
  * evidence in our notes.
  *
  * ***ORACLE-DERIVED.***  Not MECHANISM.  A width-member isolation
@@ -3116,19 +3147,19 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define LCDC_W_BGDATA 8   /* LCDC.4 TILE_SEL, background path */
 #endif
 /* ===========================================================================
- * LCDC_W_WINDATA = 7 IS ***FITTED***, NOT DERIVED.  Staged 2026-08-31 under
+ * LCDC_W_WINDATA = 7 IS ***FITTED***, NOT DERIVED.  Staged under
  * The maintainer's ruling of that date: "Take the reference as the target.  Adopt
  * anything that scores.  But record, per value, whether it has a MECHANISM or
  * is FITTED."  It is the first value adopted under that policy, and the label
  * is the whole point of adopting it -- see our provenance record, and the
- * 2026-08-31 section of our board record for the measurement.
+ * section of our board record for the measurement.
  *
  * WHAT IT ASSERTS: that LCDC.4 reaches the WINDOW tile-data address one dot
  * earlier than it reaches the BACKGROUND tile-data address -- ONE BIT CARRYING
  * TWO DIFFERENT SETTLING WIDTHS ON TWO DIFFERENT PATHS.  Nothing in the
  * hardware material says that, and the fitting is the reason it is here.
  *
- * MEASURED 2026-08-31, clean build per point, base stamp
+ * MEASURED, clean build per point, base stamp
  * c336c5cf098e2f693276a47e7ba9e117d0f8e2bb (our stamp tool):
  *
  *     bg/win   board   pass    tile_sel_change   tile_sel_win_change
@@ -3166,9 +3197,9 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * reads 576 px at 7.  Only the window test prefers 7.  Routed to the
  * review; not edited from here.
  *
- * THE PRIOR REFUSAL THIS REVERSES: 2026-08-28, refused on the ground that we
+ * THE PRIOR REFUSAL THIS REVERSES: refused on the ground that we
  * had no mechanism for it.  That ground is unchanged -- there is still no
- * mechanism.  What changed is that the 2026-08-31 ruling makes the absence a
+ * mechanism.  What changed is that the ruling makes the absence a
  * LABEL rather than a disqualification.  If silicon ever answers the two-phase
  * question (our hardware questions, section 6, SPECIFIED-BLOCKED), this value is
  * re-decided on that answer and the label is what makes it findable.
@@ -3184,7 +3215,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #endif
 /* ===========================================================================
  * THE LEAD-WINDOW DEPTH LEVER -- two new WIDTHS, not two new knobs.
- * Built 2026-09-02 from the lead-window-depth notes, on the maintainer's ruling.
+ * Built from the lead-window-depth notes, on the maintainer's ruling.
  *
  * WHY IT IS A WIDTH AND NOT A PER-CONSUMER `depth` CONSTANT, which is what the
  * registration asked for.  The registration says "a per-consumer constant
@@ -3239,8 +3270,8 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * All thirteen shipped widths are 7/8/9, so both expressions are 0 and
  * `clang -E -P` is byte-identical to the unpatched file.  RE-CHECK THAT AFTER
  * EVERY EDIT: WX_W_WINCMP's identically worded claim was found VOID on
- * 2026-09-02 when its own default moved and nobody re-ran the check. */
-/* MEASURED 2026-09-02, base f94eac5 / 3e8f0de (identical src/gb.c), all 31
+ * when its own default moved and nobody re-ran the check. */
+/* MEASURED, base f94eac5 / 3e8f0de (identical src/gb.c), all 31
  * mealybug cartridges rendered and compared BYTE FOR BYTE, never by board
  * figure.  BOTH REGISTERED PREDICTIONS WERE READ; ONE HELD AND ONE FAILED.
  *
@@ -3333,7 +3364,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
     /* ***THE LIST IS THE GUARD, SO A MEMBER MISSING FROM IT IS A GUARD THAT
      * DOES NOT RUN.***  LCDC_W_BGMAP_CGB and LCDC_W_OBJ_FETCH_CGB are
      * delivered through the SAME width parameter as every name above and were
-     * simply never added here.  Measured 2026-09-06, before the fix: widths 60
+     * simply never added here.  Measured, before the fix: widths 60
      * and 90 COMPILED CLEAN on both of them while correctly firing the #errors
      * below on LCDC_W_WINMAP_CGB and LCDC_W_BGDATA_CGB -- that working pair is
      * the positive control, and it is what makes this an omission rather than
@@ -3430,7 +3461,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* ***THE SUPERSEDED ARGUMENT FOLLOWS.  ITS VALUE WAS -1 AND ITS CONCLUSION IS
  * WITHDRAWN; ITS DERIVATION OF THE SUM STANDS.***
  *
- * ***G7's CGB ARM -- DISCHARGED 2026-09-03.  MECHANISM, NOT FITTED.***
+ * ***G7's CGB ARM -- DISCHARGED.  MECHANISM, NOT FITTED.***
  *
  * Was `1`, an UNDECIDED-ADOPTED-GUARD-VALUE copied from the DMG arm.  Note
  * 10's G7 row had already flagged that as pointing THE WRONG WAY -- not merely
@@ -3496,7 +3527,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* SCX_WRITE_LEAD -- SCX's write lead in dots, and this block is about
  * SCX_WRITE_LEAD and nothing else (our method).  1 = shipped.
  *
- * PROMOTED FROM A BARE LITERAL 2026-09-02 in the literals review.  It sat in the
+ * PROMOTED FROM A BARE LITERAL in the literals review.  It sat in the
  * io_write_early switch as a naked `2` beside SCY_EARLY, WX_LEAD and IF_EARLY
  * -- three registered knobs and one invisible constant governing rendered
  * output in exactly the same way -- so it could not be swept, and it never had
@@ -3517,7 +3548,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * MEASUREMENT AT THIS BASE, and whoever reopens this owes an account of why a
  * derivation that predicts 2 loses to 1 on the only corpus that can see it.
  * The value is FITTED until that account exists.  Adopted under the maintainer's ruling
- * of 2026-09-02, "take the reference as the target, adopt anything that scores,
+ * "take the reference as the target, adopt anything that scores,
  * but record per value whether it has a MECHANISM or is FITTED".
  *
  * WHAT IT COST, BY BYTE COMPARISON AND NOT BY BOARD FIGURE: 2 of 31 renders
@@ -3541,7 +3572,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define SCX_WRITE_LEAD_CGB 1   /* UNDECIDED-ADOPTED-GUARD-VALUE -- Form A, G8, CGB single */
 #endif
 #ifndef SCX_WRITE_LEAD_CGB2
-/* NOT WRONG -- UNREACHABLE HERE.  Swept 2026-09-03 to -1: byte-identical
+/* NOT WRONG -- UNREACHABLE HERE.  Swept to -1: byte-identical
  * board, same reason as LCD_ON_START_CGB2 -- compat mode is single speed.
  * Undecided, and undecidable on this corpus. */
 #define SCX_WRITE_LEAD_CGB2 1  /* UNDECIDED -- UNREACHABLE ON THIS CORPUS, G8 */
@@ -3572,7 +3603,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * (our method: the comment above a value is not its account unless it
  * names the value; the IF phase note above belongs to IF_EARLY).
  *
- * SHIPPED AT 1 -- 2026-09-02.  The window's per-frame arming condition is
+ * SHIPPED AT 1.  The window's per-frame arming condition is
  * evaluated EVERY DOT and is CONJUNCTIVE with win_enable.  Registered at
  * our notes; label FITTED, not MECHANISM.
  *
@@ -3611,7 +3642,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * and nothing else (our method).  -1 = shipped, the register latching one dot
  * LATE with the CPU's value winning a same-cycle conflict.
  *
- * PROMOTED FROM A BARE LITERAL 2026-09-02 in the literals review, at exactly its
+ * PROMOTED FROM A BARE LITERAL in the literals review, at exactly its
  * shipped value, so the promotion is behaviour-neutral by construction.  It was
  * a naked `-1` sharing the G10 row with IF_EARLY.
  *
@@ -3718,7 +3749,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * consequence follows from that one difference. DO NOT extrapolate past
  * X = 7: at X = 8 the fetch begins AT the activation dot and the additive
  * form collapses to the bare base. */
-/* SHIPPED 2026-08-19 on the maintainer's ruling. The two-constraint object model:
+/* SHIPPED on the maintainer's ruling. The two-constraint object model:
  * begin = 89 + X, end = max(100, begin + 6), cost = end - begin. The floored
  * law 6 + max(0, 5 - X) is EMERGENT from it rather than fitted, with the
  * crossover at X = 5 falling out of the two constraints. Board 8876 -> 7279 at
@@ -3726,7 +3757,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * against the acceptance the ruling moved. The cell that decided it
  * (m3_lcdc_win_map_change) goes 372 -> 310 -- a SCORE, so tier 2, not the
  * "tier-1 photograph cell" this comment used to call it. [TIER CORRECTED
- * 2026-08-20; see the tier note in our run_mealybug test.] See the PPU design, "The
+ * see the tier note in our run_mealybug test.] See the PPU design, "The
  * two-constraint model built" and "Shipped on the maintainer's ruling".
  *
  * RE-DERIVED AT BASE 1892, shipped configuration -- and THIS is OBJ_TWO_CON's
@@ -3747,12 +3778,12 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * and the two-constraint model is a structure. Our notice walks with the right
  * spacing at 85 + X where the oracle begins at 89 + X, so this is one number
  * and it must not be folded into the structural change. */
-/* RE-DERIVED 2026-08-19, when the acceptance it is graded against moved. At 5
+/* RE-DERIVED, when the acceptance it is graded against moved. At 5
  * the activation dot was exact and the author's law was uniformly one
  * short; at 6 the author's law is exact at ALL EIGHT alignments, all three
  * acceptance ladders land -- including the re-derived LX = 0 cell -- and the
  * board is 987 px better. The reference's activation dot now reads one early,
- * [TIER CORRECTED 2026-08-20: this dot was called "tier-1" twice above. It is
+ * [TIER CORRECTED: this dot was called "tier-1" twice above. It is
  * a DOT COMPARISON against an emulator trace -- not a score and not a picture
  * read -- so it is tier 2 by a second route: no photograph was ever consulted.]
  * which is a magnitude and is recorded as such. */
@@ -3760,7 +3791,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * ***DO NOT CONCLUDE FROM THIS FLAT CONSTANT THAT THE STALL LAW IS FLAT.
  * IT IS NOT. I DID, AND IT COST A DAY'S BEST-LOOKING FINDING.***
  *
- * WHAT I CLAIMED, 2026-09-02, and it is WRONG: "our core implements a flat term
+ * WHAT I CLAIMED, and it is WRONG: "our core implements a flat term
  * with NO X-dependent component at all", inferred from this one site being a
  * constant, and offered as a MECHANISM route citing the suite author's own
  * arithmetic in inc/lcdc_stat_int_base.asm.
@@ -3865,7 +3896,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * family refutes a per-object scaling -- and not per run: the ten-runs family
  * refutes that too.  ONCE PER LINE.
  *
- * ***THE FIGURE WAS 47 OF 105 UNTIL 2026-09-18 AND THAT FIGURE WAS AN
+ * ***THE FIGURE WAS 47 OF 105 UNTIL A RE-RUN, AND THAT FIGURE WAS AN
  * INSTRUMENT ARTEFACT.***  our mooneye_report test allocated the core context
  * with malloc and no memset, and gb_reset() carries dev/model/sgb ACROSS its
  * own memset by reading them BEFORE it -- so every run through that tool ran
@@ -3953,14 +3984,14 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define OBJ_M0_LEAD 3
 #endif
 /* OBJ_M0_LEAD_CGB -- THE SAME REPORT LEAD ON THE COLOR, ONE DOT SHORTER
- * (2026-10-17).  Mooneye
+ * Mooneye
  * acceptance/ppu/intr_2_mode0_timing_sprites failed on the Color device at
  * testcase 0A (with and without the boot program) while it passes 105 of 105
- * on the original.  Cause (gb-statdocs r3/win NOTES 1, re-measured here): the
+ * on the original.  Cause (our notes, re-measured here): the
  * lead is the object-free report's position inside the processor's four-dot
  * sample window, and the Color's processor samples the line one dot later
  * than the original's (machine cycles cover dots 4k+2..4k+5 on the Color at
- * single speed, 4k+1..4k+4 on the original; statdocs r3/lcdc NOTES 1).  So the
+ * single speed, 4k+1..4k+4 on the original).  So the
  * Color's lead is the original's minus that one dot.
  * LABEL: the ONE-DOT OFFSET is MECHANISM (the measured access phase); the
  * magnitude it is applied to is OBJ_M0_LEAD's, which is FITTED, so the value
@@ -3973,7 +4004,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define OBJ_M0_LEAD_CGB 2
 #endif
 /* M0_LEAD_CGB -- THE OBJECT-FREE LINE'S REPORT LEAD ON THE COLOR
- * (2026-10-22).  On a CGB line where NO object was noticed, STAT reports mode 0
+ * On a CGB line where NO object was noticed, STAT reports mode 0
  * this many dots before the line's last pixel.  Report-only, exactly like
  * OBJ_M0_LEAD_CGB: it writes mode_report, int_mode and the STAT line and
  * nothing else, so ppu_mode, m0_seen, the fetcher, the H-blank chunk, the
@@ -3998,7 +4029,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #endif
 /* ===========================================================================
  *  F1 -- THE MODE EDGES THE CPU SEES, AGAINST THE AGE TESTS
- *  (2026-10-28).  our notes lists the failures; the
+ * our notes lists the failures; the
  *  record of this work is our notes.
  *
  *  The AGE timing tests (Christoph Sprenger, MIT; each verified by its author
@@ -4063,6 +4094,25 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef M0_LEAD_DMG
 #define M0_LEAD_DMG 3
 #endif
+/* OBJ_OFF_M0_LEAD -- A LINE WHOSE OBJECTS ARE SWITCHED OFF IS AN OBJECT-FREE
+ * LINE FOR THE MODE-0 REPORT.
+ * M0_LEAD_DMG gives object-free lines their three-dot report lead and keeps it
+ * off lines where the OAM search selected objects (Mooneye
+ * intr_2_mode0_timing_sprites pins those, with objects ON).  The gate tested
+ * the search's count only, so a line whose objects were selected while LCDC
+ * bit 1 is clear -- the original Game Boy then fetches none of them -- lost the
+ * lead too.  Pinball Deluxe does exactly that on line 127 (the status bar:
+ * LCDC $E3 -> $F1 written in line 126's H-blank, window from line 127): our
+ * mode-0 report there came three dots after SameBoy 1.0.5's, whose mode 3 on
+ * that line is the plain 172 + window length (it skips objects when LCDC bit
+ * 1 is clear, display.c), and the game's STAT poll at $0E04 read mode 3 where
+ * SameBoy read mode 0 (frame 2,078, Start 6 frames in 12).  With the knob, the
+ * lead applies when objects are off and no object fetch ran on the line.
+ * LABEL: MECHANISM (no fetch, so the line ends as an object-free one); the
+ * three dots are M0_LEAD_DMG's (FITTED there).  On (Pinball Deluxe, 2.1.2); off arm: 0. */
+#ifndef OBJ_OFF_M0_LEAD
+#define OBJ_OFF_M0_LEAD 1
+#endif
 #ifndef LINE0_M0_LAG
 #define LINE0_M0_LAG 2
 #endif
@@ -4072,7 +4122,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef CT_WRAP_M0
 #define CT_WRAP_M0 1
 #endif
-/* F1b -- THE COLOR'S VRAM / OAM WINDOWS AT SINGLE SPEED (2026-10-28).
+/* F1b -- THE COLOR'S VRAM / OAM WINDOWS AT SINGLE SPEED.
  * AGE oam-read-ncmBC, vram-read-ncmBCE and oam-write-ncmBCE (and the single-speed
  * halves of the colour-mode ones), verified by their author on CPU CGB B/C/E:
  *  CGB_ACC_REL 1       VRAM and OAM come back to the CPU when STAT reports mode 0
@@ -4103,7 +4153,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define CGB_OAMW_LIVE 1
 #endif
 /* CGB_ACC_DS -- F1b AT DOUBLE SPEED: THE COLOR'S MEMORY PORTS FOLLOW STAT
- * (2026-11-01).  AGE vram-read-cgbBCE, oam-read-dmgC-cgbBC and
+ * AGE vram-read-cgbBCE, oam-read-dmgC-cgbBC and
  * oam-write-cgbBCE, verified by their author on CPU CGB B/C/E, double-speed
  * rows, traced read by read.  At double speed the CPU's VRAM and OAM ports
  * close and open exactly when the CT block's STAT report (ct_stat) changes:
@@ -4154,7 +4204,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define M0_IRQ_LEAD_DMG 0
 #endif
 /* RUN_IRQ_LOOK_DMG -- THE RUNNING PROCESSOR SEES A PPU REQUEST TWO DOTS EARLIER
- * THAN THE HALTED ONE (2026-10-28).
+ * THAN THE HALTED ONE.
  * Three hardware tables, each verified by its author, disagree with one
  * sampling point:
  *   AGE stat-int-dmgC (a RUNNING processor, NOPs, takes the mode-0, mode-2 and
@@ -4178,7 +4228,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * 24/24 -> 2/24 and AGE m3-bg-lcdc (DMG) fails.  Our write leads were fitted
  * with today's line-start dispatch, so that half was DECLINED until they
  * were re-derived.
- * REDEVELOPED (2026-10-28):
+ * REDEVELOPED:
  * RUN_IRQ_LOOK_EDGES 3 together with DMG_WRITE_LAG 4 (the drawing-register
  * writes land one machine cycle later than the leads fitted under the late
  * dispatch put them), LINE0_DISPATCH_LAG 3, VB_MODE_DOT 6 and DMG_HALT_TEST_END 2.
@@ -4198,8 +4248,123 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef RUN_IRQ_LOOK_DMG
 #define RUN_IRQ_LOOK_DMG 2
 #endif
+/* RUN_LOOK_MEMOP -- THE LOOK IS NOT REFUSED WHEN THE INSTRUCTION IT PROTECTS
+ * WILL NOT RUN.
+ * RUN_IRQ_LOOK_DMG's gate refuses the look when the next instruction's second
+ * machine cycle reads or writes memory through (HL), (BC), (DE), (C) or the
+ * stack, so that the access keeps its dot.  But the look is how the running
+ * processor's boundary test sees a request two dots on; refusing it there means
+ * a running DMG never takes a line-start (or end-of-drawing) interrupt at a
+ * boundary in front of one of those instructions, and takes it one instruction
+ * late instead.  Hardware samples at every boundary alike.  SameBoy 1.0.5
+ * samples IF at the end of every instruction (GB_cpu_run's flush), whatever
+ * comes next.
+ * Pinball Deluxe (Europe), Start pressed 6 frames in 12, matched SameBoy cycle
+ * for cycle for 2,012 frames and then parted exactly here: the STAT mode-2
+ * request for line 40 rose at SameBoy's instruction boundary in front of
+ * LD E,(HL) at 1EA6, inside the game's timer handler; SameBoy took it, we ran
+ * LD E,(HL) first.  That late start is the one-line lag that leaks the stack.
+ * With this knob: when the gate refuses the look only because of the next
+ * instruction, IME is set, and the look would raise a request that is enabled,
+ * the look is kept and the dispatch happens (the instruction never runs, so no
+ * access moves).  Otherwise the whole machine is restored from a copy taken
+ * before the look, so nothing else can change.  DMG only, running processor
+ * only, the same dots as the look.  LABEL: MECHANISM (one sampling point for
+ * every boundary).  On (Pinball Deluxe, 2.1.2); off arm: 0. */
+#ifndef RUN_LOOK_MEMOP
+#define RUN_LOOK_MEMOP 1
+#endif
+/* DISPATCH_LOOK -- THE DISPATCH'S OWN SAMPLE LOOKS AHEAD LIKE THE BOUNDARY
+ * TEST.  With DISPATCH_IF_LATE the look is taken at
+ * that later sample instead (the form measured and proposed); alone it is the
+ * first form tried, which settles and looks after the high push and did NOT
+ * cure frame 4,007 (the request rose one dot past the look).
+ * service_interrupt picks the vector from IE & IF after the high push.  That
+ * is a sample by a running processor, but it had no look, so a line-start
+ * request (mode 2, LYC, vertical blank) rising in the two dots the look covers
+ * was missed and a lower-priority request already up was taken instead.
+ * Pinball Deluxe, Start 6 frames in 12, frame 4,007: woken from HALT by the
+ * timer at the end of line 125, SameBoy 1.0.5 took the LY=126 STAT interrupt
+ * (it reads IF for the vector at the low push, and the coincidence rose on
+ * that very cycle) and we took the timer; the trace matched until there.
+ * With the knob the PPU runs RUN_IRQ_LOOK_DMG dots early at that sample, on
+ * the look's own dots only; the next machine cycle is the low push to the
+ * stack, which the PPU does not see.  DMG only.  LABEL: MECHANISM (one look
+ * for every running-processor sample); the 2 is RUN_IRQ_LOOK_DMG's (FITTED).
+ * On (Pinball Deluxe, 2.1.2); off arm: 0. */
+#ifndef DISPATCH_LOOK
+#define DISPATCH_LOOK 1
+#endif
+/* DISPATCH_IF_LATE -- THE VECTOR TAKES IE AFTER THE HIGH PUSH AND IF AFTER THE
+ * LOW PUSH.
+ * SameBoy 1.0.5's dispatch (GB_cpu_run) reads IE after writing the high byte
+ * (Mooneye ie_push pins that half) and IF after the low byte write.  We read
+ * both after the high push, one machine cycle earlier for IF.  Pinball Deluxe,
+ * Start 6 frames in 12: at frame 4,007 (woken by the timer at the end of line
+ * 125, the LY=126 request rising during the pushes) and again at frame 4,629
+ * (a mode-2 request rising while the timer handler is being entered) SameBoy
+ * took STAT and we took the timer.  With the knob the vector is chosen from IE
+ * as it stood after the high push and IF as it stands after the low push (PPU
+ * settled; with DISPATCH_LOOK the running look is applied at that sample).
+ * Both departures then go away and the trace matches SameBoy cycle for cycle
+ * for 9,000 frames.  DMG only.  LABEL: SOURCE-READ (the sampling point),
+ * reason NOT ESTABLISHED by a hardware test we hold.  On (Pinball Deluxe,
+ * 2.1.2); off arm: 0. */
+#ifndef DISPATCH_IF_LATE
+#define DISPATCH_IF_LATE 1
+#endif
+/* VB_LAG_VEC -- THE VECTOR SAMPLE KEEPS THE VERTICAL-BLANK LAG.
+ * HALT_VB_LAG hides line 144's vertical-blank request for its first dots from
+ * the instruction-boundary samples (VB_LAG_RUN).  The vector is chosen at a
+ * later sample (DISPATCH_IF_LATE), which did not apply it, so a dispatch begun
+ * for the timer at the end of line 143 switched to the vertical blank when the
+ * line turned during the pushes.  SameBoy 1.0.5 raises the vertical blank five
+ * T-cycles into the line and took the timer.  Pinball Deluxe, Start 5 frames
+ * in 10, frame 8,931.  LABEL: SOURCE-READ, the dots are HALT_VB_LAG's (FITTED).
+ * Original Game Boy only (DISPATCH_IF_LATE's arm).  Off arm: 0. */
+#ifndef VB_LAG_VEC
+#define VB_LAG_VEC 1
+#endif
+/* DISPATCH_CLEAR_MID -- THE DISPATCH CLEARS ITS REQUEST TWO T-CYCLES INTO
+ * THE LAST MACHINE CYCLE.
+ * SameBoy 1.0.5's dispatch (GB_cpu_run) chooses the vector from IF after the
+ * low push, then runs two more T-cycles and only then clears the chosen bit.
+ * A request of the same source that rises in those two T-cycles is cleared
+ * with it, so one dispatch serves both.  We cleared the bit at the vector
+ * sample, so such a request stayed pending and the handler ran a second time
+ * after its RETI.  Pinball Deluxe, Start 1 frame in 7: SET 5,(HL) writes
+ * STAT in line 153, the write's quirk requests STAT, and line 0's mode-2
+ * request rises two T-cycles into the dispatch's last machine cycle.  The
+ * request timing is not touched; only the moment of the clear moves.  Original
+ * Game Boy only (DISPATCH_IF_LATE's arm).  LABEL: SOURCE-READ (the clear
+ * point), reason NOT ESTABLISHED by a hardware test we hold.  Value: the
+ * T-cycles into the last machine cycle (SameBoy's 2), the default.  Off arm: 0. */
+#ifndef DISPATCH_CLEAR_MID
+#define DISPATCH_CLEAR_MID 2
+#endif
+/* HALT_VB_LAG is documented with its sample in gb_step; its default is set
+ * here because the vector sample above it in the file reads it. */
+#ifndef HALT_VB_LAG
+#define HALT_VB_LAG 4
+#endif
+/* HALT_IME1_REPEAT -- HALT WITH IME ON AND A REQUEST ALREADY UP RETURNS TO THE
+ * HALT, AS `ei; halt` DOES.
+ * EI_HALT_REPEAT covers the case where IME turns on as HALT completes.  The
+ * same holds when IME was already on: a request the boundary test missed but
+ * HALT's own test sees (it rose inside HALT's machine cycle) is taken at once,
+ * and the address pushed is the HALT's own, so the handler returns to the HALT
+ * and it runs again.  SameBoy 1.0.5's halt() does exactly this (pc-- when IME is
+ * set, the halt bug when it is not); the processor cannot tell how long IME
+ * has been on.  Ours halted and then woke, pushing HALT + 1, so the handler
+ * returned past the HALT.  Pinball Deluxe, Start 6 frames in 12, frame 4,483:
+ * the trace matched SameBoy until that return (08C5 against 08C4).  DMG only.
+ * LABEL: MECHANISM (EI_HALT_REPEAT's, verified on the AGE hardware table for
+ * the EI case).  On (Pinball Deluxe, 2.1.2); off arm: 0. */
+#ifndef HALT_IME1_REPEAT
+#define HALT_IME1_REPEAT 1
+#endif
 /* DMG_WRITE_LAG -- A DRAWING-REGISTER WRITE LANDS ONE MACHINE CYCLE LATER THAN
- * THE OLD LEADS PUT IT (2026-10-28).
+ * THE OLD LEADS PUT IT.
  * The old per-register leads (BGP_LEAD 2, OBP_LEAD 3, LCDC_LEAD 2, SCX_WRITE_LEAD
  * 1, SCY_EARLY 1, WX_LEAD 2) placed each write 1-3 dots BEFORE its own machine
  * cycle began.  They were fitted on mealybug, whose every write is timed from a
@@ -4227,7 +4392,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef DMG_WRITE_LAG
 #define DMG_WRITE_LAG 4
 #endif
-/* CGB_WRITE_LAG -- THE SAME PLACEMENT ON THE COLOR (2026-11-07).
+/* CGB_WRITE_LAG -- THE SAME PLACEMENT ON THE COLOR.
  * AGE m3-bg-lcdc / m3-bg-scx / m3-bg-bgp in colour mode and in the Color's
  * DMG-compatibility mode (the ncm runs) all failed while the DMG runs of the
  * same cartridges pass.  Traced on m3-bg-lcdc (colour): every wrong tile is
@@ -4252,7 +4417,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define CGB_WRITE_LAG_DS 1
 #endif
 /* DMG_HALT_TEST_END -- THE DMG'S HALT TESTS FOR A REQUEST AT THE END OF ITS OWN
- * MACHINE CYCLE, WITH THE RUNNING PROCESSOR'S LOOK (2026-10-28).
+ * MACHINE CYCLE, WITH THE RUNNING PROCESSOR'S LOOK.
  * The Color's CT_HALT_TEST_END, on the DMG.  AGE halt-m0-interrupt-dmgC: with the
  * line-start dispatch on time our HALT executes at line dot 253 (CPU time) and the
  * mode-0 request rises at 257 + SCX; the hardware table runs the halt bug for
@@ -4263,8 +4428,38 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef DMG_HALT_TEST_END
 #define DMG_HALT_TEST_END 2
 #endif
+/* HALT_FIRST_GAP -- THE HALTED ORIGINAL GAME BOY SKIPS ONE SAMPLE RIGHT AFTER
+ * THE HALT.  SameBoy 1.0.5 (sm83_cpu.c, GB_cpu_run) samples a
+ * halted DMG two T-cycles into each machine cycle and dispatches two T-cycles
+ * later; ours samples at the machine-cycle boundary and dispatches there, and
+ * the halted lags (HALT_TIMA_LAG, HALT_VB_LAG) are fitted to that offset.  Its
+ * first machine cycle after the HALT is a whole one with the sample at its
+ * start (just_halted), which falls on the HALT's own test, so the next sample
+ * comes six T-cycles later, not four.  Our halted step one machine cycle after
+ * the HALT has no SameBoy counterpart, and a request it saw was taken a
+ * machine cycle early.  Pinball Deluxe, Start 2 frames in 20, frame 5,070:
+ * HALT one dot before line 144, our vertical-blank dispatch 4 cycles before
+ * SameBoy's.  The step still runs, it does not wake.  LABEL: SOURCE-READ.
+ * Original Game Boy only.  Off arm: 0. */
+#ifndef HALT_FIRST_GAP
+#define HALT_FIRST_GAP 1
+#endif
+/* HALT_TEST_VB_LAG -- HALT'S OWN TEST SEES THE VERTICAL BLANK WHERE SAMEBOY
+ * RAISES IT.  SameBoy 1.0.5 raises line 144's vertical-blank
+ * request five T-cycles into the line (display.c), and HALT tests IF once, at
+ * the end of its machine cycle (sm83_cpu.c halt()).  Ours raises it at dot 0;
+ * HALT_VB_LAG hides it from the instruction-boundary samples, but HALT's own
+ * test (DMG_HALT_TEST_END, through the running look) still saw it, so a HALT
+ * ending in the first dots of line 144 returned to itself and was taken at
+ * once (Pinball Deluxe, the same frame 5,070 as HALT_FIRST_GAP).  The value is
+ * the first dot of line 144, before the look, at which the test sees it.
+ * LABEL: SOURCE-READ (SameBoy's five T-cycles, its own order behind the
+ * vertical-blank lag, not established).  Original Game Boy only.  Off arm: 0. */
+#ifndef HALT_TEST_VB_LAG
+#define HALT_TEST_VB_LAG 4
+#endif
 /* WIN_FINE_STALL -- A WINDOW THAT TAKES OVER DURING THE FINE-SCROLL DISCARD
- * STILL SPENDS THE DISCARD'S DOTS (2026-10-28).  AGE
+ * STILL SPENDS THE DISCARD'S DOTS.  AGE
  * stat-mode-window-dmgC: the end of drawing is the same for every WX 1-165;
  * ours ended SCX & 7 dots early for WX 1-7 because WIN_FINE_SCOPE voids the
  * pending discard at the takeover.  The discard is now kept as a stall (bit 7
@@ -4276,7 +4471,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define WIN_FINE_STALL 1
 #endif
 /* WIN_HELD_EXTRA -- ON A DMG LINE WHOSE WINDOW STARTS AT WX 1-7 THE END OF
- * DRAWING IS REPORTED ONE DOT LATER (2026-10-28).  After the stall
+ * DRAWING IS REPORTED ONE DOT LATER.  After the stall
  * above, AGE stat-mode-window-dmgC still read our WX 1-7 lines one dot early
  * against WX 8-163 on every SCX (traced: 259 against 260 at SCX 0).  Adding the
  * dot to the pixel pipeline instead breaks mealybug m3_window_timing (6 px) and
@@ -4288,7 +4483,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define WIN_HELD_EXTRA 1
 #endif
 /* WIN_FINE_STALL_CGB / WIN_TAIL_HOLD_CGB -- THE SAME TWO WINDOW LAWS ON THE COLOR
- * (2026-11-07).  AGE stat-mode-window-cgbBCE / -ncmBCE / -ds (the
+ * AGE stat-mode-window-cgbBCE / -ncmBCE / -ds (the
  * author's tables, CPU CGB B, C and E): WX 1-9 and 162-166 all end drawing
  * on the same dot as WX 8, and WX 167 does not; ours ended SCX & 7 dots early
  * for WX 1-7 (the discard voided at the takeover, as on the DMG before
@@ -4305,7 +4500,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #ifndef WIN_FINE_STALL_CGB
 #define WIN_FINE_STALL_CGB 1
 #endif
-/* BGMAP_SUM -- THE BACKGROUND MAP COLUMN IS A SUM, NOT A TILE COUNT (2026-11-07,
+/* BGMAP_SUM -- THE BACKGROUND MAP COLUMN IS A SUM, NOT A TILE COUNT (
  * measured).  AGE m3-bg-scx (the author's photographs, DMG-CPU C and CPU CGB
  * B/C/E, colour and compatibility modes, single and double speed): a line that
  * starts with fine scroll 1-7 and has SCX written to a multiple of 8 near its
@@ -4362,7 +4557,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 #define M0_LEAD_CGB_DS 0
 #endif
 /* CGB_PAL_BLOCK -- THE COLOR'S PALETTE RAM IS BUSY WHILE THE LCD DRAWS
- * (2026-10-22).  A BCPD/OCPD ($FF69/$FF6B) write that lands while the
+ * A BCPD/OCPD ($FF69/$FF6B) write that lands while the
  * PPU is drawing is DROPPED and the auto-increment in BCPS/OCPS STILL
  * HAPPENS; a read returns $FF.
  * MECHANISM, documented: Pan Docs (LCD Colour Palettes) -- palette data
@@ -4407,7 +4602,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  * and with begin = 89 + X that is end = 100 - (SCX & 7) wherever the law is
  * FALLING.
  *
- * REFUTED as a complete account, measured 2026-08-20, and kept inert as the
+ * REFUTED as a complete account, measured, and kept inert as the
  * control that shows why. A single ready dot cannot WRAP, and the sampled law
  * does: at (X + SCX) & 7 == 0 the cost jumps back to 11. This knob reproduces
  * every cell where X + SCX < 8 and misses all 25 where it wraps. So the sampled
@@ -4453,7 +4648,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
  *     They are kept inert rather than deleted because they are not simply
  *     wrong: they score BETTER on the reference captures (6304 against 6499),
  *     which are SCORES and therefore tier 2 -- this comment said "tier-1"
- *     [TIER CORRECTED 2026-08-20] -- while
+ *     [TIER CORRECTED] -- while
  *     being contradicted by an uncorroborated T2 trace. That combination is the
  *     open conflict, and deleting the knob would delete the evidence for it.
  * 2 = the comb is anchored on OUR fetcher: the dot of its last completed push.
@@ -4588,7 +4783,7 @@ static const u8 TIMER_BIT[4] = { 9, 3, 5, 7 };
 /* Whether the output position, rather than the pushed-pixel count, owns the
  * boundary position zero. See ppu_object_at.
  *
- * REFUTED 2026-08-20, kept inert with the error named. It was built to close a
+ * REFUTED, kept inert with the error named. It was built to close a
  * four-dot deficit at "on-screen alignment 0", which was OAM X = 8 -- screen
  * LX = 0, the one X where the fetcher is still inside its opening dummy fetch
  * and the steady-state law does not apply at all. Swept across X = 0..31, this
@@ -4759,11 +4954,11 @@ static unsigned long gb_seqno;
  * is not a side question here -- it IS the rule.
  *
  * ===========================================================================
- * SHIPPED AT 1, 2026-08-29.  THIS IS THE FIX FOR THE ZELDA/SUPER MARIO LAND
+ * SHIPPED AT 1.  THIS IS THE FIX FOR THE ZELDA/SUPER MARIO LAND
  * FREEZE, AND IT WAS ALREADY IN THE TREE.
  *
  * THE SHIP THAT CAUSED THE REGRESSION, NAMED AND NOT SOFTENED (the maintainer's
- * instruction): d05637d, 2026-08-19 17:22, "Ship the object model per the maintainer's
+ * instruction): d05637d, 17:22, "Ship the object model per the maintainer's
  * ruling: 12418 -> 8890" -- the phase-keyed object wait that replaced the
  * per-alignment stall.  The commit before it produced 0 short lines and it
  * produced 146.  It bought 3528 px on 24 synthetic stimuli and deadlocked a
@@ -4813,7 +5008,7 @@ static unsigned long gb_seqno;
 #ifndef OBJ_CLIP_RAMP
 #define OBJ_CLIP_RAMP 0
 #endif
-/* OBJ_CLIP_WAIT (29 Oct 2026) -- an object hidden left of the
+/* OBJ_CLIP_WAIT -- an object hidden left of the
  * screen (OAM X 1..7) costs what the same object eight pixels right costs.
  * AGE stat-mode-sprites (verified on DMG-CPU C and CPU CGB B/C/E): the table
  * row for X = 1..7 equals the row for X = 9..15 at every SCX.  Ours noticed a
@@ -4889,7 +5084,7 @@ static unsigned long gb_seqno;
  *
  *   0 = shipped: the fetch samples its registers wherever the stall leaves it
  *   1 = WHOLE-REGISTER form. SCY/SCX/LCDC are swapped wholesale for the step.
- *       Measured 2026-08-20: scy 558->58 (exact hit), tile_sel 512->8, but
+ *       Measured: scy 558->58 (exact hit), tile_sel 512->8, but
  *       tile_sel_win 454->628 and bg_map/win_map flat. It over-reaches --
  *       swapping LCDC reaches lcdc_wincmp(), the window-enable comparison,
  *       which is a different consumer with its own timing -- and it under-
@@ -5029,7 +5224,7 @@ static unsigned long gb_seqno;
  * only reader of.  At the SHIPPED OBJ_PHASE_WAIT=2 they are both inert, so
  * -DOBJ_STALL_BIAS=-4, =0 and =+8 all score identically and an arm sweeping
  * either one MEASURES NOTHING while reading as a clean null result.  Verified
- * behaviourally 2026-09-18: at the shipped configuration -DOBJ_FIRST_RUN=1,
+ * behaviourally: at the shipped configuration -DOBJ_FIRST_RUN=1,
  * -DOBJ_STALL_BIAS=4 and -DOBJ_STALL_BIAS=-4 every one gives the same 61 of 105
  * on intr_2_mode0_timing_sprites as the default.
  *
@@ -5046,7 +5241,7 @@ static unsigned long gb_seqno;
 #ifndef OBJ_ROW_MASK
 #define OBJ_ROW_MASK 1
 #endif
-/* ***THE SINGLE-POSITION EXCEPTION IS REFUTED. TESTED 2026-09-02, NOT UNTESTED,
+/* ***THE SINGLE-POSITION EXCEPTION IS REFUTED. TESTED, NOT UNTESTED,
  * AND NOT MERELY UNEXPLAINED.***  Read this before reopening the clause.
  *
  * The MERGE_EN_LAG block registers a prediction from the PPU design 43: that
@@ -5086,7 +5281,7 @@ static unsigned long gb_seqno;
  * in STAT for one dot.  This block is about STAT_CONFLICT_MOMENT and nothing
  * else (our method).  0x78 = shipped.
  *
- * PROMOTED FROM A BARE LITERAL 2026-09-02 in the literals review, at exactly its
+ * PROMOTED FROM A BARE LITERAL in the literals review, at exactly its
  * shipped value, so the promotion is behaviour-neutral by construction.  THE
  * ASYMMETRY THIS FIXES: STAT7 above selects ALTERNATIVES to this moment (0x00
  * and 0x58) and was registered; the BASE VALUE those alternatives depart from
@@ -5098,8 +5293,27 @@ static unsigned long gb_seqno;
 #ifndef STAT_CONFLICT_MOMENT
 #define STAT_CONFLICT_MOMENT 0x78
 #endif
+/* STATW_M0_EDGE -- THE ORIGINAL'S STAT-WRITE MOMENT DOES NOT CATCH A MODE-0
+ * EDGE THAT FALLS AT THE END OF ITS OWN DOT.  The all-selects
+ * moment is held for one real dot (below).  When the mode the interrupt logic
+ * sees turns to 0 at the end of that held dot, our line rose with every select
+ * still on, so a write meant to enable only the OAM source raised a mode-0
+ * request.  SameBoy 1.0.5 (sm83_cpu.c, the DMG STAT conflict; display.c, the
+ * end of mode 3) holds $FF for the same one cycle, but its mode-0 source is
+ * evaluated one cycle after drawing ends, after the written value has landed,
+ * so that edge sees the written value.  Its moment sees the mode-0 source
+ * exactly when STAT already reads mode 0 as the write lands; ours reports
+ * mode 0 a few dots before its request rises, so a write in that gap now
+ * fires too.  A request already up when the write lands fires, as before.  Pinball Deluxe sets STAT bit 5 with
+ * SET 5,(HL) right at the end of a line's drawing (frames 2,037 and 2,460,
+ * Start 3 frames in 8 and 10 in 26): ours took a STAT interrupt there, SameBoy
+ * did not.  LABEL: SOURCE-READ (no cartridge we hold places the edge inside
+ * the moment's dot).  Original Game Boy only.  Off arm: 0. */
+#ifndef STATW_M0_EDGE
+#define STATW_M0_EDGE 1
+#endif
 /* CGB_PALIDX_DEVICE -- BCPS and OCPS ($FF68, $FF6A) ARE READABLE ON THE COLOR
- * DEVICE IN BOTH MODES (2026-10-15, gb-statdocs).  MECHANISM, cartridge-declared:
+ * DEVICE IN BOTH MODES (our notes).  MECHANISM, cartridge-declared:
  * Mooneye misc/boot_hwio-C (its header: verified on CGB, AGB, AGS) reads $C8 and
  * $D0 at the compatibility-mode handover -- the index the boot program's palette
  * writes left behind, auto-increment bit 7 set, bit 6 reading 1.  The data ports
@@ -5111,7 +5325,7 @@ static unsigned long gb_seqno;
 #define CGB_PALIDX_DEVICE 1
 #endif
 /* CGB_UNDOC_DEVICE -- $FF72, $FF73 AND $FF75 BELONG TO THE COLOR DEVICE, NOT THE
- * MODE (2026-10-15, gb-statdocs).  MECHANISM, cartridge-declared twice: Mooneye
+ * MODE (our notes).  MECHANISM, cartridge-declared twice: Mooneye
  * misc/bits/unused_hwio-C and misc/boot_hwio-C both assert them mapped on a
  * cartridge with no Color flag ($00, $00, $8F at the handover; writes read back).
  * $FF74 stays gated on colour mode, as its own documentation says and as both
@@ -5121,8 +5335,8 @@ static unsigned long gb_seqno;
 #define CGB_UNDOC_DEVICE 1
 #endif
 /* STAT_M2_144_LEAD_CGB -- ON A COLOR THE LINE-144 MODE-2 STATUS INTERRUPT IS
- * RAISED ONE MACHINE CYCLE BEFORE THE VERTICAL-BLANK REQUEST (2026-10-15,
- * gb-statdocs).  Mooneye misc/ppu/vblank_stat_intr-C, whose header records PASS on
+ * RAISED ONE MACHINE CYCLE BEFORE THE VERTICAL-BLANK REQUEST (
+ * our notes).  Mooneye misc/ppu/vblank_stat_intr-C, whose header records PASS on
  * CGB, AGB, AGS and FAIL on DMG, MGB, SGB, SGB2: "stat_m2_144 is triggered one cycle
  * before a vblank".  Measured on this core before the change (our STAT probes
  * vbstat_main.c): rounds 1 0 1 1 against the declared 1 0 1 0, i.e. the two
@@ -5137,20 +5351,20 @@ static unsigned long gb_seqno;
 #define STAT_M2_144_LEAD_CGB 4
 #endif
 /* STAT_M2_144_FROM_VB -- THE ONE MACHINE CYCLE IS COUNTED FROM WHERE THE
- * VERTICAL-BLANK REQUEST NOW IS (2026-10-28).  The lead above was set
- * on 15 Oct with the vertical-blank request at line 144 dot 0.  The CT block (24
- * Oct) moved that request on the Color to dot CT_VB_SS (3) at single speed and
+ * VERTICAL-BLANK REQUEST NOW IS.  The lead above was set
+ * with the vertical-blank request at line 144 dot 0.  The CT block
+ * moved that request on the Color to dot CT_VB_SS (3) at single speed and
  * left this raise at line 143 dot 452, so the two came TWO machine cycles apart
  * and Mooneye misc/ppu/vblank_stat_intr-C (PASS on CGB/AGB/AGS by its author;
- * SameBoy 0.16.2 passes it too, observed 28 Oct) has failed since 24 Oct
- * (found 28 Oct when the regression net ran again).  Counted from the request,
+ * SameBoy 0.16.2 passes it too) then failed after the CT block
+ * (found when the regression net ran again).  Counted from the request,
  * one machine cycle before dot CT_VB_SS is line 143 dot 456 - (4 - CT_VB_SS).
  * The Color timing guard is unmoved by it (no probe cell reads the line-144 mode-2
  * request).  Double speed keeps the old 4 (UNDECIDED, as the knob above says).
  * LABEL: MECHANISM (the order is the cartridge's; the dot follows the request it
  * is ordered against).  Off arm: 0. */
 /* CT_HALT_TEST_END -- THE COLOR'S HALT TESTS FOR A REQUEST AT THE END OF ITS OWN
- * MACHINE CYCLE (2026-10-28).  AGE halt-m0-interrupt-dmgC-cgbBCE
+ * MACHINE CYCLE.  AGE halt-m0-interrupt-dmgC-cgbBCE
  * (verified by its author on CPU CGB B, C and E): HALT with IME clear runs the
  * halt bug when the mode-0 request is already up as it executes, for SCX 0-2 and
  * not 3-7.  Traced here: our HALT executes at line dot 254, the request rises at
@@ -5170,7 +5384,7 @@ static unsigned long gb_seqno;
 /* UNUSABLE_READ -- what a read of FEA0-FEFF returns on DMG.  This block is
  * about UNUSABLE_READ and nothing else (our method).  0xFF = shipped.
  *
- * PROMOTED FROM A BARE LITERAL 2026-09-02 in the literals review, at exactly its
+ * PROMOTED FROM A BARE LITERAL in the literals review, at exactly its
  * shipped value, so the promotion is behaviour-neutral by construction.
  *
  * IT IS OUTSIDE THE RENDERED-OUTPUT SURFACE -- a bus read, not a PPU value --
@@ -5209,7 +5423,7 @@ static unsigned long gb_seqno;
  *           effect of a reset written for the takeover's own shortened fetch,
  *           whose comment says nothing about mid-pair coherence.
  *
- * MEASURED 2026-09-02, all 31 cartridges, on the value the fetch ACTUALLY
+ * MEASURED, all 31 cartridges, on the value the fetch ACTUALLY
  * CONSUMED (fetch_sel when latched, live otherwise -- the LIVE bit is
  * latch-independent and reading it instead gives the same figure at every
  * setting, which is a quantity that cannot move under the arm being swept):
@@ -5274,7 +5488,7 @@ static unsigned long gb_seqno;
 /* ===========================================================================
  * THE LINE-153 SEQUENCE AND THE LYC COMPARATOR BLIND.
  *
- * PROMOTED FROM INLINE LITERALS 2026-09-02 in the literals review, each at
+ * PROMOTED FROM INLINE LITERALS in the literals review, each at
  * EXACTLY its shipped value, so the promotion is behaviour-neutral by
  * construction.  These four blocks are about these four constants and nothing
  * else (our method).
@@ -5380,7 +5594,7 @@ static unsigned long gb_seqno;
  * passes and 20 px of m3_bgp_change), so ours ran LONG.  ***I FALLS WHEN THE
  * LINE-144 END MOVES LATER***, which is the opposite of what
  * our notes section 6 concluded -- it read
- * the sign the wrong way round and proposed t = -3.  Corrected there 2026-09-17
+ * the sign the wrong way round and proposed t = -3.  Corrected there 
  * with this measurement beside it.
  *
  * ***THE PLACEMENT IS A MACHINE CYCLE, NOT A TUNED DOT, AND THAT IS MEASURED
@@ -5393,7 +5607,7 @@ static unsigned long gb_seqno;
  *     LINE0_DISPATCH_LAG   4   ->   VB_MODE_DOT 5,6,7,8  PASS, all else FAIL
  *     LINE0_DISPATCH_LAG   8   ->   VB_MODE_DOT 9..12    PASS, all else FAIL
  *
- * (42 builds, dots 0..13 at each of the three lags, 2026-09-17.)  So the value
+ * (42 builds, dots 0..13 at each of the three lags.)  So the value
  * is DERIVED rather than fitted: one machine cycle after the dispatch lag.  A
  * literal would silently stop tracking if LINE0_DISPATCH_LAG ever moved, and
  * the band moves with it by construction.
@@ -5409,7 +5623,7 @@ static unsigned long gb_seqno;
  *
  * 0 disables the deferral entirely and restores the single-statement form.
  *
- * 2026-10-28: 6, no longer LINE0_DISPATCH_LAG + 4.  With the running
+ * 6, no longer LINE0_DISPATCH_LAG + 4.  With the running
  * look at the line start (RUN_IRQ_LOOK_EDGES 3) AGE stat-int-dmgC's mode-1 rows
  * want the vertical-blank mode-1 source at dot 6 (an earlier measurement agreed; 7
  * fails them), and Mooneye intr_1_2_timing-GS still passes at 6. */
@@ -5472,7 +5686,7 @@ static long g_blk_vram = 0, g_blk_oam = 0;
  * (m3_wx_4_change 0 -> 15218). Swept 0,5,6,7,8; see the window-counter note in
  * the PPU design. */
 /* ***WIN_PRIME_LEAD = 7 IS RIGHT LOCALLY AND WRONG GLOBALLY, AND THAT IS A
- * SHARPER NEGATIVE THAN "IT DID NOT WORK".***  Measured 2026-09-02 on all 31
+ * SHARPER NEGATIVE THAN "IT DID NOT WORK".***  Measured on all 31
  * cartridges by BYTE COMPARISON.
  *
  * ON m3_window_timing IT IS A PURE FIX: 13 -> 9, ***4 FIXED / 0 CREATED / 0
@@ -5745,6 +5959,43 @@ enum gb_device {
  *  Neither figure can be checked from anything in this tree, so this enum
  *  carries the NAMES, which are not in dispute, and leaves the COUNT open.
  *  Resolving it needs a reference we do not have.  */
+/* GB_MODELS: 1 = the behaviours that differ between Game Boy
+ * models and between Color revisions follow the model setting, and a Color
+ * with no model set is a revision E.  0 = one fixed behaviour per family (the
+ * Color's is revision C's) and the Color default is revision C, as before; the
+ * build is then the earlier core byte for byte.
+ *
+ * Why E: it is the last Color revision, the one SameBoy defaults to, and the
+ * one the sound tests this core is tuned on (SameSuite) and AGE's E tables were
+ * checked on.  Each row that reads the setting carries its own switch below
+ * (MDL_*), all following this one, so a single row can be taken out to see
+ * what it moves.  The rows and what each one follows are listed where they act. */
+#ifndef GB_MODELS
+#define GB_MODELS 1
+#endif
+/* MDL_DMG0: the first Game Boy board, DMG-CPU 0 (the launch units, which carry
+ * the early start-up program).  1 = the model exists (GB_MODEL_DMG0, placed
+ * after every earlier value so none changes its number); 0 = no such model and
+ * the build is the earlier core byte for byte.  What it changes and why is at
+ * the hand-over in gb_reset; everywhere else it is a DMG-CPU B.
+ *
+ * Why only the hand-over: it is the one difference a source measures and
+ * explains (the early start-up program runs a different length of time, so it
+ * leaves other registers, divider and picture position; with Nintendo's DMG 0
+ * program supplied, this core earns all of it by running it, and the serial
+ * clock's phase follows from the divider).  One more difference is measured
+ * but NOT explained anywhere: Mooneye ppu/stat_irq_blocking, checked by its
+ * author, fails on a DMG 0 and passes on DMG A, B and C, and no source says
+ * what the DMG 0's STAT interrupt line does instead.  It is NOT BUILT (nothing
+ * to build it from); DMG 0 keeps DMG-CPU B's STAT behaviour and passes that
+ * test where the console fails it.  This is the ruling: a real first-model
+ * Game Boy fails stat_irq_blocking and ours passes it; nobody has yet found
+ * out what that board does differently, so DMG 0 follows the later boards
+ * here.  Open until a DMG 0 board is measured.  No
+ * other emulator read models a DMG 0 beyond choosing its start-up program. */
+#ifndef MDL_DMG0
+#define MDL_DMG0 GB_MODELS
+#endif
 enum gb_model {
     GB_MODEL_DMG_B = 0,   /* ZERO ON PURPOSE -- see above.  `DMG-CPU B`, which  */
                           /* is the revision the stored DMG column was taken on. */
@@ -5754,9 +6005,9 @@ enum gb_model {
     GB_MODEL_CGB_0,       /* ---- the CGB family begins ----                     */
     GB_MODEL_CGB_A,
     GB_MODEL_CGB_B,
-    GB_MODEL_CGB_C,       /* ***OUR REFERENCE REVISION.***  The stored CGB column */
-                          /* is `CPU CGB C`, so this is what the board is a board */
-                          /* OF, and after this axis exists it can SAY so.        */
+    GB_MODEL_CGB_C,       /* The stored mealybug CGB column is `CPU CGB C`; with  */
+                          /* GB_MODELS 0 this is the Color default.  With it on,  */
+                          /* the default is CGB_E (GB_CGB_DEFAULT).               */
     GB_MODEL_CGB_D,       /* the threshold every `>= CGB_D` comment names, AND    */
                           /* the singleton `!= CGB_D` names.  Both, at one value. */
     GB_MODEL_CGB_E,
@@ -5764,6 +6015,19 @@ enum gb_model {
                           /* extra-OAM corruption note and with CGB by the        */
                           /* LCD-timing note.                                     */
     GB_MODEL_AGS,
+#if GB_MODELS
+    GB_MODEL_SGB2,        /* the Super Game Boy 2: the Pocket's chip on its own   */
+                          /* crystal.  Placed last so every value above keeps its */
+                          /* number; it is NOT a Color part, and every threshold  */
+                          /* test is conjoined with GB_MODEL_IS_CGB already.      */
+    GB_MODEL_SGB_PAL,     /* the Super Game Boy on a PAL Super NES: its clock is  */
+                          /* the PAL console's.  GB_MODEL_SGB is the NTSC one.     */
+#if MDL_DMG0
+    GB_MODEL_DMG0,        /* DMG-CPU 0, the first board.  A DMG-family part (not  */
+                          /* a Color, so every threshold test conjoined with      */
+                          /* GB_MODEL_IS_CGB passes it by).  Last, as SGB2 is.    */
+#endif
+#endif
     GB_MODEL_COUNT        /* one past the last; the model table's denominator.    */
 };
 
@@ -5780,6 +6044,125 @@ enum gb_model {
  * scored cells inside the blast radius of a change that is supposed to move
  * nothing. */
 #define GB_MODEL_DEV(m)     (GB_MODEL_IS_CGB(m) ? GB_DEV_CGB : GB_DEV_DMG)
+
+/* ---------------------------------------------------------------------------
+ *  THE MODEL ROWS (GB_MODELS).  Each switch is one difference between models,
+ *  named by what it changes.  1 = it follows the model setting; 0 = the fixed
+ *  behaviour this core had before (the Color's is revision C's, the Super Game
+ *  Boy's is the original's).  Sources and labels are at each use.
+ *
+ *  "Late Color" below means revision D, E and the Advance: SameBoy draws the
+ *  line between C and D for nearly every row ("C or older"); AGE's author, who
+ *  had B, C and E consoles, groups D with the early ones.  Where the two agree
+ *  (C against E) the row is as both say; for D we follow SameBoy, whose author
+ *  had a D, and say so.
+ * ------------------------------------------------------------------------- */
+#define GB_CGB_LATE(gb) (GB_MODELS && GB_MODEL_IS_CGB((gb)->model) && (gb)->model > GB_MODEL_CGB_C)
+/* Revision E and the Advance only: for rows that only AGE models (its author
+ * had no D, and groups it with the early revisions). */
+#define GB_CGB_E_ON(gb) (GB_MODELS && GB_MODEL_IS_CGB((gb)->model) && (gb)->model >= GB_MODEL_CGB_E)
+#define GB_MODEL_IS_AGB(m)  ((m) == GB_MODEL_AGB || (m) == GB_MODEL_AGS)
+#if GB_MODELS
+#define GB_MODEL_IS_SGBF(m) ((m) == GB_MODEL_SGB || (m) == GB_MODEL_SGB2 || (m) == GB_MODEL_SGB_PAL)
+#else
+#define GB_MODEL_IS_SGBF(m) ((m) == GB_MODEL_SGB)
+#endif
+/* The Color's model when none is set (gb_set_device, every harness and the
+ * site's default path). */
+#ifndef GB_CGB_DEFAULT
+#define GB_CGB_DEFAULT (GB_MODELS ? GB_MODEL_CGB_E : GB_MODEL_CGB_C)
+#endif
+#ifndef MDL_LY153          /* V4: line 153's LY and comparator sequence        */
+#define MDL_LY153 GB_MODELS
+#endif
+#ifndef MDL_LYCBLIND       /* V3: the comparator's blind moment at line start */
+#define MDL_LYCBLIND GB_MODELS
+#endif
+#ifndef MDL_WRAPM0         /* the mode-0 machine cycle at the end of line 153 */
+#define MDL_WRAPM0 GB_MODELS
+#endif
+#ifndef MDL_OAMRD          /* V5: when sprite memory opens and closes to reads */
+#define MDL_OAMRD GB_MODELS
+#endif
+#ifndef MDL_PAL            /* P2: compat palette writes land a dot sooner     */
+#define MDL_PAL GB_MODELS
+#endif
+#ifndef MDL_SCY            /* V1: the tile row is read once per tile          */
+#define MDL_SCY GB_MODELS
+#endif
+#ifndef MDL_IR             /* S7: infrared port bit 4; the Advance has no IR   */
+#define MDL_IR GB_MODELS
+#endif
+#ifndef MDL_FEA0           /* V8: reads and writes of $FEA0-$FEFF              */
+#define MDL_FEA0 GB_MODELS
+#endif
+#ifndef MDL_LEN            /* A10: the extra length clock on CGB 0, A and B    */
+#define MDL_LEN GB_MODELS
+#endif
+/* V4's two numbers.  LY153_ZERO_LATE: how many dots longer LY reads 153 on
+ * line 153 at single speed from revision D (AGE: one, read_ly; SameBoy: two).
+ * LY153_CMP_EARLY: how many dots sooner the comparator sees 153 there
+ * (SameBoy: two, 4 against 6). */
+#ifndef LY153_ZERO_LATE
+#define LY153_ZERO_LATE 1
+#endif
+#ifndef LY153_CMP_EARLY
+#define LY153_CMP_EARLY 2
+#endif
+#define ly153_late(gb) ((MDL_LY153 && GB_CGB_LATE(gb) && !(gb)->double_speed) ? LY153_ZERO_LATE : 0)
+#ifndef OAMRD_DS_EARLY     /* V5: dots sooner sprite memory closes, double speed */
+#define OAMRD_DS_EARLY 1
+#endif
+#ifndef MDL_AGBWAVE        /* A2: the Advance shuts wave RAM while it plays    */
+#define MDL_AGBWAVE GB_MODELS
+#endif
+#ifndef MDL_AGBMIX         /* A1: the Advance's digital sound mixer           */
+#define MDL_AGBMIX GB_MODELS
+#endif
+#ifndef MDL_ZOMBIE         /* A4: the NRx2 write glitch on Color 0 to C       */
+#define MDL_ZOMBIE GB_MODELS
+#endif
+#ifndef MDL_SQFREQ         /* A8: D and E hold a square's sample on a period write */
+#define MDL_SQFREQ GB_MODELS
+#endif
+#ifndef MDL_SQDELAY        /* A8: 0 to C start a square later in double speed */
+#define MDL_SQDELAY GB_MODELS
+#endif
+#ifndef MDL_PCMREAD        /* A8: Color 0 to C read a rising square edge as 0     */
+#define MDL_PCMREAD GB_MODELS
+#endif
+#ifndef MDL_SQTRIGSTEP     /* A8: D and E step a square's sample on some triggers */
+#define MDL_SQTRIGSTEP GB_MODELS
+#endif
+#ifndef MDL_VRAMEND        /* V6: a video-memory read on the dot drawing ends  */
+#define MDL_VRAMEND GB_MODELS
+#endif
+#ifndef MDL_DMASCAN        /* V7: E's object search during a halted transfer  */
+#define MDL_DMASCAN GB_MODELS
+#endif
+#ifndef MDL_TSELD          /* V2: revision D's own TILE_SEL glitch            */
+#define MDL_TSELD GB_MODELS
+#endif
+#ifndef MDL_SGBCLK         /* S4: the Super Game Boy runs from the SNES clock  */
+#define MDL_SGBCLK GB_MODELS
+#endif
+/* S4.  The Super Game Boy (not the SGB2, which has its own crystal) is clocked
+ * from the Super NES: 21.477272 MHz / 5 on an NTSC console, 21.28137 MHz / 5
+ * on a PAL one, against 4.194304 MHz in every handheld (Pan Docs Specifications
+ * and Audio: "2.4% faster ... the SGB2 rectifies"; SameBoy's SGB_NTSC_FREQUENCY
+ * and SGB_PAL_FREQUENCY).  The machine runs the same cycles per frame; what
+ * changes is how many of them make a second of real time: the sound's output
+ * rate and a cartridge's own clock crystal (RTC, TAMA, HuC3), which keeps real
+ * time.  The host paces frames from gb_clock_hz.  MECHANISM. */
+#define GB_HZ_DEFAULT 4194304u
+#if GB_MODELS
+#define GB_MODEL_HZ(m) ((MDL_SGBCLK && (m) == GB_MODEL_SGB) ? 4295454u                       : (MDL_SGBCLK && (m) == GB_MODEL_SGB_PAL) ? 4256274u : GB_HZ_DEFAULT)
+#else
+#define GB_MODEL_HZ(m) GB_HZ_DEFAULT
+#endif
+#ifndef MDL_BOOT           /* S1: the Pocket's and Super Game Boys' hand-over */
+#define MDL_BOOT GB_MODELS
+#endif
 
 /* The note-10 row ids, so a guard site names its own row and the fence audit
  * can name it back.  G1..G34 is the complete GUARD list: §1 carries G1-G31 and
@@ -5845,7 +6228,7 @@ static void gb_cgb_live(struct GB *gb, int row);
 
 /* ***THE THREE-ARM FORM.  DMG / CGB SINGLE SPEED / CGB DOUBLE SPEED.***
  *
- * ADDED 2026-09-02 on the maintainer's ruling, because the two-arm form PROVABLY COULD
+ * ADDED on the maintainer's ruling, because the two-arm form PROVABLY COULD
  * NOT EXPRESS TWO OF ITS OWN ANSWERS and would have manufactured dishonest
  * closures by construction.  Two guard rows say so in their own sentences:
  * one quantity is "THREE-WAY rather than two-way ... a single mode test gets
@@ -5885,6 +6268,35 @@ static void gb_cgb_live(struct GB *gb, int row);
  *  Machine context — the entire emulated machine. No mutable file-scope state.
  * ------------------------------------------------------------------------- */
 #include "apu.h"
+
+/* Knobs GB_BESS, GB_WORKBOY, GB_GBS: three player features, each on (1) by
+ * default; with all three at 0 the build is the core without them, byte for
+ * byte.  GB_BESS: save states in the shared BESS format (src/bess.c).
+ * GB_WORKBOY: the Workboy keyboard on the link port (src/workboy.c).  GB_GBS:
+ * playing GBS music files (src/gbs.c). */
+#ifndef GB_BESS
+#define GB_BESS 1
+#endif
+#ifndef GB_WORKBOY
+#define GB_WORKBOY 1
+#endif
+#ifndef GB_GBS
+#define GB_GBS 1
+#endif
+
+/* TIMED_INPUT: a host may give each button change its place in the coming
+ * frame, gb_set_buttons_at(gb, mask, dot), and gb_run_frame applies it when the
+ * frame reaches that dot.  On the console a press reaches the joypad lines at
+ * any point of the frame, so the joypad interrupt and a polled $FF00 see it at
+ * any LY (Pan Docs: Joypad Input, the INT $60 edge); a host that changes the
+ * buttons only between frames makes every press land on the same line, which
+ * is what the Telling LYs test cartridge detects.  MECHANISM.  A host that
+ * never calls the export is unchanged: gb_set_buttons still acts at once and
+ * the queue stays empty.  0 = no export and no queue (the earlier context). */
+#ifndef TIMED_INPUT
+#define TIMED_INPUT 1
+#endif
+#define TIMED_INPUT_SLOTS 32
 
 struct GB {
     /* THE DEVICE MODE.  See the fence block above.  Placed first so that a
@@ -6077,7 +6489,7 @@ struct GB {
      * the object's oq_pri[] already is.  Zero on DMG, where the background has
      * no such bit at all. */
     u8  oq_bpri[16];
-    /* The BACKGROUND's palette number (attribute bits 0-2).  ADDED 2026-08-29.
+    /* The BACKGROUND's palette number (attribute bits 0-2).  ADDED.
      * The comment this replaces said it was "deliberately NOT here yet:
      * nothing resolves a CGB colour until note 04, and a lane nothing reads is
      * the orphan shape this campaign has now been bitten by twice."
@@ -6513,12 +6925,12 @@ struct GB {
 
     void *doctor_fp; /* native DOCTOR log FILE* (opaque here); NULL otherwise   */
 
-    /* 2026-10-14: 1 = a Li Cheng board, whose chip ignores the writes
+    /* 1 = a Li Cheng board, whose chip ignores the writes
      * the program makes to $2101-$2FFF (see cart_parse).  Kept LAST so no
      * earlier field moves.  A cartridge property: carried across gb_reset. */
     int mbc_gap2100;
 
-    /* 2026-10-14: the Sintax chip (see cart_parse and cart_write_mbc).
+    /* the Sintax chip (see cart_parse and cart_write_mbc).
      * sx = 1 on a Sintax board (a cartridge property, carried across gb_reset);
      * the rest is chip state that powers up zero.  Kept LAST, after
      * mbc_gap2100, so no earlier field moves. */
@@ -6528,14 +6940,14 @@ struct GB {
     u8  sx_key[4];     /* data keys, written at $7x2x-$7x5x                       */
     u8  sx_cur;        /* key applied to $4000-$7FFF reads: sx_key[sx_raw & 3]    */
 
-    /* 2026-10-14: the BBD and Hitek chips.  bbd = 1 BBD, 2 Hitek (a
+    /* the BBD and Hitek chips.  bbd = 1 BBD, 2 Hitek (a
      * cartridge property, carried across gb_reset); the two modes are chip
      * state set by the program (Hitek powers up with both at 7, see gb_reset). */
     int bbd;
     u8  bbd_data;      /* data-line wiring mode, written at $2x01 (3 bits)        */
     u8  bbd_bank;      /* bank-number wiring mode, written at $2x80 (3 bits)      */
 
-    /* 2026-10-14: the Vast Fame VF001 protection.  vf = 1 on a Vast
+    /* the Vast Fame VF001 protection.  vf = 1 on a Vast
      * Fame board (cartridge property, carried across gb_reset); the rest is
      * chip state that powers up zero. */
     int vf;
@@ -6545,7 +6957,7 @@ struct GB {
     u8  vf_repl, vf_repl_bank;
     u16 vf_repl_addr;
 
-    /* 2026-10-14: the Makon (NT) chips.  nt = 1 on a Makon board
+    /* the Makon (NT) chips.  nt = 1 on a Makon board
      * (cartridge property, carried across gb_reset); the rest is chip state.
      *   nt_split  1 after the unlock write ($55 to $14xx): the $4000-$7FFF
      *             window splits into two 8 KB halves banked separately
@@ -6556,7 +6968,7 @@ struct GB {
     int nt;
     u8  nt_split, nt_lo, nt_hi, nt_swap, nt_base, nt_mask;
 
-    /* 2026-10-14: the Sachen MMC1 / MMC2 chips.  sachen = 1 (MMC1)
+    /* the Sachen MMC1 / MMC2 chips.  sachen = 1 (MMC1)
      * or 2 (MMC2), a cartridge property carried across gb_reset; the rest is
      * chip state (see gb_reset for the power-on values). */
     int sachen;
@@ -6564,18 +6976,18 @@ struct GB {
     u8  sa_lock;                     /* 0 unlocked, 1 locked (DMG phase), 2 CGB phase */
     u8  sa_count;                    /* header-area reads seen in this phase      */
 
-    /* 2026-10-14: the "Pokemon Jade" (PKJD) protection, an MBC3
+    /* the "Pokemon Jade" (PKJD) protection, an MBC3
      * with two extra registers.  pkjd = 1 on such a board (carried across
      * gb_reset); pk_d / pk_e the two registers, powering up zero. */
     int pkjd;
     u8  pk_d, pk_e;
 
-    /* 2026-10-14: GGB-81 (bbd = 3, reusing the BBD data crossbar
+    /* GGB-81 (bbd = 3, reusing the BBD data crossbar
      * state) and Wisdom Tree, cartridge properties carried across gb_reset.
      * SKOB LEE8 was researched and declined. */
     int wisdom;
 
-    /* 2026-10-15: the licensed chips.
+    /* the licensed chips.
      * Every field below is appended so no earlier field moves.  CARTRIDGE
      * PROPERTIES (set by cart_parse, carried across gb_reset): chip_caps,
      * chip_ram_len.  HOST INPUTS (carried across gb_reset, the host owns them):
@@ -6624,13 +7036,13 @@ struct GB {
      * committed a frame; a reset clears it. */
     int cam_wants;
 
-    /* 2026-10-15: the Rocket Games chip.  rocket = 1 on such a board
+    /* the Rocket Games chip.  rocket = 1 on such a board
      * (cartridge property, carried across gb_reset); rk_logo is the offset
      * of the logo inside the RUNNING boot program image (-1: none), found at
      * reset; the rest is chip state. */
     int rocket, rk_logo;
     u8  rk_bank, rk_outer, rk_lock, rk_count;
-    /* ---- GBH (2026-10-24): EXTRA HARDWARE AROUND THE CONSOLE. ----
+    /* ---- GBH: EXTRA HARDWARE AROUND THE CONSOLE. ----
      * Appended so no earlier field moves.  EVERY FIELD ZERO = TODAY'S CORE: no
      * path reads one of these unless the host attached a device or the
      * cartridge has the part (xflags), so a host that never heard of them gets
@@ -6661,7 +7073,7 @@ struct GB {
     u32 sonar_t0;        /* cycle_acc when the last pulse went out                    */
     u32 sonar_seed;      /* the simulated lake's random state                         */
     u16 sonar_ping;      /* pulses sent since power-on (the strip being drawn)        */
-    /* ---- UNLICENSED BOARDS (2026-10-25). ----
+    /* ---- UNLICENSED BOARDS. ----
      * Appended so no earlier field moves.  ub, ub_pre and ub_sapad are cartridge
      * properties (set by cart_parse, carried across gb_reset); the rest is chip
      * state that powers up as gb_reset sets it.  ub = 0 for every cartridge the
@@ -6672,12 +7084,81 @@ struct GB {
     u8  ub_c, ub_f;      /* Story of Lasama: the 64 KiB half, the 16 KiB bank in it   */
     u8  ub_once;         /* Chongwu: the one protected read has been answered         */
     u8  ub_lock, ub_count; /* Gowin logo switch: phase (0 off, 1 show, 2 check), reads */
+#if GB_WORKBOY
+    /* The Workboy keyboard on the link port (src/workboy.c). */
+    u8  wb_on;           /* plugged in                                                */
+    u8  wb_out, wb_bit;  /* the reply being shifted out, and the next bit of it       */
+    u8  wb_rx, wb_bits;  /* the byte coming in, and its bits so far                   */
+    u8  wb_mode;         /* 0 not yet spoken to; 'R' clock read, 'W' clock set, 'O' keys */
+    u8  wb_key;          /* the key waiting to be sent, $FF none                      */
+    u8  wb_shift, wb_user_shift;   /* the keyboard's shift, the player's shift        */
+    u8  wb_buf[0x15];    /* the clock buffer                                          */
+    u8  wb_idx;          /* nibbles sent ('R') or bytes taken ('W')                   */
+    u8  wb_time[7];      /* host input: the local time                                */
+    u8  wb_set[6];       /* a time the program set, for the host                      */
+    u8  wb_set_flag;
+#endif
+#if GB_MODELS
+    /* The model rows' own state (V8, V6).  Added at the end; with GB_MODELS 0
+     * the context is the earlier one. */
+    u8  extra_oam[0x60];   /* V8: the RAM at $FEA0-$FEFF on Color revisions 0 to D   */
+    u8  cpu_vram_bus;      /* V6: the last byte a processor video-memory read took   */
+    u16 last_map_addr;     /* V6: the background fetcher's last map address          */
+    u16 last_data_addr;    /* V6: ... and its last tile-data address                 */
+#endif
+#if TIMED_INPUT
+    /* Host button changes waiting for their place in the coming frame (see
+     * gb_set_buttons_at).  Empty between frames: every frame ends by applying
+     * whatever is left. */
+    u8  tin_n, tin_head;
+    u8  tin_mask[TIMED_INPUT_SLOTS];
+    u32 tin_dot[TIMED_INPUT_SLOTS];
+#endif
 };
 /* Unlicensed boards: the boards of struct GB's ub field (see gbu_board). */
 enum { UB_NONE = 0, UB_SPACEWORLD, UB_LASAMA, UB_CHONGWU, UB_NGHK, UB_LICHENG,
        UB_GGB81, UB_VF10, UB_SACHEN_PAD40, UB_GOWIN };
 
+#if SGB_SOUND
+#include "sgbsnd.c"
+#endif
 #include "apu.c"
+
+#if APU_INTERFERENCE
+/* THE BUZZ'S OFFSET FOR THIS MACHINE CYCLE (APU_INTERFERENCE in apu.h), in
+ * SameBoy's units, from the states SameBoy's interference() listens to.
+ * SOURCE-READ, sizes by ear (its comment); the states are read from our machine:
+ * halt, LCDC bit 7, the STAT mode the processor sees, NR52 bit 7, the Color's
+ * RP bit 0.  The original Game Boy (and the Super Game Boy) at a quarter, as
+ * there.  Only called while the level is above 0. */
+static int gb_interference(const struct GB *gb) {
+    const int A = 0xFF0;
+    const int cgb = gb->dev == GB_DEV_CGB;
+#if GB_MODELS
+    const int old = !GB_MODEL_IS_AGB(gb->model);     /* not the Game Boy Advance */
+#else
+    const int old = gb->model <= GB_MODEL_CGB_E;     /* not the Game Boy Advance */
+#endif
+    int ret = 0;
+    if (gb->halt) ret -= old ? A / 5 : A / 12;
+    if (gb->lcdc & 0x80) {
+        ret += A / 7;
+        if ((gb->mode_report & 3) == 3 && old) ret += A / 14;
+        else if ((gb->mode_report & 3) == 1) ret -= A / 7;
+    }
+    if (gb->apu.power) ret += A / 10;
+    if (cgb && old && (gb->io[0x56] & 1)) ret += A / 10;
+    if (!cgb) ret /= 4;
+    return ret;
+}
+#endif
+/* Every machine cycle's sound step goes through here, so the buzz's offset is
+ * read from the machine that is running (two linked machines run in turn). */
+#if APU_INTERFERENCE
+#define gb_apu_tick4(g) do { if (g_interf_level) g_interf_bias = gb_interference(g);                              apu_tick4(&(g)->apu, (g)->div_counter); } while (0)
+#else
+#define gb_apu_tick4(g) apu_tick4(&(g)->apu, (g)->div_counter)
+#endif
 
 /* ---------------------------------------------------------------------------
  *  The fence's two arrival points.  Reached ONLY when a guard site is executed
@@ -6724,7 +7205,7 @@ static void gb_cgb_live(struct GB *gb, int row) {
 }
 
 enum { MAP_NONE = 0, MAP_MBC1, MAP_MBC2, MAP_MBC3, MAP_MBC5,
-       /* 2026-10-15: the licensed chips added after the first five.
+       /* the licensed chips added after the first five.
         * Appended so the first five keep their numbers (gb_dbg_mapper). */
        MAP_HUC1, MAP_HUC3, MAP_MBC7, MAP_MMM01, MAP_M161, MAP_CAMERA, MAP_TAMA5,
        MAP_MBC6 };
@@ -6740,9 +7221,9 @@ static void set_hl(struct GB *g, u16 v){ g->h = v >> 8; g->l = v & 0xFF; }
 static void set_af(struct GB *g, u16 v){ g->a = v >> 8; g->f = v & 0xF0; }
 
 /* ---------------------------------------------------------------------------
- *  THE GAME BOY PRINTER, A DEVICE ON THE LINK PORT (2026-10-21).
+ *  THE GAME BOY PRINTER, A DEVICE ON THE LINK PORT.
  *
- *  Request (2026-10-21): over 100 cartridges print through the
+ *  Request: over 100 cartridges print through the
  *  Game Boy Printer; the Game Boy Camera shows "error 02" today because nothing
  *  answers on the link.  This is the printer itself, as a second device on the
  *  serial line: the Game Boy is always the master (internal clock), the printer
@@ -6796,7 +7277,8 @@ static void set_af(struct GB *g, u16 v){ g->a = v >> 8; g->f = v & 0xF0; }
  *    PRN_MARGIN_LINES one margin unit.  DERIVED from the same prints: one band
  *                     (16 lines) fits; 15 fits too, 14 and 17 do not.
  *    PRN_TIMEOUT_CYCLES 100 ms with no byte and the printer returns to its
- *                     initialized state (Pan Docs).  Not while the paper moves.
+ *                     initialized state (Pan Docs), or 125 ms with PRN_IDLE_125
+ *                     (the firmware reading).  Not while the paper moves.
  *
  *  THE OUTPUT is paper, not a picture: a FIFO of dot lines in the order the head
  *  makes them (feed lines for the margins included), each 160 darkness values
@@ -6832,7 +7314,57 @@ static void set_af(struct GB *g, u16 v){ g->a = v >> 8; g->f = v & 0xF0; }
 #define PRN_LINE_CYCLES    ((u32)((unsigned long long)PRN_HZ * 668u / 10000u)) /* 66.8 ms, DERIVED; our printer notes */
 #define PRN_START_CYCLES   ((u32)((unsigned long long)PRN_HZ * 272u / 1000u))  /* 272 ms, DERIVED; our printer notes */
 #define PRN_MARGIN_LINES   16
+/* PRN_IDLE_125 -- THE IDLE RESET COMES AFTER 125 MS, NOT 100 MS.
+ * The printer's firmware (R. Boichot's disassembly, as read in SameBoy
+ * issue 799) returns to its initialized state after 125 ms with no byte; Pan
+ * Docs gives 100 ms.  Pokemon Crystal pauses up to about 102 ms between the
+ * packets of a Pokedex page, so with 100 ms its second print lost all but the
+ * last band of page 1; with 125 ms both prints are whole.  The Camera, Super
+ * Mario Bros. Deluxe and Pokemon Yellow print the same either way, and
+ * Crystal's Initialize after a finished page still comes after a pause of
+ * about 288 ms, so it still answers $00.  LABEL: SOURCE-READ.  Off arm: 0
+ * (100 ms, Pan Docs). */
+#ifndef PRN_IDLE_125
+#define PRN_IDLE_125 1
+#endif
+#if PRN_IDLE_125
+#define PRN_TIMEOUT_CYCLES (PRN_HZ / 8u)       /* 125 ms, firmware reading    */
+#else
 #define PRN_TIMEOUT_CYCLES (PRN_HZ / 10u)      /* 100 ms, Pan Docs            */
+#endif
+/* PRN_DATA_NEEDS_INIT -- AFTER A PRINT, DATA WITHOUT AN INITIALIZE IS REFUSED
+ *.  Measured on a physical printer (SameBoy issue 799): once a
+ * print has finished, a Data packet sent with no Initialize first is answered
+ * with status $14 (packet error, image full) and nothing more is printed; with
+ * an Initialize first the same printer printed both images.  Ours started a new
+ * page.  The idle reset (PRN_TIMEOUT_CYCLES) still clears the page, as the
+ * firmware's own idle reset does, so a game that pauses before its next Data
+ * is unaffected.  LABEL: MECHANISM (one physical printer).  Off arm: 0. */
+#ifndef PRN_DATA_NEEDS_INIT
+#define PRN_DATA_NEEDS_INIT 1
+#endif
+/* PRN_BUSY_DATA_IGNORED -- DATA WHILE THE HEAD IS PRINTING IS IGNORED.
+ * The printer's firmware (R. Boichot's disassembly, as read in SameBoy
+ * issue 799) ignores Data while it prints and keeps reporting busy.  Ours reset
+ * the page under the print in progress, so the rest of the paper came from the
+ * new data.  LABEL: SOURCE-READ (a firmware reading, no physical test).  Off
+ * arm: 0. */
+#ifndef PRN_BUSY_DATA_IGNORED
+#define PRN_BUSY_DATA_IGNORED 1
+#endif
+/* PRN_BYTE_GAP -- A PACKET WHOSE BYTES COME TOO FAR APART IS DROPPED.
+ * The same firmware reading: more than 5.12 ms between two bytes of a
+ * packet and the printer drops it and waits for a new sync.  Ours waited for
+ * the 100 ms idle reset.  The firmware then answers $FF until the line is
+ * quiet; that part is not modelled.  Checked on game prints (Game Boy Camera,
+ * Super Mario Bros. Deluxe at double speed, Pokemon Yellow and Crystal
+ * Pokedex pages, each printed twice): the largest gap inside a packet is
+ * 3.8 ms, and paper and replies are the same with the rule on and off.
+ * LABEL: SOURCE-READ.  Off arm: 0. */
+#ifndef PRN_BYTE_GAP
+#define PRN_BYTE_GAP 1
+#endif
+#define PRN_GAP_CYCLES     ((u32)((unsigned long long)PRN_HZ * 512u / 100000u)) /* 5.12 ms */
 /* record flags */
 #define PRN_F_FEED   0x01   /* paper fed, nothing burnt (a margin)            */
 #define PRN_F_START  0x02   /* first line of a Print command                  */
@@ -6992,6 +7524,9 @@ static void prn_execute(void) {
         break;
     }
     case 0x04:                                   /* Data */
+#if PRN_BUSY_DATA_IGNORED
+        if (g_prn.busy) break;                                /* see the knob */
+#endif
         if (g_prn.len == 0) { if (g_prn.ram_len) { g_prn.pend = 1; g_prn.pend_end = 1; } break; }
         if (g_prn.printed || g_prn.ready) prn_reset_page();   /* a new page after a print */
         for (u16 i = 0; i < g_prn.stage_len && g_prn.ram_len < PRN_RAM; i++)
@@ -7010,6 +7545,12 @@ static void prn_execute(void) {
 static void prn_byte(struct GB *gb, u8 b) {
     prn_clock(gb);
     prn_advance();
+#if PRN_BYTE_GAP
+    if (g_prn.st != PRN_IDLE && g_prn.st != PRN_SYNC2
+        && g_prn.now - g_prn.last_byte > PRN_GAP_CYCLES) {
+        g_prn.st = PRN_IDLE; g_prn.deferred = 0;    /* the packet is dropped */
+    }
+#endif
     g_prn.last_byte = g_prn.now;
     u8 next = 0x00;
     switch (g_prn.st) {
@@ -7039,6 +7580,9 @@ static void prn_byte(struct GB *gb, u8 b) {
         g_prn.rsum |= (u16)(b << 8);
         if (g_prn.rsum != g_prn.sum) g_prn.err |= 0x01;
         else if (g_prn.cmd != 0x01 && g_prn.cmd != 0x02 && g_prn.cmd != 0x04 && g_prn.cmd != 0x0F) g_prn.err |= 0x10;
+#if PRN_DATA_NEEDS_INIT
+        else if (g_prn.cmd == 0x04 && g_prn.printed && !g_prn.busy) g_prn.err |= 0x10;
+#endif
         else if (g_prn.cmd == 0x0F) { prn_settle(); g_prn.packets++; }
         else g_prn.deferred = 1;                   /* takes effect after its reply */
         g_prn.st = PRN_ACK;
@@ -7066,7 +7610,7 @@ static inline int prn_listens(const struct GB *gb) {
     return PRINTER_LINK && g_prn.owner == gb && g_prn.mode;
 }
 /* ===========================================================================
- *  GBH (2026-10-24): THE EXTRA HARDWARE AROUND THE CONSOLE.
+ *  GBH: THE EXTRA HARDWARE AROUND THE CONSOLE.
  *  Link cable and infrared between two machines in this instance, the Barcode
  *  Boy, the rumble motor, the HuC3 tone and the Pocket Sonar.  Full design,
  *  every source and every label: our extra-hardware notes.
@@ -7140,6 +7684,10 @@ static void bcb_tick(struct GB *gb, int cycles) {
     if (++gb->bcb_cnt == 30) { gb->bcb_state = 0; gb->bcb_cnt = 0; }
 }
 
+#if GB_WORKBOY
+#include "workboy.c"
+#endif
+
 /* INFRARED BETWEEN TWO LINKED MACHINES.  The light a sensor sees is any LED of
  * either machine that is on: the Color's RP bit 0, or a HuC1/HuC3 cartridge's
  * own LED.  CONVERGENCE (SameBoy timing.c ir_run, its constants copied): the
@@ -7163,15 +7711,61 @@ static void bcb_tick(struct GB *gb, int cycles) {
 #endif
 #define GBH_IR_MAX ((IR_FADE_CAP ? GBH_IR_WARMUP : 0u) + GBH_IR_THRESHOLD * 2u + GBH_IR_DECAY + 268u)
 static int ir_led(const struct GB *gb) {
+#if MDL_IR
+    if (GB_MODEL_IS_AGB(gb->model)) return gb->cart_ir;   /* the Advance has no IR (S7) */
+#endif
     return (gb->dev == GB_DEV_CGB && gb->cgb_mode && (gb->io[0x56] & 1)) || gb->cart_ir;
 }
 static int ir_sensing(const struct GB *gb) {
+#if MDL_IR
+    if (GB_MODEL_IS_AGB(gb->model))
+        return (gb->mapper == MAP_HUC1 || gb->mapper == MAP_HUC3) && gb->chip_mode == 0x0E;
+#endif
     if (gb->dev == GB_DEV_CGB && gb->cgb_mode && (gb->io[0x56] & 0xC0) == 0xC0) return 1;
     return (gb->mapper == MAP_HUC1 || gb->mapper == MAP_HUC3) && gb->chip_mode == 0x0E;
 }
+/* IR_MODEL_105 -- SAMEBOY 1.0.5'S INFRARED MODEL.  SameBoy
+ * replaced the 1.0.3 model copied above because Pokemon Card GB 2's 216-unit
+ * pulses fall under its 240-unit threshold, so the game's infrared exchange
+ * failed (its issue 792, commit 2f298ce, "a more realistic infrared model").
+ * The new model has no threshold: once the sensor has warmed up (32,000 units
+ * after reading is enabled, the last 2,048 ramping in through a noise test)
+ * light is seen at once, and a steady light fades after 23,000 units (again
+ * through 2,048 units of noise).  The units are SameBoy's: 8 MHz ticks, two per
+ * T-cycle at single speed, one at double speed, so the times are wall time.
+ * Ours counted CPU T-cycles, which also doubled every 1.0.3 time at single
+ * speed.  The two counters share ir_sensor (warm-up in the low 16 bits, the
+ * fade in the high 16), so the machine's saved state keeps its size.  The
+ * noise is SameBoy's formula on our divider and line dot; it only shapes the
+ * two ramps.  LABEL: CONVERGENCE (SameBoy's constants are a model of one
+ * sensor; Pan Docs gives no figures).  Off arm: 0, the 1.0.3 model. */
+#ifndef IR_MODEL_105
+#define IR_MODEL_105 1
+#endif
 static void ir_run(struct GB *gb, int cycles) {
     struct GB *p = link_peer(gb);
     int sensing = ir_sensing(gb);
+#if IR_MODEL_105
+    {
+        enum { DECAY = 23000, NOISE = 2048, WARM = 32000, DECAY_MAX = DECAY + NOISE + DECAY, WARM_MAX = WARM + NOISE };
+        int u = gb->double_speed ? cycles : cycles * 2;
+        int warm = (int)(gb->ir_sensor & 0xFFFF), decay = (int)(gb->ir_sensor >> 16);
+        int input = ir_led(gb) || (p && ir_led(p));
+        u16 noise = (u16)((u16)((9 + gb->div_counter) * 127) ^ (u16)(gb->ppu_dots * 137));
+        noise = (u16)((noise >> 3) % NOISE);
+        if (sensing) { warm += u; if (warm > WARM_MAX) warm = WARM_MAX; }
+        else { warm -= u; if (warm < 0) warm = 0; input = 0; }
+        if (warm < WARM) input = 0;
+        else if (warm != WARM_MAX) input &= noise < warm - WARM;
+        if (input) { decay += u; if (decay > DECAY_MAX) decay = DECAY_MAX; }
+        else { decay -= u; if (decay < 0) decay = 0; }
+        if (decay >= DECAY && decay < DECAY + NOISE) input &= noise > decay - DECAY;
+        else if (decay >= DECAY + NOISE) input = 0;
+        gb->ir_sensor = (u32)warm | ((u32)decay << 16);
+        gb->ir_light = (u8)input;
+        return;
+    }
+#endif
     if (sensing && (ir_led(gb) || (p && ir_led(p)))) {
         gb->ir_sensor += (u32)cycles;
         if (gb->ir_sensor > GBH_IR_MAX) gb->ir_sensor = GBH_IR_MAX;
@@ -7185,9 +7779,31 @@ static void ir_run(struct GB *gb, int cycles) {
         gb->ir_light = 0;
     }
 }
-/* Light seen, for the three readers (RP bit 1, HuC1 and HuC3 mode $E): only
- * while linked; 0 otherwise, which is the stub's answer. */
-static inline int ir_seen(const struct GB *gb) { return (gb->xflags & GBH_X_LINK) && gb->ir_light; }
+/* IR_SELF -- A MACHINE ALONE STILL SEES ITS OWN LED.  The Color's LED sits
+ * beside its receiver, and a HuC1 or HuC3 cartridge's LED beside its own: Pan
+ * Docs (CGB Registers, FF56): when reading, "Bit 0 must be cleared -- if you
+ * don't want to receive your own Game Boy's IR signal".  SameBoy 1.0.5 runs its
+ * sensor on every Color (timing.c ir_run, called from GB_advance_cycles) with
+ * the machine's own LED in its input, linked or not ("You will read your own IR
+ * LED if it's on", memory.c).  So the sensor now runs on a machine alone too,
+ * whenever reading is enabled or the sensor is still warm or lit, and the only
+ * light it can see there is its own; no light comes from the room (SameBoy
+ * models none either).  LABEL: MECHANISM (Pan Docs) for the own-LED path,
+ * SOURCE-READ (SameBoy) for running the same sensor model alone.  Off arm: 0,
+ * the sensor runs only while linked and a machine alone never sees light. */
+#ifndef IR_SELF
+#define IR_SELF 1
+#endif
+/* Light seen, for the three readers (RP bit 1, HuC1 and HuC3 mode $E).  With
+ * IR_SELF off: only while linked; 0 otherwise, which is the stub's answer. */
+static inline int ir_seen(const struct GB *gb) { return (IR_SELF || (gb->xflags & GBH_X_LINK)) && gb->ir_light; }
+#if IR_SELF
+/* The sensor of a machine alone needs running only while reading is enabled or
+ * its counters have not yet run down; otherwise it is idle and costs nothing. */
+static inline void ir_alone(struct GB *gb, int cycles) {
+    if (gb->ir_sensor || gb->ir_light || ir_sensing(gb)) ir_run(gb, cycles);
+}
+#endif
 
 /* THE POCKET SONAR (Bandai, 1998; MBC1S).  MECHANISM (Dan Docs "Pocket Sonar"):
  * an MBC1 whose $6000 write of 1 selects sonar mode, $4000 writes 1 then 0 send
@@ -7240,6 +7856,9 @@ static void gbh_tick(struct GB *gb, int cycles) {
     if (gb->xflags & GBH_X_RUMBLE) { gb->rum_all += (u32)cycles; if (gb->ramb & 0x08) gb->rum_on += (u32)cycles; }
     if (gb->xflags & GBH_X_BCB) bcb_tick(gb, cycles);
     if (gb->xflags & GBH_X_LINK) ir_run(gb, cycles);
+#if IR_SELF
+    else ir_alone(gb, cycles);
+#endif
 }
 
 /* ---------------------------------------------------------------------------
@@ -7291,7 +7910,13 @@ static void timer_tick_1(struct GB *gb) {
             int sin = prn_drives(gb) ? (g_prn.out >> (gb->ser_bits - 1)) & 1 : 1;
             /* GBH: a second Game Boy on the cable (only inside gb_link_run_frame). */
             if (g_link[0]) sin = link_bit(gb, (gb->sb >> 7) & 1);
+#if GB_WORKBOY
+            if (gb->wb_on) sin = wb_bit_out(gb);       /* the Workboy keyboard */
+#endif
             gb->sb = (u8)((gb->sb << 1) | sin);
+#if GB_WORKBOY
+            if (gb->wb_on && gb->ser_bits > 1) wb_bit_in(gb, (gb->sb >> 7) & 1);
+#endif
             if (--gb->ser_bits == 0) {
                 gb->sc &= 0x7F;
                 gb->reg_if |= INT_SERIAL;
@@ -7313,6 +7938,64 @@ static void timer_tick_1(struct GB *gb) {
         timer_increment_tima(gb);
     gb->timer_last_bit = cur;
 }
+
+/* TIMER_FAST4 -- ONE MACHINE CYCLE OF THE TIMER IN ONE STEP WHEN NOTHING CAN
+ * HAPPEN IN IT.
+ * Every machine cycle runs timer_tick_1 four times.  When no TMA reload is
+ * owed (tima_reload_delay <= 0), no serial transfer is shifting (ser_bits 0)
+ * and the selected divider bit, ANDed with the enable, does not fall on any of
+ * the four counts, those four calls only add 4 to the divider and store the
+ * last count's divider bit (timer_last_bit) and serial-clock bit (ser_prev).
+ * This does exactly that and nothing else; every other cycle takes the four
+ * calls as before.  The four counts' bits are worked out the way timer_tick_1
+ * works them out, so the test cannot disagree with the calls it replaces.
+ * 0 = the four calls always. */
+#ifndef TIMER_FAST4
+#define TIMER_FAST4 1
+#endif
+#if TIMER_FAST4
+#ifdef SPEED_CHECK
+static unsigned g_timer_fast;
+WASM_EXPORT("gb_speed_check") unsigned gb_speed_check(void) { return g_timer_fast; }
+#endif
+static inline void timer_tick_4(struct GB *gb) {
+    if (gb->tima_reload_delay <= 0 && !(SERIAL_CLOCK && gb->ser_bits)) {
+        u16 d = gb->div_counter;
+        int en = (gb->tac & 0x04) ? 1 : 0, b = TIMER_BIT[gb->tac & 3];
+        int p = gb->timer_last_bit != 0, fall = 0;
+        for (int k = 1; k <= 4; k++) {
+            int c = en & (((u16)(d + k) >> b) & 1);
+            fall |= p & !c; p = c;
+        }
+        if (!fall) {
+            d = (u16)(d + 4);
+#ifdef SPEED_CHECK
+            /* test build only: take the four calls as well and trap on any difference */
+            u8 sp = (u8)((((unsigned)d + SERIAL_TAP_LEAD)
+                    >> ((SERIAL_FAST_CGB && gb->cgb_mode && (gb->sc & 0x02)) ? 3 : 8)) & 1);
+            u8 tima = gb->tima, rif = gb->reg_if, sb = gb->sb, sbits = gb->ser_bits, rl = gb->tima_reloaded;
+            int rd = gb->tima_reload_delay;
+            timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb);
+            if (gb->div_counter != d || gb->timer_last_bit != p || (SERIAL_CLOCK && gb->ser_prev != sp)
+                || gb->tima != tima || gb->reg_if != rif || gb->sb != sb || gb->ser_bits != sbits
+                || gb->tima_reloaded != rl || gb->tima_reload_delay != rd) __builtin_trap();
+            g_timer_fast++;
+            return;
+#endif
+            gb->div_counter = d;
+            if (SERIAL_CLOCK)
+                gb->ser_prev = (u8)((((unsigned)d + SERIAL_TAP_LEAD)
+                    >> ((SERIAL_FAST_CGB && gb->cgb_mode && (gb->sc & 0x02)) ? 3 : 8)) & 1);
+            gb->timer_last_bit = p;
+            return;
+        }
+    }
+    timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb);
+}
+#define TIMER_TICK4(gb) timer_tick_4(gb)
+#else
+#define TIMER_TICK4(gb) do { timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); } while (0)
+#endif
 
 /* ---------------------------------------------------------------------------
  *  PPU — pixel-FIFO, one dot at a time. Design and citations in
@@ -7347,6 +8030,14 @@ static void ppu_update_stat_line(struct GB *gb) {
             gb->lyc_flag = (u8)(!gb->lyc_blank && _m);
             if (CT_CGB(gb) && CT_HOLD_DS && gb->double_speed && gb->lyc_blank)
                 gb->lyc_flag = _prev;
+            /* MDL_LYCBLIND (V3): from revision D the blind moment holds the old
+             * flag at single speed too, as at double speed (SameBoy GB_STAT_update:
+             * the clearing arm is "model <= CGB_C && !double speed").  SOURCE-READ;
+             * no test in our sets sees it at single speed. */
+#if MDL_LYCBLIND
+            if (CT_CGB(gb) && GB_CGB_LATE(gb) && !gb->double_speed && gb->lyc_blank)
+                gb->lyc_flag = _prev;
+#endif
             /* LYC_CARRY: the blind spot may not DROP a live match. */
             if (LYC_CARRY && gb->lyc_blank && _m && _prev) gb->lyc_flag = 1;
             /* LYC_BLANK_HOLD: the blind spot may not drop a match early either.
@@ -7523,7 +8214,7 @@ static void ppu_enter_mode(struct GB *gb, u8 mode) {
  * 1 at pos 0, so residue r arrives at pos (r - 1) mod 8 -- residue 0 arrives on
  * the PUSH dot itself.
  *
- * CORRECTED 2026-09-23, and the wrong form is named rather than deleted.  This
+ * CORRECTED, and the wrong form is named rather than deleted.  This
  * read "(r + 6) mod 8", which reproduces NEITHER of the two anchors in its own
  * sentence -- it sends residue 1 to pos 7 and residue 0 to pos 6 -- nor the
  * wait table below it.  The slip is in the prose only: the predicate returned
@@ -7618,7 +8309,7 @@ static u8 lcdc_c(const struct GB *gb, int rel) {
 /* ===========================================================================
  * ***THE WRITE-DELIVERY AXIS IS SHUT FOR TWO OPEN CELLS, AND IT IS SHUT
  * DIFFERENTLY FOR EACH.  READ THIS BEFORE SWEEPING A WIDTH FOR EITHER.***
- * Measured 2026-09-02, scratch builds from HEAD, -D only, byte comparison of
+ * Measured, scratch builds from HEAD, -D only, byte comparison of
  * all 31 renders.  162 px total.
  *
  *   m3_lcdc_win_en_change_multiple_wx   66 px   NEEDS DELIVERY LATER
@@ -7682,7 +8373,7 @@ static u8 lcdc_cw(const struct GB *gb, int rel, int w) {
      * The per-bit settling widths (LCDC_PERBIT plus the nine LCDC_W_*) did not
      * exist when the guard audit was written: G1 audits SEVEN REL_* consumers
      * and this core now has twelve plus a THIRTEEN-entry width table.
-     * (Corrected 2026-09-02: this sentence read "nine-entry" while the table
+     * (Corrected: this sentence read "nine-entry" while the table
      * had thirteen.  IT CORRECTED ONE STALE CARDINALITY -- seven REL_*
      * consumers to twelve -- WHILE CARRYING ITS OWN, STALE BY FOUR.)  The audit is
      * still right about what is DMG-only and is no longer complete about what
@@ -7696,13 +8387,13 @@ static u8 lcdc_cw(const struct GB *gb, int rel, int w) {
      * which is the precise shape of fossil this fence exists to prevent. */
     w = GB_DMG_ONLY(gb, GB_G1, w);
     if (!LCDC_PERBIT) return lcdc_c(gb, rel);
-    /* WIDTH 6 -- THE WRITE-SIDE TWIN OF THE 228, added 2026-09-02.
+    /* WIDTH 6 -- THE WRITE-SIDE TWIN OF THE 228, added.
      * WLEAD_BITS delivers early by writing the REGISTER, so every consumer of
      * that bit sees it -- per-BIT granularity.  This delivers early THROUGH THE
      * PER-CONSUMER CHANNEL instead, so one consumer of a bit can take the early
      * value while another does not.  That is exactly what LCDC_W_WINDATA /
      * LCDC_W_BGDATA already do at width 7/8, extended one dot further back. */
-    /* MEASURED 2026-09-02, base ca8fb18, and THE REGISTERED PREDICTION FAILED.
+    /* MEASURED, base ca8fb18, and THE REGISTERED PREDICTION FAILED.
      * P0 held: at defaults 31/31 renders BYTE-IDENTICAL, so this is neutral by
      * construction.  P2 held perfectly -- LCDC_W_WINDATA=6 moves ONLY the two
      * window cells and LCDC_W_BGDATA=6 ONLY the two background cells, so the
@@ -7719,7 +8410,7 @@ static u8 lcdc_cw(const struct GB *gb, int rel, int w) {
      * described here as "WITH the conflict dot" was lcdc_pre = n+1, which by the
      * head-decrement covers ticks 1..n -- THE LEAD TICKS, NOT THE CONFLICT TICK.
      * The renders did differ and that measurement stands; the DOT IT NAMED did
-     * not.  Re-run 2026-09-02 with the span made explicit (LCDC_PRE_SPAN):
+     * not.  Re-run with the span made explicit (LCDC_PRE_SPAN):
      *
      *   SPAN 0  conflict tick ALONE     ***BYTE-INERT, 0/31.  CLOSES NOTHING.***
      *   SPAN 1  lead ticks only         closes the 178; 1026 px created
@@ -7807,7 +8498,7 @@ static u8 lcdc_cw(const struct GB *gb, int rel, int w) {
 /* Every LCDC.5 consumer goes through here, so the clear-only release has one
  * site rather than FIVE.  See WINCMP_CLR_EARLY.
  *
- * CORRECTED 2026-09-02: this read "rather than four".  THE SAME STALE BIT-5
+ * CORRECTED: this read "rather than four".  THE SAME STALE BIT-5
  * CONSUMER COUNT THAT WAS FIXED AT THE BIT-1 FUNNEL BLOCK HAD LEAKED INTO A
  * SECOND CLAIM HERE AND WAS NOT CORRECTED WITH IT -- an earlier change added a
  * fifth lcdc_wincmp call site and only one of the two places that count them
@@ -7839,7 +8530,7 @@ static u8 lcdc_wincmp(const struct GB *gb) {
     return v;
 }
 /* WIN_TAIL_HOLD -- A WINDOW THAT STARTS IN THE LINE'S LAST PIXELS STILL LENGTHENS DRAWING
- * (2026-10-29).  AGE stat-mode-window-dmgC (its author's hardware table):
+ * AGE stat-mode-window-dmgC (its author's hardware table):
  * WX 164 and 165 read exactly like WX 162 and 163 on every fine scroll -- the end of drawing comes late by
  * the window's start-up fetch -- and WX 166 does not.  Ours reported mode 0 three dots before the last
  * pixel (M0_LEAD_DMG) while the window, whose position match lands on pixel 157 or 158, had not started
@@ -7903,7 +8594,7 @@ static u8 lcdc_objen(const struct GB *gb, int site) {
      *
      * OBJ_EN gating the FETCH means it gates mode-3 COST, so getting this
      * wrong moves geometry and not just pixels. */
-    /* ***G32 -- DISCHARGED 2026-09-03, AND THE EVIDENCE WAS ALREADY IN THE
+    /* ***G32 -- DISCHARGED, AND THE EVIDENCE WAS ALREADY IN THE
      * PARAGRAPH ABOVE.***  The row was the one place the two oracles contradict
      * each other, so it could not be settled by reading them -- and it was
      * settled at T2 BY MEASUREMENT: on the CGB references the DMG render is
@@ -7974,6 +8665,14 @@ static void scantrace_line(struct GB *gb);
 #define OAM_GRIP_LAG 2
 #endif
 static int oam_scan_blocked(struct GB *gb) {
+#if MDL_DMASCAN
+    /* MDL_DMASCAN (V7): on revision E and the Advance a sprite-memory transfer
+     * does not hide the objects from the line's search while the processor is
+     * halted; earlier revisions do (SameBoy's object search, "model <
+     * CGB_E"; Pan Docs OAM_DMA_Transfer: "most PPU revisions").  SOURCE-READ;
+     * no test in our sets reaches it. */
+    if (gb->dev == GB_DEV_CGB && GB_CGB_E_ON(gb) && gb->halt) return 0;
+#endif
 #if OAM_GRIP_LAG
     return (gb->grip_hist >> (OAM_GRIP_LAG - 1)) & 1;
 #else
@@ -8416,8 +9115,8 @@ static void oam_bug_read_incdec(struct GB *gb) {
     do { if ((v) >= 0xFE00 && (v) < 0xFF00 && oam_bug_live(gb)) \
              oam_bug_read_incdec(gb); } while (0)
 /* OAM_BUG_DISPATCH -- INTERRUPT DISPATCH DECREMENTS SP LIKE A PUSH, SO IT TRIGGERS
- * THE SAME OAM CORRUPTION (2026-10-17; gb-statdocs
- * r3/cpu NOTES 2).  The document quoted above push16 names the interrupt beside
+ * THE SAME OAM CORRUPTION (our
+ * notes).  The document quoted above push16 names the interrupt beside
  * push, call and rst ("push / call / rst / interrupt"), and the dispatch has the
  * same cycle shape as PUSH from its internal cycle on (an internal cycle, then
  * two writes each after an SP decrement), but service_interrupt never charged
@@ -8425,7 +9124,7 @@ static void oam_bug_read_incdec(struct GB *gb) {
  * write, on the SP value before the decrement.  LABEL: MECHANISM (the document
  * names the case; the placement is push16's, by the shared cycle shape).
  * Reached only when SP is in $FE00-$FEFF while the picture unit is in mode 2;
- * no cartridge we hold does that during a dispatch (r3 measured no oam_bug
+ * no cartridge we hold does that during a dispatch (our run measured no oam_bug
  * buffer moves).  Off arm: 0. */
 #ifndef OAM_BUG_DISPATCH
 #define OAM_BUG_DISPATCH 1
@@ -8484,7 +9183,7 @@ static void bg_push8(struct GB *gb) {
 #define TSEL_LATCH_LO  2  /* TILE_SEL_LATCH == 2, latched at the low byte     */
 
 /* ***THE TILE-SELECT FAMILY IS THE WRONG PLACE TO LOOK FOR FOUR OF THE OPEN
- * CELLS, AND THE REASON IS GEOMETRY, NOT A SWEEP.***  Located 2026-09-02.
+ * CELLS, AND THE REASON IS GEOMETRY, NOT A SWEEP.***  Located.
  *
  * Every residual this funnel has ever explained was TILE-ALIGNED -- the 178 is
  * three solid 8x8 tiles, beginning and ending exactly on 8-pixel edges, because a
@@ -8493,7 +9192,7 @@ static void bg_push8(struct GB *gb) {
  *
  *   m3_wx_6_change             66  ONE SCANLINE, y=101, x=94..159 contiguous
  *   m3_scx_high_5_bits         41  one tile COLUMN, two 7-row clusters, 64 apart
- *       ***CLOSED 2026-09-02 by SCX_WRITE_LEAD 2 -> 1 (d7657f4): 41 fixed,
+ *       ***CLOSED by SCX_WRITE_LEAD 2 -> 1 (d7657f4): 41 fixed,
  *       0 created, a new PASS.  THE EXCLUSION HERE WAS RIGHT, NOT
  *       SUPERSEDED*** -- tile-select would not have reached it, and
  *       something else did.  Kept listed because the geometry argument is
@@ -8685,7 +9384,7 @@ static void bg_push8(struct GB *gb) {
  *
  * ---------------------------------------------------------------------------
  * ***NO GLOBAL STIMULUS CAN DISCRIMINATE A CAUSE ON THIS CELL. DO NOT SPEND A
- * BUILD TRYING.***  Established 2026-09-02.
+ * BUILD TRYING.***  Established.
  *
  * The cartridge pulses LCDC.4 for ~2 dots at a FIXED dot on every line (the
  * handler is identical every line: line_0_fix, 9 nops, ld [hl],c, ld [hl],b).
@@ -8719,7 +9418,7 @@ static void bg_push8(struct GB *gb) {
 /* ===========================================================================
  * ***THE LCDC-PHASE CLASS CANNOT CLOSE m3_lcdc_tile_sel_win_change, AND THAT IS
  * A MEASUREMENT RATHER THAN A DISCOURAGEMENT.  DO NOT BUILD ANOTHER WIDTH,
- * LEAD, LAG OR UN-LAG AT THIS CONSUMER.***  Core, 2026-09-05.
+ * LEAD, LAG OR UN-LAG AT THIS CONSUMER.***  Core.
  * Full evidence: our notes.
  *
  * THE COUNTEREXAMPLE, AND IT IS THE WHOLE OF IT.  Two window tile-data HIGH
@@ -9099,7 +9798,18 @@ static u8 fsn_scx(struct GB *gb) {
  * NO-OP AT THE SHIPPED VALUE BY CONSTRUCTION: at ROW_LATCH 0 the runtime value
  * equals the compile-time one on DMG, so `if (0) ty = ...` selects exactly what
  * `#if 0` removed. */
+/* MDL_SCY (V1): from revision D the tile row is taken once, at the map fetch,
+ * and held for both data fetches, so a timed SCY write cannot mix two rows
+ * (Pan Docs Scrolling; mealybug m3_scy_change, CPU CGB C against D photographs;
+ * SameBoy caches fetcher_y at "model > CGB_C").  ROW_LATCH's value 2 is that
+ * form.  MECHANISM. */
+#ifndef ROW_LATCH_CGB_LATE
+#define ROW_LATCH_CGB_LATE 2
+#endif
 static int gb_row_latch(const struct GB *gb) {
+#if MDL_SCY
+    if (gb->dev == GB_DEV_CGB && GB_CGB_LATE(gb)) return ROW_LATCH_CGB_LATE;
+#endif
     return GB_DEV_SPLIT(gb, GB_G16, ROW_LATCH, ROW_LATCH_CGB);
 }
 
@@ -9134,7 +9844,7 @@ static u16 ppu_fetch_data_addr_p(struct GB *gb, int hi) {
      * and the renumbering is the CGB study's to make, not mine. */
     u8 ty = gb->win_active ? gb->win_line : (u8)(gb->ly + fsn_scy(gb));
     if (gb_row_latch(gb)) ty = gb->fetch_ty;
-    /* G16 -- CORRECTION, 2026-08-28, RECORDED RATHER THAN QUIETLY FIXED.
+    /* G16 -- CORRECTION, RECORDED RATHER THAN QUIETLY FIXED.
      *
      * THIS COMMENT PREVIOUSLY READ: "LCDC.4 is sampled live at each data fetch
      * on DMG and on CGB-C; it is cached at the map fetch only above CGB-C.  So
@@ -9572,6 +10282,9 @@ static void ppu_fetcher_step(struct GB *gb) {
                  * exactly the DMG behaviour without a device test of its own. */
                 u16 mcell = (u16)(map + (ty >> 3) * 32 + tx);
                 gb->fetch_tile = ppu_vram(gb, mcell);
+#if MDL_VRAMEND
+                gb->last_map_addr = mcell;
+#endif
                 gb->fetch_attr = (u8)GB_DEV_SPLIT(gb, GB_G18,
                                                   0, ppu_vram_b(gb, mcell, 1));
             }
@@ -9582,7 +10295,7 @@ static void ppu_fetcher_step(struct GB *gb) {
             if (gb_row_latch(gb) == 2) gb->fetch_ty = ty;
             /* Both TILE_SEL latch reads go through lcdc_tilesel() and
              * name their site, so bit 4 has no raw consumer left.  They
-             * were raw until 2026-08-20 and dead only because
+             * were raw and dead only because
              * TILE_SEL_LATCH is 0 -- a latent hole that would have
              * opened the moment anyone swept that knob.  Converted at
              * LCDC_W_TSLATCH = 8, which lcdc_cw returns unconditionally
@@ -9603,6 +10316,9 @@ static void ppu_fetcher_step(struct GB *gb) {
                 if (TILE_SEL_GLITCH && gb->dev == GB_DEV_CGB) {
                     gb->tsel_last = (u8)((lcdc_cw(gb, REL_BGDATA,
                                                   LCDC_W_BGDATA) & 0x10) != 0);
+#if MDL_TSELD
+                    if (gb->tsel_glitch && gb->model == GB_MODEL_CGB_D) goto tsel_d_lo;
+#endif
                     if (gb->tsel_glitch) {
                         u8 real = ppu_vram_b(gb, ppu_fetch_data_addr_p(gb, 0),
                                              ppu_fetch_data_bank(gb));
@@ -9630,8 +10346,14 @@ static void ppu_fetcher_step(struct GB *gb) {
                     gb->fetch_lo = gb->fetch_hi;   /* the previous row's high */
                     gb->fetch_step = 2; break;
                 }
+#if MDL_TSELD
+            tsel_d_lo:
+#endif
                 gb->fetch_lo = ppu_vram_b(gb, ppu_fetch_data_addr_p(gb, 0),
                                           ppu_fetch_data_bank(gb));
+#if MDL_VRAMEND
+                gb->last_data_addr = ppu_fetch_data_addr_p(gb, 0);
+#endif
                 if (TSEL_SET_LASTU && gb->dev == GB_DEV_CGB && gb->fetch_sel_used) {
                     gb->tsel_lu = gb->fetch_lo; gb->tsel_have_lu = 1;
                 }
@@ -9660,6 +10382,18 @@ static void ppu_fetcher_step(struct GB *gb) {
                                                   LCDC_W_BGDATA) & 0x10) != 0);
                     u8 real = ppu_vram_b(gb, (u16)(ppu_fetch_data_addr_p(gb, 1) + 1),
                                          ppu_fetch_data_bank(gb));
+#if MDL_TSELD
+                    /* MDL_TSELD (V2): on revision D alone, clearing TILE_SEL on
+                     * the high plane's read takes that plane from the LOW
+                     * plane's address instead of using the tile number
+                     * (mealybug's PPU documentation; SameBoy's
+                     * data_for_tile_sel_glitch, "model != CGB_D").  The low
+                     * plane reads normally.  SOURCE-READ. */
+                    if (gb->tsel_glitch && gb->model == GB_MODEL_CGB_D)
+                        gb->fetch_hi = gb->tsel_saved = ppu_vram_b(gb, ppu_fetch_data_addr_p(gb, 1),
+                                                                  ppu_fetch_data_bank(gb));
+                    else
+#endif
                     if (gb->tsel_glitch) {
                         if (gb->tsel_last) {
                             gb->fetch_hi = (gb->fetch_tile & 0x80) ? real
@@ -9674,6 +10408,9 @@ static void ppu_fetcher_step(struct GB *gb) {
                 } else
                 gb->fetch_hi = ppu_vram_b(gb, (u16)(ppu_fetch_data_addr_p(gb, 1) + 1),
                                           ppu_fetch_data_bank(gb));
+#if MDL_VRAMEND
+                gb->last_data_addr = (u16)(ppu_fetch_data_addr_p(gb, 1) + 1);
+#endif
                 /* TSEL_SET_LASTU: a tile interrupted by an object read its high
                  * byte BEFORE the object on hardware, so it does not overwrite. */
                 if (TSEL_SET_LASTU && gb->dev == GB_DEV_CGB && gb->fetch_sel_used
@@ -10026,7 +10763,7 @@ static u16 ppu_obj_addr_hi(struct GB *gb) {
  * indistinguishable from the closed form. */
 /* `O3` -- THE OBJECT'S VRAM BANK, attribute bit 3.
  *
- * ***THIS HAD NO GUARD SITE AT ALL BEFORE 2026-08-30, AND THAT IS WORSE THAN A
+ * ***THIS HAD NO GUARD SITE AT ALL BEFORE, AND THAT IS WORSE THAN A
  * WRONG ONE.*** Both object fetches called ppu_vram(), which is bank 0
  * unconditionally, and no row was named at either. So on the CGB arm an object
  * tile was always read from bank 0, and if a CGB title placed object tiles in
@@ -10140,7 +10877,7 @@ static void ppu_fetch_object(struct GB *gb) {
          * G18 and G19 by S4 alone, which is T2 at best and `T?` for most of its
          * cartridges -- the rows that make CGB rendering CGB rendering are
          * covered only by the weakest figure in the gate. */
-        /* G18 -- DISCHARGED 2026-08-30, and the register that makes it a
+        /* G18 -- DISCHARGED, and the register that makes it a
          * SELECTION rather than a hard-wired choice landed in the same commit.
          * It was held for exactly one cycle because $FF6C did not exist, and
          * writing one of two rules with no way to pick the other would have
@@ -10537,7 +11274,7 @@ static void fx_capture(struct GB *gb, int qi, int lx, u8 bc, u8 oc, u8 opal,
 /* Take the oldest pixel out of the output pipeline, apply the palette AS IT
  * STANDS NOW, and write it to the LCD.
  *
- * STALE PARAGRAPH CORRECTED 2026-08-20. What stood here said the index "reaches
+ * STALE PARAGRAPH CORRECTED. What stood here said the index "reaches
  * the LCD OUT_PIPE dots later" and that a mid-scanline palette write "takes
  * effect OUT_PIPE pixels earlier", and it closed by concluding that "seven dots
  * of output pipeline is what remains". OUT_PIPE IS ZERO and has been since the
@@ -10556,7 +11293,7 @@ static void fx_capture(struct GB *gb, int qi, int lx, u8 bc, u8 oc, u8 opal,
  *
  * Measured against mealybug-tearoom-tests, whose expectations are the suite
  * author's own emulator renders, not captures of real hardware [TIER CORRECTED
- * 2026-08-20]. `m3_bgp_change` writes BGP at counted offsets and DISPLAYS
+ * ]. `m3_bgp_change` writes BGP at counted offsets and DISPLAYS
  * where each value lands: our bands sat seven pixels late, uniformly, and no
  * other lever could move them -- not the PPU/CPU skew, not the power-on line
  * phase, not the position of the mode-3 window, and not the write phase, which
@@ -10574,7 +11311,7 @@ static void fx_capture(struct GB *gb, int qi, int lx, u8 bc, u8 oc, u8 opal,
  * expression, and that path only maps it through palette RAM.
  *
  * IN FULL CGB MODE THE INDEX IS THE RAW COLOUR INDEX AND BGP IS NOT CONSULTED
- * AT ALL.  `C1`, and until 2026-08-30 it was NOT WRITTEN.
+ * AT ALL.  `C1`, and it was NOT WRITTEN.
  *
  * ===========================================================================
  * WHY THE REFUSAL EXPIRED, AND IT EXPIRED BY MEASUREMENT AND NOT BY ARGUMENT.
@@ -10640,7 +11377,7 @@ static u16 ppu_cgb_colour(struct GB *gb, int objwon, u8 opal, u8 bpal,
                           u8 shade, u8 raw) {
     const u8 *ram = objwon ? gb->obpal : gb->bgpal;
     int pal = (objwon ? opal : bpal) & 7;
-    /* C1.  BACKGROUND AND OBJECT, both, since 2026-08-30.  `raw` is the caller's
+    /* C1.  BACKGROUND AND OBJECT, both.  `raw` is the caller's
      * bc or oc according to which won.  This is a MODE test and not a DEVICE
      * test, so it is not a fence row: both arms are correct behaviour for the
      * mode they serve and neither is a fossil.
@@ -10944,7 +11681,7 @@ static void ppu_set_lcd(struct GB *gb, int on) {
         /* The ppu_dots == 0 branch, which normally does this at each line head,
          * is skipped on this line -- so do its work here. */
         /* WRITER A of win_y_cond, and it is UNCONDITIONAL -- LEFT STANDING
-         * KNOWINGLY, 2026-09-02.  our method does not demand that no
+         * KNOWINGLY.  our method does not demand that no
          * unconditional writer survives; it demands that none survives
          * SILENTLY, so this is the record.
          *
@@ -11165,7 +11902,7 @@ static void ppu_tick_1(struct GB *gb) {
             }
             if (gb->ppu_dots == LINE_PRE) {
                 gb->spr_count = 0; gb->scan_index = 0;
-                /* WRITER C of win_y_cond, CONJUNCTIVE since 2026-09-02.
+                /* WRITER C of win_y_cond, CONJUNCTIVE.
                  * See the WY_EVERY_DOT block for the registration; the
                  * conjunct here owns the seventeen m3w_win / m3wph probes
                  * whose own stimulus CLEARS WIN_EN mid-mode-3 and which
@@ -11177,7 +11914,7 @@ static void ppu_tick_1(struct GB *gb) {
                 if (!gb->lcd_on_line) {
                     ppu_enter_mode(gb, 2);      /* STAT's mode bits become 2 */
                     gb->int_mode = -1;          /* and the signal is forced down */
-                    /* D16, TRIED AND REFUTED AS A PRESCRIPTION 2026-08-20.  The
+                    /* D16, TRIED AND REFUTED AS A PRESCRIPTION.  The
                      * oracles raise the mode-2 interrupt early on lines 1..143
                      * and not on line 0, and I proposed moving our early pulse
                      * to match.  It cannot work here, and the reason is two
@@ -11425,10 +12162,10 @@ static void ppu_tick_1(struct GB *gb) {
                      * From X >= 6 the object is noticed AFTER win_px reaches 7,
                      * so the ladder saturates because the window has already
                      * activated -- not because anything clamps it.
-                     * CORRECTED 2026-10-17 (gb-statdocs r3/win NOTES,
+                     * CORRECTED (our notes,
                      * "internal oddities"): MEASURED, the 106, 105, 104, ...
                      * ladder is the COLOR's; the original's is 107, 105, 105,
-                     * 103, 103, 101 (r3/win EVIDENCE E9).  The arithmetic above
+                     * 103, 103, 101 (our evidence).  The arithmetic above
                      * describes the Color and is kept as written.
                      *
                      * ***STATED AS AN ORDERING FACT, NOT AS A BUG.***  Charging
@@ -11492,7 +12229,7 @@ static void ppu_tick_1(struct GB *gb) {
                     /* =========================================================
                      * ***m3_wx_6_change: THE TRIGGER CONDITION IS EXONERATED BY
                      * MEASUREMENT, AND THE WINDOW-TRIGGER FAMILY IS EXCLUDED.***
-                     * Located 2026-09-02 at base d7657f4.  Read both halves: a
+                     * Located at base d7657f4.  Read both halves: a
                      * reader who knows only the exclusion will re-derive the rest.
                      *
                      * THE REFERENCE'S FIRST REGIME IS AN EXACT PROGRESSION:
@@ -11874,7 +12611,7 @@ static void ppu_tick_1(struct GB *gb) {
                          * is the FETCHER'S PHASE at the hit, and (X + SCX) & 7
                          * is that phase.
                          *
-                         * PROMOTED from diagnostic to derived, 2026-08-19, and
+                         * PROMOTED from diagnostic to derived, and
                          * the code and its comment no longer disagree.  When it
                          * shipped it was a measured term without a mechanism and
                          * was labelled one; three things since have supplied the
@@ -12001,7 +12738,7 @@ static void ppu_tick_1(struct GB *gb) {
                             /* lx == 0: the opening fetch is still running, so
                              * nothing waits.
                              *
-                             * PROVABLY REDUNDANT, measured 2026-08-19, and the
+                             * PROVABLY REDUNDANT, measured, and the
                              * comment that stood here was wrong about its own
                              * mechanism. It said this branch is what produces
                              * the LX=0 cell. It is not: the branch FIRES (1368
@@ -12010,7 +12747,7 @@ static void ppu_tick_1(struct GB *gb) {
                              * -- OBJ_LX0_WAIT=1 -- is BYTE-IDENTICAL across the
                              * whole board, all three acceptance ladders and the
                              * reference test (a score, tier 2 -- this said
-                             * "tier-1 photograph" [CORRECTED 2026-08-20]).
+                             * "tier-1 photograph" [CORRECTED]).
                              * The phase window is
                              * already open at those moments, so the general
                              * mechanism produces the LX=0 regime on its own.
@@ -12402,7 +13139,7 @@ static void ppu_tick_1(struct GB *gb) {
                  * source move; ppu_mode, m0_seen, the fetcher and the pixel
                  * pipeline do not, so the H-blank chunk, the VRAM/OAM block and
                  * every render stay on the dots they were on.  See the knob. */
-                if ((gb->dev == GB_DEV_CGB ? OBJ_M0_LEAD_CGB : OBJ_M0_LEAD)
+                if ((gb->dev == GB_DEV_CGB ? OBJ_M0_LEAD_CGB != 0 : OBJ_M0_LEAD != 0)
                     && gb->mode_report == 3 && gb->obj_have_last
                     && (int)gb->lx < 160
                     && (160 - (int)gb->lx) + obj_dots_owed(gb)
@@ -12412,7 +13149,8 @@ static void ppu_tick_1(struct GB *gb) {
                 }
                 /* M0_LEAD_DMG / M0_IRQ_LEAD_DMG: the original's object-free
                  * line, report and request leads (see the knobs). */
-                if (gb->dev == GB_DEV_DMG && !gb->obj_have_last && !gb->lcd_on_line && !gb->spr_count
+                if (gb->dev == GB_DEV_DMG && !gb->obj_have_last && !gb->lcd_on_line
+                    && (!gb->spr_count || (OBJ_OFF_M0_LEAD && !(gb->lcdc & 0x02) && gb->obj_end_dot == 0xFFFF))
                     && (int)gb->lx < 160) {
                     if (WIN_TAIL_HOLD && gb->mode_report == 3 && gb->win_active && gb->wx >= 7 + 157 && gb->wx <= 7 + 158
                         && gb->bgf_len == 0
@@ -12427,7 +13165,7 @@ static void ppu_tick_1(struct GB *gb) {
                     }
                 }
                 /* M0_LEAD_CGB: the object-free line's report lead (see knob). */
-                if (!CT_CGB(gb) && M0_LEAD_CGB && gb->dev == GB_DEV_CGB
+                if (!CT_CGB(gb) && M0_LEAD_CGB != 0 && gb->dev == GB_DEV_CGB
                     && (M0_LEAD_CGB_DS || !gb->double_speed)
                     && gb->mode_report == 3 && !gb->obj_have_last
                     && (int)gb->lx < 160 && (160 - (int)gb->lx) + (CT_M0_OWED ? obj_dots_owed(gb) : 0) <= M0_LEAD_CGB) {
@@ -12509,7 +13247,7 @@ static void ppu_tick_1(struct GB *gb) {
          * one before it can be written -- that is a structural prerequisite,
          * not a constant to pick.
          *
-         * ***PRICING QUALIFIER, 2026-09-03.  THIS ROW WAS PRICED AT
+         * ***PRICING QUALIFIER.  THIS ROW WAS PRICED AT
          * WORTH-NOTHING AS A **VALUE** QUESTION AND IS UNTESTED AS A
          * **STRUCTURAL** ONE.***  The sweep asked "is there a better constant
          * for the CGB arm" and the answer was no.  It did NOT ask whether the
@@ -12528,7 +13266,11 @@ static void ppu_tick_1(struct GB *gb) {
          * at either revision or either speed. */
         if (CT_CGB(gb)) GB_DEV_LIVE(gb, GB_G14); else GB_DMG_ONLY_STMT(gb, GB_G14);
         gb->lyc_blank = LYC_BLANK_DOTS;   /* comparator blind for the first M-cycle */
+#if MDL_LY153
+        if (CT_CGB(gb)) gb->lyc_blank = (u8)(gb->ly + 1 == 153 ? CT_V(gb, CT_LYCB153) - ((GB_CGB_LATE(gb) && !gb->double_speed) ? LY153_CMP_EARLY : 0) : CT_V(gb, CT_LYCB));
+#else
         if (CT_CGB(gb)) gb->lyc_blank = (u8)(gb->ly + 1 == 153 ? CT_V(gb, CT_LYCB153) : CT_V(gb, CT_LYCB));
+#endif
         /* The window's row counter advances only on lines where the window
          * actually rendered — which is why hiding the window for some lines
          * resumes at the same row rather than tracking LY (Pan Docs). */
@@ -12592,13 +13334,21 @@ static void ppu_tick_1(struct GB *gb) {
             int k = (gb->ly == 144) ? CT_V(gb, CT_LY144) : (gb->ly == 153) ? CT_V(gb, CT_LY153) : CT_V(gb, CT_LY);
             if (k < 0) gb->ly_vis = gb->ly; else gb->ct_ly_due = 1;
         } else gb->ly_vis = gb->ly;
-        /* CT_WRAP_M0 (28 Oct 2026): on the Color at revision C the
+        /* CT_WRAP_M0: on the Color at revision C the
          * frame wrap also reports one mode-0 machine cycle between mode 1 and
          * line 0's mode 2 (AGE stat-mode-dmgC-cgbBC / -ncmBC, verified on a
          * CPU CGB C; the test's own note: "no mode-0 m-cycle at the end of
          * mode-1 on CGB-E").  0 restores the CGB-E-like report the reference
          * gave. */
+#if MDL_WRAPM0
+        /* MDL_WRAPM0: revision E reports no mode-0 machine cycle at the end of
+         * line 153 (AGE stat-mode-cgbE / -ncmE, checked by its author on a CPU
+         * CGB E; the AGE emulator's get_stat_mode).  MECHANISM (the documented
+         * difference); D follows the early revisions, as AGE groups it. */
+        if (CT_CGB(gb) && gb->ly < 144) { gb->ct_m2r_due = 1; if (gb->ly != 0 || (CT_WRAP_M0 && !gb->double_speed && !GB_CGB_E_ON(gb))) gb->ct_stat = 0; }
+#else
         if (CT_CGB(gb) && gb->ly < 144) { gb->ct_m2r_due = 1; if (gb->ly != 0 || (CT_WRAP_M0 && !gb->double_speed)) gb->ct_stat = 0; }
+#endif
     }
     if (CT_CGB(gb)) {
         if (gb->ct_ly_due && gb->ppu_dots == ((gb->ly == 144) ? CT_V(gb, CT_LY144) : (gb->ly == 153) ? CT_V(gb, CT_LY153) : CT_V(gb, CT_LY))) {
@@ -12612,7 +13362,11 @@ static void ppu_tick_1(struct GB *gb) {
      * them the early zero would make the PPU treat line 153 as line 0 and run a
      * scan there. Only this register and the LYC comparator are visible, and
      * the comparator has been separately sequenced all along. */
+#if MDL_LY153
+    if (gb->ly == 153 && gb->ppu_dots == (CT_CGB(gb) ? CT_V(gb, CT_LY153Z) + ly153_late(gb) : LY153_VIS_DOT)) gb->ly_vis = 0;
+#else
     if (gb->ly == 153 && gb->ppu_dots == (CT_CGB(gb) ? CT_V(gb, CT_LY153Z) : LY153_VIS_DOT)) gb->ly_vis = 0;
+#endif
     /* Line 153 is the odd one out. TCAGBD 8.9.1 gives the comparator's view
      * clock by clock:
      *
@@ -12636,6 +13390,18 @@ static void ppu_tick_1(struct GB *gb) {
          * constant already said SameBoy "guards it to the pre-CGB-D models";
          * the fence's job is that the guard is now CODE and not a comment. */
         if (CT_CGB(gb)) GB_DEV_LIVE(gb, GB_G14); else GB_DMG_ONLY_STMT(gb, GB_G14);
+#if MDL_LY153
+        if (CT_CGB(gb) && GB_CGB_LATE(gb) && !gb->double_speed) {
+            /* MDL_LY153 (V4): from revision D, at single speed, the comparator
+             * sees 153 from the same moment as at double speed and keeps it,
+             * with no second blind moment, until it sees 0 where the early
+             * revisions do (SameBoy's line-153 sequence, "model > CGB_C";
+             * AGE ly-cgbE / ly-ncmE, CPU CGB E, for the LY register).  The
+             * comparator half is SOURCE-READ. */
+            if (gb->ppu_dots >= LY153_CMP0_DOT + CT_LYCB0_SS) gb->ly_for_cmp = 0;
+            else gb->ly_for_cmp = 153;
+        } else
+#endif
         if (gb->ppu_dots == LY153_CMP0_DOT) {  /* second blind window, then 0 */
             gb->lyc_blank = LY153_BLANK_DOTS;
             if (CT_CGB(gb)) gb->lyc_blank = (u8)CT_V(gb, CT_LYCB0);
@@ -12648,9 +13414,9 @@ static void ppu_tick_1(struct GB *gb) {
     ppu_update_stat_line(gb);
 }
 
-/* ppu_tick4() REMOVED 2026-08-26.  It batched four dots as one call, which is
+/* ppu_tick4() REMOVED.  It batched four dots as one call, which is
  * what the PPU did before mode 3 was made to end when the fetcher is done.  Its
- * last call site went at c8b9d8d (2026-08-18), replaced by `ppu_pay(gb, 0)` when
+ * last call site went at c8b9d8d, replaced by `ppu_pay(gb, 0)` when
  * bus accesses moved to the start of their cycle and dots stopped being payable
  * four at a time.  Diagnosed before deleting: nothing STOPPED calling it, it was
  * superseded by a deliberate change of granularity, and it predates the object
@@ -12665,7 +13431,7 @@ static void ppu_tick_1(struct GB *gb) {
  * ------------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------------
- *  2026-10-15: THE LICENSED CHIPS THE CORE DID NOT HAVE.
+ * THE LICENSED CHIPS THE CORE DID NOT HAVE.
  *
  *  Until this round cart_parse sent every type byte it did not know to "no
  *  mapper", so these boards ran as a flat 32 KB window and stuck at the logo.
@@ -12986,7 +13752,7 @@ static int cam_px(struct GB *gb, int x, int y) {
     if (x < 0) x = 0; if (x >= CAM_W) x = CAM_W - 1;
     if (y < 0) y = 0; if (y >= CAM_H) y = CAM_H - 1;
     long exposure = (gb->cam_reg[2] << 8) | gb->cam_reg[3];
-    /* FITTED (8 Nov 2026): brightness scales linearly with exposure
+    /* FITTED: brightness scales linearly with exposure
      * and is unity at $0500.  A webcam already exposes every scene to about
      * mid-grey, so the host image carries no light level of its own.  $0500
      * is chosen so that a normally exposed webcam picture (mean luma 128)
@@ -13279,7 +14045,7 @@ static int cart_bankN(struct GB *gb) {
     }
 }
 
-/* THE BBD AND HITEK CHIPS' WIRING (2026-10-14).
+/* THE BBD AND HITEK CHIPS' WIRING.
  * Same packing as SX_WIRE: for output line 0-7
  * (one hex digit each, line 0 lowest), the input line that drives it.
  * DATA: the chip routes the cartridge data lines to the bus through a
@@ -13464,7 +14230,7 @@ static u8 cart_read_rom(struct GB *gb, u16 addr) {
     return gb->rom[off];
 }
 
-/* THE SINTAX CHIP'S BANK-NUMBER WIRING (2026-10-14).
+/* THE SINTAX CHIP'S BANK-NUMBER WIRING.
  *
  * The chip does not pass the byte written to $2000 straight to its bank
  * lines: it routes each of the eight data bits to a bank line through a
@@ -13515,8 +14281,8 @@ static int cart_ram_bank(struct GB *gb) {
     return bank & (ram_banks - 1);
 }
 
-/* A RAM CHIP SMALLER THAN THE 8 KB WINDOW IS MIRRORED ACROSS IT (
- * 2026-10-14).  MECHANISM: a 2 KB chip ($0149 = $01) has address lines A0-A10
+/* A RAM CHIP SMALLER THAN THE 8 KB WINDOW IS MIRRORED ACROSS IT
+ * MECHANISM: a 2 KB chip ($0149 = $01) has address lines A0-A10
  * only, so A11 and A12 of $A000-$BFFF are not decoded and the chip repeats four
  * times; there is no line that could make the upper 6 KB read as open bus.
  * Several Taiwanese Color carts (Sheng Shou Wuyu, Shuihu Shenshou) test this
@@ -13529,7 +14295,7 @@ static int cart_ram_bank(struct GB *gb) {
 #define CRAM_SMALL_MIRROR 1
 #endif
 
-/* THE PKJD REGISTERS (2026-10-14).
+/* THE PKJD REGISTERS.
  * The board answers the three register numbers the MBC3 leaves unused,
  * $0D, $0E and $0F, written to $4000-$5FFF as if selecting an RTC register:
  * $0D and $0E are plain read/write bytes at $A000-$BFFF; $0F is write-only
@@ -13538,7 +14304,7 @@ static int cart_ram_bank(struct GB *gb) {
  * Reads of $0F return 0.  Everything else is the MBC3, RTC included.
  * SOURCE-READ: mGBA src/gb/mbc/unlicensed.c _GBPKJD/_GBPKJDRead; hhugboy
  * src/memory/mbc/MbcUnlPokeJadeDia.cpp ("this cart's protection more or less
- * extends MBC3's RTC register functionality"), read 2026-10-14, no code taken.
+ * extends MBC3's RTC register functionality"), read, no code taken.
  * Both read the RTC registers of this board as 0 (hhugboy: "the cart I have
  * just returns 00"); that is NOT taken here, because the identification below
  * also reaches the licensed Telefang carts, whose clock is real; on a PKJD
@@ -13775,7 +14541,7 @@ static void cart_write_ram(struct GB *gb, u16 addr, u8 v) {
     if (off >= 0 && off < gb->cram_len) gb->cram[off] = v;
 }
 
-/* THE VAST FAME VF001 PROTECTION REGISTERS (2026-10-14).
+/* THE VAST FAME VF001 PROTECTION REGISTERS.
  * $6000-$7FFF, decoded on A15-A12 and A3-A0.
  * Writing $96 to $7000 opens a configuration session and loads the running
  * value with its start value (0); $96 to $700F closes it.  Inside a session
@@ -13788,7 +14554,7 @@ static void cart_write_ram(struct GB *gb, u16 addr, u8 v) {
  * source bank from $6000).  Writes outside a session, to $7001-$6FFF gaps
  * or to $700B-$700E do nothing.
  * SOURCE-READ: hhugboy src/memory/mbc/MbcUnlVf001.cpp (the only open
- * implementation; mGBA lists VF01 as TODO), read 2026-10-14, no code taken.
+ * implementation; mGBA lists VF01 as TODO), read, no code taken.
  * Its author marks the non-zero-bank sequence trigger "not 100% sure"; its
  * test of the bank region compares against decimal 4000, read here as the
  * $4000 window boundary it plainly means (FITTED, the boundary choice).
@@ -14070,6 +14836,9 @@ static u16 cpu_wram_off(const struct GB *gb, u16 addr) {
  * ------------------------------------------------------------------------- */
 static void rtc_tick(struct GB *gb, int cycles) {
     if (gb->xflags) gbh_tick(gb, cycles);                            /* GBH */
+#if IR_SELF
+    else ir_alone(gb, cycles);                                       /* IR_SELF */
+#endif
     /* G26 -- THE RTC'S CLOCK DOMAIN, DMG ONLY.  Every caller passes 4 from the
      * CPU domain.  SameBoy runs its RTC BELOW the speed shift -- the WALL
      * domain -- so in CGB double speed the correct advance is `4 >> double`.
@@ -14102,7 +14871,11 @@ static void rtc_tick(struct GB *gb, int cycles) {
     if (gb->mapper == MAP_TAMA5) {       /* Licensed chips: the TAMA6 counts seconds */
         if (!gb->t5_run) return;
         gb->t5_cycles += (u32)cycles;
+#if MDL_SGBCLK
+        while (gb->t5_cycles >= GB_MODEL_HZ(gb->model)) { gb->t5_cycles -= GB_MODEL_HZ(gb->model); t5_second(gb); }
+#else
         while (gb->t5_cycles >= 4194304u) { gb->t5_cycles -= 4194304u; t5_second(gb); }
+#endif
         return;
     }
     if (gb->mapper == MAP_MBC7) {        /* Licensed chips: the EEPROM's write cycle */
@@ -14115,14 +14888,23 @@ static void rtc_tick(struct GB *gb, int cycles) {
     }
     if (gb->mapper == MAP_HUC3) {        /* Licensed chips: the HuC3 MCU counts minutes */
         gb->huc3_cycles += (u32)cycles;
+#if MDL_SGBCLK
+        while (gb->huc3_cycles >= 60u * GB_MODEL_HZ(gb->model)) { gb->huc3_cycles -= 60u * GB_MODEL_HZ(gb->model); huc3_minute(gb); }
+#else
         while (gb->huc3_cycles >= 60u * 4194304u) { gb->huc3_cycles -= 60u * 4194304u; huc3_minute(gb); }
+#endif
         return;
     }
     if (!gb->has_rtc) return;
     if (gb->rtc_live[4] & 0x40) return;          /* DH bit 6: clock halted */
     gb->rtc_cycles += (u32)cycles;
+#if MDL_SGBCLK
+    while (gb->rtc_cycles >= GB_MODEL_HZ(gb->model)) {
+        gb->rtc_cycles -= GB_MODEL_HZ(gb->model);
+#else
     while (gb->rtc_cycles >= 4194304u) {
         gb->rtc_cycles -= 4194304u;
+#endif
         int carry;
         if (RTC_WRAP_EXACT) {
             carry = 0;
@@ -14154,6 +14936,28 @@ static void rtc_tick(struct GB *gb, int cycles) {
     }
 }
 
+/* RTC_FAST -- THE CARTRIDGE-CLOCK STEP SKIPPED WHEN IT HAS NOTHING TO DO
+ * rtc_tick runs every machine cycle.  With no extra
+ * attached (xflags 0), the infrared sensor at rest (ir_sensor and ir_light 0)
+ * and unable to start (no HuC1 or HuC3 cartridge, no Color reading enabled at
+ * FF56), no clock chip (TAMA5, MBC7, camera, HuC3) and no MBC3 clock, all it
+ * does is record guard row G26 on the Color (GB_DEV_SPLIT's gb_cgb_live).  So
+ * then only that is done.  0 = rtc_tick every cycle, as before. */
+#ifndef RTC_FAST
+#define RTC_FAST 1
+#endif
+#if RTC_FAST
+static inline int rtc_idle(const struct GB *gb) {
+    return !gb->xflags && !gb->ir_sensor && !gb->ir_light && !gb->has_rtc
+        && gb->mapper != MAP_TAMA5 && gb->mapper != MAP_MBC7 && gb->mapper != MAP_CAMERA
+        && gb->mapper != MAP_HUC3 && gb->mapper != MAP_HUC1
+        && !(gb->dev == GB_DEV_CGB && gb->cgb_mode && (gb->io[0x56] & 0xC0) == 0xC0);
+}
+#define RTC_TICK4(gb) do { if (rtc_idle(gb)) { if ((gb)->dev != GB_DEV_DMG) gb_cgb_live((gb), GB_G26); }                            else rtc_tick((gb), 4); } while (0)
+#else
+#define RTC_TICK4(gb) rtc_tick((gb), 4)
+#endif
+
 /* ---------------------------------------------------------------------------
  *  OAM DMA — one byte per M-cycle from (value<<8) into OAM. During the transfer
  *  the CPU cannot write OAM (the DMA owns it), which is exactly what the Mooneye
@@ -14183,7 +14987,7 @@ static void rtc_tick(struct GB *gb, int cycles) {
  *   0 = the old order: the access first, the DMA's previous-cycle debt paid
  *       after.  Kept reachable as the control; it is what the GB tab's old
  *       "oam_dma_start fails at 2 and at 3" described.
- * CORRECTED 2026-10-17 (gb-statdocs r3/cpu NOTES 1):
+ * CORRECTED (our notes):
  * this paragraph used to say 0 was shipped and the default, and called the arm
  * "PROPOSED AND UNRULED, so it ships inert", while the define below has been 1.
  * The define was right; the words were stale.  No behaviour change.
@@ -14271,7 +15075,7 @@ static void rtc_tick(struct GB *gb, int cycles) {
  * CPU CGB B and C): the immediate TIMA increment the reset causes needs one
  * machine cycle less of delay on B/C than on E ("On CPU CGB E they are delayed
  * by one m-cycle"); ours behaved like E.
- * REFUSED ARM, kept reachable (measured 29 Oct): at 1 the 65 KHz and 16 KHz
+ * REFUSED ARM, kept reachable (measured): at 1 the 65 KHz and 16 KHz
  * rows of spsw-tima-cgbBC pass, but the 4 KHz "1 m-cycle before" row and the
  * 262 KHz row go wrong (13 -> 13 wrong cells; cgbE 5 -> 21), so the low
  * divider bits around the STOP are not modelled by a single reset point.
@@ -14321,14 +15125,14 @@ static void rtc_tick(struct GB *gb, int cycles) {
 #define BOOT_REGS_MODEL 1
 #endif
 /* CGB_NOBOOT_HANDOVER -- THE NO-BOOT COLOR START IS THE BOOTED COLOR'S HAND-OVER
- * (2026-10-17).  Before this the Color device without a
+ * Before this the Color device without a
  * boot program started where the original does (line 0, one dot processed), so
  * its machine cycles covered dots 4k+1..4k+4 while every booted Color run covers
- * 4k+2..4k+5 (gb-statdocs r3/lcdc NOTES 10; re-measured with
- * our seatH/phase_probe test: 19,996 of 20,000 instruction boundaries on dot
+ * 4k+2..4k+5 (re-measured with
+ * our phase probe test: 19,996 of 20,000 instruction boundaries on dot
  * 2 mod 4 booted, on 1 mod 4 no-boot).  Every value below was MEASURED by running
  * the real Color boot program (World Rev 2) on this core to the hand-over and
- * reading the state (our seatH/phase_probe test, divhdr_probe.c, hwio_probe.c); no
+ * reading the state (our phase probe test, divhdr_probe.c, hwio_probe.c); no
  * firmware byte is copied:
  *   picture position  line 148, dot 354 (mode 1) for a cartridge without the
  *                     Color flag, line 144, dot 166 for one with it (bit 7 of
@@ -14362,6 +15166,25 @@ static void rtc_tick(struct GB *gb, int cycles) {
  * Off arm: 0 restores line 0 and the single 0x2674 divider. */
 #ifndef CGB_NOBOOT_HANDOVER
 #define CGB_NOBOOT_HANDOVER 1
+#endif
+/* DMG_NOBOOT_HANDOVER -- THE NO-BOOT ORIGINAL STARTS WHERE ITS BOOT PROGRAM HANDS OVER
+ * Before this the original Game Boy (DMG-CPU B) and the Pocket without a boot
+ * program started the picture unit at line 0 (one dot processed, mode 2), so
+ * STAT read $86 at PC = $0100.  Running Nintendo's own programs on this core to
+ * the hand-over (DMG World Rev 1 on DMG-CPU B, the Pocket's on the Pocket) leaves
+ * line 153, dot 397, mode 1: LY already reads $00 there, so the LY = LYC flag is
+ * set and STAT reads $85.  Pan Docs Power_Up_Sequence gives exactly STAT $85 and
+ * LY $00 for DMG / MGB.  The dot is 1 mod 4 (153 x 456 + 397 dots from line 0,
+ * 456 being a multiple of 4), the machine-cycle phase the one-dot step below
+ * already sets, so no CPU-to-picture phase moves; the divider (0xABC8) was
+ * already the booted value.  Reached by running the picture unit on from line 0,
+ * as DMG 0 and the Color do, so every internal picture state is the natural one.
+ * LABEL: MECHANISM (the state the program leaves; tier: this core running the
+ * real program, and Pan Docs' table agrees).  NOT CHANGED: the Super Game Boys
+ * (Pan Docs gives "??" there and no SGB program is in the library to measure),
+ * and DMG 0 (its own block).  Off arm: 0 restores line 0. */
+#ifndef DMG_NOBOOT_HANDOVER
+#define DMG_NOBOOT_HANDOVER 1
 #endif
 /* CGB_MODE_FROM_HEADER -- DERIVE COMPATIBILITY MODE FROM THE CARTRIDGE RATHER
  * THAN FROM THE DEVICE.  ***MEASUREMENT ONLY, DEFAULT OFF, NOT A PROPOSAL.***
@@ -14615,15 +15438,15 @@ static void tick4(struct GB *gb) {
     gb->tima_reloaded = 0;   /* window is one M-cycle; a bus write after this
                               * tick sees whether a reload landed in it */
     spsw_flip(gb);
-    timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb);
+    TIMER_TICK4(gb);
     spsw_count(gb);
 #ifndef DOCTOR
     /* Gameboy Doctor stubs LY to a constant and its reference raises no PPU
      * interrupts, so the PPU-lite is compiled out of the doctor build. */
-    apu_tick4(&gb->apu, gb->div_counter);
+    gb_apu_tick4(gb);
     ppu_pay(gb, 0);
     dma_tick(gb);
-    rtc_tick(gb, 4);
+    RTC_TICK4(gb);
 #endif
     gb->cycle_acc += 4;
 }
@@ -14719,7 +15542,7 @@ static void hdma_chunk(struct GB *gb) {
  *   *** BOTH CARTRIDGES DO BUILD.  hdma_timing-C.gb and hdma_during_halt-C.gb
  *   are present, 32 KB each, at test/vendor/mealybug-tearoom-tests/build/dma/
  *   in GameBoy4.  The "does not build" claim this paragraph used to carry was
- *   checked on 2026-09-16 and is false; the structure is still unverified,
+ *   checked and is false; the structure is still unverified,
  *   because nothing here RUNS them, but it is no longer unrunnable. *** */
 
 /* GDMA_SETUP_M -- ONE M-CYCLE, ONCE PER GENERAL-PURPOSE TRANSFER, ON TOP OF
@@ -14846,11 +15669,83 @@ static int cgb_ds_port(const struct GB *gb, int oam) {
     if (!(CGB_ACC_DS && CT_CGB(gb) && gb->double_speed && (gb->lcdc & 0x80) && gb->ly < 144)) return -1;
     if (!gb->lcd_on_line)
         return gb->ct_stat == 3 || (oam && gb->ct_stat == 2)
-            || (wl && gb->ppu_dots >= CT_M2R_DS + 1 - wl && gb->ppu_dots < LINE_PRE + 80);
+            || (wl && gb->ppu_dots >= CT_M2R_DS + 1 - wl && gb->ppu_dots < LINE_PRE + 80)
+#if MDL_OAMRD
+            || (oam == 1 && GB_CGB_LATE(gb)
+                && gb->ppu_dots >= CT_M2R_DS - OAMRD_DS_EARLY && gb->ppu_dots < LINE_PRE + 80)
+#endif
+            ;
     if (wl && gb->ppu_dots >= LINE_PRE + 80 && gb->ppu_dots < LINE_PRE + 80 + CGB_VRAM_OPEN_L0_DS
         && gb->ppu_dots >= LINE_PRE + 80 + CGB_VRAM_OPEN_L0_DS - wl) return 1;
     return cgb_l0_ds_stat(gb) == 3;
 }
+/* MDL_OAMRD (V5): from revision D sprite memory stays closed to reads for one
+ * dot more where mode 3 ends at single speed, and closes one dot sooner where
+ * a line starts at double speed (AGE oam-read-cgbE and -ncmE, checked by its
+ * author on a CPU CGB E, the AGE emulator's is_oam_readable; SameBoy's
+ * oam_read_blocked at both moments, "model >= CGB_D").  Writes and video
+ * memory are unchanged on both.  MECHANISM (the documented difference); the
+ * one dot is the tables'. */
+#if MDL_VRAMEND
+/* The first dot of the mode-0 report at single speed, away from the power-on
+ * line: SameBoy's display state 22, the one dot between "drawing over" and the
+ * ports' release on every Color.  The same dot V5 holds sprite memory shut on
+ * from revision D. */
+static int cgb_m0_first_dot(struct GB *gb) {
+    if (!(CT_CGB(gb) && !gb->double_speed && !gb->lcd_on_line)) return 0;
+    if (!(gb->ct_stat == 0 && (gb->ppu_mode == 3 || gb->mode_report == 3)) || (int)gb->lx >= 160) return 0;
+    int d = (160 - (int)gb->lx) + ((gb->obj_have_last || CT_M0_OWED) ? obj_dots_owed(gb) : 0);
+    return d >= (gb->obj_have_last ? CT_M0RO_SS : CT_M0R_SS);
+}
+#endif
+#if MDL_FEA0
+/* MDL_FEA0 (V8): on a Color, $FEA0-$FEFF opens and shuts with sprite memory
+ * (and reads $FF, writes lost, during a transfer).  Revisions 0 to C have RAM
+ * there, the address masked with ~$18; revision D has RAM with the address
+ * forced to $Fx above $C0; revision E and the Advance have none, and read the
+ * address's high nibble twice ($FFAx reads $AA).  (Pan Docs Memory_Map,
+ * FEA0-FEFF; SameBoy GB_read_oam / write_oam; the AGE emulator's
+ * prohibited-area read.)  SOURCE-READ; no test in our sets reaches it.
+ * fea0_cell: the RAM cell, -1 for none. */
+static int fea0_cell(const struct GB *gb, u16 addr);
+#define OAM_CELL_READ(gb, addr) ((addr) < 0xFEA0 ? (gb)->oam[(addr) - 0xFE00] : fea0_read((gb), (addr)))
+#define OAM_CELL_WRITE(gb, addr, v) do { if ((addr) < 0xFEA0) (gb)->oam[(addr) - 0xFE00] = (v);         else { int c_ = fea0_cell((gb), (addr)); if (c_ >= 0) (gb)->extra_oam[c_] = (v); } } while (0)
+static u8 fea0_read(const struct GB *gb, u16 addr) {
+    int c = fea0_cell(gb, addr);
+    if (c >= 0) return gb->extra_oam[c];
+    return (u8)((addr & 0xF0) | ((addr & 0xF0) >> 4));   /* revision E and the Advance */
+}
+static int fea0_cell(const struct GB *gb, u16 addr) {
+    unsigned a = addr & 0xFF;
+    if (!GB_MODEL_IS_CGB(gb->model) || gb->model >= GB_MODEL_CGB_E) return -1;
+    if (gb->model == GB_MODEL_CGB_D) { if (a >= 0xC0) a |= 0xF0; }
+    else a &= ~0x18u;
+    return (int)(a - 0xA0);
+}
+#else
+#define OAM_CELL_READ(gb, addr) ((gb)->oam[(addr) - 0xFE00])
+#define OAM_CELL_WRITE(gb, addr, v) ((gb)->oam[(addr) - 0xFE00] = (v))
+#endif
+#if MDL_OAMRD
+/* OAMRD_L0_K: on the line the LCD came on, the late release lasts from where
+ * our mode 3 ends to this many dots after (AGE: the first frame's line 0 has
+ * its own edge, 82 + 172 + SCX % 8, one more on E).  FITTED: 3 is the value at
+ * which oam-read-cgbE / -ncmE pass (0, 1 and 2 leave two cells each); our
+ * power-on line's own length is itself fitted (LCD_ON_LEN_*). */
+#ifndef OAMRD_L0_K
+#define OAMRD_L0_K 3
+#endif
+static int cgb_oam_rd_late_end(struct GB *gb) {
+    if (!(CT_CGB(gb) && GB_CGB_LATE(gb) && !gb->double_speed)) return 0;
+    /* the power-on line: the dot after its mode 3 ends */
+    if (gb->lcd_on_line)
+        return gb->ly == 0 && gb->m0_seen && gb->ppu_dots >= (int)gb->m0_dot
+            && gb->ppu_dots <= (int)gb->m0_dot + OAMRD_L0_K;
+    if (!(gb->ct_stat == 0 && (gb->ppu_mode == 3 || gb->mode_report == 3)) || (int)gb->lx >= 160) return 0;
+    int d = (160 - (int)gb->lx) + ((gb->obj_have_last || CT_M0_OWED) ? obj_dots_owed(gb) : 0);
+    return d >= (gb->obj_have_last ? CT_M0RO_SS : CT_M0R_SS);
+}
+#endif
 static int m0_dmg_released(const struct GB *gb) {
     if (CGB_ACC_REL && CT_CGB(gb) && !gb->double_speed && !gb->lcd_on_line)
         return gb->ct_stat == 0 && (gb->ppu_mode == 3 || gb->mode_report == 3);
@@ -14873,6 +15768,9 @@ static u8 bus_read(struct GB *gb, u16 addr) {
      * during the transfer (Mooneye ret_timing sources DMA from VRAM and loops
      * in ROM), so over-blocking here would make those fetches read garbage. */
     if (gb->dma_active && addr >= 0xFE00 && addr < 0xFEA0) return 0xFF;
+#if MDL_FEA0
+    if (gb->dma_active && gb->dev == GB_DEV_CGB && addr >= 0xFEA0 && addr < 0xFF00) return 0xFF;
+#endif
 
     /* THE CPU IS ON THE TRANSFER'S BUS: it reads what the transfer reads.
      * This is what makes BullyGB's DMG run execute the transfer's own bytes
@@ -14936,7 +15834,7 @@ static u8 bus_read(struct GB *gb, u16 addr) {
          * three different axes on three different edges, so a single mode test
          * gets at least one of them wrong.
          *
-         * ***PRICING QUALIFIER, 2026-09-03.  THIS ROW WAS PRICED AT
+         * ***PRICING QUALIFIER.  THIS ROW WAS PRICED AT
          * WORTH-NOTHING AS A **VALUE** QUESTION AND IS UNTESTED AS A
          * **STRUCTURAL** ONE.***  The sweep asked "is there a better constant
          * for the CGB arm" and the answer was no.  It did NOT ask whether the
@@ -14994,6 +15892,31 @@ static u8 bus_read(struct GB *gb, u16 addr) {
             }
         }
 #endif
+#if MDL_VRAMEND
+        /* MDL_VRAMEND (V6): a processor read on the one dot where drawing has
+         * ended and the ports are not yet released (single speed, every Color)
+         * meets the fetcher's own address.  In $9000-$9FFF: 0 on revisions 0
+         * to C when the fetcher's last data address was below $9000, else the
+         * byte at its last map address.  Below $9000, when the fetcher's last
+         * data address was in $9000-$9FFF: revision E and the Advance return
+         * the previous processor read's byte and take this one; earlier
+         * revisions return the previous byte.  Otherwise the byte at the
+         * fetcher's last data address.  (SameBoy read_vram, its display state
+         * 22.)  SOURCE-READ; no test in our sets reads on that dot. */
+        if (gb->dev == GB_DEV_CGB && (gb->lcdc & 0x80) && cgb_m0_first_dot(gb)) {
+            u16 a, bank = (u16)(cpu_vram_off(gb, addr) & 0x2000);
+            if (addr & 0x1000) {
+                if (!GB_CGB_LATE(gb) && !(gb->last_data_addr & 0x1000)) return 0;
+                a = gb->last_map_addr;
+            } else if (gb->last_data_addr & 0x1000) {
+                u8 r = gb->cpu_vram_bus;
+                if (GB_CGB_E_ON(gb)) gb->cpu_vram_bus = gb->vram[cpu_vram_off(gb, addr)];
+                return r;
+            } else a = gb->last_data_addr;
+            return gb->cpu_vram_bus = gb->vram[bank | (a & 0x1FFF)];
+        }
+        return gb->cpu_vram_bus = gb->vram[cpu_vram_off(gb, addr)];
+#endif
         return gb->vram[cpu_vram_off(gb, addr)];
     } else if (addr < 0xC000) {          /* external cartridge RAM / MBC RTC */
         return cart_read_ram(gb, addr);
@@ -15007,10 +15930,18 @@ static u8 bus_read(struct GB *gb, u16 addr) {
          * unbanked view of the same address, which is not a mirror.  On DMG
          * this is `addr - 0xE000` exactly, by the same funnel argument. */
         return gb->wram[cpu_wram_off(gb, (u16)(addr - 0x2000))];
-    } else if (addr < 0xFEA0) {          /* OAM */
+    } else if (addr < 0xFEA0
+#if MDL_FEA0
+               /* V8: on a Color, $FEA0-$FEFF is shut and opened with sprite memory */
+               || (gb->dev == GB_DEV_CGB && addr < 0xFF00)
+#endif
+              ) {                        /* OAM */
 #ifndef DOCTOR
         { int ds = cgb_ds_port(gb, 1);
-          if (ds >= 0) return ds ? 0xFF : gb->oam[addr - 0xFE00]; }
+          if (ds >= 0) return ds ? 0xFF : OAM_CELL_READ(gb, addr); }
+#if MDL_OAMRD
+        if (cgb_oam_rd_late_end(gb)) return 0xFF;
+#endif
         if ((gb->lcdc & 0x80)
             && (gb->ppu_mode == 2 || ((gb->ppu_mode == 3 || gb->mode_report == 3) && !m0_dmg_released(gb))
                 || gb->mode_report == 2
@@ -15018,14 +15949,14 @@ static u8 bus_read(struct GB *gb, u16 addr) {
                  * STAT reports mode 2 at its end. */
                 || (gb->ly < 144 && gb->ppu_dots < LINE_PRE))) {
 #ifdef TRACE_RST
-            /* Declared and never incremented until 2026-08-19; its zero used to
+            /* Declared and never incremented; its zero used to
              * be an initialiser printed beside a genuinely measured zero. */
             g_blk_oam++;
 #endif
             return 0xFF;
         }
 #endif
-        return gb->oam[addr - 0xFE00];
+        return OAM_CELL_READ(gb, addr);
     } else if (addr < 0xFF00) {          /* unusable */
         /* G24 -- DMG ONLY, and REVISION-dependent on CGB rather than merely
          * mode-dependent: CGB-0/A/B/C mirror the real extra-OAM bytes with a
@@ -15070,6 +16001,17 @@ static u8 bus_read(struct GB *gb, u16 addr) {
                 if (RP_CGB && gb->dev == GB_DEV_CGB && gb->cgb_mode) {
                     /* GBH: a linked second Color's light clears bit 1
                      * (Pan Docs: 0 = receiving, only with reading enabled). */
+#if MDL_IR
+                    /* MDL_IR (S7): bit 4 reads 1 on every Color but revision E,
+                     * and the Advance has no infrared receiver (SameBoy's RP read,
+                     * "model != CGB_E", and its ir_run; Pan Docs CGB_Registers:
+                     * "the GBA does not include an infra-red port").  SOURCE-READ. */
+                    {   u8 b4 = (u8)(gb->model == GB_MODEL_CGB_E ? 0x00 : 0x10);
+                        if ((gb->io[0x56] & 0xC0) == 0xC0 && ir_seen(gb) && !GB_MODEL_IS_AGB(gb->model))
+                            return (u8)((gb->io[0x56] & 0xC1) | 0x2C | b4);
+                        return (u8)((gb->io[0x56] & 0xC1) | 0x2E | b4);
+                    }
+#endif
                     if ((gb->io[0x56] & 0xC0) == 0xC0 && ir_seen(gb))
                         return (u8)((gb->io[0x56] & 0xC1) | 0x3C);
                     return (u8)((gb->io[0x56] & 0xC1) | 0x3E);  /* bit 1: no light */
@@ -15228,6 +16170,17 @@ static u8 bus_read(struct GB *gb, u16 addr) {
                 if (gb->dev == GB_DEV_CGB && addr == 0xFF6C)
                     return (u8)(gb->opri | 0xFE);
 #if PCM_REGS
+#if MDL_PCMREAD
+                /* MDL_PCMREAD (A8): on Color revisions 0 to C a read of PCM12 on the
+                 * very clock a square channel steps from a silent sample sees that
+                 * channel as 0 (SameBoy pcm_mask, "model <= CGB_C"; SameSuite
+                 * channel_1_freq_change_timing-cgb0BC: "affected by the PCM read
+                 * glitch on CGB-C and older").  SOURCE-READ. */
+                if (gb->dev == GB_DEV_CGB && addr == 0xFF76 && GB_MODEL_IS_CGB(gb->model)
+                    && gb->model <= GB_MODEL_CGB_C)
+                    return (u8)(((gb->apu.pcm_edge & 1) ? 0 : (gb->apu.ch[0].out & 0x0F))
+                                | ((gb->apu.pcm_edge & 2) ? 0 : ((gb->apu.ch[1].out & 0x0F) << 4)));
+#endif
                 if (gb->dev == GB_DEV_CGB && addr == 0xFF76)
                     return (u8)((gb->apu.ch[0].out & 0x0F)
                                 | ((gb->apu.ch[1].out & 0x0F) << 4));
@@ -15427,6 +16380,9 @@ static void sgb_icd_write(struct GB *gb, u8 v) {
                     gb->sgb_npkt++;
                 } else if (gb->sgb_lost < 255) gb->sgb_lost++;
             }
+#if SGB_SOUND
+            if (gb->icd_unlocked) sgbs_packet(&gb->apu, gb->icd_buf);   /* SNES sound */
+#endif
             /* Command applies on the 128th DATA bit; the stop bit's value is
              * never inspected, which is what cpp's CorruptStop asserts. */
             if (gb->icd_unlocked && (gb->icd_buf[0] >> 3) == 0x11) {  /* MLT_REQ */
@@ -15483,7 +16439,14 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
         gb->wram[cpu_wram_off(gb, addr)] = v;
     } else if (addr < 0xFE00) {
         gb->wram[cpu_wram_off(gb, (u16)(addr - 0x2000))] = v;   /* echo */
-    } else if (addr < 0xFEA0) {
+    } else if (addr < 0xFEA0
+#if MDL_FEA0
+               || (gb->dev == GB_DEV_CGB && addr < 0xFF00)
+#endif
+              ) {
+#if MDL_FEA0
+        if (addr >= 0xFEA0 && gb->dma_active) return;    /* V8: lost during a transfer */
+#endif
 #ifndef DOCTOR
         /* Same one-M-cycle write lag as VRAM above, with one extra wrinkle the
          * OAM samples force: the scan RELEASES OAM on the live mode-2 exit, so
@@ -15495,7 +16458,7 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
          * away by `mode_report == 3` and never executed. */
         { int ds = cgb_ds_port(gb, 2);
           if (ds > 0) return;
-          if (ds == 0) { gb->oam[addr - 0xFE00] = v; return; } }
+          if (ds == 0) { OAM_CELL_WRITE(gb, addr, v); return; } }
         if (gb->lcdc & 0x80) {
             int lead = GB_DMG_ONLY(gb, GB_G15, VRAM_CLOSE_LEAD);
             if (((gb->mode_report == 3 && !m0_dmg_released(gb))
@@ -15515,7 +16478,7 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
                         || (gb->ly < 144 && !gb->lcd_on_line && gb->ppu_dots < LINE_PRE))))) return;
         }
 #endif
-        gb->oam[addr - 0xFE00] = v;
+        OAM_CELL_WRITE(gb, addr, v);
     } else if (addr < 0xFF00) {
         /* unusable */
     } else if (addr < 0xFF80) {
@@ -15544,6 +16507,9 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
                      * write, so the 44-row text channel is preserved BY
                      * CONSTRUCTION rather than by re-verification. */
                     if (SERIAL_CLOCK && (v & 0x01)) gb->ser_bits = 8;
+#if GB_WORKBOY
+                    if (SERIAL_CLOCK && (v & 0x01) && gb->wb_on) wb_bit_in(gb, (gb->sb >> 7) & 1);
+#endif
                     gb->ser_tx = gb->sb; gb->ser_ext = 0;      /* GBH: link, Barcode Boy */
                     /* The printer sees the whole byte the Game Boy sends. */
                     if (SERIAL_CLOCK && (v & 0x01) && prn_listens(gb)) g_prn.tx = gb->sb;
@@ -15620,7 +16586,7 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
                             * NOTE 18: caught by NOTHING.  The STAT7 variant is
                             * recorded byte-identical either way, so no test we
                             * own can see this row move in any direction. */
-                           /* G11 DISCHARGED 2026-10-03 (r-gbc-afterboot, cause C2).
+                           /* G11 DISCHARGED (our after-boot notes, cause C2).
                             * The CGB arm is NOT the DMG all-selects moment.  A
                             * CGB carries no DMG STAT-write bug; what it does
                             * carry is a one-cycle INTERMEDIATE between old and
@@ -15651,6 +16617,14 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
                            if (gb->dev == GB_DEV_DMG && STAT7 == 3 && gb->ppu_dots == LINE_PRE - 1)
                                moment = 0x00;      /* dot reached at all? */
                            gb->stat = moment;          /* as if $FF, for one cycle */
+                           /* STATW_M0_EDGE: STAT already reads mode 0 (the
+                            * report's lead before the last pixel), so the
+                            * moment sees the mode-0 source. */
+#if STATW_M0_EDGE
+                           if (gb->dev == GB_DEV_DMG && gb->mode_report == 0 && gb->int_mode == 3) {
+                               gb->int_mode = 0; ppu_update_stat_line(gb); gb->int_mode = 3;
+                           }
+#endif
                            ppu_update_stat_line(gb);
                            /* HELD for a real dot, not applied instantaneously.
                             * SameBoy on DMG holds the all-selects value for
@@ -15660,8 +16634,20 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
                             * raise the line where an instantaneous version sees
                             * nothing. */
                            if (gb->pend_dots > 0) {
+#if STATW_M0_EDGE
+                               s8 _im = gb->int_mode; u8 _if = gb->reg_if, _sl = gb->stat_line;
+#endif
                                gb->pend_dots--;
                                ppu_tick_1(gb);
+#if STATW_M0_EDGE
+                               /* STATW_M0_EDGE: a mode-0 edge at the end of the
+                                * held dot is judged on the written value. */
+                               if (gb->dev == GB_DEV_DMG && _im != 0 && gb->int_mode == 0) {
+                                   gb->reg_if = (u8)((gb->reg_if & ~INT_STAT) | (_if & INT_STAT));
+                                   gb->stat_line = _sl;
+                                   gb->stat = v & 0x78;
+                               }
+#endif
                                ppu_update_stat_line(gb);
                            }
                            gb->stat = save;
@@ -15900,7 +16886,7 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
                  *
                  * NO LONGER MERELY RECORDED, AND THE OLD SENTENCE IS CORRECTED
                  * RATHER THAN LEFT.  It said "nothing in this core reads
-                 * cgb_mode yet", and on 2026-08-30 ppu_cgb_colour began to:
+                 * cgb_mode yet", and ppu_cgb_colour began to:
                  * C1 selects the raw colour index on the strength of this bit.
                  * A stale negative in a comment is the defect this tree keeps
                  * paying for -- a wrong claim gets found, a wrong DISCLAIMER
@@ -15980,7 +16966,7 @@ static void bus_write(struct GB *gb, u16 addr, u8 v) {
 /* Clocked bus operations: one M-cycle each. The tick happens first so that a
  * peripheral sees the access at the end of the machine cycle (GBCTR timing). */
 /* ---------------------------------------------------------------------------
- *  CHEATS: Game Genie style read substitution (26 Oct 2026).
+ *  CHEATS: Game Genie style read substitution.
  *
  *  THE TABLE LIVES OUTSIDE struct GB ON PURPOSE.  Save states, the state size,
  *  rewind and every export that copies the context stay byte for byte what
@@ -16046,7 +17032,7 @@ static u8 read8(struct GB *gb, u16 addr)          { tick4(gb); u8 v = bus_read(g
 static int io_write_early(const struct GB *gb, u16 addr) {
     if ((addr & 0xFF80) != 0xFF00) return 0;
     switch (addr & 0x7F) {
-        /* G7 -- DISCHARGED 2026-09-03, DEV SPLIT, MECHANISM.  The CGB arm was
+        /* G7 -- DISCHARGED, DEV SPLIT, MECHANISM.  The CGB arm was
          * an adopted copy of the DMG arm and note 10 had already flagged it as
          * pointing THE WRONG WAY, not merely by a different amount.  It is now
          * -1: Currie's published "2 T-cycles later on CGB" carried against our
@@ -16135,7 +17121,7 @@ static int lcdc_budget_cut(struct GB *gb, int deficit) {
 static void write8_core(struct GB *gb, u16 addr, u8 v) {
     gb->tima_reloaded = 0;
     spsw_flip(gb);
-    timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb); timer_tick_1(gb);
+    TIMER_TICK4(gb);
     spsw_count(gb);
 #ifndef DOCTOR
     /* G4 -- DMG ONLY.  Restricting the two-stage conflict to mode 3 is OURS,
@@ -16151,7 +17137,7 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
          * any bit but BG_EN is a dot late. SameBoy does the same on DMG.
          *
          * ONE KNOWING DEVIATION remains from that entry.  The other was
-         * RETIRED 2026-08-20; its justification is kept below, marked, because
+         * RETIRED; its justification is kept below, marked, because
          * it is this project's clearest instance of 10p.
          *
          * RETIRED -- pend_dots = 4.  We now leave 5, as SameBoy does.  The
@@ -16167,7 +17153,7 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
          * WHAT IT WAS: a measurement, correct when taken.  WHEN: against a base
          * long superseded -- the seam ship alone moved the board 5456 -> 5121.
          * WHY IT SURVIVED: nobody re-derived it.  Re-measured at HEAD on
-         * 2026-08-20 the same setting gives board 1892 (re-derived at base 1892 after cycle 1;
+         * the same setting gives board 1892 (re-derived at base 1892 after cycle 1;
          * it read 2896 at base 2896) and Mooneye 10/12 with
          * identical fails -- not 36217 and 9/12.  The figure did not become
          * wrong; it stopped being about this core, and went on justifying a
@@ -16316,7 +17302,7 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
                 gb->tsel_glitch = 0;
                 gb->pend_dots--;
             }
-            dma_tick(gb); rtc_tick(gb, 4); apu_tick4(&gb->apu, gb->div_counter);
+            dma_tick(gb); RTC_TICK4(gb); gb_apu_tick4(gb);
             gb->cycle_acc += 4;
             return;
         }
@@ -16390,8 +17376,8 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
             gb->pend_dots--; gb->tsel_set_owed = 0;   /* dot-neutral likewise */
         }
         dma_tick(gb);
-        rtc_tick(gb, 4);
-        apu_tick4(&gb->apu, gb->div_counter);
+        RTC_TICK4(gb);
+        gb_apu_tick4(gb);
         gb->cycle_acc += 4;
         return;
     }
@@ -16441,7 +17427,7 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
          * core does not have -- and it applies no palette conflict whatever at
          * double speed.
          *
-         * ***PRICING QUALIFIER, 2026-09-03.  THIS ROW WAS PRICED AT
+         * ***PRICING QUALIFIER.  THIS ROW WAS PRICED AT
          * WORTH-NOTHING AS A **VALUE** QUESTION AND IS UNTESTED AS A
          * **STRUCTURAL** ONE.***  The sweep asked "is there a better constant
          * for the CGB arm" and the answer was no.  It did NOT ask whether the
@@ -16458,10 +17444,14 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
          * NOTE 10 IS ONE SHIP STALE HERE TOO: it records OBP_LEAD 4 and OBP_OR
          * 1.  This core ships OBP_LEAD 3 and OBP_OR 0, so the OR transient now
          * exists for BGP alone (`with_or = is_bgp ? 1 : OBP_OR`).  Routed. */
-        /* G6 -- DISCHARGED 2026-09-03.  Derivation, both labels, the reference
+        /* G6 -- DISCHARGED.  Derivation, both labels, the reference
          * spike counts and the withdrawal are at the BGP_LEAD_CGB block. */
         int lead = GB_DEV_SPLIT(gb, GB_G6, is_bgp ? BGP_LEAD : OBP_LEAD,
                                           is_bgp ? BGP_LEAD_CGB : OBP_LEAD_CGB);
+#if BGP_EARLY_CGB_D || OBP_EARLY_CGB_D
+        if ((is_bgp ? BGP_EARLY_CGB_D : OBP_EARLY_CGB_D) && gb->dev == GB_DEV_CGB && GB_CGB_LATE(gb))
+            lead += 1;   /* revision D and later: one dot sooner */
+#endif
         int with_or = GB_DEV_SPLIT(gb, GB_G6, is_bgp ? BGP_OR : OBP_OR,
                                              is_bgp ? BGP_OR_CGB : OBP_OR_CGB);
         /* ***THIS SITE CHARGED A FOUR-DOT MACHINE CYCLE UNCONDITIONALLY, AND
@@ -16510,8 +17500,8 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
             bus_write(gb, addr, v);
             gb->pend_dots = budget - 1 + lead - deficit;
             dma_tick(gb);
-            rtc_tick(gb, 4);
-            apu_tick4(&gb->apu, gb->div_counter);
+            RTC_TICK4(gb);
+            gb_apu_tick4(gb);
             gb->cycle_acc += 4;
             return;
         }
@@ -16532,8 +17522,8 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
 #endif
         gb->pend_dots = budget - 1 + lead - deficit;
         dma_tick(gb);
-        rtc_tick(gb, 4);
-        apu_tick4(&gb->apu, gb->div_counter);
+        RTC_TICK4(gb);
+        gb_apu_tick4(gb);
         gb->cycle_acc += 4;
         return;
     }
@@ -16545,8 +17535,8 @@ static void write8_core(struct GB *gb, u16 addr, u8 v) {
     bus_write(gb, addr, v);
     dma_tick(gb);
 #endif
-    rtc_tick(gb, 4);
-    apu_tick4(&gb->apu, gb->div_counter);
+    RTC_TICK4(gb);
+    gb_apu_tick4(gb);
 #else
     bus_write(gb, addr, v);
 #endif
@@ -16790,7 +17780,7 @@ static void exec_cb(struct GB *gb){
  *  overwrites IE (SP at 0xFFFF) can redirect/cancel the vector (Mooneye
  *  ie_push — measured hardware behaviour).
  * ------------------------------------------------------------------------- */
-/* DISPATCH_CLEARS_EI -- A DISPATCH CANCELS AN EI STILL IN FLIGHT (2026-10-17;
+/* DISPATCH_CLEARS_EI -- A DISPATCH CANCELS AN EI STILL IN FLIGHT (
  * our CPU notes).
  * The only way an EI's delayed enable can meet a dispatch is EI executed while
  * IME was ALREADY set (with IME clear nothing can dispatch until the enable
@@ -16805,8 +17795,8 @@ static void exec_cb(struct GB *gb){
 #ifndef DISPATCH_CLEARS_EI
 #define DISPATCH_CLEARS_EI 1
 #endif
-/* IRQ_HOLD_ALL_SAMPLES -- EVERY INTERRUPT SAMPLE SEES THE SAME HOLDS (2026-10-17;
- * gb-statdocs r3/cpu NOTES 3).  LINE0_DISPATCH_LAG and
+/* IRQ_HOLD_ALL_SAMPLES -- EVERY INTERRUPT SAMPLE SEES THE SAME HOLDS (our
+ * notes).  LINE0_DISPATCH_LAG and
  * LYC_DISPATCH_LAG hide a fresh line-0 / coincidence STAT raise from the
  * processor for a few dots ("the bit is set; this is the sample missing it").
  * The boundary test and the HALT wake applied them; the dispatch re-sample
@@ -16840,7 +17830,7 @@ static void ct_switch_ppu(struct GB *gb) {
         if (n > 0) { for (int i = 0; i < n; i++) ppu_tick_1(gb); } else gb->pend_dots += n;
         return;
     }
-    if (!(CT_ON && gb->dev == GB_DEV_CGB && CT_SWITCH_PPU) || !(gb->lcdc & 0x80) || gb->lcd_on_line) return;
+    if (!(CT_ON && gb->dev == GB_DEV_CGB && CT_SWITCH_PPU != 0) || !(gb->lcdc & 0x80) || gb->lcd_on_line) return;
     if (gb->double_speed) { for (int i = 0; i < CT_SWITCH_PPU; i++) ppu_tick_1(gb); }
     else if (CT_SWITCH_PPU_BACK > 0) { for (int i = 0; i < CT_SWITCH_PPU_BACK; i++) ppu_tick_1(gb); }
     else gb->pend_dots += CT_SWITCH_PPU_BACK;
@@ -16866,6 +17856,13 @@ static void service_interrupt(struct GB *gb){
 
     /* sample after high push; IRQ_HOLD_ALL_SAMPLES: through the same holds as
      * the boundary test (irq_visible). */
+    /* DISPATCH_LOOK (see the knob): this sample is a running processor's too. */
+    if (DISPATCH_LOOK && !DISPATCH_IF_LATE && RUN_IRQ_LOOK_DMG != 0 && gb->dev == GB_DEV_DMG && (gb->lcdc & 0x80)
+        && !gb->dma_active && !gb->dma_startup && (gb->reg_ie & 0x03 & ~gb->reg_if)) {
+        ppu_settle(gb);                  /* the push's owed dots first, as at the boundary */
+        if (gb->pend_dots == 0 && run_look_edge(gb)) run_look(gb);
+    }
+    u8 ie_at_hi = gb->reg_ie; (void)ie_at_hi;
     u8 pend = IRQ_HOLD_ALL_SAMPLES ? irq_visible(gb)
                                    : (u8)(gb->reg_ie & gb->reg_if & 0x1F);
     int bit = -1, i;
@@ -16873,6 +17870,24 @@ static void service_interrupt(struct GB *gb){
 
     gb->sp = (u16)(gb->sp - 1);
     write8(gb, gb->sp, (u8)(gb->pc & 0xFF));/* push PC low (M4) */
+    /* DISPATCH_IF_LATE (see the knob): IE as it stood after the high push,
+     * IF as it stands after the low push. */
+    if (DISPATCH_IF_LATE && gb->dev == GB_DEV_DMG) {
+        u8 ie_hi = ie_at_hi;
+        ppu_settle(gb);
+        if (DISPATCH_LOOK && RUN_IRQ_LOOK_DMG != 0 && (gb->lcdc & 0x80) && !gb->dma_active && !gb->dma_startup
+            && gb->pend_dots == 0 && (ie_hi & 0x03 & ~gb->reg_if) && run_look_edge(gb))
+            run_look(gb);
+        u8 vis = IRQ_HOLD_ALL_SAMPLES ? irq_visible(gb) : (u8)(gb->reg_ie & gb->reg_if & 0x1F);
+        u8 p2 = (u8)(vis | (gb->reg_if & ie_hi & 0x1F & ~gb->reg_ie)) & ie_hi;
+#if VB_LAG_VEC
+        /* VB_LAG_VEC (see the knob): the vertical-blank lag at this sample too. */
+        if (HALT_VB_LAG && gb->ly == 144 && gb->ppu_dots < HALT_VB_LAG)
+            p2 &= (u8)~INT_VBLANK;
+#endif
+        bit = -1;
+        for (i = 0; i < 5; i++) if (p2 & (1 << i)) { bit = i; break; }
+    }
 
     if (bit < 0) {                       /* all bits cancelled -> vector 0 */
         gb->pc = 0x0000;
@@ -16881,6 +17896,19 @@ static void service_interrupt(struct GB *gb){
         gb->pc = (u16)(0x40 + bit * 8);
     }
     tick4(gb);                           /* load PC (M5) */
+#if DISPATCH_CLEAR_MID
+    /* DISPATCH_CLEAR_MID (see the knob): the PPU owes M5's dots; run the first
+     * ones now and clear again, so a request rising there is served too. */
+    if (DISPATCH_IF_LATE && gb->dev == GB_DEV_DMG && bit >= 0) {
+        for (i = 0; i < DISPATCH_CLEAR_MID && gb->pend_dots > 0; i++) {
+            gb->pend_dots--; ppu_tick_1(gb);
+        }
+        if (gb->reg_if & (1 << bit)) {
+            gb->reg_if &= (u8)~(1 << bit);
+            if (bit == 1) { gb->l0_hold = 0; gb->lyc_hold = 0; }
+        }
+    }
+#endif
 }
 
 /* ---------------------------------------------------------------------------
@@ -17004,8 +18032,14 @@ static void exec_one(struct GB *gb){
             ppu_settle(gb);
         /* DMG_HALT_TEST_END: the DMG's HALT tests at the end of its machine cycle
          * too, through the running processor's look (see the knob). */
+#if HALT_TEST_VB_LAG
+        int _hdot = -1;      /* HALT_TEST_VB_LAG: the dot of HALT's own test, before the look */
+#endif
         if (DMG_HALT_TEST_END && gb->dev == GB_DEV_DMG && (gb->lcdc & 0x80)) {
             ppu_settle(gb);
+#if HALT_TEST_VB_LAG
+            if (gb->ly == 144) _hdot = gb->ppu_dots;
+#endif
             if ((DMG_HALT_TEST_END > 1) * RUN_IRQ_LOOK_DMG && !gb->dma_active && !gb->dma_startup
                 && (gb->reg_ie & 0x03 & ~gb->reg_if) && run_look_edge(gb))
                 run_look(gb);
@@ -17018,11 +18052,17 @@ static void exec_one(struct GB *gb){
          * interrupt handler's first opcode -- Tokyo Disneyland's VBlank vector
          * holds CALL $0478, and the corrupted fetch read its operand one byte
          * early and called $78CD instead, into garbage. */
+#if HALT_TEST_VB_LAG
+        u8 _hvis = IRQ_HOLD_ALL_SAMPLES ? irq_visible(gb) : (u8)(gb->reg_ie & gb->reg_if & 0x1F);
+        if (_hdot >= 0 && _hdot < HALT_TEST_VB_LAG) _hvis &= (u8)~INT_VBLANK;
+#define HALT_VIS_ _hvis
+#else
+#define HALT_VIS_ (IRQ_HOLD_ALL_SAMPLES ? irq_visible(gb) : (u8)(gb->reg_ie & gb->reg_if & 0x1F))
+#endif
         if (!gb->ime && !gb->ime_scheduled
-            && (IRQ_HOLD_ALL_SAMPLES ? irq_visible(gb)
-                                     : (u8)(gb->reg_ie & gb->reg_if & 0x1F)))
+            && HALT_VIS_)
             gb->halt_bug = 1;
-        /* EI_HALT_REPEAT (28 Oct 2026; AGE ei-halt-dmgC-cgbBCE,
+        /* EI_HALT_REPEAT (AGE ei-halt-dmgC-cgbBCE,
          * Pan Docs "halt bug"): `ei; halt` with a request already pending does
          * not halt.  IME turns on as HALT completes and the request is taken
          * at once, and the address pushed is the HALT's own, so the handler
@@ -17031,12 +18071,17 @@ static void exec_one(struct GB *gb){
          * read normally (the Tokyo Disneyland note above still holds).
          * MECHANISM; check: ei-halt's third and sixth result bytes
          * (return address minus HALT address) read 00 on the hardware table. */
-        else if (EI_HALT_REPEAT && !gb->ime && gb->ime_scheduled
-            && (IRQ_HOLD_ALL_SAMPLES ? irq_visible(gb)
-                                     : (u8)(gb->reg_ie & gb->reg_if & 0x1F)))
+        else if (((EI_HALT_REPEAT && !gb->ime && gb->ime_scheduled)
+                  || (HALT_IME1_REPEAT && gb->dev == GB_DEV_DMG && gb->ime))
+            && HALT_VIS_)
             gb->pc = (u16)(gb->pc - 1);
+#undef HALT_VIS_
         else
+#if HALT_FIRST_GAP
+            gb->halt = gb->dev == GB_DEV_DMG ? 3 : 1;   /* 3, 2: see HALT_FIRST_GAP */
+#else
             gb->halt = 1;
+#endif
         break;
     case 0xF3: gb->ime = 0; gb->ime_scheduled = 0; break;/* DI */
     /* EI: schedule IME on, effective after the NEXT instruction. Only START the
@@ -17203,6 +18248,55 @@ static int run_look_edge(struct GB *gb) {
     return ((RUN_IRQ_LOOK_EDGES & 1) && (d >= 452 || d <= 12))
         || ((RUN_IRQ_LOOK_EDGES & 2) && (gb->ppu_mode == 3 || gb->int_mode == 3) && gb->lx >= 140);
 }
+/* LOOK_SNAP_PART -- RUN_LOOK_MEMOP'S COPY OF THE MACHINE LEAVES OUT WHAT A LOOK
+ * CANNOT WRITE.
+ * The look runs ppu_tick_1 for RUN_IRQ_LOOK_DMG dots and nothing else.  The
+ * picture unit never writes video, work or cartridge memory or the camera's
+ * host picture (their only writers are the processor's bus, the cheat writer,
+ * the Color's HDMA, the camera's capture in rtc_tick and the cartridge chips),
+ * and it writes the frame store only at the current line (ppu_push_pixel,
+ * gb->ly < 144).  So the copy taken before the look, and put back when the look
+ * is dropped, holds the whole context except vram, wram, cram, cam_src and the
+ * frame store outside lines ly and ly + 1: about 12 KB, not 252 KB, twice per
+ * dropped look.  What is put back is byte for byte what the full copy put back.
+ * LOOK_SNAP_CHECK (a test build only) takes the full copy as well and traps if
+ * any byte outside the part moved.  0 = the full copy, as before. */
+#ifndef LOOK_SNAP_PART
+#define LOOK_SNAP_PART 1
+#endif
+#if LOOK_SNAP_PART
+static struct GB look_snap;
+#define LS_OFF(f) __builtin_offsetof(struct GB, f)
+#define LS_END(f) (LS_OFF(f) + sizeof(((struct GB *)0)->f))
+/* A plain copy, eight bytes at a time where both sides allow it (the source
+ * and the copy are the same struct type, so they share their alignment). */
+typedef unsigned long long __attribute__((may_alias)) ls_word;
+static void ls_cpy(u8 *d, const u8 *s, unsigned long n) {
+    while (n && ((unsigned long)d & 7)) { *d++ = *s++; n--; }
+    if (!((unsigned long)s & 7)) {
+        ls_word *dw = (ls_word *)d; const ls_word *sw = (const ls_word *)s;
+        for (; n >= 8; n -= 8) *dw++ = *sw++;
+        d = (u8 *)dw; s = (const u8 *)sw;
+    }
+    while (n--) *d++ = *s++;
+}
+static void look_snap_copy(u8 *d, const u8 *s, int ly) {
+    ls_cpy(d, s, LS_OFF(fb));
+    if (ly < 144) ls_cpy(d + LS_OFF(fb) + (unsigned long)ly * 160 * sizeof(gb_px),
+                         s + LS_OFF(fb) + (unsigned long)ly * 160 * sizeof(gb_px),
+                         (ly + 1 < 144 ? 2 : 1) * 160 * sizeof(gb_px));
+    ls_cpy(d + LS_END(fb), s + LS_END(fb), LS_OFF(vram) - LS_END(fb));
+    ls_cpy(d + LS_END(vram), s + LS_END(vram), LS_OFF(wram) - LS_END(vram));
+    ls_cpy(d + LS_END(wram), s + LS_END(wram), LS_OFF(cram) - LS_END(wram));
+    ls_cpy(d + LS_END(cram), s + LS_END(cram), LS_OFF(cam_src) - LS_END(cram));
+    ls_cpy(d + LS_END(cam_src), s + LS_END(cam_src), sizeof(struct GB) - LS_END(cam_src));
+}
+#endif
+#ifdef LOOK_SNAP_CHECK
+static struct GB look_full;
+static unsigned g_look_snaps, g_look_drops;
+WASM_EXPORT("gb_look_check") unsigned gb_look_check(int which) { return which ? g_look_drops : g_look_snaps; }
+#endif
 static int run_look_gate(struct GB *gb) {
     if (!run_look_edge(gb))
         return 0;
@@ -17308,14 +18402,64 @@ void gb_step(struct GB *gb){
     /* RUN_IRQ_LOOK_DMG: the running processor's sample (see the knob). */
     if (RUN_IRQ_LOOK_DMG && gb->dev == GB_DEV_DMG && !gb->halt && (gb->lcdc & 0x80)
         && !gb->dma_active && !gb->dma_startup && gb->pend_dots == 0
-        && (gb->reg_ie & 0x03 & ~gb->reg_if) && run_look_gate(gb)) {
-        run_look(gb);
-        pending = irq_visible(gb);
+        && (gb->reg_ie & 0x03 & ~gb->reg_if)) {
+        if (run_look_gate(gb)) {
+            run_look(gb);
+            pending = irq_visible(gb);
+        } else if (RUN_LOOK_MEMOP && gb->ime && run_look_edge(gb) && gb_peek(gb, gb->pc) >= 0) {
+            /* RUN_LOOK_MEMOP (see the knob): the gate refused the look only to
+             * keep the next instruction's memory access on its dot.  If the look
+             * raises a request the processor will take, that instruction does
+             * not run at all, so the look is kept and the dispatch goes ahead;
+             * otherwise the machine is put back exactly as it was. */
+#if !LOOK_SNAP_PART
+            static struct GB look_snap;
+#endif
+            const struct GB *lg = g_look_gb; u8 lp = g_look_if_pre;
+#if LOOK_SNAP_PART
+            int snap_ly = gb->ly;             /* the frame store's lines, fixed before the look */
+            look_snap_copy((u8 *)&look_snap, (const u8 *)gb, snap_ly);
+#else
+            memcpy(&look_snap, gb, sizeof look_snap);
+#endif
+#ifdef LOOK_SNAP_CHECK
+            memcpy(&look_full, gb, sizeof look_full); g_look_snaps++;
+#endif
+            run_look(gb);
+            u8 p2 = irq_visible(gb);
+            if (p2 & (u8)~pending) pending = p2;
+            else {
+#ifdef LOOK_SNAP_CHECK
+                g_look_drops++;
+                {   /* every byte the part leaves out must be as the full copy has it */
+                    const u8 *a = (const u8 *)gb, *b = (const u8 *)&look_full;
+                    for (unsigned long i = 0; i < sizeof(struct GB); i++) if (a[i] != b[i]) {
+                        int in = i < LS_OFF(fb) || (i >= LS_END(fb) && i < LS_OFF(vram))
+                            || (i >= LS_END(vram) && i < LS_OFF(wram)) || (i >= LS_END(wram) && i < LS_OFF(cram))
+                            || (i >= LS_END(cram) && i < LS_OFF(cam_src)) || i >= LS_END(cam_src)
+                            || (snap_ly < 144 && i >= LS_OFF(fb) + (unsigned long)snap_ly * 160 * sizeof(gb_px)
+                                && i < LS_OFF(fb) + (unsigned long)(snap_ly + (snap_ly + 1 < 144 ? 2 : 1)) * 160 * sizeof(gb_px));
+                        if (!in) __builtin_trap();
+                    }
+                }
+#endif
+#if LOOK_SNAP_PART
+                look_snap_copy((u8 *)gb, (const u8 *)&look_snap, snap_ly);
+#else
+                memcpy(gb, &look_snap, sizeof look_snap);
+#endif
+#ifdef LOOK_SNAP_CHECK
+                for (unsigned long i = 0; i < sizeof(struct GB); i++)
+                    if (((const u8 *)gb)[i] != ((const u8 *)&look_full)[i]) __builtin_trap();
+#endif
+                g_look_gb = lg; g_look_if_pre = lp;
+            }
+        }
     }
     /* ...and a HALTED sample does not see what a look raised (see the knob). */
     if (RUN_IRQ_LOOK_DMG && gb->halt && gb->pend_dots < 0 && g_look_gb == gb)
         pending &= (u8)~(gb->reg_if & (u8)~g_look_if_pre);
-    /* HALT_TIMA_LAG (8 Nov 2026): on the original Game Boy a HALTED
+    /* HALT_TIMA_LAG: on the original Game Boy a HALTED
      * processor sees a timer request one machine cycle after the TIMA overflow,
      * at the TMA reload, not at the overflow itself.  Our IF bit is set at the
      * overflow (the running processor's timing, rapid_toggle), so while the
@@ -17333,6 +18477,50 @@ void gb_step(struct GB *gb){
 #endif
     if (HALT_TIMA_LAG && gb->halt && gb->dev == GB_DEV_DMG && gb->tima_reload_delay > 0)
         pending &= (u8)~INT_TIMER;
+    /* HALT_VB_LAG / VB_LAG_RUN / VB_LAG_HALT / VB_LAG_STAT.
+     * On the original Game Boy our vertical-blank request is seen one machine
+     * cycle sooner than SameBoy 1.0.5 sees it (Pinball Deluxe's first
+     * cycle-for-cycle departures: frame 20 from HALT, frame 104 running).
+     * SameBoy raises line 144's mode-2 STAT request as LY changes and the
+     * vertical-blank request three T-cycles later (display.c); we raise both
+     * on one dot.  HALT_VB_LAG=4 hides the vertical-blank request for the
+     * first 4 dots of line 144: from a halted sample (VB_LAG_HALT, default on)
+     * and from a running one (VB_LAG_RUN).  Measured: with only the
+     * vertical blank hidden from a halted sample, Mooneye vblank_stat_intr-GS
+     * (verified on the DMG by its author: the two requests wake a halted
+     * processor together) fails on the public table; VB_LAG_STAT hides line
+     * 144's mode-2 STAT request from the HALTED sample too, and the row passes
+     * again.  It must not hide STAT from the running sample: there SameBoy
+     * already sees the STAT request (frame 2,012).  The proposed set is
+     * HALT_VB_LAG 4, VB_LAG_RUN 1, VB_LAG_STAT 1: gbmicrotest int_vblank2_halt,
+     * _incs, _nops, vblank2_int_halt_b, _nops_b, _inc_sled and
+     * lcdon_halt/nops_to_vblank_int_b move to pass.  LABEL: FITTED (the 4 and
+     * the split are measured, the mechanism behind SameBoy's three-cycle order
+     * is not established).  The proposed set is on (Pinball Deluxe, 2.1.2);
+     * HALT_VB_LAG 0 is the behaviour before. */
+#ifndef HALT_VB_LAG
+#define HALT_VB_LAG 4
+#endif
+#ifndef VB_LAG_RUN
+#define VB_LAG_RUN 1
+#endif
+#ifndef VB_LAG_STAT
+#define VB_LAG_STAT 1
+#endif
+    /* VB_LAG_STAT: a halted sample sees line 144's mode-2 STAT request with
+     * the vertical blank (Mooneye vblank_stat_intr-GS), so it is hidden with it. */
+#ifndef VB_LAG_HALT
+#define VB_LAG_HALT 1
+#endif
+    if (HALT_VB_LAG && ((gb->halt && VB_LAG_HALT) || (!gb->halt && VB_LAG_RUN)) && gb->dev == GB_DEV_DMG && gb->ly == 144
+        && gb->ppu_dots < HALT_VB_LAG)
+        pending &= (u8)~(INT_VBLANK | ((VB_LAG_STAT && gb->halt && (gb->stat & 0x20)) ? INT_STAT : 0));
+    /* HALT_FIRST_GAP: the halted original has no sample one machine cycle
+     * after the HALT (see the knob); halt counts 3, 2, then stays 1. */
+#if HALT_FIRST_GAP
+    if (gb->halt == 2) pending = 0;
+    if (gb->halt > 1) gb->halt--;
+#endif
     if (gb->halt) {
         /* The KEY1 speed-switch stall lives here rather than in a state of its
          * own, because that is what it IS on both oracles: an ordinary halt
@@ -17386,7 +18574,7 @@ void gb_step(struct GB *gb){
 
 #if STOP_SPEED_DEFER
     /* A DEFERRED SPEED FLIP ALSO COMPLETES WHEN THE CPU IS NOT HALTED.
-     * (r-gbc-afterboot, cause C3.)  The STOP handler skips the halt stall when
+     * (our after-boot notes, cause C3.)  The STOP handler skips the halt stall when
      * an interrupt is already pending, and the deferred flip was counted down
      * ONLY inside the halted branch above -- so a switch taken with IF&IE set
      * never happened at all: KEY1 was cleared, bit 7 never rose, and a title
@@ -17455,16 +18643,39 @@ void gb_step(struct GB *gb){
  * With the LCD off the PPU never reaches the boundary, so the nominal frame
  * length is the fallback; a hard cap of two frames means no configuration can
  * spin here. */
+#if TIMED_INPUT
+void gb_set_buttons(struct GB *gb, int mask);
+/* Apply, in order, every queued button change whose dot has been reached. */
+static void tin_due(struct GB *gb, u32 dots) {
+    while (gb->tin_n && gb->tin_dot[gb->tin_head] <= dots) {
+        gb_set_buttons(gb, gb->tin_mask[gb->tin_head]);
+        gb->tin_head = (u8)((gb->tin_head + 1) % TIMED_INPUT_SLOTS);
+        gb->tin_n--;
+    }
+}
+/* The frame has ended: anything still waiting happened before its end. */
+static void tin_flush(struct GB *gb) { tin_due(gb, 0xFFFFFFFFu); gb->tin_head = 0; }
+#endif
 WASM_EXPORT("gb_run_frame")
 void gb_run_frame(struct GB *gb){
     u32 start = gb->cycle_acc;
+#if SGB_SOUND
+    if (gb->apu.sgbs_slot) sgbs_gb_frame(&gb->apu, gb->fb);   /* a SOU_TRN screen */
+#endif
 #if FRAME_BUDGET
     /* The superseded T-cycle budget, kept as a CONTROL so the frame-marker
      * test's sensitivity stays provable rather than asserted: at
      * FRAME_BUDGET=1 it must report 0 uniform frames and a migrating seam. A
      * check that cannot fail is not a check (our method). */
-    while ((u32)(gb->cycle_acc - start) < FRAME_TCYCLES && !gb->locked)
+    while ((u32)(gb->cycle_acc - start) < FRAME_TCYCLES && !gb->locked) {
+#if TIMED_INPUT
+        if (gb->tin_n) tin_due(gb, (u32)(gb->cycle_acc - start));
+#endif
         gb_step(gb);
+    }
+#if TIMED_INPUT
+    tin_flush(gb);
+#endif
     return;
 #endif
     /* G27 -- DMG ONLY.  FRAME_TCYCLES is 70224 counted in CPU T-CYCLES, and a
@@ -17504,8 +18715,16 @@ void gb_run_frame(struct GB *gb){
         if (!(gb->lcdc & 0x80)
             && ((u32)(gb->cycle_acc - start) >> dot_shift) >= FRAME_TCYCLES) break;
         if (((u32)(gb->cycle_acc - start) >> dot_shift) >= 2u * FRAME_TCYCLES) break;
+#if TIMED_INPUT
+        /* A change is applied between instructions, at the first one that
+         * starts on or after its dot. */
+        if (gb->tin_n) tin_due(gb, (u32)(gb->cycle_acc - start) >> dot_shift);
+#endif
         gb_step(gb);
     }
+#if TIMED_INPUT
+    tin_flush(gb);
+#endif
 }
 
 /* ---------------------------------------------------------------------------
@@ -17570,7 +18789,7 @@ static int detect_multicart(const u8 *rom, int len) {
 #define VASTFAME_CHIP 1
 #endif
 
-/* THE BOARD TABLE (2026-10-14).  Some images say nothing in their
+/* THE BOARD TABLE.  Some images say nothing in their
  * contents about the board they came from; the doctrine's per-hash board
  * table ("planned from day one") names it.  Key: CRC-32 of the whole image
  * plus its size.  Each entry is FITTED and carries its evidence:
@@ -17589,7 +18808,7 @@ static int detect_multicart(const u8 *rom, int len) {
 #ifndef BOARD_TABLE
 #define BOARD_TABLE 1
 #endif
-/* GBU_BOARDS -- UNLICENSED BOARDS (2026-10-25).  Boards the dumps do not announce, named per
+/* GBU_BOARDS -- UNLICENSED BOARDS.  Boards the dumps do not announce, named per
  * image (key: CRC-32 of the whole image plus its size), each with its source:
  *   UB_SPACEWORLD  Pocket Monsters Kin/Gin Spaceworld 1997 demos (4 images):
  *                  the header says MBC1; mGBA src/gb/overrides.c lists all four
@@ -17739,7 +18958,7 @@ static void cart_parse(struct GB *gb) {
     if (!gb->rom || gb->rom_len < 0x150) return;
     int gbu = gbu_board(gb->rom, gb->rom_len);   /* unlicensed boards */
 
-    /* THE SACHEN MMC1 AND MMC2 BOARDS (2026-10-14).
+    /* THE SACHEN MMC1 AND MMC2 BOARDS.
      *
      * Sachen (Taiwan) stored the whole header area $0100-$01FF of its carts
      * with address lines swapped (sachen_scramble) and put its own logo where
@@ -17757,7 +18976,7 @@ static void cart_parse(struct GB *gb) {
      * SOURCE-READ: mGBA src/gb/mbc/unlicensed.c _GBSachen, _GBSachenMMC1Read,
      * _GBSachenMMC2Read, src/gb/mbc.c _detectUnlMBC; hhugboy
      * src/memory/mbc/MbcUnlSachenMMC1.cpp, MbcUnlSachenMMC2.cpp,
-     * CartDetection.cpp (read 2026-10-14, no code taken).  The read-count
+     * CartDetection.cpp (read, no code taken).  The read-count
      * model of the unlock is mGBA's (header-area reads); hhugboy counts every
      * cartridge read and states the hardware as "0x31 transitions of A15".
      * FITTED: which count; MECHANISM: the scramble and the RA7 hold.
@@ -17770,7 +18989,7 @@ static void cart_parse(struct GB *gb) {
      * Without a boot program the chip starts unlocked (there is no logo pass).
      * Disproved by: a Sachen cart whose straight header reads as the header on
      * hardware; a licensed image matching.  Off arm: -DSACHEN_CHIP=0. */
-    /* THE ROCKET GAMES BOARD (2026-10-15).
+    /* THE ROCKET GAMES BOARD.
      *
      * Rocket Games (and Smartcom) carts hold their own logo at $0104-$0133.
      * The chip passes the header straight during a first phase of 48 header
@@ -17781,9 +19000,9 @@ static void cart_parse(struct GB *gb) {
      * check passes; after 48 more header reads it unlocks for good.  The chip
      * itself carries an XOR table that turns its logo into Nintendo's
      * (hhugboy MbcUnlRocketGames.cpp, the only open implementation; read
-     * 2026-10-15, no code or table taken).
+     * no code or table taken).
      *
-     * FIRMWARE BOUNDARY (the maintainer's ruling, 2026-10-15): the 48 logo bytes are
+     * FIRMWARE BOUNDARY (the maintainer's ruling): the 48 logo bytes are
      * never in this source, a test fixture or a log.  At reset the core looks
      * in the boot program image that is RUNNING (the user's own file, handed
      * in by the shell) for the 48-byte block whose CRC-32 is the logo's
@@ -17920,7 +19139,7 @@ static void cart_parse(struct GB *gb) {
         }
     }
 
-    /* A "NO MAPPER" HEADER ON AN IMAGE BIGGER THAN 32 KB (2026-10-12).
+    /* A "NO MAPPER" HEADER ON AN IMAGE BIGGER THAN 32 KB.
      *
      * MECHANISM, the part that is forced: a board with no mapper wires CPU
      * A0-A14 straight to the chip, so the CPU can address exactly 32 KB of it.
@@ -17935,7 +19154,7 @@ static void cart_parse(struct GB *gb) {
      * FITTED-TO-SAMEBOY (pin SB-1.0.3-5-CGBC-01, output only), the part that
      * is a choice: WHICH chip.  The dump cannot say.  SameBoy, run on this
      * cartridge, logs that it assumes MBC3 for exactly this case and the game
-     * plays there; Gambatte, mGBA and Gearboy (source read 2026-10-12) treat
+     * plays there; Gambatte, mGBA and Gearboy (source read) treat
      * it as plain and stall.  For the bank writes these carts make ($2000-
      * $3FFF, small numbers, no RAM) MBC1, MBC3 and MBC5 differ only in how
      * bank 0 is treated, and MBC3 is the arm that has a working witness.
@@ -17947,7 +19166,7 @@ static void cart_parse(struct GB *gb) {
      * Disproved by: a Zuigao Jimi (or any $0147=$00 >32 KB) board dumped and shown
      * to decode $2000 writes differently from MBC3 for the banks it uses.
      * Off arm: -DROMONLY_OVERSIZE_MBC=0 restores the header-literal core. */
-    /* AN MBC1 HEADER ON A LI CHENG BOARD (2026-10-14).
+    /* AN MBC1 HEADER ON A LI CHENG BOARD.
      *
      * What the board is: Li Cheng (Niutoude) Color carts carry the maker's own
      * 48-byte mark at $0184-$01B3, after the Nintendo logo the boot program
@@ -17961,7 +19180,7 @@ static void cart_parse(struct GB *gb) {
      * mark recognised by CRC-32, MBC1 header -> Li Cheng); hhugboy
      * src/memory/mbc/MbcUnlLiCheng.cpp ("2100 needs to be not-ignored ... but
      * 2180 DOES need to be ignored") and CartDetection.cpp (mark at $0184).
-     * Read 2026-10-14, no code taken.
+     * Read, no code taken.
      *
      * Label: FITTED for the identification (a maker's mark is evidence of the
      * board, not a hardware line; census: the two mark values occur on no
@@ -17978,14 +19197,14 @@ static void cart_parse(struct GB *gb) {
         }
     }
 
-    /* THE SINTAX CHIP (2026-10-14).
+    /* THE SINTAX CHIP.
      *
      * What the board is: Sintax Color carts (Taiwan, 2001-2004, built on the
      * same SDK as the BBD carts) carry the maker's mark at $0184-$01B3 (a
      * damaged copy of the Nintendo logo) and an MBC5 type byte.  The chip is
      * an MBC5 with two additions, both SOURCE-READ (mGBA src/gb/mbc/unlicensed.c
      * _GBSintax/_GBSintaxRead and src/gb/mbc.c _detectUnlMBC; hhugboy
-     * src/memory/mbc/MbcUnlSintax.cpp and CartDetection.cpp; read 2026-10-14,
+     * src/memory/mbc/MbcUnlSintax.cpp and CartDetection.cpp; read,
      * no code taken):
      *   1. a crossbar between the $2000 data byte and the bank lines, set by a
      *      4-bit mode written to $5x1x (address & $F0F0 = $5010); a mode write
@@ -18003,7 +19222,7 @@ static void cart_parse(struct GB *gb) {
      * dump (a hack or reprint) matches in most banks (8 to 16 of 16) and must
      * read straight.  The sources test bank 1 alone; two 4 MB decrypted
      * images here (Emo Cheng DX, Luke Yingxiong Chuan 3) keep bank 1 untagged
-     * and were broken by that test (gate of 2026-10-14, record section 2), so
+     * and were broken by that test (gate, record section 2), so
      * the test is: 6 or more of banks 1-16 tagged = decrypted.  Census: 78
      * images carry the mark, none licensed; 72 encrypted, 6 decrypted.
      * Disproved by: a Sintax board read on hardware with a key written whose
@@ -18019,7 +19238,7 @@ static void cart_parse(struct GB *gb) {
         }
     }
 
-    /* THE BBD AND HITEK CHIPS (2026-10-14).
+    /* THE BBD AND HITEK CHIPS.
      *
      * What the boards are: BBD (and the SKOB-published / Fiver Firm builds on
      * the same SDK) and Hitek ("GK.RX", Gaoke with Ruanxin) Color carts, MBC5
@@ -18050,7 +19269,7 @@ static void cart_parse(struct GB *gb) {
             gb->bbd = 2;
     }
 
-    /* THE VAST FAME BOARD (2026-10-14).
+    /* THE VAST FAME BOARD.
      * Vast Fame Color carts carry the maker's mark
      * at $0184-$01B3 ("V.fame", and "SOUL" on the Falchion-era builds) and
      * an MBC1 or MBC5 type byte; the chip banks as an MBC5 (hhugboy,
@@ -18074,7 +19293,7 @@ static void cart_parse(struct GB *gb) {
         }
     }
 
-    /* THE MAKON (NT) CHIP (2026-10-14).
+    /* THE MAKON (NT) CHIP.
      *
      * What the board is: Makon (NT) Color carts, header licensee "MK" or "GC"
      * at $0144-$0145, MBC1 or MBC5 type byte.  One chip model covers both
@@ -18099,7 +19318,7 @@ static void cart_parse(struct GB *gb) {
      * and run as Li Cheng, and stop when given the Makon chip (measured).
      * Disproved by: a Makon board shown to ignore the $14xx unlock, or a licensed
      * image with MK/GC.  Off arm: -DMAKON_CHIP=0. */
-    /* THE PKJD BOARD (2026-10-14).  Taiwanese Color carts built from
+    /* THE PKJD BOARD.  Taiwanese Color carts built from
      * Keitai Denjuu Telefang ("Pokemon Jade", "Pokemon Diamond", Koudai
      * Guaishou) keep Telefang's header: licensee "2N", type $10 (MBC3 + timer
      * + RAM + battery).  Identification, FITTED: that licensee and type.  It
@@ -18113,7 +19332,7 @@ static void cart_parse(struct GB *gb) {
     if (PKJD_CHIP && type == 0x10 && gb->rom[0x144] == '2' && gb->rom[0x145] == 'N')
         gb->pkjd = 1;
 
-    /* GGB-81, WISDOM TREE (2026-10-14).
+    /* GGB-81, WISDOM TREE.
      * Identification, FITTED:
      *   GGB-81: mark CRC-32 79F34594 ("DATA.") or 7E8C539B ("TD-SOFT"), mGBA's
      *     two; MBC5 type; banks as BBD with the GGB-81 data table (bbd = 3);
@@ -18163,7 +19382,7 @@ static void cart_parse(struct GB *gb) {
     }
 
     /* A TYPE BYTE THAT NAMES NO CHIP, ON AN IMAGE BIGGER THAN 32 KB
-     * (2026-10-22).
+     *
      *
      * MECHANISM, the forced part (the same as the oversize no-mapper rule): the console never reads
      * $0147; the board's own chip decides how $2000-$3FFF writes bank the ROM,
@@ -18174,7 +19393,7 @@ static void cart_parse(struct GB *gb) {
      * cart type of EA ... is a consequence of there being code in the header
      * area"), so $0147 is a value no chip maker assigned.
      *
-     * FITTED, the choice: WHICH chip.  hhugboy (read 2026-10-22, no code taken)
+     * FITTED, the choice: WHICH chip.  hhugboy (read, no code taken)
      * runs Super Donkey Kong 3 as an MBC1 with no save; measured here it runs
      * only on MBC1 (MBC3 and MBC5 lock), and the two Gowin images that get
      * past their start (Magic Ball, Binary Monsters II) run identically on
@@ -18209,8 +19428,8 @@ static void cart_parse(struct GB *gb) {
         gb->rom_banks = banks;
     }
 
-    /* THE ROM CHIP IS AS BIG AS THE DUMP, NOT AS THE HEADER SAYS (
-     * 2026-10-14).  MECHANISM: $0148 is a byte of data the game never reads
+    /* THE ROM CHIP IS AS BIG AS THE DUMP, NOT AS THE HEADER SAYS
+     * MECHANISM: $0148 is a byte of data the game never reads
      * back; the mapper drives all of its bank lines and the board wires as
      * many of them as its chip has.  A header that under-states the chip only
      * shrinks OUR mask, so banks past it folded onto low banks.  Qunxia Zhuan
@@ -18380,8 +19599,17 @@ void gb_reset(struct GB *gb){
      * presence flag is carried -- the ICD's own state is deliberately NOT, so
      * a reset returns the receiver to idle and the player index to 1. */
     int sgb = gb->sgb;
+#if GB_WORKBOY
+    /* The Workboy stays plugged in across a reset, with the host's clock. */
+    u8 wb_on = gb->wb_on, wb_time[7];
+    for (int i = 0; i < 7; i++) wb_time[i] = gb->wb_time[i];
+#endif
 
     memset(gb, 0, sizeof(*gb));
+#if GB_WORKBOY
+    gb->wb_on = wb_on;
+    for (int i = 0; i < 7; i++) gb->wb_time[i] = wb_time[i];
+#endif
 
     gb->dev = dev;
     gb->model = model;
@@ -18629,6 +19857,39 @@ void gb_reset(struct GB *gb){
     gb->d = 0x00; gb->e = 0xD8;
     gb->h = 0x01; gb->l = 0x4D;
 #endif
+#if MDL_BOOT
+    /* S1, the start without a boot program on the original's relatives: the
+     * hand-over registers each model's own boot program leaves (Pan Docs
+     * Power_Up_Sequence; Mooneye boot_regs-mgb, -sgb, -sgb2, checked by their
+     * author on those consoles).  The Pocket and the Super Game Boy 2 leave
+     * A = $FF; both Super Game Boys leave F = 0, C = $14, E = 0, HL = $C060,
+     * and the Super Game Boy's start-up sound never played, so channel 1 is
+     * off (NR52 $F0).  MECHANISM (the documented hand-over). */
+    if (dev == GB_DEV_DMG) {
+        if (gb->model == GB_MODEL_MGB) gb->a = 0xFF;
+        if (GB_MODEL_IS_SGBF(gb->model)) {
+            gb->a = (gb->model == GB_MODEL_SGB) ? 0x01 : 0xFF;
+            gb->f = 0x00; gb->b = 0x00; gb->c = 0x14;
+            gb->d = 0x00; gb->e = 0x00; gb->h = 0xC0; gb->l = 0x60;
+            gb->apu.ch[0].enabled = 0;
+        }
+    }
+#endif
+#if GB_MODELS && MDL_DMG0
+    /* DMG-CPU 0 without a start-up program: the registers its own (early)
+     * program leaves, A = $01, F = 0, B = $FF, C = $13, D = 0, E = $C1,
+     * HL = $8403, SP = $FFFE.  Mooneye boot_regs-dmg0, whose author checked it
+     * on a DMG 0 (and which fails on DMG A, B and C); Pan Docs Power_Up_Sequence
+     * gives the same; and running Nintendo's DMG 0 program on this core to
+     * PC = $0100 leaves exactly these.  Fixed, not taken from the cartridge
+     * header.  MECHANISM (the documented hand-over). */
+    if (gb->model == GB_MODEL_DMG0) {
+        gb->a = 0x01; gb->f = 0x00;
+        gb->b = 0xFF; gb->c = 0x13;
+        gb->d = 0x00; gb->e = 0xC1;
+        gb->h = 0x84; gb->l = 0x03;
+    }
+#endif
     gb->sp = 0xFFFE; gb->pc = 0x0100;
     gb->locked = 0;
     gb->buttons = 0;              /* nothing pressed; joyp_sel is set above */
@@ -18641,6 +19902,17 @@ void gb_reset(struct GB *gb){
                     : (gb->model == GB_MODEL_AGB ||
                        gb->model == GB_MODEL_AGS) ? 0x2678
                     : (gb->dev == GB_DEV_CGB)     ? cgb_noboot_div(gb) : 0xABC8;
+#if GB_MODELS && MDL_DMG0
+    /* DMG-CPU 0: the early program is shorter, so the divider is far behind
+     * DMG-CPU B's at the hand-over (reads $18, against $AB).  0x182C is the
+     * whole counter running Nintendo's DMG 0 program on this core leaves at
+     * PC = $0100, measured the same way as DMG-CPU B's 0xABC8 above (which
+     * that run also reproduces exactly); its value and phase are what Mooneye
+     * boot_div-dmg0 and boot_hwio-dmg0 check, both checked by their author on
+     * a DMG 0.  MECHANISM (the state the program leaves; tier: this core
+     * running the real program). */
+    if (gb->model == GB_MODEL_DMG0) gb->div_counter = 0x182C;
+#endif
 #else
     gb->div_counter = (gb->dev == GB_DEV_CGB) ? cgb_noboot_div(gb) : 0xABC8;
 #endif
@@ -18737,6 +20009,43 @@ void gb_reset(struct GB *gb){
      * construction and is not a candidate for shipping. */
     for (int i = 0; i < START_SKEW; i++) ppu_tick_1(gb);
 #endif
+#if DMG_NOBOOT_HANDOVER
+    if (dev == GB_DEV_DMG && !gb->sgb
+        && (gb->model == GB_MODEL_DMG_B || gb->model == GB_MODEL_MGB)) {
+        /* The booted hand-over position (see DMG_NOBOOT_HANDOVER): line 153,
+         * dot 397, mode 1, so STAT reads $85 and LY $00 at PC = $0100.  The
+         * interrupt flags stay as the table set them ($E1, which the booted
+         * run leaves too). */
+        u8 if_keep = gb->reg_if;
+        while (!(gb->ly == 153 && (int)gb->ppu_dots == 397)) ppu_tick_1(gb);
+        gb->reg_if = if_keep;
+        gb->frame_done = 0;
+    }
+#endif
+#if GB_MODELS && MDL_DMG0
+    if (gb->model == GB_MODEL_DMG0) {
+        /* DMG-CPU 0's picture position at the hand-over: line 145, dot 93, in
+         * mode 1 (LY reads $91, STAT $81, as Pan Docs Power_Up_Sequence gives for
+         * DMG 0).  Measured by running Nintendo's DMG 0 program on this core to
+         * PC = $0100, the method the Color's hand-over below uses; reached by
+         * running the picture unit on from line 0 so every internal picture
+         * state is the natural one there, and keeping the interrupt flags the
+         * table set ($E1, which the booted run leaves too).
+         * The dot is 1 mod 4, the same machine-cycle phase as the step above.
+         * Mooneye boot_hwio-dmg0 (LY $01, STAT $83 where it reads them) checks
+         * the result.  MECHANISM (the state the program leaves; tier: this core
+         * running the real program).
+         *
+         * The other hand-over values are DMG-CPU B's (the table above): the
+         * sound registers, the palettes and the rest of the I/O read the same on
+         * both in boot_hwio-dmg0 and boot_hwio-dmgABCmgb.  Object palettes are
+         * not written by either program and stay as the DMG table has them. */
+        u8 if_keep = gb->reg_if;
+        while (!(gb->ly == 145 && (int)gb->ppu_dots == 93)) ppu_tick_1(gb);
+        gb->reg_if = if_keep;
+        gb->frame_done = 0;
+    }
+#endif
 #if CGB_NOBOOT_HANDOVER
     if (dev == GB_DEV_CGB) {
         /* The booted Color's hand-over, measured (see CGB_NOBOOT_HANDOVER). */
@@ -18781,6 +20090,20 @@ int gb_audio_pull(struct GB *gb, short *dst, int frames, int rate){
     return apu_pull(&gb->apu, dst, frames, rate);
 }
 
+#if APU_INTERFERENCE
+/* THE BUZZ'S LEVEL (APU_INTERFERENCE in apu.h): a setting of the player's, 0..100,
+ * 0 = none (the default).  It belongs to the module, not to one machine, so it is
+ * not in a save state; `gb` is taken for the calling pattern only.  Returns the
+ * level kept.  Absent from a build with no buzz, so a host tests for the export. */
+WASM_EXPORT("gb_set_interference")
+int gb_set_interference(struct GB *gb, int level){
+    (void)gb;
+    if (level < 0) level = 0; else if (level > 100) level = 100;
+    g_interf_level = level;
+    return level;
+}
+#endif
+
 WASM_EXPORT("gb_set_buttons")
 void gb_set_buttons(struct GB *gb, int mask){
     u8 old = gb->buttons, nw = (u8)(mask & 0xFF);
@@ -18793,6 +20116,37 @@ void gb_set_buttons(struct GB *gb, int mask){
     }
     gb->buttons = nw;
 }
+
+#if TIMED_INPUT
+/* gb_set_buttons_at(gb, mask, dot): the buttons become `mask` when the coming
+ * frame reaches `dot` (0 .. 70223, dots counted from the start of the next
+ * gb_run_frame / gb_link_run_frame; that frame starts at the beginning of
+ * vertical blank, LY 144).  A dot of 0 or less, with nothing waiting, is
+ * gb_set_buttons now.  Changes keep the order they are given in (a dot earlier
+ * than the one before it is moved up to it), and whatever has not been reached
+ * when the frame ends is applied then, so no press is lost.  A host turns the
+ * time of a key event into a dot as the fraction of the wall-clock window
+ * since the last frame it ran, times 70224.  Returns the changes waiting. */
+WASM_EXPORT("gb_set_buttons_at")
+int gb_set_buttons_at(struct GB *gb, int mask, int dot){
+    if (dot <= 0 && !gb->tin_n) { gb_set_buttons(gb, mask); return 0; }
+    if (dot < 0) dot = 0;
+    if (gb->tin_n) {
+        u32 last = gb->tin_dot[(gb->tin_head + gb->tin_n - 1) % TIMED_INPUT_SLOTS];
+        if ((u32)dot < last) dot = (int)last;
+    }
+    if (gb->tin_n == TIMED_INPUT_SLOTS) {          /* full: the oldest goes now */
+        gb_set_buttons(gb, gb->tin_mask[gb->tin_head]);
+        gb->tin_head = (u8)((gb->tin_head + 1) % TIMED_INPUT_SLOTS);
+        gb->tin_n--;
+    }
+    int at = (gb->tin_head + gb->tin_n) % TIMED_INPUT_SLOTS;
+    gb->tin_mask[at] = (u8)(mask & 0xFF);
+    gb->tin_dot[at] = (u32)dot;
+    gb->tin_n++;
+    return gb->tin_n;
+}
+#endif
 
 /* Framebuffer for the shell/harness: 160x144 ELEMENTS of gb_px.  What an element
  * means is gb_frame_format(), not its width.  Palette application already
@@ -18861,7 +20215,7 @@ int gb_frame_bytes(void){ return (int)(160 * 144 * sizeof(gb_px)); }
  * THE JUSTIFICATION THAT USED TO SIT HERE HAS MOVED UNDERNEATH THE FUNCTION AND
  * IS CORRECTED RATHER THAN LEFT.  It read "there is no CGB rendering today --
  * G17..G20 are undischarged".  G17, G18 and G21 report DISCHARGED (fencecov,
- * run), and on 2026-08-30 the CGB-mode background index landed (C1).  ***THE
+ * run), and the CGB-mode background index landed (C1).  ***THE
  * UNCONDITIONAL ANSWER IS STILL THE HONEST ONE AND THE FUNCTION DOES NOT
  * MOVE***, but for the reason the fence gives rather than the one this comment
  * gave: every CGB-mode run in this estate still carries a NON-ZERO FENCE
@@ -18888,7 +20242,7 @@ int gb_frame_format(struct GB *gb){
      * either way and the element is a colour either way.
      *
      * ***THIS FUNCTION PREVIOUSLY RETURNED SHADE8 UNCONDITIONALLY AND THAT WAS
-     * A LIE TO THE SHELL.***  Measured 2026-09-03 on three CGB-only titles: the
+     * A LIE TO THE SHELL.***  Measured on three CGB-only titles: the
      * core boots them and fills the framebuffer with BGR555 (Wario Land 3, all
      * 23,040 elements above 3; Pokemon Crystal 23,040 at frame 900), while this
      * function reported SHADE8 -- so a shell that believed it would palette-map
@@ -18929,8 +20283,8 @@ int gb_cram_len(struct GB *gb){ return gb->cram_len; }
 WASM_EXPORT("gb_has_battery")
 int gb_has_battery(struct GB *gb){ return gb->has_battery; }
 
-/* THE MBC3 CLOCK, FOR THE HOST TO KEEP WITH THE BATTERY SAVE (2026-10-15, gb
- * integrator).  The cartridge's clock is battery-backed like its RAM, but the
+/* THE MBC3 CLOCK, FOR THE HOST TO KEEP WITH THE BATTERY SAVE (our
+ * integration notes).  The cartridge's clock is battery-backed like its RAM, but the
  * hosts kept only gb_cram_ptr, so Pokemon Gold / Silver / Crystal lost their time
  * on every reload.  A view of the clock block, contiguous in struct GB: latched
  * S M H DL DH (rtc[0..4]), live S M H DL DH (rtc_live[0..4]), the latch
@@ -18947,7 +20301,7 @@ int gb_rtc_len(struct GB *gb){
 }
 
 /* gb_clock_advance -- THE TIME AWAY, FOR THE CLOCKS THAT LIVE IN BATTERY RAM
- * (2026-10-17; GB-ROUND-2026-10-14 section 18, "Not
+ * (our notes, "Not
  * covered: HuC3 and TAMA5 keep their clocks inside their own state; their
  * elapsed-time advance is not done").  The HuC3 MCU's minute and day counters and
  * the TAMA6's calendar are kept in cram (huc3_mem, t5_page), so they persist with
@@ -19063,7 +20417,7 @@ int gb_cart_caps(struct GB *gb){ return gb->chip_caps; }
  * gb_camera_commit(gb, 1); a capture uses whatever the buffer holds when it
  * completes.  gb_camera_commit(gb, 0) returns to the built-in test card.  With
  * no host image the sensor sees the test card, never noise. */
-/* THE REAL CAMERA, CORE SIDE (2026-10-15: "I always wanted to know if
+/* THE REAL CAMERA, CORE SIDE ("I always wanted to know if
  * it would work with my computer's real camera").
  *
  * What the core takes: ONE frame of the sensor's view, 128 x 112 bytes of
@@ -19149,13 +20503,18 @@ void gb_set_tilt(struct GB *gb, int x_milli_g, int y_milli_g){
  * every figure we print.  `gb_fence_hit(gb, r)` enumerates them, and the whole
  * point of the fence is that this list is EXACT rather than remembered. */
 /* THE MODEL DEFAULT FOR A DEVICE MODE, AND IT IS THE NO-CHANGE GATE'S HINGE.
- * CGB defaults to CGB-C because `CPU CGB C` is the stored column the board is
- * scored against; DMG defaults to DMG-CPU B because that is the revision the
- * stored DMG column was taken on.  ***CHANGING EITHER DEFAULT CHANGES WHAT
+ * With GB_MODELS on the Color defaults to revision E (GB_CGB_DEFAULT; see
+ * GB_MODELS for why); with it off, to revision C, the stored column the
+ * mealybug Color board is scored against.  DMG defaults to DMG-CPU B because
+ * that is the revision the stored DMG column was taken on.  ***CHANGING EITHER DEFAULT CHANGES WHAT
  * EVERY EXISTING FIGURE IS A FIGURE OF***, which is why they are named here
  * once rather than spelled at call sites. */
 static int gb_model_default_for(int dev){
+#if GB_MODELS
+    return (dev == GB_DEV_CGB) ? GB_CGB_DEFAULT : GB_MODEL_DMG_B;
+#else
     return (dev == GB_DEV_CGB) ? GB_MODEL_CGB_C : GB_MODEL_DMG_B;
+#endif
 }
 
 WASM_EXPORT("gb_set_device")
@@ -19184,6 +20543,16 @@ int gb_set_model(struct GB *gb, int model){
 WASM_EXPORT("gb_get_model")
 int gb_get_model(struct GB *gb){ return gb->model; }
 
+#if GB_MODELS
+/* The machine's master clock in Hz: 4194304 on every handheld, the SNES's on a
+ * Super Game Boy (S4).  A host that paces frames by time runs
+ * gb_clock_hz / 70224 frames a second (59.73 on a handheld, 61.17 on an NTSC
+ * Super Game Boy, 60.61 on a PAL one); the sound it pulls is already at that
+ * speed. */
+WASM_EXPORT("gb_clock_hz")
+int gb_clock_hz(struct GB *gb){ return (int)GB_MODEL_HZ(gb->model); }
+#endif
+
 /* ---------------------------------------------------------------------------
  *  SGB: ATTACH OR DETACH THE PERIPHERAL.  Call before gb_reset.
  *
@@ -19199,7 +20568,7 @@ int gb_get_model(struct GB *gb){ return gb->model; }
  *  documented C == $14 SGB detection is absent on purpose.  Unread code is
  *  unscored code that can still regress. */
 /* ---------------------------------------------------------------------------
- *  GBH (2026-10-24): THE HOST SIDE OF THE EXTRA HARDWARE.
+ *  GBH: THE HOST SIDE OF THE EXTRA HARDWARE.
  *
  *  gb_sgb_npackets(gb)        SGB packets waiting (16 bytes each, oldest first)
  *  gb_sgb_packets(gb)         their address
@@ -19244,6 +20613,11 @@ int gb_link_run_frame(struct GB *a, struct GB *b, gb_px *fb_b) {
         if (a->frame_done) break;
         if (!(a->lcdc & 0x80) && ((u32)(a->cycle_acc - start) >> dot_shift) >= FRAME_TCYCLES) break;
         if (((u32)(a->cycle_acc - start) >> dot_shift) >= 2u * FRAME_TCYCLES) break;
+#if TIMED_INPUT
+        /* Both players' changes are placed on the first machine's frame. */
+        if (a->tin_n) tin_due(a, (u32)(a->cycle_acc - start) >> dot_shift);
+        if (b->tin_n) tin_due(b, (u32)(a->cycle_acc - start) >> dot_shift);
+#endif
         u32 c0 = a->cycle_acc;
         gb_step(a);
         a->link_bal += (int)((u32)(a->cycle_acc - c0) >> a->double_speed);
@@ -19260,6 +20634,16 @@ int gb_link_run_frame(struct GB *a, struct GB *b, gb_px *fb_b) {
         }
         if (!LOCK_RUNS_FRAME && b->locked) a->link_bal = 0;
     }
+    /* LINK_LCDOFF_SHOW: while the second machine's LCD is off it ends no frames,
+     * so its screen kept the last picture it finished; on its own it would show
+     * its own frame store, which LCD_OFF_BLANK clears on the original Game Boy.
+     * So the second screen now shows the same as that machine would alone.  0 =
+     * the old behaviour (the last finished picture stays). */
+    if (LINK_LCDOFF_SHOW && fb_b && !(b->lcdc & 0x80))
+        for (int i = 0; i < 160 * 144; i++) fb_b[i] = b->fb[i];
+#if TIMED_INPUT
+    tin_flush(a); tin_flush(b);
+#endif
     a->xflags &= (u8)~GBH_X_LINK; b->xflags &= (u8)~GBH_X_LINK;
     g_link[0] = g_link[1] = 0;
     return ended;
@@ -19332,6 +20716,12 @@ const char *gb_model_name(int model){
         "DMG-CPU B", "MGB", "SGB",
         "CPU CGB 0", "CPU CGB A", "CPU CGB B", "CPU CGB C",
         "CPU CGB D", "CPU CGB E", "AGB", "AGS"
+#if GB_MODELS
+        , "SGB2", "SGB (PAL)"
+#if MDL_DMG0
+        , "DMG-CPU 0"
+#endif
+#endif
     };
     if (model < 0 || model >= GB_MODEL_COUNT) return "INVALID-MODEL";
     return nm[model];
@@ -19635,6 +21025,9 @@ struct GB *gb_create(void){
 WASM_EXPORT("gb_destroy")
 void gb_destroy(struct GB *gb){
     if (g_prn.owner == gb) { g_prn.owner = 0; g_prn.mode = 0; g_prn.linked = 0; }
+#if SGB_SOUND
+    gb_sgb_sound(gb, 0, 0);
+#endif
     for (int i = 0; i < GB_MAX_INSTANCES; i++)
         if (&g_pool[i] == gb) { g_pool_used[i] = 0; return; }
 }
@@ -19789,6 +21182,13 @@ void gb_cart_reset(void){
 }
 #endif
 
+#if GB_BESS && !defined(DOCTOR)
+#include "bess.c"
+#endif
+#if GB_GBS && !defined(DOCTOR)
+#include "gbs.c"
+#endif
+
 /* STRUCTURAL GUARD ON THE KNOB LAYOUT.  A knob defined inside ANOTHER knob's
  * #ifndef block disappears the moment the outer knob is defined on the command
  * line -- and an absent knob evaluates as 0 in #if, so the build SUCCEEDS and
@@ -19807,7 +21207,7 @@ void gb_cart_reset(void){
  * Build-mode conditionals (GB_NATIVE, DOCTOR) are NOT knobs and are excluded;
  * constants defined inside them are absent by design in the other mode.
  *
- * ADDED 2026-09-18 WITH THE OAM-DMA SCAN-LATCH LANDING: OAM_SCAN_LATCH,
+ * ADDED WITH THE OAM-DMA SCAN-LATCH LANDING: OAM_SCAN_LATCH,
  * OAM_GRIP_LAG, OBJ_FETCH_DMA, OBJ_DMA_CURSOR.  our knobcensus test's drift arm
  * caught all four as UNPLACED and REDDENED THE GATE on the landing arm -- which
  * is the first time that arm has fired on a real ship, and it worked: four new
@@ -19815,33 +21215,33 @@ void gb_cart_reset(void){
  * They are put in the REGISTRY rather than the census because they are ordinary
  * top-level knobs with no reason to be excused.
  *
- * ADDED 2026-10-03: TSEL_SET_LASTU (the CGB tile-select SET substitute), same
+ * ADDED: TSEL_SET_LASTU (the CGB tile-select SET substitute), same
  * reason -- an ordinary top-level knob, caught UNPLACED by the drift arm.
  *
- * ADDED 2026-10-12: ROMONLY_OVERSIZE_MBC (the no-mapper header on an
+ * ADDED: ROMONLY_OVERSIZE_MBC (the no-mapper header on an
  * image over 32 KB), an ordinary top-level knob placed here on landing.
  *
- * ADDED 2026-10-14: CRAM_SMALL_MIRROR (a RAM chip under 8 KB mirrors
+ * ADDED: CRAM_SMALL_MIRROR (a RAM chip under 8 KB mirrors
  * across the window) and ROM_BANKS_FROM_FILE (the ROM bank mask follows
  * the dump, not an under-stating header), ordinary top-level knobs.
  *
- * ADDED 2026-10-14: LICHENG_MARK_MBC5 (an MBC1 header on a Li Cheng
+ * ADDED: LICHENG_MARK_MBC5 (an MBC1 header on a Li Cheng
  * board), SINTAX_CHIP, BBD_HITEK_CHIP, VASTFAME_CHIP,
  * MAKON_CHIP and BOARD_TABLE, SACHEN_CHIP and
  * PKJD_CHIP, MINOR_UNL_CHIPS, ROCKET_CHIP,
  * ordinary top-level knobs placed here on landing.
  *
- * ADDED 2026-10-15: CGB_PALIDX_DEVICE, CGB_UNDOC_DEVICE and STAT_M2_144_LEAD_CGB
- * (gb-statdocs: Mooneye boot_hwio-C, unused_hwio-C, vblank_stat_intr-C), ordinary
+ * ADDED: CGB_PALIDX_DEVICE, CGB_UNDOC_DEVICE and STAT_M2_144_LEAD_CGB
+ * (our notes: Mooneye boot_hwio-C, unused_hwio-C, vblank_stat_intr-C), ordinary
  * top-level knobs, all inert on the original by a device test.
  *
- * ADDED 2026-10-15: CHIP_HUC1, CHIP_HUC3, CHIP_MBC7, CHIP_MMM01, CHIP_M161,
+ * ADDED: CHIP_HUC1, CHIP_HUC3, CHIP_MBC7, CHIP_MMM01, CHIP_M161,
  * CHIP_CAMERA, CHIP_TAMA5, CHIP_MBC6 (the licensed chips; each is that chip's off arm).
  *
- * ADDED 2026-10-22: UNKNOWN_TYPE_MBC1 (an unknown type byte on a banked image),
+ * ADDED: UNKNOWN_TYPE_MBC1 (an unknown type byte on a banked image),
  * an ordinary top-level knob placed here on landing.
  *
- * ADDED 2026-10-25: GBU_BOARDS (unlicensed boards) and
+ * ADDED: GBU_BOARDS (unlicensed boards) and
  * IRQ_HOLD_FRESH_ONLY (the STAT hold delays only a new request), ordinary
  * top-level knobs placed here on landing. */
 #if \
@@ -19858,9 +21258,9 @@ void gb_cart_reset(void){
     !defined(OBJ_DESYNC_CGB) || !defined(LCDC_W_OBJ_FETCH_CGB) || !defined(LCDC_W_BGMAP_CGB) || \
     !defined(WY_EVERY_DOT) || !defined(IF_EARLY) || !defined(FRAME_BUDGET) || !defined(ROW_LATCH) || \
     !defined(OBJ_TWO_CON) || !defined(OBJ_BEGIN_OFF) || !defined(OBJ_END_DOT) || !defined(OBJ_END_SCX) || \
-    !defined(OBJ_LINE_LEAD) || !defined(OBJ_M0_LEAD) || !defined(OBJ_M0_LEAD_CGB) || !defined(CGB_NOBOOT_HANDOVER) || \
+    !defined(OBJ_LINE_LEAD) || !defined(OBJ_M0_LEAD) || !defined(OBJ_M0_LEAD_CGB) || !defined(CGB_NOBOOT_HANDOVER) || !defined(DMG_NOBOOT_HANDOVER) || \
     !defined(OAM_BUG_DISPATCH) || !defined(DISPATCH_CLEARS_EI) || !defined(IRQ_HOLD_ALL_SAMPLES) || \
-    !defined(SERIAL_EXT_WAITS) || !defined(SERIAL_FAST_CGB) || !defined(RP_CGB) || !defined(LCDC_BUDGET_SPEED) || \
+    !defined(SERIAL_EXT_WAITS) || !defined(SERIAL_FAST_CGB) || !defined(RP_CGB) || !defined(IR_SELF) || !defined(LCDC_BUDGET_SPEED) || \
     !defined(OBJ_NOTICE_SCX) || !defined(OBJ_END_COMB) || !defined(WIN_PX_ONCE) || !defined(WIN_PRIME_LX0) || \
     !defined(PRE_VIS_POS) || !defined(OBJ_PREVIS_AT0) || !defined(OBJ_PUSH_SERVE) || !defined(OBJ_X0_OUTPUT) || \
     !defined(OBJ_READY_STATE) || !defined(OBJ_PARK_OPEN) || !defined(OBJ_ARM_AT_READY) || !defined(OBJ_ARM_DISARM) || \
@@ -19893,7 +21293,8 @@ void gb_cart_reset(void){
     !defined(CGB_VRAM_OPEN_L0) || !defined(CGB_OAMW_LIVE) || \
     !defined(RUN_IRQ_LOOK_DMG) || !defined(RUN_IRQ_LOOK_EDGES) || !defined(STAT_M2_144_FROM_VB) || \
     !defined(CT_HALT_TEST_END) || !defined(DMG_WRITE_LAG) || !defined(DMG_WRITE_LAG_MASK) || \
-    !defined(DMG_HALT_TEST_END) || !defined(WIN_FINE_STALL) || !defined(WIN_HELD_EXTRA)
+    !defined(DMG_HALT_TEST_END) || !defined(WIN_FINE_STALL) || !defined(WIN_HELD_EXTRA) || \
+    !defined(GB_BESS) || !defined(GB_WORKBOY) || !defined(GB_GBS)
 #error "a knob has lost its definition -- every knob must be guarded at top level, never inside another knob #ifndef block"
 #endif
 

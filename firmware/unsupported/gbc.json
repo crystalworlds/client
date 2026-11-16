@@ -5,7 +5,7 @@
  "guards": [
   "game-boy"
  ],
- "count": 17,
+ "count": 13,
  "entries": {
   "081f283109a14a0e4758edd97fc1d4e141d3c3b1906811ae7afa4c9d167fba9c": {
    "kind": "cartridge",
@@ -18,18 +18,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes while starting up.",
    "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Beta) (1998-06-15) (GB Compatible)"
-  },
-  "1cfb4d7021b3e17dc6a1b7a240090232c8e18d082247f40df60a7327fcd50f02": {
-   "kind": "cartridge",
-   "code": "HANGS_AT_BOOT",
-   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
-   "title": "Action Replay Pro (World) (Unl)"
-  },
-  "343aa6cbce4bd7f174c1ac2c4b01cd545e4377360d3f8be0d5331a7bcd5c6c0c": {
-   "kind": "cartridge",
-   "code": "HANGS_AT_BOOT",
-   "reason": "it is a cheat add-on that needs a game cartridge plugged in behind it; a real console refuses it on its own too.",
-   "title": "GameShark MX (USA) (v1.02) (Unl)"
   },
   "436c9c6743f91a200cb2d30dca95f87375ff8e2eed7eb19fa41972c86bbca8fe": {
    "kind": "cartridge",
@@ -61,12 +49,6 @@
    "reason": "it crashes while starting up.",
    "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Rev 1) (Demo) (Special Version 2) (GB Compatible)"
   },
-  "5f22b311117de4a8dd8947cb3a6819504468c4444d6754ffc94da53442f4ced6": {
-   "kind": "cartridge",
-   "code": "HANGS_AT_BOOT",
-   "reason": "the console's start-up logo check refuses this cartridge on its own, as a real console does.",
-   "title": "Mail Junkies World Port (United Kingdom) (v1.01) (Unl)"
-  },
   "71cb58b5f26bd2d5f0ff924e018cc96ae44184a8070f6c81254b88b5e64ea289": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
@@ -78,12 +60,6 @@
    "code": "CRASHES_AT_BOOT",
    "reason": "it crashes while starting up.",
    "title": "Zelda no Densetsu - Yume o Miru Shima DX (Japan) (Beta) (1998-06-15) (GB Compatible) (Alt)"
-  },
-  "7934ce16ed80616d946f8270c55c4cf9209951e2dd36afe6ceb57dcab6900bfe": {
-   "kind": "cartridge",
-   "code": "HANGS_AT_BOOT",
-   "reason": "it is a communication add-on that waits for its link hardware, which is not emulated.",
-   "title": "SmartCom (Europe) (Unl)"
   },
   "afa55d726b87c8fbf8d2b70e61df035749833210ab1dcf211e67c152dd6c4ff4": {
    "kind": "cartridge",

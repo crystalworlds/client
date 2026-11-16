@@ -146,6 +146,8 @@
   function byHash(t) {
     var k = sha12Of(t);
     if (!k) return null;
+    /* a bad copy repaired on load takes its clean copy's shelf (firmware/site/repairs.js, 13 Nov 2026) */
+    try { var c = root && root.CWSRepair && root.CWSRepair.clean12(k); if (c) k = c; } catch (e) {}
     var m = hashTable();
     return (m && m.get(k)) || null;
   }

@@ -13,7 +13,7 @@
  * or in front of opaque art (a render). Without art: the largest integer scale.
  * Full screen (A13): the screen alone, as large as fits, art off.
  */
-import { SegmentLayer } from './segments.mjs?v=2.1.1';
+import { SegmentLayer } from './segments.mjs?v=2.2.0';
 
 /* The whole device on a tall screen only if its game screen stays at least this large against the
    cropped band (1 = never smaller). 0.85: a portrait phone and a Fold cover screen are width-bound
@@ -39,6 +39,7 @@ export class Presenter {
     this.art = null; this.full = false;
     this.shownRect = null;      // the part of the art the frame shows, [l, t, w, h] in fractions of the art (null: no art shown)
     this.tallView = false;      // the whole device is shown on a tall, narrow screen (art.tall)
+    this.portraitView = false;  // a wide device cropped to its screen on a portrait stage (art.portrait)
     this.onArtView = null;      // told after every layout (the on-screen art buttons follow it)
     this.lut16 = null;
     this.presented = 0;
@@ -121,7 +122,7 @@ export class Presenter {
     const wrap = this.wrap, img = this.img;
     if (desc && desc.lcd) this.segLayer().build(desc); else if (this.seg) this.seg.clear();
     if (!desc) {
-      wrap.classList.remove('has-art', 'glass-opaque'); this.box.classList.remove('art-mode');
+      wrap.classList.remove('has-art', 'glass-opaque', 'art-cutout'); this.box.classList.remove('art-mode');
       img.removeAttribute('src');
       this.layout();
       return Promise.resolve();
@@ -131,6 +132,8 @@ export class Presenter {
       img.onerror = () => { this.setArt(null); res(); };
       img.src = desc.src;
       wrap.classList.toggle('glass-opaque', !!desc.opaque);
+      /* a cut-out photograph shown whole (its own drop shadow, transparent around it): no frame shadow */
+      wrap.classList.toggle('art-cutout', !!desc.cutout);
       wrap.classList.add('has-art'); this.box.classList.add('art-mode');
       this.layout();
       if (desc.measureGlass) this.measureGlass(desc).then(op => { if (this.art === desc) wrap.classList.toggle('glass-opaque', op); });
@@ -167,7 +170,13 @@ export class Presenter {
     const bw = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const bh = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     if (!(bw > 0 && bh > 0)) return;
-    const g = this.art;
+    let g = this.art;
+    /* A WIDE DEVICE ON A PORTRAIT STAGE (the Game Boy Advance): an art that is shown whole
+       but carries a `portrait` box is drawn as that CROP (its screen area) when the stage is taller than
+       it is wide, as the crop layout below draws a television. The art buttons then stand down (the
+       shown part does not hold them) and the float pad takes over. A wide stage keeps the whole device. */
+    this.portraitView = !!(g && g.portrait && !this.full && !g.crop && bh > bw);
+    if (this.portraitView) g = Object.assign({}, g, { crop: g.portrait });
     if (!g || this.full || !g.crop) box.style.paddingTop = '';
     box.style.paddingBottom = '';
     this.shownRect = null; this.tallView = false;

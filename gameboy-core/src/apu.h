@@ -15,30 +15,79 @@
 #ifndef GB_APU_H
 #define GB_APU_H
 
+/* SGB_SOUND: the Super Game Boy's SNES sound, the built-in
+ * effects of the SOUND command and the programs SOU_TRN uploads, made by an SPC700 and
+ * S-DSP running the SNES program's own sound program (src/sgbsnd.c). 0 = none of it is
+ * compiled, and the build is the core it was. 1 = built; a machine plays SNES sound only
+ * after the host hands it the SNES program (gb_sgb_sound). */
+#ifndef SGB_SOUND
+#define SGB_SOUND 1
+#endif
+
+/* APU_FAST: the same sound unit with less work per tick.
+ * MDL_SQTRIGSTEP's per-square bookkeeping is done for both squares at the top
+ * of the tick, and only when a bit has to change; the noise latches are cleared
+ * only when one is set; the Super Game Boy's sum is not made when it would add
+ * zero.  Every value the unit holds or puts out is the same at every tick, and
+ * 0 builds the code as before. */
+#ifndef APU_FAST
+#define APU_FAST 1
+#endif
+
 /* One APU tick is 2 T-cycles. Everything below counts in T-cycles so that the
  * wave channel's (2048-f)*2 period and the square channels' (2048-f)*4 are the
  * same kind of number. */
 #define APU_TICK_T 2
 
-/* DC-blocking high-pass -- the DMG's output capacitor. DEFAULT OFF, and off
- * means COMPILED OUT: no state, no arithmetic, `struct APU` unchanged byte for
- * byte, so every existing number is untouched. Build -DAPU_HIGHPASS=1 to enable.
+/* APU_HIGHPASS -- THE OUTPUT CAPACITOR (the high-pass filter).  1 = ON (since
+ * after the check against SameBoy: docs/GB-AUDIO-HPF.md sect. 5).
+ * MECHANISM: the console's sound leaves through a coupling capacitor, which takes
+ * the DC level off and bends the lowest notes (a first-order corner near 28 Hz).
  *
- * A knob rather than a shipped change because it moves the DC content of every
- * render and therefore every track's spectral score -- it needs a baseline to
- * move from, and the audio baseline is frozen while the boot-chime regression
- * is unexplained. See the audio design sect. 21.
+ * WHAT THE SWITCH NOW MEANS.  Earlier this name was the older knob that put
+ * the capacitor in front of BOTH consumers, the instrument's capture and the host
+ * ring.  Since then the host ring has had the same capacitor of its own
+ * (APU_HOST_DCBLOCK), so turning the old knob on would have filtered what the
+ * player hears TWICE (measured: the "double" arm).  So the capacitor has one
+ * switch now: APU_HIGHPASS decides the host's capacitor (APU_HOST_DCBLOCK follows
+ * it unless given), and what the player hears is unchanged byte for byte at 1.
+ * The instrument keeps reading the raw DAC sum, as the audio design sect. 4.6
+ * requires; the older arm that filtered the capture is kept, off, as
+ * APU_CAPTURE_HIGHPASS (the audio design sect. 21 is its record).
+ * Off arm: -DAPU_HIGHPASS=0 gives the raw DAC sum on the host ring too.
  *
  * The charge factor is per APU TICK, not per output sample: the capacitor sees
  * the DAC's continuous output rather than the host's sampling of it, so the
  * constant is independent of the output rate and needs no pow() in freestanding
  * code. 0.999958 per T-cycle (TCAGBD), squared for the 2 T tick. */
 #ifndef APU_HIGHPASS
-#define APU_HIGHPASS 0
+#define APU_HIGHPASS 1
+#endif
+#ifndef APU_CAPTURE_HIGHPASS
+#define APU_CAPTURE_HIGHPASS 0
 #endif
 #define APU_HP_CHARGE 0.999916001764
 
-/* APU_HOST_DCBLOCK -- THE HOST OUTPUT IS CAPACITOR-COUPLED (2026-10-14).
+/* APU_INTERFERENCE -- THE BUZZ A REAL CONSOLE ADDS.  Built
+ * in (1); how loud it is, is a SETTING the host passes with gb_set_interference
+ * (0..100, 0 = none, the default).  At 0 nothing is added and the output is the
+ * same as without it, sample for sample.
+ * SOURCE-READ, reason NOT ESTABLISHED for the sizes: SameBoy 1.0.5 Core/apu.c,
+ * interference(), whose own comment says its levels "aren't scientifically
+ * measured, but based on ear based on several recordings".  The states it hears
+ * are ours to read: the processor halted (quieter), the LCD on (louder), the LCD
+ * drawing (mode 3, louder again) or in vertical blank (quieter), the sound unit
+ * on, the Color's infrared light on; the original Game Boy's at a quarter.  A
+ * small random hiss rides on top, one value per output sample.
+ * Where it enters is ours: before the output capacitor, because a disturbance of
+ * the chip's own supply is on its sound pins, ahead of the capacitor.  SameBoy
+ * adds it after its filter; its offset part is a level no capacitor passes, so
+ * the two differ only below the capacitor's corner. */
+#ifndef APU_INTERFERENCE
+#define APU_INTERFERENCE 1
+#endif
+
+/* APU_HOST_DCBLOCK -- THE HOST OUTPUT IS CAPACITOR-COUPLED.
  * MECHANISM: the console's audio output passes a coupling capacitor, so no DC
  * reaches the jack. The DAC sum here is not centred (a powered, quiet DAC sits
  * at its rail: silence was -0.75 FS, Link's Awakening's output sat AT the -1.0
@@ -48,13 +97,14 @@
  * HOST ring only (apu_out). The instrument's capture (apu_capture, GB_NATIVE)
  * and every scored audio number keep reading the raw DAC sum, so no audio
  * baseline moves; only what the shell plays changes. 1 = on (shipped).
- * Off arm: -DAPU_HOST_DCBLOCK=0 restores the raw host output. */
+ * Off arm: -DAPU_HOST_DCBLOCK=0 restores the raw host output.  Now it
+ * follows APU_HIGHPASS unless given on its own. */
 #ifndef APU_HOST_DCBLOCK
-#define APU_HOST_DCBLOCK 1
+#define APU_HOST_DCBLOCK APU_HIGHPASS
 #endif
 
 /* APU_HOST_HEADROOM -- THE HOST SCALE LEAVES ROOM FOR THE CAPACITOR'S SWING
- * (2026-10-14).
+ *
  * MECHANISM (a derived bound, not a measured one). The capacitor update is
  * c' = (1-k) x + k c, so the charge c is always a convex combination of past
  * inputs and stays inside the input's own range, +-480 per side (apu_mix). The
@@ -66,7 +116,7 @@
  * Reference levels, for scale: SameBoy's per-channel amplitude is 0xFF0
  * (MAX_CH_AMP, Core/apu.h), four channels 0x3FC0 = 0.498 FS rail to rail, so
  * it is 6 dB quieter again than this scale.
- * Off arm: -DAPU_HOST_HEADROOM=0 restores 480 = full scale (the 2026-10-14
+ * Off arm: -DAPU_HOST_HEADROOM=0 restores 480 = full scale (the first
  * round's output, saturated). Only meaningful with APU_HOST_DCBLOCK. */
 #ifndef APU_HOST_HEADROOM
 #define APU_HOST_HEADROOM 1
@@ -133,7 +183,7 @@
  * it were registered as code in our hardware-session prediction BEFORE
  * being measured; exactly one reproduces the declared 144-cell table. */
 /* APU_BOOT_CH1_ON -- THE NO-BOOT START LEAVES CHANNEL 1 ON, SO FF26 READS F1
- * (2026-10-17).  Both boot programs play their start-up
+ * Both boot programs play their start-up
  * sound on channel 1 and never stop it: the envelope decays to volume 0 but the
  * channel stays enabled, so NR52 reads $F1 at the hand-over (Pan Docs, Power Up
  * Sequence: NR52 = $F1 on the original; Mooneye acceptance/boot_hwio-dmgABCmgb,
@@ -473,12 +523,31 @@ struct APU {
     int ring_head, ring_tail;   /* in frames; head == tail means empty         */
     unsigned ring_dropped;      /* frames lost to overflow, saturating         */
 
-#if APU_HIGHPASS
+#if APU_CAPTURE_HIGHPASS
     double hp_l, hp_r;          /* capacitor charge, one per side               */
     int    an_l, an_r;          /* the filtered pair both consumers read        */
 #endif
 #if APU_HOST_DCBLOCK
     double hb_l, hb_r;          /* host output: capacitor charge, one per side  */
+#endif
+#if SGB_SOUND
+    /* The Super Game Boy's SNES sound (src/sgbsnd.c): which sound unit plays with this
+     * machine (an index, 0 = none, so a save state carries no pointer), its last
+     * sample in host units, and the sum over the current output sample. */
+    unsigned char sgbs_slot;
+    int  sgbs_ext_l, sgbs_ext_r;
+    long long sgbs_acc_l, sgbs_acc_r;
+#endif
+#if MDL_SQFREQ || MDL_PCMREAD
+    unsigned char sq_reload;    /* bit i: square i reloaded its period counter on   *
+                                 * the last sound tick                            */
+    unsigned char sq_hold;      /* MDL_SQFREQ: bit i, square i's next step is held */
+    unsigned char pcm_edge;     /* MDL_PCMREAD: bit i, square i stepped from a     *
+                                 * silent sample on the last sound tick           */
+#endif
+#if MDL_SQTRIGSTEP
+    int sq_frz[2];              /* MDL_SQTRIGSTEP: square i's timer at its stop     */
+    unsigned char sq_frz_ok;    /* bit i: sq_frz[i] holds the value at the stop    */
 #endif
 };
 

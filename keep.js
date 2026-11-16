@@ -34,7 +34,7 @@
         recover.
      5. Keeps a diagnostic record (key NAMES and sizes, persisted yes/no,
         origin, first-seen and last-seen times, events). Shown by ?diag=1,
-        ?diag=storage, or Settings, Access Code, Storage check. It stays in
+        ?diag=storage, or Settings, Your vault, Storage check. It stays in
         this browser; nothing is sent anywhere.
    Plain ES5 on purpose: it also runs on the TV's older engine.
    ======================================================================== */
@@ -354,8 +354,8 @@
     notice('You are now on ' + CANON_HOST,
       'You are now on ' + esc(CANON_HOST) + '. Sign in to your media server and game server once here; this address will remember you. ' +
       '<br><br>Your earlier sign-ins and vault code stay saved at the old address, <b>' + esc(movedFrom) + '</b>. ' +
-      'To bring the vault code across: open <b>' + esc(movedFrom) + '/?stay=1</b>, go to Settings, Access Code and press Copy, ' +
-      'then come back here and paste it in <b>Settings, Access Code, Switch to a different vault</b>.',
+      'To bring the vault code across: open <b>' + esc(movedFrom) + '/?stay=1</b>, go to Settings, Your vault and press Copy, ' +
+      'then come back here and paste it in <b>Settings, Your vault, Switch to a different vault</b>.',
       [{ label: 'OK' }, { label: 'Open Settings', go: openSettingsCode }]);
     return true;
   }
@@ -402,7 +402,7 @@
         event('lost-no-backup', 'cookie remembers this address');
         notice('This browser cleared this site\'s saved settings',
           'Your vault code, Media Login and game server connections were saved at this address before, but the browser has deleted them. ' +
-          'To get your games and notes back, paste your vault code in <b>Settings, Access Code, Switch to a different vault</b>. ' +
+          'To get your games and notes back, paste your vault code in <b>Settings, Your vault, Switch to a different vault</b>. ' +
           'Then sign in to Media Login again and use Direct connect for your game server.',
           [{ label: 'Open Settings', go: openSettingsCode }, { label: 'Close' }]);
       } else if (others.length) {
@@ -411,7 +411,7 @@
         var target = others[0] + location.pathname + location.search + location.hash;
         notice('You are on a different address than last time',
           'This page is <b>' + esc(origin) + '</b>. Your sign-ins, vault code and game servers are kept by <b>' + esc(others[0]) + '</b>. ' +
-          'Each address keeps its own, so this one starts empty. Open the usual address to carry on, or paste your vault code here in Settings, Access Code.',
+          'Each address keeps its own, so this one starts empty. Open the usual address to carry on, or paste your vault code here in Settings, Your vault.',
           [{ label: 'Open ' + others[0], go: function () { location.href = target; } }, { label: 'Stay here' }]);
       } else if (!fresh) {
         outcome = 'vault-missing';
@@ -431,7 +431,7 @@
     if (pendingNotice && pendingNotice.kind === 'restored') {
       notice('Your saved settings were put back',
         'This browser had lost what the site saved here (vault code, Media Login, game servers). The site kept a backup copy and has put it back, so nothing else needs doing. ' +
-        'If it keeps happening, open <b>Settings, Access Code, Storage check</b> and keep a photo of it.',
+        'If it keeps happening, open <b>Settings, Your vault, Storage check</b> and keep a photo of it.',
         [{ label: 'OK' }, { label: 'Storage check', go: function () { CWKeep.showReport(); } }]);
     }
     return idbGet('diag').then(function (idiag) {

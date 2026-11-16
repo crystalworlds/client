@@ -685,9 +685,9 @@
   var GB_INDEX_URL = (function () {
     try {
       var s = document.currentScript && document.currentScript.src;   // .../firmware/site/content_pack.js?v=…
-      if (s) return s.replace(/[^/]*$/, '') + 'gb_index.json.gz?v=2.1.1';   // cache tag: bump when the index is rebuilt (17 Oct: Sachen MMC2 boards are Color; 23 Oct: Binary Monsters II on the Game Boy shelf)
+      if (s) return s.replace(/[^/]*$/, '') + 'gb_index.json.gz?v=2.2.0';   // cache tag: bump when the index is rebuilt (17 Oct: Sachen MMC2 boards are Color; 23 Oct: Binary Monsters II on the Game Boy shelf)
     } catch (e) {}
-    return 'firmware/site/gb_index.json.gz?v=2.1.1';
+    return 'firmware/site/gb_index.json.gz?v=2.2.0';
   })();
   var GB_INDEX = null;         // { <sha256 prefix>: { s, b, n, name } } once loaded
   var GB_INDEX_PREFIX = 12;
@@ -1508,26 +1508,12 @@
   }
 
   // Load any stored pack up front; gnw.js awaits this before falling back to it.
-  /* A pack stored before 24 Oct 2026 holds the Game & Watch programs under older key
-     names (one for the map, one for each unit's program). Read it as the new ones,
-     so a pack people already made keeps working without being opened again. */
-  function upgradeStoredPack(p) {
-    if (!p || p.programs || !p.roms) return p;
-    var out = {};
-    for (var d in p.roms) {
-      var e = p.roms[d] || {}, n = {};
-      for (var k in e) n[k === 'rom' ? 'program' : k] = e[k];
-      out[d] = n;
-    }
-    p.programs = out; delete p.roms;
-    return p;
-  }
   /* SWITCHED OFF (28 Oct; source-switch.js): the content pack's switch in Settings is
      off. The pack stays stored and held (_packKept) but reads as closed (_pack null) to every
      caller, so its titles, firmware and artwork are not used; on again, it is back at once. */
   var _packKept = null;
   function packOff() { try { return !!(window.CwSources && !window.CwSources.on('pack')); } catch (e) { return false; } }
-  var ready = idbGet().then(function (p) { p = upgradeStoredPack(p); _packKept = p; _pack = packOff() ? null : p; applyToPage(_pack); return _pack; })
+  var ready = idbGet().then(function (p) { _packKept = p; _pack = packOff() ? null : p; applyToPage(_pack); return _pack; })
     .catch(function () { _pack = null; return null; });
   window.addEventListener('cw:source-switch', function (e) {
     if (!e || !e.detail || e.detail.id !== 'pack') return;

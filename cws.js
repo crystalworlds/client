@@ -1,5 +1,5 @@
 /* ===========================================================================
-   cws.js  --  the Crystal Worlds Game Server client
+   cws.js  --  the CrystalVault Server client
    ---------------------------------------------------------------------------
    Lets this site play the cartridges on a person's own game servers. Built
    from the server's published contract only (CrystalWorldsServer docs/API.md
@@ -7,36 +7,32 @@
    document's.
 
    WHAT IT DOES, IN ORDER
-     1. Discovery (2.1): asks the registry which servers are linked to the vault
-        code this browser already holds. The registry hashes the code; this file
-        never does. Answers are cached per server for when the registry is down.
-     1a. Direct connection (2.4a, added 2026-10-10): the visitor types a server's
-        host[:port] in Settings, Game servers, Direct connect. No registry call:
-        the typed address is the confirmation, pairing sends "direct" instead of
-        a pairing key, and a hash of the vault code bound to that server
-        (never the code) lets the owner approve it in advance.
-     2. Confirmation (2.2): a server this browser has not seen before is shown as
-        new and the visitor is asked once whether they linked it. Nothing but the
-        health check is sent to it before Yes.
-     3. Endpoint race (2.3): LAN, then IPv6 WAN, then WAN, then relay, started
-        250 ms apart, each timing out after 3 s. The first healthy answer with
-        the listed server_id wins and is kept for the session.
-     4. Pairing (2.4, 2.5): asks the owner to approve this device, shows the
+     1. Finding a server, two ways:
+        - Direct connection (2.4a, added 2026-10-10): the visitor types a server's
+          host[:port] in Settings, Game servers, Direct connect. The typed address
+          is the confirmation, and pairing sends "direct" with the vault's
+          identity signed by the vault key (never the vault code).
+        - Over the internet: cws-reach.mjs finds the servers that list this
+          vault's connection key through the CrystalWorlds introducer and opens
+          a WebRTC data channel to each.
+     2. Health: the typed address, or the data channel, must answer with the
+        expected server_id; a different one is a failure, never a success.
+     3. Pairing (2.4, 2.5): asks the owner to approve this device, shows the
         match code while it waits, and stores the device token per vault and per
         server in localStorage['cws.servers.v1'].
-     5. PIN (2.6, 2.8): asked on join and whenever the server says it is due;
-        wrong-PIN counts and lockouts are shown in plain words.
-     6. Library (6, 8): every reachable server's listing merged by SHA-256, so a
+     4. No PIN at a server: the owner's approval is the trust. The vault's
+        own PIN is asked by cws-reach.mjs where the vault needs it.
+     5. Library (6, 8): every reachable server's listing merged by SHA-256, so a
         cartridge held twice is shown once; titles become ordinary tiles through
         the site's existing manifests (gb, nes, atari, Pokemon mini).
-     7. Downloads (6.3, 8.3, 8.4): ranged and resumable, failing over between
+     6. Downloads (6.3, 8.3, 8.4): ranged and resumable, failing over between
         servers, verified by SHA-256 before a byte reaches a core.
-     8. Forgetting a server, revocation and vault changes clear its tokens and
+     7. Forgetting a server, revocation and vault changes clear its tokens and
         the cartridges only it supplied, including the play windows' caches.
 
-   WITH NO SERVER LINKED NOTHING CHANGES: one discovery request is made, the
-   Settings card says no server is linked, and every hook in index.html is a
-   no-op because nothing is listed.
+   WITH NO SERVER LINKED NOTHING CHANGES: nothing is sent to any server, the
+   Settings card shows the two ways to add one, and every hook in index.html is
+   a no-op because nothing is listed.
 
    SECRETS: the vault code, device tokens, poll secrets and PINs are never
    logged, never put in a URL and never sent anywhere but where the contract
@@ -46,27 +42,35 @@
   'use strict';
 
   var API_MAJOR = '1';
-  /* REGISTRY_DISCOVERY: finding servers by vault code through the Crystal Worlds
-     registry (2.1, 2.2 "remove from my vault"). Off by decision of
-     2026-10-10 until the server domain is chosen: with it off, this file never
-     calls the registry, and servers are added by Direct connect (2.4a) only.
-     Set to true to turn discovery back on; nothing else needs changing. */
-  var REGISTRY_DISCOVERY = false;
-  var REGISTRY = 'https://uhnqgivmznafzdhnodpl.supabase.co/functions/v1';
+  /* Game servers over the internet, through the CrystalWorlds introducer and
+     WebRTC, and the vault as the person's identity on the site (a name, a
+     picture and a PIN that every vault without them sets on the welcome
+     screen): both live in cws-reach.mjs, which is always loaded. A server on
+     the home network is still reached by its typed address (Direct connect)
+     first, exactly as before. */
+  var R = null, _reachP = null;
+  function loadReach() {
+    if (_reachP) return _reachP;
+    /* Through Function, so a browser that cannot read import() still reads this file. */
+    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.2.0'); })
+      .then(function (m) { R = m && m.default; return R; }, function (e) { warn('reach not loaded', e && e.message); return null; });
+    return _reachP;
+  }
+  /* Reached over the internet now? A server with a typed address too is tried at home first (s.via). */
+  function isRtc(s) { if (!s || !s.listing || !s.listing.rtc) return false; return s.listing.direct ? s.via === 'rtc' : true; }
   var K_TOKENS = 'cws.servers.v1';       // {vhp: {sid: {device_id, device_token, profile_id, profile_name}}}
-  var K_CONFIRM = 'cws.confirmed.v1';    // {vhp: {sid: 'yes' | 'no'}}
-  var K_DISC = 'cws.discovery.v1';       // {vhp: {sid: listing}}  (2.1 failure modes: the cache)
+  var K_TOKENS_R = 'cws.servers.remote.v1';   // REACH: the same, for passes made over the internet (a server issues one pass per connection kind)
+  var K_CONFIRM = 'cws.confirmed.v1';    // {vhp: {sid: 'yes' | 'no'}}  ('no': set aside on this browser)
   var K_PAIR = 'cws.pairing.v1';         // {vhp: {sid: {request_id, poll_secret, match_code, expires_at}}}
   var K_WITHDRAWN = 'cws.withdrawn.v1';  // {vhp: {sid: iso time}}: the server's owner withdrew this browser
-  var K_LAN = 'cws.lanExplained.v1';
   var K_DIRECT = 'cws.direct.v1';        // {vhp: {sid: {host, port, scheme}}}  (2.4a: typed by the user)
   var K_GB_SHA1 = 'gnw.gb.cartSha1.v1';  // emby.js / gbvideo.js art lookup, {deviceId: UPPERHEX}
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var SID_RE = /^[a-z2-7]{26}$/;
   var SHA_RE = /^[0-9a-f]{64}$/;
 
-  var T_STAGGER = 250, T_ATTEMPT = 3000, T_FIRST_BYTE = 3000, T_STALL = 10000;
-  var T_FAIL_MEMORY = 5 * 60 * 1000, T_BAD_HASH = 30 * 60 * 1000, T_PROBABLY_OFF = 15 * 60 * 1000;
+  var T_ATTEMPT = 3000, T_FIRST_BYTE = 3000, T_STALL = 10000;
+  var T_FAIL_MEMORY = 5 * 60 * 1000, T_BAD_HASH = 30 * 60 * 1000;
   var T_REFRESH = 5 * 60 * 1000;
   var MAX_PARALLEL = 3;
   var CACHE_CAP = 200 * 1024 * 1024;
@@ -75,13 +79,10 @@
   var C = {
     vault: null, vhp: null,
     servers: {},          // sid -> server record (see newServer)
-    registry: { state: 'idle', msg: '', retryAt: 0, backoff: 5000, timer: 0 },
     bySha: {}, byId: {}, boot: {},  // merged library
     added: { gb: {}, nes: {}, atari: {}, pm: {} },
     signature: '',
-    epFail: {},           // 'host:port' -> until
     events: [],           // debug trail, no secrets
-    prompted: {},         // sid -> true once a dialog was auto-shown this session
     ready: null, readyResolve: null,
     unsupported: 0
   };
@@ -159,8 +160,8 @@
     return Promise.resolve(sha256js(bytes));
   }
   function utf8(s) { return new TextEncoder().encode(s); }
-  /* The per-vault storage partition (2.5's "vault hash prefix"). Prefixed so it
-     can never equal the registry's discovery hash, and never sent anywhere. */
+  /* The per-vault storage partition (2.5's "vault hash prefix"). Prefixed, and
+     never sent anywhere. */
   function storeKey(code) { return sha256(utf8('cws-client-store-v1\u0000' + code)).then(function (h) { return h.slice(0, 16); }); }
 
   function b64(bytes) {
@@ -229,24 +230,8 @@
 
   /* ---------------------------------------------------------------- helpers */
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function fmtDate(iso) {
-    var d = new Date(iso); if (isNaN(d)) return '';
-    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) + ' at ' +
-      d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
-  }
   function fmtTime(ms) { return new Date(ms).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }); }
   function plural(n, a, b) { return n + ' ' + (n === 1 ? a : (b || a + 's')); }
-  function anonKey() { try { return typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : ''; } catch (e) { return ''; } }
-  function registryBase() {
-    /* Development only: a registry stand-in on this machine. Honoured solely on
-       a loopback page, so a production page can never be pointed elsewhere. */
-    var h = location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') {
-      try { var o = localStorage.getItem('cws.dev.registry'); if (o && /^https?:\/\//.test(o)) return o.replace(/\/+$/, ''); } catch (e) {}
-    }
-    try { if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) return SUPABASE_URL.replace(/\/+$/, '') + '/functions/v1'; } catch (e) {}
-    return REGISTRY;
-  }
   /* SWITCHED OFF (28 Oct; source-switch.js): the game servers' switch in Settings is
      off. Nothing is sent to any server or to the vault's server list, and the library is built
      as if no server were joined. Tokens, pairings, addresses and the cached listings are kept,
@@ -254,6 +239,7 @@
   function cwsOff() { try { return !!(window.CwSources && !window.CwSources.on('cws')); } catch (e) { return false; } }
   function timedFetch(url, opt, ms) {
     if (cwsOff()) return Promise.reject(Object.assign(new Error('Game servers are switched off in Settings.'), { status: 0, code: 'network' }));
+    if (/^rtc:/.test(url)) return R ? R.fetch(url, opt || {}, ms) : Promise.reject(Object.assign(new Error('not connected'), { status: 0, code: 'network' }));   // REACH: a data channel
     var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, ms);
     /* A caller's own signal (the endpoint race cancelling the losers) is
        followed too. It used to replace this one, so the time limit never
@@ -304,7 +290,8 @@
   function srvOf(sid) { return C.servers[sid] || (C.servers[sid] = newServer(sid)); }
   function confirmed(sid) { return slot(K_CONFIRM, sid) === 'yes'; }
   function hidden(sid) { return slot(K_CONFIRM, sid) === 'no'; }
-  function tokenOf(sid) { return slot(K_TOKENS, sid) || null; }
+  function tokKey(sid) { return isRtc(C.servers[sid]) ? K_TOKENS_R : K_TOKENS; }   // the pass matching the connection in use
+  function tokenOf(sid) { return slot(tokKey(sid), sid) || null; }
   function label(s) {
     if (!s.name) return 'Game server ' + s.id.slice(0, 6).toUpperCase();
     var twin = Object.keys(C.servers).some(function (k) { return k !== s.id && C.servers[k].name === s.name; });
@@ -316,63 +303,8 @@
     render();
   }
 
-  /* ---------------------------------------------------------------- 2.1 discovery */
-  function discover() {
-    if (!REGISTRY_DISCOVERY) { C.registry.state = 'off'; C.registry.msg = ''; return Promise.resolve([]); }
-    var url = registryBase() + '/cws-discover';
-    var key = anonKey();
-    var headers = { 'Content-Type': 'application/json' };
-    if (key) { headers.apikey = key; headers.Authorization = 'Bearer ' + key; }
-    return timedFetch(url, { method: 'POST', headers: headers, body: JSON.stringify({ vault_code: C.vault }) }, 10000)
-      .then(function (r) {
-        if (r.status >= 500) throw new Error('registry ' + r.status);
-        return r.json().catch(function () { return null; }).then(function (j) {
-          if (r.status !== 200 || !j || !Array.isArray(j.servers)) {
-            /* A 4xx is an answer, not an outage (API.md 12, T3): no cache fallback. */
-            C.registry.state = 'refused'; C.registry.msg = 'Crystal Worlds could not look up your servers (' + r.status + ').';
-            return [];
-          }
-          C.registry.state = 'ok'; C.registry.backoff = 5000; C.registry.msg = '';
-          var cache = {}, list = [];
-          for (var i = 0; i < j.servers.length && i < 16; i++) {
-            var x = j.servers[i];
-            if (!x || !SID_RE.test(x.server_id || '')) continue;
-            var l = { server_id: x.server_id, pairing_key: x.pairing_key || '', linked_at: x.linked_at || '', last_seen: x.last_seen || '',
-                      same_network: !!x.same_network, endpoints: Array.isArray(x.endpoints) ? x.endpoints.slice(0, 16) : [] };
-            cache[l.server_id] = l; list.push(l);
-          }
-          var all = lsGet(K_DISC); all[C.vhp] = cache; lsSet(K_DISC, all);
-          ev('discovered', { count: list.length });
-          return list;
-        });
-      })
-      .catch(function () {
-        var cached = slotAll(K_DISC), list = Object.keys(cached).map(function (k) { return cached[k]; });
-        C.registry.state = list.length ? 'cached' : 'down';
-        C.registry.msg = "Can't reach Crystal Worlds to find your servers.";
-        scheduleRediscover();
-        ev('registry-down', { cached: list.length });
-        return list;
-      });
-  }
-  function scheduleRediscover() {
-    if (C.registry.timer) return;
-    var wait = C.registry.backoff;
-    C.registry.backoff = Math.min(wait * 2, 5 * 60 * 1000);
-    C.registry.retryAt = Date.now() + wait;
-    C.registry.timer = setTimeout(function () { C.registry.timer = 0; refresh(); }, wait);
-  }
-
-  /* ---------------------------------------------------------------- 2.3 endpoint race */
-  var _lanPerm = null;
-  function lanPermission() {
-    if (_lanPerm) return _lanPerm;
-    var q = function (name) { return navigator.permissions.query({ name: name }).then(function (s) { return s.state; }); };
-    _lanPerm = (navigator.permissions ? q('local-network').catch(function () { return q('local-network-access'); }) : Promise.reject())
-      .catch(function () { return 'unknown'; });
-    return _lanPerm;
-  }
-  function hasIPv6Hint() { return true; }  // a browser cannot tell; a dead AAAA fails fast
+  /* ---------------------------------------------------------------- reaching a server
+     A typed address (Direct connect), or the data channel cws-reach.mjs opened. */
   function schemeFor(host) { return (host === 'localhost' || host === '127.0.0.1') ? 'http://' : 'https://'; }
   function hostPart(host) { return host.indexOf(':') >= 0 && host.charAt(0) !== '[' ? '[' + host + ']' : host; }
   function healthAt(ep, sid, ctl) {
@@ -386,64 +318,22 @@
       return { ep: ep, health: j, rtt: performance.now() - t0, base: base };
     });
   }
-  function explainLan() {
-    var done; try { done = localStorage.getItem(K_LAN) === '1'; } catch (e) { done = true; }
-    if (done) return Promise.resolve();
-    return new Promise(function (res) {
-      dialog({
-        sub: 'Game servers', title: 'Looking on your home network',
-        html: '<p style="' + P + '">Your game server is on the same network as this device. Your browser will now ask whether this site may <b style="color:var(--text)">look for and connect to devices on your local network</b>.</p>' +
-              '<p style="' + P + '">Allow it for the fastest connection. If you would rather not, choose Block: the site will reach your server over the internet instead.</p>',
-        actions: [{ label: 'Continue', kind: 'accent', primary: true, action: 'lan-continue', onClick: function (d) { try { localStorage.setItem(K_LAN, '1'); } catch (e) {} d.close(); } }],
-        onClose: res
-      });
-    });
-  }
-  function race(s) {
+  function locate(s) {
     var l = s.listing; if (!l) return Promise.reject(new Error('no listing'));
+    /* REACH: the connection the introducer set up, and the server's health answer over it. */
+    function overInternet() {
+      if (!R) return Promise.reject(new Error('reach off'));
+      return R.whenOpen(s.id, 15000).then(function (w) { s.via = 'rtc'; return { ep: { kind: w.kind }, health: w.health, rtt: w.rtt, base: w.base }; });
+    }
+    if (l.rtc && !l.direct) return overInternet();
     if (l.direct) {
       /* 2.4a: the address the user typed, and only it. A different server_id
          there is that address failing, never a success. */
       var ctl = new AbortController();
-      return healthAt({ kind: 'lan', host: l.direct.host, port: l.direct.port, scheme: l.direct.scheme }, s.id, ctl);
+      var home = healthAt({ kind: 'lan', host: l.direct.host, port: l.direct.port, scheme: l.direct.scheme }, s.id, ctl).then(function (w) { s.via = 'direct'; return w; });
+      return l.rtc ? home.catch(overInternet) : home;   // REACH: at home first, then over the internet
     }
-    return lanPermission().then(function (perm) {
-      var order = [], now = Date.now(), byKind = { lan: [], wan6: [], wan: [], relay: [] };
-      (l.endpoints || []).forEach(function (e) { if (e && byKind[e.kind] && e.host && e.port) byKind[e.kind].push(e); });
-      if (l.same_network && perm !== 'denied') order = order.concat(byKind.lan);
-      if (hasIPv6Hint()) order = order.concat(byKind.wan6);
-      order = order.concat(byKind.wan.filter(function (e) { return e.direct_status !== 'failed'; }));
-      order = order.concat(byKind.relay);
-      order = order.filter(function (e) { return !(C.epFail[e.host + ':' + e.port] > now); });
-      if (!order.length) return Promise.reject(new Error('no endpoint'));
-      var needExplain = perm === 'prompt' && order[0].kind === 'lan';
-      return (needExplain ? explainLan() : Promise.resolve()).then(function () {
-        return new Promise(function (resolve, reject) {
-          var ctls = [], settled = false, pending = 0, idx = 0, waitT = 0;
-          function next() {
-            if (settled || idx >= order.length) { if (!settled && pending === 0) { settled = true; reject(new Error('unreachable')); } return; }
-            var ep = order[idx++], ctl = new AbortController(); ctls.push(ctl); pending++;
-            var started = Date.now();
-            healthAt(ep, s.id, ctl).then(function (w) {
-              if (settled) return;
-              settled = true; clearTimeout(waitT);
-              ctls.forEach(function (c) { if (c !== ctl) try { c.abort(); } catch (e) {} });
-              resolve(w);
-            }, function () {
-              pending--;
-              if (settled) return;
-              C.epFail[ep.host + ':' + ep.port] = Date.now() + T_FAIL_MEMORY;
-              /* T5: a failure before its 250 ms is up starts the next at once. */
-              if (Date.now() - started < T_STAGGER) { clearTimeout(waitT); next(); }
-              else if (idx >= order.length && pending === 0) { settled = true; reject(new Error('unreachable')); }
-            });
-            clearTimeout(waitT);
-            waitT = setTimeout(next, T_STAGGER);
-          }
-          next();
-        });
-      });
-    });
+    return Promise.reject(new Error('no address'));
   }
 
   /* ---------------------------------------------------------------- API calls */
@@ -486,29 +376,46 @@
      or another tab still says so, never "not joined yet", and no PIN is
      asked. Asking again waits for the owner: the server holds this
      browser's vault code (server 2.4a), whatever this file does. */
-  var WITHDRAWN_MSG = 'Access for this browser was withdrawn. You can ask to join again; the server\'s owner has to approve it first.';
+  var WITHDRAWN_MSG = 'The server owner removed this browser.';
+  var REMOVED_MSG = 'The server owner removed this vault.';
   function withdrawn(sid) { return !!slot(K_WITHDRAWN, sid); }
-  function closePinDialog(s) { if (s.pinDlg && !s.pinDlg.closed) try { s.pinDlg.close(); } catch (x) {} s.pinDlg = null; }
   function lostToken(s) {   // the token is gone: withdrawn here, or in another tab
     s.items = null; s.bootItems = null; s.session = null;
-    closePinDialog(s);
     dropServerContent(s.id, false);
     if (withdrawn(s.id)) setState(s, 'withdrawn', WITHDRAWN_MSG);
-    else setState(s, 'unpaired', 'This browser\'s pass for this server is no longer valid. Ask to join again; it needs the server owner\'s approval.');
+    else setState(s, 'unpaired', 'This browser\'s pass for this server is no longer valid. Ask again to join.');
     rebuild();
   }
   function onAuthError(s, e) {
     if (e.code === 'device_revoked' || e.code === 'token_invalid') {
-      slot(K_TOKENS, s.id, null);
+      slot(tokKey(s.id), s.id, null);
+      if (e.code === 'device_revoked') { removedByOwner(s, isRtc(s) ? REMOVED_MSG : WITHDRAWN_MSG); return true; }
+      /* A pass the server no longer knows: asked for again quietly, once (approval is automatic while
+         the vault is still approved). */
+      if (e.code === 'token_invalid' && !s.mended) { s.mended = true; s.items = null; s.session = null; startPairing(s); return true; }
       if (e.code === 'device_revoked') slot(K_WITHDRAWN, s.id, new Date().toISOString());
       lostToken(s);
       return true;
     }
-    if (e.code === 'token_missing' && !tokenOf(s.id) && (s.state === 'ready' || s.state === 'pin')) { lostToken(s); return true; }
-    if (e.code === 'pin_required') { setState(s, 'pin', 'Enter your PIN to use this server.'); promptPinSoon(s); return true; }
+    if (e.code === 'token_missing' && !tokenOf(s.id) && s.state === 'ready') { lostToken(s); return true; }
     if (e.code === 'setup_incomplete') { setState(s, 'setup', 'The server\'s owner has not finished setting it up yet.'); return true; }
     if (e.code === 'origin_forbidden') { setState(s, 'error', 'This server does not accept this website yet. Its owner can allow it in the server\'s Security settings.'); return true; }
     return false;
+  }
+
+  /* The owner removed the person (over the internet: refused not_listed or device_revoked) or this
+     browser (a typed address: device_revoked): the row goes and the tile shows the two ways again;
+     over the internet a later re-add appears by itself. */
+  function removedByOwner(s, msg) {
+    var key = s.listing && s.listing.rtc && s.listing.rtc.server_key;
+    [K_TOKENS, K_TOKENS_R, K_PAIR, K_CONFIRM, K_WITHDRAWN, K_DIRECT].forEach(function (k) { slot(k, s.id, null); });
+    closePairingDialog(s, true);
+    clearTimeout(s.pollTimer);
+    dropServerContent(s.id, false);
+    delete C.servers[s.id];
+    if (R && key && R.untrust) R.untrust(key);
+    toastSafe(msg || REMOVED_MSG, 'error');
+    rebuild(); render();
   }
 
   /* ---------------------------------------------------------------- connect one server */
@@ -518,15 +425,16 @@
       if (hidden(s.id)) { setState(s, 'hidden'); return Promise.resolve(); }
       if (!s.base || why === 'retry') {
         setState(s, 'connecting', 'Looking for this server…');
-        return race(s).then(function (w) {
+        return locate(s).then(function (w) {
           s.base = w.base; s.kind = w.ep.kind; s.rtt = w.rtt; s.health = w.health; s.setupComplete = !!w.health.setup_complete;
           var st = Date.parse(w.health.time); s.clockSkew = isNaN(st) ? 0 : st - Date.now();
           ev('connected', { server: s.id, kind: s.kind, rtt: Math.round(s.rtt) });
           return afterHealth(s);
         }, function () {
           s.base = ''; s.retryAt = Date.now() + T_FAIL_MEMORY;
-          var off = s.listing && s.listing.last_seen && (Date.now() - Date.parse(s.listing.last_seen) > T_PROBABLY_OFF);
-          setState(s, 'unreachable', off ? 'Probably switched off: Crystal Worlds has not heard from it for a while.' : 'Not reachable from here right now.');
+          var ri = isRtc(s) && R ? R.info(s.id) : null;
+          setState(s, 'unreachable', ri ? (ri.msg && ri.msg !== 'Not reachable from here right now.' ? ri.msg : 'Not online now.') :
+            'Not reachable from here right now.');
           var dl = s.listing && s.listing.direct;
           if (dl) diagnose({ host: dl.host, port: dl.port }, dl.scheme).then(function (why) { if (s.state === 'unreachable') setState(s, 'unreachable', why); });
           ev('unreachable', { server: s.id });
@@ -546,23 +454,23 @@
       setState(s, 'version', newer ? 'This website needs updating to work with this server.' : 'This server needs updating to work with this website.');
       return Promise.resolve();
     }
-    if (!confirmed(s.id)) { setState(s, 'new'); promptConfirmSoon(s); return Promise.resolve(); }
+    /* A listing comes only from a typed address or a server that lists this vault's connection
+       key, and either is the confirmation (2.4a; reach). */
+    if (!confirmed(s.id)) slot(K_CONFIRM, s.id, 'yes');
     if (!s.setupComplete) { setState(s, 'setup', 'The server\'s owner has not finished setting it up yet.'); return Promise.resolve(); }
     if (!tokenOf(s.id)) {
       var pend = slot(K_PAIR, s.id);
       if (pend) { s.pairing = pend; setState(s, 'pairing'); poll(s); return Promise.resolve(); }
       if (withdrawn(s.id)) { setState(s, 'withdrawn', WITHDRAWN_MSG); return Promise.resolve(); }
+      if (isRtc(s)) return startPairing(s);   // REACH: the server let this connection key in, so this browser joins at once
       setState(s, 'unpaired', 'This browser has not joined this server yet.');
       return Promise.resolve();
     }
     return api(s, 'GET', '/session', { auth: 'device' }).then(function (r) {
-      var j = r.json || {};
+      var j = r.json || {}, sv = j.server || {};
       s.session = j;
-      s.name = (j.server && j.server.name) || s.name;
-      s.profile = (j.profile && j.profile.name) || s.profile;
-      var pin = j.pin || {};
-      if (pin.locked_until) { setState(s, 'pin', 'Too many wrong PINs on this browser. Try again later.'); return; }
-      if (pin.required) { setState(s, 'pin', 'Enter your PIN to use this server.'); promptPinSoon(s); return; }
+      s.name = sv.name || s.name;
+      s.template = (j.template && j.template.name) || s.template || '';
       setState(s, 'ready');
       return loadLibrary(s);
     }, function (e) {
@@ -576,40 +484,44 @@
     });
   }
 
-  /* ---------------------------------------------------------------- 2.4 pairing */
-  /* 2.4a: the vault code is never sent to a server; this hash is bound to the
-     server's id, so it is useless on any other server and to the registry. */
-  function vaultHash(sid) { return sha256(utf8('cws-vault-approval-v1\u0000' + sid + '\u0000' + C.vault)); }
+  /* ---------------------------------------------------------------- 2.4 pairing
+     A browser arrives as its vault, whichever way: over the internet the channel has already
+     proved the connection key ("channel": true); by Direct connect the browser asks the server for a
+     challenge and sends its vault identity (connection key, alias, picture) signed by the vault key.
+     The vault code is never sent, and no PIN is ever asked by a server. */
+  var WAIT_APPROVAL = 'Waiting for the server owner to approve your login.';
+  var IDENTITY_MSG = 'This server could not check your vault. Reload the page and try again.';
+  function identityFor(s) {
+    if (!R || !R.identityReady || !R.identityReady()) return Promise.reject(Object.assign(new Error('no identity'), { status: 0, code: 'no_identity' }));
+    return api(s, 'GET', '/pairing/challenge').then(function (r) {
+      var j = r.json || {};
+      if (!j.challenge || !j.server_key) throw Object.assign(new Error('no challenge'), { status: 0, code: 'challenge_missing' });
+      s.serverKey = j.server_key;
+      return R.directIdentity(j.server_key, j.challenge);
+    });
+  }
   function startPairing(s, retried) {
     var l = s.listing;
-    var direct = !!(l && l.direct);
-    if (!l || (!direct && !l.pairing_key)) { setState(s, 'error', 'Crystal Worlds did not give this browser what it needs to ask to join. Try again later.'); return Promise.resolve(); }
+    if (!l || !(l.direct || l.rtc)) { setState(s, 'error', 'This browser does not know how to reach this server. Connect to it again.'); return Promise.resolve(); }
     setState(s, 'pairing', 'Asking to join…');
-    return vaultHash(s.id).then(function (vh) {
-      var body = deviceDescription();
-      if (direct) body.direct = true; else body.pairing_key = l.pairing_key;
-      body.vault_hash = vh;
-      return api(s, 'POST', '/pairing', { body: body });
-    }).then(function (r) {
+    var body = deviceDescription();
+    var ready = isRtc(s) ? Promise.resolve((body.channel = true, body))   // the connection key proved on this channel is the identity
+      : identityFor(s).then(function (id) { body.direct = true; body.identity = id; return body; });
+    return ready.then(function (b) { return api(s, 'POST', '/pairing', { body: b }); }).then(function (r) {
       var j = r.json || {};
       var auto = j.approval === 'automatic';
       s.pairing = { request_id: j.request_id, poll_secret: j.poll_secret, match_code: j.match_code, expires_at: j.expires_at,
                     interval: Math.max(3, +j.poll_interval_seconds || 3), auto: auto };
       slot(K_PAIR, s.id, s.pairing);
       ev('pairing-requested', { server: s.id, approval: auto ? 'automatic' : 'owner' });
-      setState(s, 'pairing', auto ? 'Your vault code is approved here. Joining…'
-        : withdrawn(s.id) ? 'Waiting for the server owner to let this browser back in.' : 'Waiting for the server owner to approve your vault code.');
+      setState(s, 'pairing', auto ? 'You are approved here. Joining…' : WAIT_APPROVAL);
       if (!auto) showPairingDialog(s);
       poll(s, auto);
     }, function (e) {
+      if (e.code === 'no_identity') { setState(s, 'unpaired', 'Choose your alias and PIN first, then ask to join.'); return; }
+      if (e.code === 'challenge_invalid' && !retried) return startPairing(s, true);   // a fresh challenge, once
+      if (e.code === 'identity_invalid' || e.code === 'challenge_invalid' || e.code === 'challenge_missing') { warn('pairing', e.code, e.info && e.info.field); setState(s, 'unpaired', IDENTITY_MSG); return; }
       if (e.code === 'direct_connect_refused') { setState(s, 'unpaired', 'This server does not accept direct connections from here. Its owner can change that in the server\'s Security settings.'); return; }
-      if (e.code === 'pairing_key_invalid' && !retried && !direct) {
-        return discover().then(function (list) {
-          C.lastDiscover = Date.now();
-          list.forEach(function (x) { if (x.server_id === s.id) s.listing = x; });
-          return startPairing(s, true);
-        });
-      }
       if (e.code === 'pairing_queue_full') { setState(s, 'unpaired', 'The server\'s owner already has many requests waiting. Ask them to clear some, then try again.'); return; }
       if (e.code === 'rate_limited') { setState(s, 'unpaired', 'Too many attempts from this network. Try again in ' + (e.info.retry_after_seconds || 60) + ' seconds.'); return; }
       if (onAuthError(s, e)) return;
@@ -624,13 +536,13 @@
       api(s, 'GET', '/pairing/' + encodeURIComponent(p.request_id), { auth: 'poll', poll: p.poll_secret }).then(function (r) {
         var j = r.json || {};
         if (j.status === 'approved' && j.device_token) {
-          slot(K_TOKENS, s.id, { device_id: j.device_id, device_token: j.device_token,
-                                 profile_id: j.profile && j.profile.id, profile_name: j.profile && j.profile.name });
+          slot(tokKey(s.id), s.id, { device_id: j.device_id, device_token: j.device_token,
+                                 vault_id: (j.vault || j.person || {}).id, template_name: j.template && j.template.name });
           slot(K_PAIR, s.id, null); s.pairing = null; slot(K_WITHDRAWN, s.id, null);
-          s.profile = (j.profile && j.profile.name) || '';
+          s.template = (j.template && j.template.name) || '';
           ev('paired', { server: s.id });
           closePairingDialog(s, true);
-          return afterHealth(s).then(function () { toastSafe('Approved. ' + label(s) + ' has let this browser in.', 'ok'); });
+          return afterHealth(s).then(function () { if (!p.auto) toastSafe('Approved. ' + label(s) + ' has let you in.', 'ok'); });
         }
         if (j.expires_at) p.expires_at = j.expires_at;
         if (j.poll_interval_seconds) p.interval = Math.max(3, +j.poll_interval_seconds);
@@ -638,13 +550,13 @@
         poll(s);
       }, function (e) {
         var msg = null;
-        if (e.code === 'pairing_denied') msg = 'The server\'s owner declined this request.';
-        else if (e.code === 'pairing_expired') msg = 'Nobody approved the request in time.';
+        if (e.code === 'pairing_denied') msg = 'The server owner said no.';
+        else if (e.code === 'pairing_expired') msg = 'Nobody approved this in time.';
         else if (e.code === 'pairing_collected' || e.code === 'poll_secret_invalid' || e.code === 'not_found') msg = 'The request is no longer open.';
         if (msg) {
           slot(K_PAIR, s.id, null); s.pairing = null;
           ev('pairing-ended', { server: s.id, code: e.code });
-          setState(s, 'unpaired', msg + ' You can ask again.');
+          setState(s, 'unpaired', msg);
           closePairingDialog(s, false, msg);
           return;
         }
@@ -658,31 +570,6 @@
     slot(K_PAIR, s.id, null); s.pairing = null;
     setState(s, 'unpaired', 'Request withdrawn.');
     if (p) api(s, 'DELETE', '/pairing/' + encodeURIComponent(p.request_id), { auth: 'poll', poll: p.poll_secret }).catch(function () {});
-  }
-
-  /* ---------------------------------------------------------------- 2.6 / 2.8 PIN */
-  function submitPin(s, pin) {
-    return api(s, 'POST', '/session/pin', { auth: 'device', body: { pin: pin } }).then(function () {
-      ev('pin-ok', { server: s.id });
-      setState(s, 'ready');
-      return loadLibrary(s).then(function () { return { ok: true }; });
-    }, function (e) {
-      var i = e.info || {};
-      if (e.code === 'pin_malformed') return { msg: 'A PIN is 6 to 12 digits.' };
-      if (e.code === 'pin_incorrect') {
-        var n = i.attempts_remaining;
-        return { msg: 'That PIN isn\'t right.' + (typeof n === 'number' ? ' ' + plural(n, 'try', 'tries') + ' left before this browser is locked out for 15 minutes.' : '') };
-      }
-      if (e.code === 'pin_locked') {
-        var until = Date.now() + (+i.retry_after_seconds || 900) * 1000;
-        s.lockedUntil = until;
-        return { msg: 'Too many wrong PINs. This browser can try again at ' + fmtTime(until) + '.', lockedUntil: until };
-      }
-      if (e.code === 'rate_limited') return { msg: 'Too many attempts from this network. Wait ' + plural(+i.retry_after_seconds || 60, 'second') + ' and try again.', lockedUntil: Date.now() + (+i.retry_after_seconds || 60) * 1000 };
-      if (onAuthError(s, e)) return { msg: s.msg, closed: true };
-      if (e.status === 0) return { msg: 'The server is not reachable right now. Try again in a moment.' };
-      return { msg: 'The server could not check the PIN (' + (e.code || e.status) + ').' };
-    });
   }
 
   /* ---------------------------------------------------------------- 6 / 8 library */
@@ -715,7 +602,7 @@
     }).then(function () {
       s.fresh = true; s.absent = {};
       idb('listings', 'readwrite', function (st) {
-        st.put({ items: s.items, boot: s.bootItems, etag: s.etag, revision: s.revision, name: s.name, profile: s.profile, t: Date.now() }, C.vhp + ':' + s.id);
+        st.put({ items: s.items, boot: s.bootItems, etag: s.etag, revision: s.revision, name: s.name, template: s.template, t: Date.now() }, C.vhp + ':' + s.id);
       });
       ev('library', { server: s.id, count: (s.items || []).length });
       setState(s, 'ready');
@@ -737,7 +624,7 @@
           if (k.indexOf(pre) === 0) {
             var s = srvOf(k.slice(pre.length)), v = cur.value || {};
             s.items = v.items || null; s.bootItems = v.boot || null; s.etag = v.etag || ''; s.revision = v.revision || '';
-            s.name = v.name || ''; s.profile = v.profile || '';
+            s.name = v.name || ''; s.template = v.template || '';
           }
           cur.continue();
         };
@@ -801,6 +688,9 @@
     /* The Super Game Boy's SNES program (SGB1, 256 KB; SGB2, 512 KB): one slot, its built-in border.
        The server marks SGB1 the default; SGB2 is offered in the play window's choice. */
     if (b.system === 'sgb' && (b.size === 262144 || b.size === 524288)) return 'sgb:snes';
+    /* (14 Nov) the Super Game Boy's and SGB2's Game Boy side start-up programs: the Game Boy slot, asked for by
+       their roles on a Super Game Boy (never the slot's usual one: the server marks them no default) */
+    if (b.system === 'sgb' && b.size === 256) return 'gb:bios';
     if (b.system === 'fds' && b.size === 8192) return 'fds:bios';   // the Disk System's drive firmware
     if (atariPrefixes()[b.system]) return 'atari-bios:' + b.sha256.slice(0, 12);   // 5200, 7800 and Lynx boot programs (atariBios)
     return null;
@@ -974,11 +864,11 @@
       var e = all[h];
       var fits = /^atari-bios:/.test(e.slot) ? (slot === 'atari-bios' && e.entry.system === system) : e.slot === slot;
       if (!fits || !reachable(e).length) return;
-      var role = e.entry.role;
-      if (roles && roles.length && role && roles.indexOf(role) < 0) return;
+      var role = e.entry.role, sysRole = String(e.entry.system || '') + ':' + String(role || '');   // a role may be named system:role (14 Nov)
+      if (roles && roles.length && role && roles.indexOf(role) < 0 && roles.indexOf(sysRole) < 0) return;
       out.push({ sha256: e.sha256, size: e.size, name: String(e.entry.title || e.entry.name || e.entry.file_name || 'Boot program'),
         role: role || '', roleName: String(e.entry.role_name || ''), generic: e.entry.generic === true,
-        auto: (want && role) ? (role === want && e.entry.generic === true) : (e.entry['default'] === true || (!!C.boot[slot] && C.boot[slot].sha256 === e.sha256)), rank: e.rank });
+        auto: (want && role) ? ((role === want || sysRole === want) && e.entry.generic === true) : (e.entry['default'] === true || (!!C.boot[slot] && C.boot[slot].sha256 === e.sha256)), rank: e.rank });
     });
     return out.sort(function (a, b) { var ra = a.rank < 0 ? 99 : a.rank, rb = b.rank < 0 ? 99 : b.rank; return (b.auto - a.auto) || ra - rb || (a.name < b.name ? -1 : 1); });
   }
@@ -1228,8 +1118,7 @@
         last = s.id;
         excluded[s.id] = true;
         ev('download-failover', { id: e.id, server: s.id, at: got, reason: err.code || err.message });
-        if (err.code === 'pin_required') { setState(s, 'pin', 'Enter your PIN to use this server.'); promptPinSoon(s); }
-        else if (err.code === 'device_revoked' || err.code === 'token_invalid') onAuthError(s, err);
+        if (err.code === 'device_revoked' || err.code === 'token_invalid') onAuthError(s, err);
         else if (err.status === 404) s.absent[e.sha256] = Date.now() + T_FAIL_MEMORY;
         else if (err.code === 'range_not_satisfiable') { got = 0; contributors = {}; }
         else if (err.status === 0 && !rechecked[s.id] && s.base && s.state === 'ready') {
@@ -1258,7 +1147,9 @@
     var ctl = new AbortController(), pos = start;
     var timer = setTimeout(function () { ctl.abort(); }, T_FIRST_BYTE);
     var url = s.base + '/api/v1/' + e.what + '/' + e.sha256 + '/data';
-    return fetch(url, { headers: h, mode: 'cors', credentials: 'omit', cache: 'no-store', signal: ctl.signal }).then(function (r) {
+    var go = /^rtc:/.test(url) ? (R ? R.fetch(url, { headers: h, signal: ctl.signal }, 864e5) : Promise.reject(new Error('not connected')))   // REACH: the timers here still rule
+      : fetch(url, { headers: h, mode: 'cors', credentials: 'omit', cache: 'no-store', signal: ctl.signal });
+    return go.then(function (r) {
       clearTimeout(timer);
       if (r.status >= 400) {
         return r.json().catch(function () { return null; }).then(function (j) { var x = apiErr(r.status, j); x.pos = start; throw x; });
@@ -1523,37 +1414,32 @@
     ev('content-dropped', { server: sid, count: gone.length });
     return Promise.all(jobs);
   }
-  function forgetServer(sid, alsoRegistry) {
+  /* Leaving a server (Use a different server): this browser drops it at once, so the tile is back to
+     the two choices straight away; the goodbye to the server (DELETE /api/v1/session on the connection
+     in use, 1.5 s at most), the vault's trusted list and the clean-up of its game copies follow without
+     holding the tile. A server met over the internet stays set aside here (Use again), so it does not
+     come back by itself; a typed address is simply forgotten. */
+  function forgetServer(sid) {
     var s = C.servers[sid]; if (!s) return Promise.resolve();
-    clearTimeout(s.pollTimer);
-    var tok = tokenOf(sid), p = Promise.resolve();
-    if (tok && s.base) p = api(s, 'DELETE', '/session', { auth: 'device' }).catch(function () {});   // 2.9: forget itself
-    return p.then(function () {
-      slot(K_TOKENS, sid, null); slot(K_PAIR, sid, null); slot(K_CONFIRM, sid, 'no'); slot(K_WITHDRAWN, sid, null);
-      s.pairing = null;
-      var direct = !!(s.listing && s.listing.direct);
-      var reg = (alsoRegistry && !direct) ? forgetAtRegistry(sid) : Promise.resolve();   // a typed address never involves the registry
-      if (direct) { slot(K_DIRECT, sid, null); slot(K_CONFIRM, sid, null); }
-      return Promise.all([dropServerContent(sid, false), reg]).then(function () { return direct; });
-    }).then(function (direct) {
-      if (direct) { delete C.servers[sid]; rebuild(); render(); }
-      else setState(s, 'hidden', 'Forgotten on this browser.');
-      ev('forgotten', { server: sid });
-    });
-  }
-  function forgetAtRegistry(sid) {
-    if (!REGISTRY_DISCOVERY) return Promise.resolve(false);
-    var key = anonKey(), headers = { 'Content-Type': 'application/json' };
-    if (key) { headers.apikey = key; headers.Authorization = 'Bearer ' + key; }
-    return timedFetch(registryBase() + '/cws-forget', { method: 'POST', headers: headers, body: JSON.stringify({ vault_code: C.vault, server_id: sid }) }, 10000)
-      .then(function (r) { return r.json().catch(function () { return null; }); })
-      .then(function (j) { ev('registry-forget', { server: sid, removed: !!(j && j.removed) }); return !!(j && j.removed); })
-      .catch(function () { toastSafe('Crystal Worlds could not be reached to remove the server from your vault. Try again later.', 'error'); return false; });
+    clearTimeout(s.pollTimer); s.left = true;
+    var bye = (tokenOf(sid) && s.base) ? api(s, 'DELETE', '/session', { auth: 'device', timeout: 1500 }).catch(function () {}) : Promise.resolve();
+    var rtc = !!(s.listing && s.listing.rtc);
+    var drop = dropServerContent(sid, false);   // reads what only this server held, before it goes
+    slot(K_TOKENS, sid, null); slot(K_TOKENS_R, sid, null); slot(K_PAIR, sid, null); slot(K_WITHDRAWN, sid, null); slot(K_DIRECT, sid, null);
+    slot(K_CONFIRM, sid, rtc ? 'no' : null);
+    s.pairing = null; closePairingDialog(s, true);
+    delete C.servers[sid];
+    rebuild(); render();
+    ev('forgotten', { server: sid });
+    /* REACH: the vault's trusted list, after the goodbye (forgetting closes the data channel it travels on) */
+    var reg = (rtc && R) ? bye.then(function () { return R.forget(sid); }).catch(function () {}) : null;   // a typed address has no trusted list
+    return Promise.all([bye, drop, reg]).then(function () {}, function () {});
   }
   /* Log out and switching vaults delete every token of the old vault (2.1). */
   function forgetVault() {
+    if (R) R.stop();
     var vhp = C.vhp; if (!vhp) return Promise.resolve();
-    [K_TOKENS, K_CONFIRM, K_DISC, K_PAIR, K_DIRECT, K_WITHDRAWN].forEach(function (k) { var a = lsGet(k); delete a[vhp]; lsSet(k, a); });
+    [K_TOKENS, K_TOKENS_R, K_CONFIRM, K_PAIR, K_DIRECT, K_WITHDRAWN].forEach(function (k) { var a = lsGet(k); delete a[vhp]; lsSet(k, a); });
     Object.keys(C.servers).forEach(function (sid) { clearTimeout(C.servers[sid].pollTimer); });
     var ids = Object.keys(C.byId).concat(Object.keys(C.boot));
     var jobs = ids.map(function (id) { return packHolds(id) ? null : Promise.all(frameCacheKeys(id).map(function (x) { return deleteFrameKey(x[0], x[1], x[2]); })); });
@@ -1569,10 +1455,10 @@
     C.vault = null; C.vhp = null;
     return Promise.all(jobs).then(function () { rebuild(); });
   }
-  /* Rotation keeps every server (the registry re-keys listings, D-C4): move
-     this browser's tokens to the new code's partition. */
+  /* Rotation keeps every server (D-C4): move this browser's tokens to the new
+     code's partition. */
   function rekey(oldVhp, newVhp) {
-    [K_TOKENS, K_CONFIRM, K_DISC, K_PAIR, K_DIRECT, K_WITHDRAWN].forEach(function (k) { var a = lsGet(k); if (a[oldVhp]) { a[newVhp] = a[oldVhp]; delete a[oldVhp]; lsSet(k, a); } });
+    [K_TOKENS, K_TOKENS_R, K_CONFIRM, K_PAIR, K_DIRECT, K_WITHDRAWN].forEach(function (k) { var a = lsGet(k); if (a[oldVhp]) { a[newVhp] = a[oldVhp]; delete a[oldVhp]; lsSet(k, a); } });
     return db().then(function (d) {
       if (!d) return;
       return new Promise(function (res) {
@@ -1593,17 +1479,13 @@
     });
   }
 
-  /* ---------------------------------------------------------------- the cycle */
-  /* Discovery is asked at start, when the registry was down, and every 30
-     minutes; in between, the five-minute refresh only re-reads the libraries
-     (cheap: the first page answers 304 when nothing changed, 6.1). */
   /* ---------------------------------------------------------------- 2.4a direct connection
-     The user types host[:port]. Nothing here calls the registry: the typed
-     address is the confirmation, and pairing sends "direct" instead of a key. */
+     The user types host[:port]: the typed address is the confirmation, and
+     pairing sends "direct" with the signed vault identity. */
   function directListings() {
     var all = slotAll(K_DIRECT);
     return Object.keys(all).filter(function (sid) { return SID_RE.test(sid) && all[sid] && all[sid].host; }).map(function (sid) {
-      return { server_id: sid, pairing_key: '', linked_at: '', last_seen: '', same_network: true, endpoints: [], direct: all[sid] };
+      return { server_id: sid, direct: all[sid] };
     });
   }
   function parseAddress(text) {
@@ -1701,7 +1583,7 @@
     }
     return attempt(0).then(function (r) {
       var h = r.w.health || {}, sid = h.server_id;
-      if (!SID_RE.test(sid || '')) return { ok: false, msg: 'Something answered at that address, but it is not a Crystal Worlds Game Server.' };
+      if (!SID_RE.test(sid || '')) return { ok: false, msg: 'Something answered at that address, but it is not a CrystalVault Server.' };
       slot(K_DIRECT, sid, { host: a.host, port: a.port, scheme: r.scheme });
       slot(K_CONFIRM, sid, 'yes');   // typing the address is the confirmation (2.4a step 2)
       var s = srvOf(sid);
@@ -1723,7 +1605,7 @@
             '<form class="cws-direct-form" autocomplete="off" style="display:flex; gap:10px; align-items:center; margin:0 0 6px;">' +
             '<input class="cws-direct" type="text" inputmode="url" autocomplete="off" spellcheck="false" aria-label="Server address" placeholder="192.168.1.20:34580" style="flex:1; ' + INPUT + ' font-family:ui-monospace,Consolas,monospace;"></form>' +
             '<div class="cws-msg" role="status" style="margin-top:6px; font-size:12px; color:var(--muted); min-height:18px;"></div>' +
-            '<p style="' + P + ' font-size:11px; font-style:italic;">The server\'s owner still decides: your vault code must be approved on the server, and you will need your profile\'s PIN.</p>',
+            '<p style="' + P + ' font-size:11px; font-style:italic;">The server\'s owner still decides: they approve your login on the server the first time. You join as yourself, with your alias and avatar.</p>',
       actions: [
         { label: 'Connect', kind: 'accent', action: 'direct-submit', onClick: function () { go(); } },
         { label: 'Cancel', action: 'close', onClick: function (dd) { dd.close(); } }
@@ -1748,25 +1630,19 @@
     return d;
   }
 
-  function listings() {
-    if (C.registry.state === 'ok' && C.lastDiscover && Date.now() - C.lastDiscover < 30 * 60 * 1000) {
-      return Promise.resolve(Object.keys(C.servers).map(function (sid) { return C.servers[sid].listing; }).filter(Boolean));
-    }
-    return discover().then(function (l) { if (C.registry.state === 'ok') C.lastDiscover = Date.now(); return l; });
-  }
+  /* The cycle: at start, on the five-minute refresh and when asked. The servers are the typed
+     addresses and the ones cws-reach.mjs found; a ready server only re-reads its library (cheap:
+     the first page answers 304 when nothing changed, 6.1). */
   function refresh() {
     if (!C.vault) return Promise.resolve();
     if (cwsOff()) { rebuild(); render(); return Promise.resolve(); }   // switched off: nobody is asked
-    return listings().then(function (list) {
-      var seen = {};
-      list = list.filter(function (l) { return !l.direct; }).concat(directListings());
-      list.forEach(function (l) { seen[l.server_id] = true; srvOf(l.server_id).listing = l; });
-      /* A server no longer listed (removed from the vault on another device):
-         nothing more is sent to it. Its token stays until the user forgets it. */
-      Object.keys(C.servers).forEach(function (sid) {
-        var s = C.servers[sid];
-        if (!seen[sid] && C.registry.state === 'ok' && !(s.listing && s.listing.direct)) { s.listing = null; s.base = ''; setState(s, 'unlisted', 'No longer linked to this vault.'); }
+    return Promise.resolve(directListings()).then(function (list) {
+      if (R) R.listings().forEach(function (l) {
+        if (slot(K_CONFIRM, l.server_id) === undefined) slot(K_CONFIRM, l.server_id, 'yes');   // REACH: no first-visit question (the server lists this vault's connection key)
+        var typed = list.filter(function (x) { return x.server_id === l.server_id && x.direct; })[0];
+        if (typed) typed.rtc = l.rtc; else list.push(l);   // a typed address too: one server, both ways
       });
+      list.forEach(function (l) { srvOf(l.server_id).listing = l; });
       return Promise.all(list.map(function (l) {
         var s = srvOf(l.server_id);
         if (s.state === 'ready' && s.base) return loadLibrary(s);
@@ -1781,22 +1657,18 @@
       var s = C.servers[sid];
       /* Coming back to the page or back online (now === true): ask again at once, not after
          the five minutes; what failed may have been this device's own network asleep (4 Nov). */
-      if (now === true && s.listing && s.state === 'unreachable' && !s.connecting) {
-        s.retryAt = 0;
-        (s.listing.endpoints || []).forEach(function (ep) { if (ep && ep.host) delete C.epFail[ep.host + ':' + ep.port]; });
-      }
+      if (now === true && s.listing && s.state === 'unreachable' && !s.connecting) s.retryAt = 0;
       if (s.listing && s.state === 'unreachable' && !(s.retryAt > Date.now())) connect(s, 'retry').then(rebuild);
-      else if (s.state === 'pin' && s.base && !s.connecting) afterHealth(s).then(rebuild);   // still allowed in? (withdrawn while away)
     });
   }
   /* Another tab of this site changed what this browser holds (a withdrawal
      seen there, a join, a forget): follow it here, so no tab keeps offering
      a PIN for a pass that is gone. */
   window.addEventListener('storage', function (e) {
-    if (!C.vault || (e.key !== K_TOKENS && e.key !== K_WITHDRAWN)) return;
+    if (!C.vault || (e.key !== K_TOKENS && e.key !== K_TOKENS_R && e.key !== K_WITHDRAWN)) return;
     Object.keys(C.servers).forEach(function (sid) {
       var s = C.servers[sid], tok = tokenOf(sid);
-      if (!tok && (s.state === 'ready' || s.state === 'pin')) lostToken(s);
+      if (!tok && s.state === 'ready') lostToken(s);
       else if (!tok && s.state === 'unpaired' && withdrawn(sid)) setState(s, 'withdrawn', WITHDRAWN_MSG);
       else if (tok && (s.state === 'unpaired' || s.state === 'withdrawn' || s.state === 'pairing')) {
         clearTimeout(s.pollTimer); s.pairing = null; closePairingDialog(s, true);   // the other tab collected the pass
@@ -1829,9 +1701,9 @@
      (the catalogue loaders, emby.js's wall hold). init() asks the same of this vault. */
   function nothingSetUp(vhp) {
     if (cwsOff()) return true;
-    var all = lsGet(K_TOKENS);
-    if (vhp) return !Object.keys(all[vhp] || {}).length;
-    return !Object.keys(all).some(function (k) { return all[k] && Object.keys(all[k]).length; });
+    var all = lsGet(K_TOKENS), rem = lsGet(K_TOKENS_R);
+    if (vhp) return !Object.keys(all[vhp] || {}).length && !Object.keys(rem[vhp] || {}).length;
+    return ![all, rem].some(function (a) { return Object.keys(a).some(function (k) { return a[k] && Object.keys(a[k]).length; }); });
   }
   if (nothingSetUp()) C.readyResolve();
 
@@ -1846,10 +1718,13 @@
       if (nothingSetUp(vhp)) C.readyResolve();   // nothing set up for this vault: nobody waits
       return loadCachedListings();
     }).then(function () {
-      var cached = slotAll(K_DISC);
-      Object.keys(cached).forEach(function (sid) { srvOf(sid).listing = cached[sid]; if (C.servers[sid].items) setState(C.servers[sid], 'connecting', 'Looking for this server…'); });
       injectSettings();
       if (Object.keys(C.servers).length) rebuild();
+      loadReach().then(function (r) {
+        if (!r || C.vault !== code) { render(); return; }
+        /* Then look once more, so trusted servers not in the room show as not online instead of waiting. */
+        return Promise.resolve(r.start(reachHooks())).then(function () { if (C.vault === code) return refresh(); });
+      });
       return refresh();
     }).then(function () { C.readyResolve(); ev('ready'); }, function (e) { warn('init', e && e.message); C.readyResolve(); });
   }
@@ -1916,7 +1791,7 @@
     var o = d.o;
     _dlgOpen = d;
     var el = document.createElement('div');
-    el.className = 'overlay open cws-overlay';
+    el.className = 'overlay open cws-overlay' + (o.cls ? ' ' + o.cls : '');
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
     /* Above whatever is open now (2026-10-12): Settings sits at z-index 150,
        so a fixed 140 opened these dialogs UNDER it -- the backdrop showed and
@@ -1926,51 +1801,25 @@
       '<div class="modal" style="max-width:520px; margin-top:8vh;">' +
         '<div class="modal-head"><div><div class="modal-sub">' + esc(o.sub || 'Game servers') + '</div>' +
         '<div class="modal-title">' + esc(o.title || '') + '</div></div>' +
-        '<button class="modal-close" aria-label="Close" data-cws-action="close">×</button></div>' +
+        /* A mandatory dialog has no close button; the hidden one is what the site's Back (keys.js) presses, and it does nothing. */
+        (o.mandatory ? '<button type="button" hidden tabindex="-1" data-cws-action="close"></button>' : '<button class="modal-close" aria-label="Close" data-cws-action="close">×</button>') + '</div>' +
         '<div class="cws-dlg-body" style="padding:18px 22px 6px;"></div>' +
         '<div class="cws-dlg-acts" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:6px 22px 22px;"></div>' +
       '</div>';
     d.el = el; d.body = el.querySelector('.cws-dlg-body'); d.acts = el.querySelector('.cws-dlg-acts');
     d.body.innerHTML = o.html || '';
-    el.querySelector('.modal-close').addEventListener('click', function () { (o.onDismiss || d.close)(d); });
-    el.addEventListener('keydown', function (e) { if (e.key === 'Escape') (o.onDismiss || d.close)(d); });
+    el.querySelector('[data-cws-action="close"]').addEventListener('click', function () { if (o.mandatory) return; (o.onDismiss || d.close)(d); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !o.mandatory) (o.onDismiss || d.close)(d); });
+    /* A press on the dimmed page around the box, where the dialog asks for it (the welcome: it tucks away). */
+    if (o.outsideDismiss && !o.mandatory) el.addEventListener('click', function (e) { if (e.target === el) (o.onDismiss || d.close)(d); });
     var first = fillActions(d, o.actions);
     document.body.appendChild(el);
     try { o.onOpen && o.onOpen(d); } catch (e) {}
-    var f = el.querySelector('input') || first || el.querySelector('.modal-close');
+    var f = el.querySelector('input:not([type="file"]):not([type="hidden"]):not([readonly])') || first || el.querySelector('.modal-close');
     if (f) setTimeout(function () { try { f.focus({ preventScroll: true }); } catch (e) {} }, 30);
     /* Keys typed here belong to this dialog: a layer underneath (Settings,
        the site's keyboard and remote handling) must not take them. */
     el.addEventListener('keydown', function (e) { if (e.key !== 'Escape') e.stopPropagation(); });
-  }
-
-  /* ---- 2.2: confirming a new server ---- */
-  function promptConfirmSoon(s) {
-    if (C.prompted['c' + s.id]) return; C.prompted['c' + s.id] = true;
-    confirmDialog(s);
-  }
-  function confirmDialog(s) {
-    var when = s.listing && s.listing.linked_at ? fmtDate(s.listing.linked_at) : '';
-    dialog({
-      sub: 'Game servers', title: 'A new game server',
-      html: '<p style="' + P + '">A new game server was linked to your vault' + (when ? ' on <b style="color:var(--text)">' + esc(when) + '</b>' : '') +
-            '. Did you or someone you trust link it?</p>' +
-            '<p style="' + P + '">Only say yes if you recognise it. A server you don\'t know could ask you for a PIN that belongs to someone else.</p>',
-      actions: [
-        { label: 'Yes, it\'s mine', kind: 'accent', primary: true, action: 'confirm-yes', onClick: function (d) {
-          slot(K_CONFIRM, s.id, 'yes'); ev('confirmed', { server: s.id }); d.close();
-          connect(s).then(function () { if (s.state === 'unpaired') startPairing(s); });
-        } },
-        { label: 'No', action: 'confirm-no', onClick: function (d) {
-          slot(K_CONFIRM, s.id, 'no'); ev('rejected', { server: s.id }); setState(s, 'hidden', 'Hidden on this browser.');
-          d.setBody('<p style="' + P + '">It is hidden on this browser and nothing has been sent to it. You can also remove it from your vault, so no device finds it with this code.</p>');
-          d.setActions([
-            { label: 'Remove it from my vault', kind: 'warn', primary: true, action: 'confirm-remove', onClick: function (d2) { forgetAtRegistry(s.id).then(function (ok) { if (ok) toastSafe('Removed from your vault.', 'ok'); }); d2.close(); } },
-            { label: 'Keep it hidden', action: 'close', onClick: function (d2) { d2.close(); } }
-          ]);
-        } }
-      ]
-    });
   }
 
   /* ---- 2.4: waiting for approval ---- */
@@ -1978,7 +1827,7 @@
   function pairingHtml(s, note) {
     var p = s.pairing || {};
     var exp = p.expires_at ? Date.parse(p.expires_at) - s.clockSkew : 0;
-    return '<p style="' + P + '"><b style="color:var(--text)">' + (withdrawn(s.id) ? 'Waiting for the server owner to let this browser back in.' : 'Waiting for the server owner to approve your vault code.') + '</b> On the computer running ' + esc(label(s)) +
+    return '<p style="' + P + '"><b style="color:var(--text)">' + WAIT_APPROVAL + '</b> On the computer running ' + esc(label(s)) +
            ', its owner opens the server\'s <b style="color:var(--text)">Pending devices</b> page and approves this browser. The same code appears beside the request:</p>' +
            '<div class="cws-match" style="font-family:ui-monospace,Consolas,monospace; font-size:28px; font-weight:800; letter-spacing:.12em; color:var(--accent-2, #f5c542); text-align:center; padding:14px; border:1px solid var(--line); border-radius:14px; margin:4px 0 12px;">' + esc(codeOf(p)) + '</div>' +
            '<p style="' + P + '">This window can stay open; the site notices the approval by itself.' + (exp ? ' The request lapses at ' + esc(fmtTime(exp)) + '.' : '') + '</p>' +
@@ -2005,74 +1854,10 @@
     ]);
   }
 
-  /* ---- 2.6: the PIN ---- */
-  function promptPinSoon(s) {
-    if (C.prompted['p' + s.id]) return; C.prompted['p' + s.id] = true;
-    pinDialog(s);
-  }
-  /* The "Enter PIN" button can be pressed long after the server last
-     answered: ask the server first, so a withdrawn browser hears so and is
-     never shown a PIN prompt (4 Nov). */
-  function pinChecked(s) {
-    if (!tokenOf(s.id)) { lostToken(s); return Promise.resolve(); }
-    if (!s.base) return connect(s, 'retry').then(rebuild);
-    return api(s, 'GET', '/session', { auth: 'device' }).then(function (r) {
-      var pin = (r.json && r.json.pin) || {};
-      s.session = r.json || s.session;
-      if (!pin.required && !pin.locked_until) { setState(s, 'ready'); return loadLibrary(s); }
-      pinDialog(s);
-    }, function (e) {
-      if (onAuthError(s, e)) return;
-      pinDialog(s);   // network trouble: the PIN answer will say what is wrong
-    });
-  }
-  function pinDialog(s) {
-    closePinDialog(s);
-    var prof = s.profile || (tokenOf(s.id) || {}).profile_name || '';
-    var days = (s.session && s.session.pin && s.session.pin.period_days) || 90;
-    var d = dialog({
-      sub: label(s), title: 'Enter your PIN',
-      html: '<p style="' + P + '">Enter the PIN for ' + (prof ? 'the <b style="color:var(--text)">' + esc(prof) + '</b> profile' : 'your profile') + ' on <b style="color:var(--text)">' + esc(label(s)) +
-            '</b>. This browser will remember it for ' + days + ' days.</p>' +
-            '<form class="cws-pin-form" autocomplete="off" style="display:flex; gap:10px; align-items:center; margin:0 0 6px;">' +
-            '<input class="cws-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="PIN" placeholder="6 to 12 digits" style="flex:1; ' + INPUT + ' font-family:ui-monospace,Consolas,monospace; letter-spacing:.2em;"></form>' +
-            '<div class="cws-msg" role="status" style="margin-top:6px; font-size:12px; color:var(--muted); min-height:18px;"></div>' +
-            '<p style="' + P + ' font-size:11px; font-style:italic;">Forgotten it? The server\'s owner can set a new one in its Profiles page.</p>',
-      actions: [
-        { label: 'Unlock', kind: 'accent', primary: false, action: 'pin-submit', onClick: function () { go(); } },
-        { label: 'Not now', action: 'close', onClick: function (dd) { dd.close(); } }
-      ]
-    });
-    function go() {
-      if (!d.el) return;
-      var inp = d.el.querySelector('.cws-pin'), msg = d.el.querySelector('.cws-msg'), btn = d.el.querySelector('[data-cws-action="pin-submit"]');
-      var v = (inp.value || '').trim();
-      if (!/^\d{6,12}$/.test(v)) { msg.textContent = 'A PIN is 6 to 12 digits.'; msg.style.color = '#f08a5d'; return; }
-      if (s.lockedUntil > Date.now()) { msg.textContent = 'Too many wrong PINs. This browser can try again at ' + fmtTime(s.lockedUntil) + '.'; msg.style.color = '#f08a5d'; return; }
-      btn.disabled = true; msg.textContent = 'Checking…'; msg.style.color = 'var(--muted)';
-      submitPin(s, v).then(function (r) {
-        inp.value = ''; v = '';
-        if (r.ok) { d.close(); toastSafe('Unlocked ' + label(s) + '.', 'ok'); return; }
-        if (r.closed) { d.close(); if (s.state === 'withdrawn') toastSafe(WITHDRAWN_MSG, 'error'); return; }
-        msg.textContent = r.msg; msg.style.color = '#f08a5d';
-        btn.disabled = false;
-        if (r.lockedUntil) {
-          btn.disabled = true;
-          setTimeout(function () { if (btn) btn.disabled = false; if (msg.textContent === r.msg) msg.textContent = 'You can try again now.'; }, Math.max(0, r.lockedUntil - Date.now()));
-        }
-        try { inp.focus(); } catch (e) {}
-      });
-    }
-    var tryWire = function () {
-      if (!d.el) { setTimeout(tryWire, 200); return; }
-      d.el.querySelector('.cws-pin-form').addEventListener('submit', function (e) { e.preventDefault(); go(); });
-    };
-    tryWire();
-    s.pinDlg = d;
-    return d;
-  }
-
-  /* ---- Settings > Content > Game servers ---- */
+  /* ---- Settings > Content > Game servers: one tile (item 4)
+     With no server yet it explains both ways (at home by Direct connect, over the internet with the
+     connection key). Once one server is added by one way, it shows that server and its state only,
+     with a small Use a different server link that leaves it and brings the two choices back. ---- */
   function injectSettings() {
     if (document.getElementById('cws-section')) return;
     var anchor = document.getElementById('content-pack-section');
@@ -2081,96 +1866,105 @@
     sec.className = 'vault-section'; sec.id = 'cws-section';
     sec.style.order = '0';   /* first in the tab: Game servers, Media Login, Content pack, the rest */
     sec.innerHTML = '<label style="' + LBL + '">Game servers</label>' +
-      '<p style="' + P + ' margin-bottom:12px;">Connect to the Crystal Worlds Game Server directly for direct media streaming.</p>' +
-      '<div id="cws-list"></div>' +
-      '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">' + button({ label: 'Direct connect', action: 'direct' }).outerHTML + '</div>';
+      '<p class="cws-intro" style="' + P + ' margin-bottom:12px;">Play the games on a CrystalVault Server.</p>' +
+      '<div id="cws-list"></div>';
     anchor.parentNode.insertBefore(sec, anchor.nextSibling);
     sec.addEventListener('click', onSettingsClick);
     render();
   }
   var STATE_TEXT = {
-    idle: 'Waiting', connecting: 'Connecting…', new: 'New: confirm it first', hidden: 'Hidden on this browser',
-    unreachable: 'Not reachable', setup: 'Setup not finished', version: 'Needs an update', unpaired: 'Not joined', withdrawn: 'Access withdrawn',
-    pairing: 'Waiting for approval', pin: 'PIN needed', ready: 'Connected', error: 'Problem', unlisted: 'No longer linked'
+    idle: 'Waiting', connecting: 'Connecting…', hidden: 'Set aside on this browser',
+    unreachable: 'Not reachable', setup: 'Setup not finished', version: 'Needs an update', unpaired: 'Not joined', withdrawn: 'Removed',
+    pairing: 'Waiting for approval', ready: 'Connected', error: 'Problem'
   };
-  var KIND_TEXT = { lan: 'on your home network', wan6: 'over the internet', wan: 'over the internet', relay: 'through the Crystal Worlds relay' };
-  function stateColour(st) { return st === 'ready' ? 'var(--accent)' : (st === 'error' || st === 'unreachable' || st === 'version' || st === 'unlisted' || st === 'withdrawn') ? '#f08a5d' : 'var(--muted)'; }
+  var KIND_TEXT_RTC = { lan: 'on your home network', rtc: 'over the internet', relay: 'over the internet, relayed' };
+  var BOX = 'border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; background:rgba(255,255,255,.015);';
+  var LINK = 'background:none; border:0; padding:2px 0; margin:2px 0 0; font:inherit; font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer;';
+  function stateColour(st) { return st === 'ready' ? 'var(--accent)' : (st === 'error' || st === 'unreachable' || st === 'version' || st === 'withdrawn') ? '#f08a5d' : 'var(--muted)'; }
+  function rowHtml(sid) {
+    var s = C.servers[sid], st = s.state || 'idle';
+    var bits = [];
+    if (st === 'ready') {
+      if (s.listing && s.listing.direct && !isRtc(s)) bits.push('on your home network');
+      else if (isRtc(s)) bits.push(KIND_TEXT_RTC[s.kind] || KIND_TEXT_RTC.rtc);
+      var n = (s.items || []).length; bits.push(plural(n, 'title'));
+    } else if (s.msg) bits.push(esc(s.msg));
+    if (st !== 'ready' && s.listing && s.listing.direct) bits.push(esc(hostPart(s.listing.direct.host) + ':' + s.listing.direct.port));
+    var acts = [];
+    if (st === 'unpaired' || st === 'withdrawn') acts.push({ label: 'Ask again', kind: 'accent', action: 'join' });
+    if (st === 'pairing') acts.push({ label: 'Show code', action: 'show-code' }, { label: 'Withdraw request', kind: 'warn', action: 'pair-cancel' });
+    if (st === 'unreachable' || st === 'error') acts.push({ label: 'Try again', action: 'retry' });
+    return '<div class="cws-row" data-sid="' + esc(sid) + '" data-state="' + esc(st) + '" style="' + BOX + '">' +
+      '<div style="display:flex; gap:10px; align-items:baseline; justify-content:space-between; flex-wrap:wrap;">' +
+        '<div style="font-size:13px; font-weight:700; color:var(--text); display:flex; gap:8px; align-items:center;">' +
+          esc(label(s)) + '</div>' +
+        '<div class="cws-state" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:' + stateColour(st) + ';">' + esc(STATE_TEXT[st] || st) + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-top:4px;">' + bits.filter(Boolean).join(' · ') + '</div>' +
+      (acts.length ? '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">' + acts.map(function (a) { return button(a).outerHTML; }).join('') + '</div>' : '') +
+      '<button type="button" class="cws-other" data-cws-action="other" style="' + LINK + '">Use a different server</button>' +
+    '</div>';
+  }
   function render() {
     var list = document.getElementById('cws-list');
     if (!list) return;
-    var sids = Object.keys(C.servers).filter(function (sid) { return C.servers[sid].listing || C.servers[sid].items || tokenOf(sid); }).sort();
+    var all = Object.keys(C.servers).filter(function (sid) { return C.servers[sid].listing || C.servers[sid].items || tokenOf(sid); }).sort();
+    var shown = all.filter(function (sid) { return !hidden(sid) && C.servers[sid].state !== 'hidden'; });
+    var aside = all.filter(function (sid) { return shown.indexOf(sid) < 0; });
+    var offline = [];
+    try { offline = (R && C.vault && R.offlineTrusted) ? R.offlineTrusted() : []; } catch (e) { offline = []; }
     var html = '';
-    if (C.registry.state === 'down' && !sids.length) {
-      var secs = Math.max(1, Math.round((C.registry.retryAt - Date.now()) / 1000));
-      html += '<div style="border:1px dashed var(--line); border-radius:12px; padding:14px; color:#f08a5d; font-size:12.5px; line-height:1.55;">' +
-              'Can\'t reach Crystal Worlds to find your servers. Trying again in about ' + plural(secs, 'second') + '. A server on your network can still be reached with <b style="color:var(--text)">Direct connect</b> below.</div>';
-    } else if (!sids.length) {
-      html += '<div style="border:1px dashed var(--line); border-radius:12px; padding:14px; color:var(--muted); font-size:12.5px; line-height:1.55;">' +
-              'No game server yet. If the server is on your network, or its owner gave you its address, use <b style="color:var(--text)">Direct connect</b> below.' + (REGISTRY_DISCOVERY ? ' Servers linked to this vault code also appear here by themselves.' : '') + '</div>';
-    }
-    var found = sids.some(function (sid) { return !(C.servers[sid].listing && C.servers[sid].listing.direct); });
-    if (found && (C.registry.state === 'cached' || C.registry.state === 'down')) {
-      html += '<p style="font-size:12px; color:#f08a5d; margin:0 0 10px;">Can\'t reach Crystal Worlds right now; using the servers this browser found last time.</p>';
-    }
-    sids.forEach(function (sid) {
-      var s = C.servers[sid], st = s.state || 'idle', tok = tokenOf(sid);
-      var bits = [];
-      if (st === 'ready') {
-        if (s.profile) bits.push('profile ' + esc(s.profile));
-        if (s.listing && s.listing.direct) bits.push('connected directly at ' + esc(hostPart(s.listing.direct.host) + ':' + s.listing.direct.port));
-        else if (s.kind) bits.push(KIND_TEXT[s.kind] || '');
-        var n = (s.items || []).length; bits.push(plural(n, 'title'));
-      } else if (s.msg) bits.push(esc(s.msg));
-      if (st !== 'ready' && s.listing && s.listing.direct) bits.push(esc(hostPart(s.listing.direct.host) + ':' + s.listing.direct.port));
-      if (st === 'new' && s.listing && s.listing.linked_at) bits.push('linked ' + esc(fmtDate(s.listing.linked_at)));
-      var acts = [];
-      if (st === 'new') acts.push({ label: 'Review', kind: 'accent', action: 'review' });
-      if (st === 'unpaired' || st === 'withdrawn') acts.push({ label: 'Ask to join', kind: 'accent', action: 'join' });
-      if (st === 'pairing') acts.push({ label: 'Show code', action: 'show-code' }, { label: 'Withdraw request', kind: 'warn', action: 'pair-cancel' });
-      if (st === 'pin') acts.push({ label: 'Enter PIN', kind: 'accent', action: 'pin' });
-      if (st === 'unreachable' || st === 'error') acts.push({ label: 'Try again', action: 'retry' });
-      if (st === 'hidden') acts.push({ label: 'Use again', action: 'unhide' });
-      if (st === 'withdrawn') acts.push({ label: 'Forget this server', kind: 'danger', action: 'forget' });
-      else if (st !== 'hidden' && (confirmed(sid) || tok)) acts.push({ label: 'Forget', kind: 'danger', action: 'forget' });
-      html += '<div class="cws-row" data-sid="' + esc(sid) + '" data-state="' + esc(st) + '" style="border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; background:rgba(255,255,255,.015);">' +
-        '<div style="display:flex; gap:10px; align-items:baseline; justify-content:space-between; flex-wrap:wrap;">' +
-          '<div style="font-size:13px; font-weight:700; color:var(--text);">' + esc(label(s)) + '</div>' +
-          '<div class="cws-state" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:' + stateColour(st) + ';">' + esc(STATE_TEXT[st] || st) + '</div>' +
+    if (shown.length || offline.length) {
+      shown.forEach(function (sid) { html += rowHtml(sid); });
+      offline.forEach(function (o) {
+        html += '<div class="cws-row" data-state="offline" style="' + BOX + '"><div style="display:flex; gap:10px; align-items:baseline; justify-content:space-between; flex-wrap:wrap;">' +
+          '<div style="font-size:13px; font-weight:700; color:var(--text);">' + esc(o.name) + '</div><div class="cws-state" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--muted);">Not online now</div></div>' +
+          '<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-top:4px;">over the internet</div>' +
+          '<button type="button" class="cws-other" data-cws-action="cwr-forget-key" data-key="' + esc(o.key) + '" style="' + LINK + '">Use a different server</button></div>';
+      });
+    } else {
+      var card = '';
+      try { card = (R && C.vault) ? R.cardHtml() : ''; } catch (e) { card = ''; }
+      html += '<div class="cws-choice" data-choice="home" style="' + BOX + '">' +
+          '<div style="font-size:13.5px; font-weight:700; color:var(--text); margin:0 0 4px;">At home, on the same network</div>' +
+          '<p style="' + P + '">Type the server\'s address. Its owner finds it on the server\'s Dashboard, under <b style="color:var(--text)">Connecting devices</b>.</p>' +
+          button({ label: 'Direct connect', kind: 'accent', action: 'direct' }).outerHTML +
         '</div>' +
-        '<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-top:4px;">' + bits.filter(Boolean).join(' · ') + '</div>' +
-        (acts.length ? '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">' + acts.map(function (a) { return button(a).outerHTML; }).join('') + '</div>' : '') +
-      '</div>';
-    });
-    // No count of files the site cannot use here (24 Oct): the Compatibility list covers that.
+        '<div class="cws-choice" data-choice="internet" style="' + BOX + '">' +
+          '<div style="font-size:13.5px; font-weight:700; color:var(--text); margin:0 0 4px;">Over the internet</div>' +
+          '<p style="' + P + '">With your connection key.</p>' + (card || '<p style="' + P + '">Loading…</p>') +
+          aside.map(function (sid) {
+            return '<div class="cws-row" data-sid="' + esc(sid) + '" data-state="hidden" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--muted);">' +
+              '<span><b style="color:var(--text)">' + esc(label(C.servers[sid])) + '</b> is set aside on this browser.</span>' + button({ label: 'Use again', action: 'unhide' }).outerHTML + '</div>';
+          }).join('') +
+        '</div>';
+    }
     list.innerHTML = html;
   }
   function onSettingsClick(e) {
     var b = e.target.closest && e.target.closest('[data-cws-action]');
     if (!b) return;
     if (b.getAttribute('data-cws-action') === 'direct') { directDialog(); return; }
+    if (R && /^cwr-/.test(b.getAttribute('data-cws-action'))) { R.onCardClick(b.getAttribute('data-cws-action'), b); return; }
     var row = b.closest('.cws-row'), sid = row && row.getAttribute('data-sid'), s = sid && C.servers[sid];
     if (!s) return;
     var a = b.getAttribute('data-cws-action');
-    if (a === 'review') confirmDialog(s);
-    else if (a === 'join') startPairing(s);
+    if (a === 'join') { slot(K_WITHDRAWN, sid, null); startPairing(s); }
     else if (a === 'show-code') showPairingDialog(s);
     else if (a === 'pair-cancel') cancelPairing(s);
-    else if (a === 'pin') pinChecked(s);
     else if (a === 'retry') { s.retryAt = 0; connect(s, 'retry').then(rebuild); }
-    else if (a === 'unhide') { slot(K_CONFIRM, sid, null); C.prompted['c' + sid] = false; connect(s, 'retry').then(rebuild); }
-    else if (a === 'forget') {
+    else if (a === 'unhide') { slot(K_CONFIRM, sid, 'yes'); connect(s, 'retry').then(rebuild); }   // Use again is the person saying so
+    else if (a === 'other') {
       dialog({
-        sub: label(s), title: 'Forget this server?',
-        html: '<p style="' + P + '">This browser will stop using <b style="color:var(--text)">' + esc(label(s)) + '</b>. Its games leave your shelves, and the copies this browser kept of games only it held are deleted.</p>' +
-              '<p style="' + P + '">The server keeps running. To use it again from here you will need its owner\'s approval.</p>' +
-              ((s.listing && s.listing.direct) ? '' : '<label style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--text); margin:0 0 6px;"><input type="checkbox" class="cws-also-reg"> Also remove it from my vault, so no device finds it with this code</label>'),
+        sub: 'Game servers', title: 'Leave ' + label(s) + '?',
+        html: '<p style="' + P + '">This browser stops using <b style="color:var(--text)">' + esc(label(s)) + '</b>. Its games disappear from your shelves on this browser, and the copies of its games kept on this browser are deleted. Your saves stay, and your other browsers are not affected.</p>' +
+              '<p style="' + P + '">Your vault stays approved on the server, so to use it again from this browser, connect to it again' + ((s.listing && s.listing.rtc) ? ' (or press Use again)' : '') + ' and it lets you straight back in.</p>',
         actions: [
-          { label: 'Forget it', kind: 'danger', primary: true, action: 'forget-yes', onClick: function (d) {
-            var also = d.el && d.el.querySelector('.cws-also-reg') && d.el.querySelector('.cws-also-reg').checked;
+          { label: 'Leave server', kind: 'danger', primary: true, action: 'forget-yes', onClick: function (d) {
             d.close();
-            forgetServer(sid, also).then(function () { toastSafe('Forgot ' + label(s) + '.', 'ok'); });
+            forgetServer(sid).then(function () { toastSafe('Left ' + label(s) + '.', 'ok'); render(); });
           } },
-          { label: 'Keep it', action: 'close', onClick: function (d) { d.close(); } }
+          { label: 'Cancel', action: 'close', onClick: function (d) { d.close(); } }
         ]
       });
     }
@@ -2193,14 +1987,85 @@
     w.__cws = true;
     window[name] = w;
   }
-  wrapVault('logoutVault', function () { forgetVault(); });
+  /* Log out (index.html logoutVault): every server this browser joined hears it left, best effort.
+     DELETE /api/v1/session on the connection in use (a direct address with keepalive, so it outlives
+     the reload; a data channel only if it is open now), never retried, never waited on for more than
+     about a second and a half. The page then clears everything it keeps. */
+  function leaveAll(ms) {
+    var jobs = [];
+    Object.keys(C.servers).forEach(function (sid) {
+      var s = C.servers[sid];
+      [K_TOKENS, K_TOKENS_R].forEach(function (k) {
+        var t = slot(k, sid); if (!t || !t.device_token) return;
+        var remote = k === K_TOKENS_R, h = { Authorization: 'Bearer ' + t.device_token };
+        if (remote) {
+          if (R && s.base && /^rtc:/.test(s.base)) jobs.push(R.fetch(s.base + '/api/v1/session', { method: 'DELETE', headers: h }, ms || 1500).catch(function () {}));
+        } else {
+          var d = s.listing && s.listing.direct;
+          var base = (d && d.host) ? (d.scheme || schemeFor(d.host)) + hostPart(d.host) + ':' + d.port : (s.base && !/^rtc:/.test(s.base) ? s.base : '');
+          if (base) { try { jobs.push(fetch(base + '/api/v1/session', { method: 'DELETE', headers: h, mode: 'cors', credentials: 'omit', cache: 'no-store', keepalive: true }).catch(function () {})); } catch (e) {} }
+        }
+      });
+      clearTimeout(s.pollTimer);
+    });
+    ev('leave-all', { count: jobs.length });
+    return Promise.race([Promise.all(jobs), new Promise(function (r) { setTimeout(r, ms || 1500); })]).then(function () {
+      if (R) { try { R.stop(); } catch (e) {} }
+      return closeDbs();
+    });
+  }
+  /* Lets go of this page's databases so the page can delete them. */
+  function closeDbs() {
+    var p = _db; _db = null;
+    var a = p ? p.then(function (d) { try { d && d.close(); } catch (e) {} }) : Promise.resolve();
+    return Promise.all([a, R && R.closeDb ? R.closeDb() : null]).then(function () {}, function () {});
+  }
   wrapVault('importVaultCode', function (now) { forgetVault().then(function () { if (now) init(now); }); });
-  wrapVault('rotateVaultCode', function (now, oldVhp) {
+  function afterRotate(now, oldVhp) {
     if (!now || !oldVhp) return;
     storeKey(String(now).toLowerCase()).then(function (nv) {
-      return rekey(oldVhp, nv).then(function () { C.vault = String(now).toLowerCase(); C.vhp = nv; });
+      return rekey(oldVhp, nv).then(function () { C.vault = String(now).toLowerCase(); C.vhp = nv; if (R) R.start(reachHooks()); });
     });
-  });
+  }
+  wrapVault('rotateVaultCode', afterRotate);
+
+  /* REACH: what cws-reach.mjs may ask of this file. No tokens. */
+  function reachHooks() {
+    return {
+      code: function () { return C.vault; }, vhp: function () { return C.vhp; }, storeKey: storeKey,
+      hidden: hidden,
+      found: function (sid) {
+        var s = srvOf(sid);
+        var l = R.listings().filter(function (x) { return x.server_id === sid; })[0];
+        if (!l) return;
+        if (s.listing && s.listing.direct) s.listing.rtc = l.rtc; else s.listing = l;
+        if (slot(K_CONFIRM, sid) === undefined) slot(K_CONFIRM, sid, 'yes');
+        if (hidden(sid)) { if (s.state !== 'hidden') setState(s, 'hidden', 'Forgotten on this browser.'); return; }
+        if (s.connecting) {   // a look that started before this connection opened: ask again once it ends
+          s.connecting.then(function () { if (s.state !== 'ready' && !hidden(sid)) { s.retryAt = 0; connect(s, 'retry').then(rebuild); } });
+          return;
+        }
+        if (s.state === 'ready' && s.base) return;
+        s.retryAt = 0;
+        connect(s, 'retry').then(rebuild);
+      },
+      removed: function (sid, key) {
+        var s = sid ? C.servers[sid] : null;
+        if (!s) Object.keys(C.servers).forEach(function (k) { var x = C.servers[k]; if (x.listing && x.listing.rtc && x.listing.rtc.server_key === key) s = x; });
+        if (s) removedByOwner(s, REMOVED_MSG); else { if (R && key && R.untrust) R.untrust(key); toastSafe(REMOVED_MSG, 'error'); render(); }
+      },
+      lost: function (sid, msg) {
+        var s = C.servers[sid];
+        if (!s || !isRtc(s)) return;
+        if (s.base) { s.base = ''; s.retryAt = Date.now() + 15000; setState(s, 'unreachable', msg || 'Not online now.'); rebuild(); }
+        else render();
+      },
+      render: function () { render(); },
+      ev: ev,
+      rewrapRotate: function () { wrapVault('rotateVaultCode', afterRotate); },
+      ui: { dialog: dialog, button: button, esc: esc, P: P, LBL: LBL, INPUT: INPUT, fmtTime: fmtTime, plural: plural, toast: toastSafe }
+    };
+  }
 
   window.addEventListener('online', function () { retryDue(true); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') retryDue(true); });
@@ -2215,7 +2080,7 @@
   function controller(q) {
     q = q || {};
     var list = Object.keys(C.servers).sort().map(function (k) { return C.servers[k]; })
-      .filter(function (s) { return s.base && tokenOf(s.id) && (s.state === 'ready' || s.state === 'pin'); });
+      .filter(function (s) { return s.base && tokenOf(s.id) && s.state === 'ready'; });
     if (!list.length) return Promise.resolve(null);
     var qs = [];
     if (q.id) qs.push('id=' + encodeURIComponent(String(q.id).slice(0, 200)));
@@ -2274,6 +2139,7 @@
     gnwPrograms: gnwPrograms, gnwTft: gnwTft, atariBios: atariBios, tapes: tapes, cassettes: cassettes, cassetteByName: cassetteByName, readRange: readRange,
     refresh: refresh,
     directConnect: directConnect,
+    leaveAll: leaveAll,
     /* For the Settings card and for testing: no tokens, no codes, no secrets. */
     servers: function () {
       return Object.keys(C.servers).map(function (sid) {
@@ -2289,6 +2155,8 @@
       });
     },
     events: function () { return C.events.slice(); },
+    /* For tests: whether the reach side is loaded and what it holds (no keys, codes or PIN keys). */
+    reach: function () { return { loaded: !!R, state: R ? R.state() : null }; },
     /* Drop this browser's verified copy of one title, so the next play downloads it again. */
     dropCached: function (id) {
       var e = C.byId[id] || C.boot[id]; if (!e) return Promise.resolve(false);

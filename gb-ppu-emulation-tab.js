@@ -208,7 +208,7 @@ function gbPpuEmulationTabHTML(d) {
     'run; with site 1 absent that cartridge never advances its window row at all. ' +
     '<code>m2_win_en_toggle</code> reaches site 1 <b>zero</b> times and site 2 on 9,951 lines: it ' +
     'cannot see the difference, which is why a core built from E.5 alone passes it and still ' +
-    'renders the other two wrong. That a line that never activated the window increments not at all is what <code>m2_win_en_toggle</code> pins, and it is the half E.5 alone gets right. <b>Falsifier:</b> either count coming out at zero on an ' +
+    'renders the other two wrong. That a line that never activated the window increments not at all is what <code>m2_win_en_toggle</code> pins, and it is the half E.5 alone gets right. <b>This would be wrong if:</b> either count came out at zero on an ' +
     'instrumented build of the shipped core.</div>' +
     '<div class="gbemu-why"><b>Why it is a state variable.</b> MECHANISM: the window&rsquo;s row counter is a state variable, not a function of the screen line, and this is the single most expensive thing on the page to get wrong. Deriving it from the screen line passes casual titles and looks right forever. On our board, deriving it from the screen line is the heaviest failure on the whole grid: <b>6,067 differing pixels</b> on <code>m3_lcdc_win_en_change_multiple</code>, one of the 24 monochrome mealybug cells. With the two increment sites of Rule 11/5, that cell is at 0 px on the shipped core. The mechanism is measured directly, by counting each site, in the box above. Deriving the window row from LY passes every commercial game you will try and fails two test cartridges outright. It is the single most common way to be 95% correct forever.</div>' +
 
@@ -234,14 +234,14 @@ function gbPpuEmulationTabHTML(d) {
     'it is the obvious one:</b> latching at mode-3 entry reads SCX two dots before the processor ' +
     'writes it, so every line spends the PREVIOUS line&rsquo;s fine scroll (measured on ' +
     '<code>m3_window_timing_wx_0</code>: with the latch at mode-3 entry its law is ' +
-    '<code>4 &minus; ((SCX &minus; 1) &amp; 7)</code>; with the latch at 89 it is <code>4 &minus; (SCX &amp; 7)</code>). <b>Falsifier:</b> an instrumented build of the shipped core latching ' +
+    '<code>4 &minus; ((SCX &minus; 1) &amp; 7)</code>; with the latch at 89 it is <code>4 &minus; (SCX &amp; 7)</code>). <b>This would be wrong if:</b> an instrumented build of the shipped core latched ' +
     'the discard on any dot but 89 at <code>SCX &amp; 7 = 0</code>. Measured: 89.</div>' +
 
     '<h4 class="gbemu-sub">And a second rule on the same axis, at a different site: the takeover comparator does not count the discards</h4>' +
     '<div class="gbemu-rule" id="gbr-11-13"><b>Rule 11/13.</b> <b>The window&rsquo;s x counter (Rule 11/3) must not increment when the output path consumes a fine-scroll discard pixel.</b> A discard pop is <em>a pixel the scroll owes</em>, not a step of the window&rsquo;s position, and that counter is exactly what the takeover comparator tests against WX. At the takeover, therefore, <code>win_px &minus; lx == 7</code> whatever <code>SCX &amp; 7</code> is.</div>' +
     '<div class="gbemu-example"><b>Example.</b> The Colour acid cartridge, <code>SCX&nbsp;&amp;&nbsp;7&nbsp;=&nbsp;4</code>, WX = 33: the takeover lands at screen column 33 &minus; 7 = 26. A build that counts the four discard pops reads <code>win_px &minus; lx == 7 + (SCX&nbsp;&amp;&nbsp;7)</code> = 11 at the takeover, so takeover at <code>win_px&nbsp;==&nbsp;WX&nbsp;==&nbsp;33</code> lands at <code>33&minus;7&minus;4&nbsp;=&nbsp;22</code>: the window origin inherits the background&rsquo;s fine scroll.</div>' +
     '<div class="gbemu-why"><b>Why.</b> <b>These are two rules and not one, and they are easy to confuse: conflate them and the second fault survives.</b> Rule 11/11 voids a <em>pending</em> discard <b>at the takeover</b>. Rule 11/13 is about what the comparator reads <em>on the way to</em> the takeover. <b>MECHANISM.</b> The rule <em>removes</em> a term and introduces no constant. <b>Note where the damage is NOT.</b> At the takeover dot the pending discard count reads <b>zero</b>: the four discards were spent early in the line, long before the window&rsquo;s position matched. So Rule 11/11, which voids a <em>pending</em> discard, <b>cannot reach this fault and is not the site</b>. <b>The damage is not that the window drops the pixels; it is that the comparator counted the pops that dropped them.</b> Two clauses, two sites, one axis, and a reader who implements only the first will reproduce this fault exactly.</div>' +
-    '<div class="gbemu-why"><b>Evidence.</b> On a build that counts the discard pops, the takeover relation <code>win_px &minus; lx == 7 + (SCX&nbsp;&amp;&nbsp;7)</code> (the seven priming increments plus one per discard pop) measures <b>11 on every activating line, 432 takeover records, zero violations, one distinct value</b> on the Colour acid cartridge with <code>SCX&nbsp;&amp;&nbsp;7&nbsp;=&nbsp;4</code>; the no-scroll control gives a gap of exactly <b>7</b> where <code>SCX&nbsp;&amp;&nbsp;7&nbsp;=&nbsp;0</code>. The takeover lands at 22 where scroll-independent gives 26: <b>the four-pixel displacement is the four counted discards, one for one.</b> <b>INSTRUMENT-MEASURED</b>, on our own core, with an observation-only instrument proved behaviourally neutral (probe and control render the cartridge byte-identically at all checkpoints compared). <b>Falsifier:</b> the relation failing at the takeover on that cartridge, or a probe build whose framebuffer differs from the control&rsquo;s. The gate behind it, proven in both directions: five builds, one cartridge, framebuffer hashes over all 65 checkpoints; the knob at its off value is <b>byte-identical to the unmodified tree</b>; the two settings <b>differ</b> on an observable; a compiler define turns the arm <em>on</em> from the control source and <em>off</em> from the arm source. <b>All five hashes fall into exactly two classes.</b> That is the whole of what a gate has to show, and a sweep that cannot show it is measuring nothing.</div>' +
+    '<div class="gbemu-why"><b>Evidence.</b> On a build that counts the discard pops, the takeover relation <code>win_px &minus; lx == 7 + (SCX&nbsp;&amp;&nbsp;7)</code> (the seven priming increments plus one per discard pop) measures <b>11 on every activating line, 432 takeover records, zero violations, one distinct value</b> on the Colour acid cartridge with <code>SCX&nbsp;&amp;&nbsp;7&nbsp;=&nbsp;4</code>; the no-scroll control gives a gap of exactly <b>7</b> where <code>SCX&nbsp;&amp;&nbsp;7&nbsp;=&nbsp;0</code>. The takeover lands at 22 where scroll-independent gives 26: <b>the four-pixel displacement is the four counted discards, one for one.</b> <b>INSTRUMENT-MEASURED</b>, on our own core, with an observation-only instrument proved behaviourally neutral (probe and control render the cartridge byte-identically at all checkpoints compared). <b>This would be wrong if:</b> the relation failed at the takeover on that cartridge, or a probe build&rsquo;s framebuffer differed from the control&rsquo;s. The gate behind it, proven in both directions: five builds, one cartridge, framebuffer hashes over all 65 checkpoints; the knob at its off value is <b>byte-identical to the unmodified tree</b>; the two settings <b>differ</b> on an observable; a compiler define turns the arm <em>on</em> from the control source and <em>off</em> from the arm source. <b>All five hashes fall into exactly two classes.</b> That is the whole of what a gate has to show, and a sweep that cannot show it is measuring nothing.</div>' +
     '<div class="gbemu-why"><b>This rule alone does not pass the row, and it is reported that way.</b> Rule 11/13 takes <code>cgb-acid-hell</code> from <b>120 px to 2 px</b> (120 differing pixels without the rule, 2 with it); with it, rows 136, 137 and 138 are byte-exact against the reference and the band is at x 26 (x 22 without it). The two survivors are a greyscale delta of <b>226</b> against the suite&rsquo;s tolerance of 50, so with this rule alone the suite&rsquo;s own comparator returns FAIL: worst delta 226 (255 without it). The last two close with the Colour tab&rsquo;s Rule C10/25, and with both rules the row passes. <b>Board movement: 0 of 264</b> for this rule alone, with the other 263 rows byte-identical. Cost across every instrument this project holds: <b>zero</b>. <b>118 of 120 pixels is not a win on this board and is not reported as one</b>: the row counts only with both rules in (section 22). It ships for a reason that is <em>not</em> the trade rule&rsquo;s: <i>it closes a real defect the corpus cannot see, and leaving it in means the next window defect hides behind it.</i> <b>And the corpus fact behind it, which is worth more than the fix:</b> no cartridge in this project&rsquo;s entire scored set supplies the stimulus this clause needs: a non-zero <code>SCX&nbsp;&amp;&nbsp;7</code> with the window at or past position 7, so the discards are spent <em>before</em> the position match rather than after it. <b>One witness in 264 rows, and it is that row itself.</b> Appendix G.6 carries the census, the live negative control inside it, and what it means for anyone scoring their own build.</div>' +
 
     '<div class="gbemu-rule" id="gbr-11-14"><b>Rule 11/14. Turning the window off part-way through a frame leaves a mark on the original Game Boy.</b> Once the window has taken over on some line of the frame and LCDC bit 5 is then cleared, a later line whose WX lands on a tile boundary (<code>(WX &amp; 7) == 7 - (SCX &amp; 7)</code>) gets one extra colour-0 pixel at <code>WX - 7</code>, and the rest of that line moves one pixel right. The Color does not do this. The core keeps one more flag for it: whether the window has taken over during this frame (the frame flag of Rule 11/6&rsquo;s table). <b>This is the same insertion as appendix E.8.3&rsquo;s first bullet, with a second way to arm it</b>, not a second mechanism: E.8.3 states the whole rule, both arms and every shared condition.</div>' +
@@ -679,7 +679,7 @@ function gbPpuEmulationTabHTML(d) {
     '</tbody></table>' +
     '<div class="gbemu-why"><b>Why.</b> INSTRUMENT-MEASURED on the shipped core, line 1 of ' +
     '<code>m3_window_timing</code> at <code>SCX&nbsp;=&nbsp;0</code>, by logging the dot at each ' +
-    'named site. <b>Falsifier:</b> any of these dots reading differently on an instrumented build of ' +
+    'named site. <b>This would be wrong if:</b> any of these dots read differently on an instrumented build of ' +
     'the shipped core at <code>SCX&nbsp;=&nbsp;0</code>. <b>The first-pop and screen rows are two stages, not one.</b> Every ' +
     '&ldquo;pixel leaves&rdquo; number this ' +
     'page prints is a <em>pop</em>; the screen is one dot later, always, and structurally, ' +
@@ -803,7 +803,7 @@ function gbPpuEmulationTabHTML(d) {
     '<div class="gbemu-example"><b>Example (the OBP convention).</b> On a Colour at single speed an OBP0 write in a cycle covering dots 102 to 105 has N = 102 (4 &times; 25 + 2): the output stage applies the new OBP0 from dot 104 (N + 2). Reading the source&rsquo;s constant 3 as a lead (three dots before the cycle end) would apply it from dot 103, one pixel early.</div>' +
     '<div class="gbemu-example"><b>Example (screen off, and double speed).</b> On the original with LCDC bit 7 = 0, an SCX write with N = 201 holds the new SCX from dot 205 (N + 4): no lead, no extra machine cycle, and nothing draws. On a Colour in double speed, a WY write with N = 100 is seen by the arming test from dot 102 (N + 2).</div>' +
     '<div class="gbemu-rule" id="gbr-E-1-1-3"><b>Rule E.1.1/3.</b> Every cell above is a property of the shipped core and must be reproduced as a dot; the evidence label on whether hardware agrees stays exactly as E.1&rsquo;s table gives it for each register. A processor read is not one of the table&rsquo;s consumers: it returns the register as stored at the read&rsquo;s access, and every store of a write, transients included, is made before the next machine cycle&rsquo;s access. So a read after the write returns the written value, and no read can see a transient.</div>' +
-    '<div class="gbemu-why"><b>Labels.</b> Every dot in this table is <b>INSTRUMENT-MEASURED</b> on the shipped core: a per-dot probe that logs each register as its consumers read it on every dot, run on a probe cartridge of our own that writes each register during mode 3, on the original, the Colour in compatibility mode, the Colour in colour mode, and the Colour in double speed (compatibility and colour mode gave identical dots). It describes our core and reproduces our renders; every double-speed cell is unscored by any cartridge we hold. The original&rsquo;s and the single-speed Colour&rsquo;s columns are measured with the probe in our source tree (<code>test/tabprobe</code>), which takes N from a WY write made at the same point of the same program (WY has no lead and no lag, so it is first seen on N&nbsp;+&nbsp;4) and reads every consumer on every dot; the same probe built with <code>DMG_WRITE_LAG</code> at 0 reads every lagged cell of the original&rsquo;s column exactly four dots earlier, which is the check that the instrument reads the lag. <b>Falsifier:</b> any cell reading differently on an instrumented build of the shipped core.</div>' +
+    '<div class="gbemu-why"><b>Labels.</b> Every dot in this table is <b>INSTRUMENT-MEASURED</b> on the shipped core: a per-dot probe that logs each register as its consumers read it on every dot, run on a probe cartridge of our own that writes each register during mode 3, on the original, the Colour in compatibility mode, the Colour in colour mode, and the Colour in double speed (compatibility and colour mode gave identical dots). It describes our core and reproduces our renders; every double-speed cell is unscored by any cartridge we hold. The original&rsquo;s and the single-speed Colour&rsquo;s columns are measured with the probe in our source tree (<code>test/tabprobe</code>), which takes N from a WY write made at the same point of the same program (WY has no lead and no lag, so it is first seen on N&nbsp;+&nbsp;4) and reads every consumer on every dot; the same probe built with <code>DMG_WRITE_LAG</code> at 0 reads every lagged cell of the original&rsquo;s column exactly four dots earlier, which is the check that the instrument reads the lag. <b>This would be wrong if:</b> any cell read differently on an instrumented build of the shipped core.</div>' +
     '<div class="gbemu-rule" id="gbr-E-1-1-4"><b>Rule E.1.1/4.</b> <b>Where the consumers read, so the table turns into pixels.</b> On an object-free line at SCX&nbsp;=&nbsp;0, on both machines and at both speeds, the background fetcher&rsquo;s step bodies execute on these line dots (event scale, Rule E/1):' +
     '<ol class="gbemu-steps">' +
       '<li>the priming fetch on 85, 87 and 89;</li>' +
@@ -1109,7 +1109,7 @@ function gbPpuEmulationTabHTML(d) {
     '<b>The clause that sentence needs, and it is not optional:</b> ' +
     'the pair is free <em>only</em> because the sweep that measured it moved the ' +
     'threshold with the start. ' +
-    '<b>Falsifier:</b> an instrumented build of the shipped core reporting mode-3 entry anywhere ' +
+    '<b>This would be wrong if:</b> an instrumented build of the shipped core reported mode-3 entry anywhere ' +
     'but 76 dots into the power-on line. Measured on this core: it reports 84 with the counter ' +
     'seeded at 8, which is 76.</div>' +
     '<p class="hw-readable"><b>The sweep, priced.</b> Each column is a value of <code>wrap &minus; start</code> in dots; each cell is the count of differing pixels on the colour pixel board, taken on an earlier state of that board (the paragraphs below give the denomination).</p>' +
@@ -1123,7 +1123,7 @@ function gbPpuEmulationTabHTML(d) {
     'reporting when it prices 450 at 3,170 against 451 at 10,027 (the pair in that sentence ' +
     'is this table&rsquo;s own second and third cells). <b>It is a pixel board and not the 264-row ' +
     'board</b>, and reading it as rows would make a five-point sweep look like a catastrophe. ' +
-    '<b>Falsifier for the denomination:</b> any of these five figures failing to reproduce on the colour pixel board at the stated difference, on the board state they were taken on (they are not today&rsquo;s board; see Rule E.2/5).</div>' +
+    '<b>This would be wrong if (for the denomination):</b> any of these five figures failed to reproduce on the colour pixel board at the stated difference, on the board state they were taken on (they are not today&rsquo;s board; see Rule E.2/5).</div>' +
     '<div class="gbemu-why"><b>449 and 453 are four apart and identical.</b> That is the direct ' +
     'demonstration that these suites measure the phase of the line boundary against the ' +
     'processor&rsquo;s machine-cycle grid and not the length, and it is why a leaky write ' +
@@ -1289,7 +1289,7 @@ function gbPpuEmulationTabHTML(d) {
     'right either way:</b> <code>cost = end &minus; begin</code> is invariant under the offset and ' +
     'reproduces <code>11 10 9 8 7 6 6 6</code> under both readings (absolute dots, or dots into mode 3, 80 dots apart), so no ladder check can catch ' +
     'it; only a mid-line register write landing during the clipped object&rsquo;s stall ' +
-    'separates them. <b>Falsifier:</b> the shipped core noticing a clipped object at OAM X = 0 on any dot but 90 (89 is the last dot before its stall; rule E.3.1/3 gives the measurement).</div>' +
+    'separates them. <b>This would be wrong if:</b> the shipped core noticed a clipped object at OAM X = 0 on any dot but 90 (89 is the last dot before its stall; rule E.3.1/3 gives the measurement).</div>' +
 
     '<div class="gbemu-rule" id="gbr-E-3-1-2"><b>Rule E.3.1/2.</b> When a clipped object is due: the pre-visible position. A clipped object (OAM X 0 to 7) is due by a pre-visible position, built like this:' +
     '<ol class="gbemu-steps">' +
@@ -1361,8 +1361,8 @@ function gbPpuEmulationTabHTML(d) {
     'which is the signature of an object noticed before output has begun rather than at a ' +
     'position. <b>A core built with the arm off gets 6 at the seam and cannot ' +
     'repair it from the ladder</b>, because the ladder is a difference and the error is in the ' +
-    'notice dot. <b>Falsifier:</b> the ' +
-    'shipped core noticing an OAM X = 8 object on any dot but 97 on the plain line at SCX &amp; 7 = 0; that falsifier covers that line and ' +
+    'notice dot. <b>This would be wrong if:</b> the ' +
+    'shipped core noticed an OAM X = 8 object on any dot but 97 on the plain line at SCX &amp; 7 = 0; that test covers that line and ' +
     'nothing wider.</div>' +
     '<p class="hw-readable">Every case of rule E.3.1/6, measured on the shipped core with a synthetic cartridge (one line,' +
     ' no boot residue, the objects named and no others); the WX = 7 row is the same, dot for dot, on ' +
@@ -1911,9 +1911,9 @@ function gbPpuEmulationTabHTML(d) {
     'screen are the same dot; they are not. <b>MECHANISM, and INSTRUMENT-MEASURED on the ' +
     'shipped core</b> by <code>test/objphase.py</code> and <code>test/openphase.py</code>, which ' +
     'record the fetcher&rsquo;s phase at the notice dot and the frame-buffer write inside the ' +
-    'output stage itself. <b>Falsifier for Rule E.5.1/1:</b> the output position advancing across the dot an ' +
-    'object is first noticed on, at any alignment. <b>Falsifier for Rule E.5.1/2:</b> the first frame-buffer ' +
-    'write of a line landing on the same dot as the line&rsquo;s first pop.</div>' +
+    'output stage itself. <b>Rule E.5.1/1 would be wrong if:</b> the output position advanced across the dot an ' +
+    'object is first noticed on, at any alignment. <b>Rule E.5.1/2 would be wrong if:</b> the first frame-buffer ' +
+    'write of a line landed on the same dot as the line&rsquo;s first pop.</div>' +
     '<div class="gbemu-why"><b>Why (what Rule E.5.1/1 settles, and what it does NOT).</b> It is why the ' +
     'ladder&rsquo;s worst cell is <b>11</b> and not 10: residue 0 loses <em>five</em> dots of ' +
     'output, the notice dot included. Measured on the shipped core at every alignment, ' +
@@ -2038,9 +2038,9 @@ function gbPpuEmulationTabHTML(d) {
     'mode-3 table reads <em>both</em> its columns off the internal mode, which this lead does ' +
     'not touch. <b>&ldquo;The table is unmoved&rdquo; is a statement about the table&rsquo;s reach, ' +
     'not evidence that the knob is inert.</b> The instruments that see this axis are the cartridge ' +
-    'itself and our object-ladder gate; both move with this constant. <b>Registered falsifier:</b> ' +
-    'if a later structure makes the object pipeline three dots shorter <em>on the pixels</em> while ' +
-    'the mealybug board holds, then this constant is describing a lag that was really a length, and ' +
+    'itself and our object-ladder gate; both move with this constant. <b>This would be wrong if:</b> ' +
+    'a later structure made the object pipeline three dots shorter <em>on the pixels</em> while ' +
+    'the mealybug board held. This constant would then be describing a lag that was really a length, and ' +
     'it must go to 0 in the same ship. <b>What would earn MECHANISM:</b> a device or a document ' +
     'pinning the dot the status register&rsquo;s mode bits fall, relative to the last pixel of a ' +
     'line whose shifter was interrupted by an object.</div>' +
@@ -2139,7 +2139,7 @@ function gbPpuEmulationTabHTML(d) {
     'applied to WX), but a precedent is not a derivation, and no ' +
     'hardware statement says WX settles late at this comparator. <b>The relation is the ' +
     'transferable part, not the number: a comparator that fires a dot later needs a dot more of ' +
-    'hold.</b> <b>Falsifier:</b> a cartridge that rewrites WX on the deciding dot and takes over at ' +
+    'hold.</b> <b>This would be wrong if:</b> a cartridge that rewrites WX on the deciding dot took over at ' +
     'the new value.<br>' +
     '<b>The <code>wx_old &ge; 7</code> guard on that hold</b> is stated here exactly as our record states it, in both halves, because neither half may ' +
     'be quoted without the other. <b>It is load-bearing:</b> without it the hold ' +
@@ -2178,11 +2178,11 @@ function gbPpuEmulationTabHTML(d) {
     '<div class="gbemu-why"><b>Why.</b> Two of the four terms are ours and not the machine&rsquo;s. Start the priming one dot later and you ' +
     'buy a four-pixel fix on one cartridge and roughly nineteen thousand pixels of damage across ' +
     'four others. INSTRUMENT-MEASURED on the ' +
-    'shipped core; <b>falsifier:</b> the window position counter taking its seven priming ' +
+    'shipped core; <b>this would be wrong if</b> the window position counter took its seven priming ' +
     'increments on any other seven dots. Whatever split you choose, check it against a cartridge that writes WX in the range 0 ' +
     'to 7. <b>WX&rsquo;s +2 lead is MECHANISM</b> (derived from dot arithmetic before it was ' +
-    'measured); <b>window-enable&rsquo;s settling</b> (at single speed a set and a clear both reach the comparator on the last lead dot, C &minus; 2; the clear-only release acts only on a Colour in double speed) is stated in E.1.3. <b>Falsifier for the expression as a whole:</b> any cartridge on which it ' +
-    'predicts a takeover dot the instrumented core does not take.</div>' +
+    'measured); <b>window-enable&rsquo;s settling</b> (at single speed a set and a clear both reach the comparator on the last lead dot, C &minus; 2; the clear-only release acts only on a Colour in double speed) is stated in E.1.3. <b>The expression as a whole would be wrong if:</b> on any cartridge it ' +
+    'predicted a takeover dot the instrumented core does not take.</div>' +
 
     '<h4 class="gbemu-sub">E.8.1: The comparator as the shipped core runs it, and what each WX does to the line</h4>' +
     '<div class="gbemu-why"><b>Why.</b> Measured on the shipped core, the priming bump is not applied on every line, the comparator is not open before the priming increments on every line, and E.8 does not say which window pixels a WX below 7 drops. The definition of <code>priming_bump</code> in Rule E.8/4 is the one measured here, and this subsection adds what E.8 leaves out.</div>' +
@@ -2392,7 +2392,7 @@ function gbPpuEmulationTabHTML(d) {
       '<tr><td>window map read (6)</td><td>C &minus; 2, set and clear</td><td>C &minus; 1, set and clear</td><td>C + 1, set and clear</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-example"><b>Example: the outstanding-work test, a set and a clear.</b> Original, display on, write cycle on 97 to 100, so C&nbsp;=&nbsp;104. A write that <b>sets</b> object-enable (bit 1): the outstanding-work test reads the bit as set from dot 104 (C) and as clear on 103 and before. A write that <b>clears</b> it: the test reads the bit as clear from dot 103 (C&nbsp;&minus;&nbsp;1). The same write as seen by object-enable at the merge: a set from 105 (C&nbsp;+&nbsp;1), a clear from 104 (C). Neither is &ldquo;C plus the tag&rdquo;.</div>' +
-    '<div class="gbemu-why"><b>Why.</b> C is N + 3 at single speed and N + 1 in double speed, with N the first dot of the write&rsquo;s machine cycle (section 1); on the original with the display on, N + 7 (measured with <code>test/tabprobe</code>: every tag keeps its place against C, for a set and for a clear). Every dot here is <b>INSTRUMENT-MEASURED</b> on the shipped core: a per-dot probe evaluates each consumer&rsquo;s own accessor on every dot around writes that set and clear every bit, on the original, the Colour in both modes and the Colour in double speed. Which accessor each consumer uses, and so which tag, is READ FROM OUR OWN SOURCE; the three object-height fetch rows are the measured tag views (8, 9 and 10) applied to that reading. This is tier one in the sense of the paragraph on the two tiers below: a description of our core, exact, and what reproduces our renders. The cross-check against pixels: the background-enable row, applied to writes on known dots, reproduced the screen columns where the picture changed, column for column. <b>Falsifier:</b> any row reading differently on an instrumented build of the shipped core.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> C is N + 3 at single speed and N + 1 in double speed, with N the first dot of the write&rsquo;s machine cycle (section 1); on the original with the display on, N + 7 (measured with <code>test/tabprobe</code>: every tag keeps its place against C, for a set and for a clear). Every dot here is <b>INSTRUMENT-MEASURED</b> on the shipped core: a per-dot probe evaluates each consumer&rsquo;s own accessor on every dot around writes that set and clear every bit, on the original, the Colour in both modes and the Colour in double speed. Which accessor each consumer uses, and so which tag, is READ FROM OUR OWN SOURCE; the three object-height fetch rows are the measured tag views (8, 9 and 10) applied to that reading. This is tier one in the sense of the paragraph on the two tiers below: a description of our core, exact, and what reproduces our renders. The cross-check against pixels: the background-enable row, applied to writes on known dots, reproduced the screen columns where the picture changed, column for column. <b>This would be wrong if:</b> any row read differently on an instrumented build of the shipped core.</div>' +
 
     '<div class="gbemu-rule" id="gbr-E-9-5"><b>Rule E.9/5.</b> <b>The conflict-dot row of Rule E.9/2 is the register, not every consumer.</b> A consumer that reads the register (tags ' +
     '8, 9, 61, 6) sees the intermediate on the conflict dot. A tag-7 consumer does not read the register on that dot: while the conflict flag is up it ' +
@@ -2462,7 +2462,7 @@ function gbPpuEmulationTabHTML(d) {
     'strengthens the paragraph below rather than weakening it: the scale has TWO non-monotone ' +
     'members, not one. E.1.3&rsquo;s width column is exact on this: it says ' +
     '&ldquo;for the whole two-dot lead window&rdquo; and stops there. ' +
-    '<b>Falsifier:</b> a build in which a tag-6 consumer reads the new value on the ' +
+    '<b>This would be wrong if:</b> in a build, a tag-6 consumer read the new value on the ' +
     'conflict dot at <code>LCDC_PRE_SPAN = 1</code>, the shipped value. (At ' +
     '<code>LCDC_PRE_SPAN = 2</code> it does: that arm exists, it is not shipped, and it ' +
     'closes 178 pixels while creating 908.)</div>' +

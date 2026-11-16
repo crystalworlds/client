@@ -10,7 +10,7 @@ function gbcMachineEmulationTabHTML(d) {
   return '<div class="gbemu-area" id="gbcemu-area-machine">' +
 
   '<section class="gbemu-hero">' +
-    '<div class="gbemu-hero-num"><b>259</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy Color, starting from a Game Boy that is already right</h3>' +
+    '<div class="gbemu-hero-num"><b>261</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy Color, starting from a Game Boy that is already right</h3>' +
       '<p>This is the research for the colour machine, written to the same standard as the ' +
       'original&rsquo;s page and assuming you have read it: everything there is still true here, and ' +
       'this page is only what the Color adds, changes and breaks. The number beside it is the ' +
@@ -19,7 +19,7 @@ function gbcMachineEmulationTabHTML(d) {
       'render or against two independent implementations agreeing. That does not make the ' +
       'mechanisms below wrong. It means section&nbsp;17 is the part you must read before quoting ' +
       'any number from this page.</p>' +
-      '<p>The core these pages describe stands at <b>259 passing rows of 264</b> on the public Game ' +
+      '<p>The core these pages describe stands at <b>261 passing rows of 264</b> on the public Game ' +
       'Boy Emulator Shootout board, on a <em>PASS-only, all-264-rows</em> basis: one board ' +
       'covering both machines. Section&nbsp;17 gives that basis in full, says why published ' +
       'comparisons are not like-for-like, and names which of the remaining rows nobody can win ' +
@@ -27,7 +27,7 @@ function gbcMachineEmulationTabHTML(d) {
     '<div class="gbemu-rule" id="gbcr-0-1"><b>Rule C0/1.</b> A build must implement everything the core this site ships does, with the values this page gives as current. A build that wants to match ours must leave out three kinds of thing: (1) anything this page describes as switched off, an off arm, a research arm, refused, not shipped, or written but behind a switch that is off; (2) anything this page puts outside the core (the site&rsquo;s player, the host&rsquo;s devices and files); (3) any earlier value or earlier core this page or a record names as history: building it gives an older core, not a second valid one. On the original, four parts belong together and a build must implement all four: the running processor&rsquo;s two-dot look, the drawing registers&rsquo; extra machine cycle, the dispatch holds of 3 and 1, and the mode-1 source on dot 6. Every other part this page describes is required: a build that leaves one out has a gap in that build, not an option.</div>' +
     '<div class="gbemu-why"><b>Why.</b> These pages describe the core this site ships, and both tabs state this same rule. History is kept off the tab (it lives in the developer changelog) so older records can still be read. A build with only some of the four original-machine parts, or none of them, is not the core this site is scored against.</div>' +
     '<div class="gbemu-rule" id="gbcr-0-2"><b>Rule C0/2.</b> A build of the Color must implement every part on this checklist. Item 1 is the Game Boy tab&rsquo;s own checklist, and it is built first: where this page says nothing different, the original&rsquo;s rule holds. Each later item names the section that specifies the part and the area file that holds it (this page is split into four area files, listed after this introduction).</div>' +
-    '<p class="gbemu-key"><b>The build checklist: every part a build of the Color must implement.</b></p><ul class="gbemu-bullets" style="list-style:none;padding-left:4px"><li>1. <b>Everything on the Game Boy tab&rsquo;s checklist first.</b> The Color runs the original&rsquo;s machine underneath; where this page says nothing different, the original&rsquo;s rule holds. <i>File: the Game Boy tab&rsquo;s eight area files, <code>gb-*-emulation-tab.js</code>.</i></li><li>2. <b>The start</b>: the boot program&rsquo;s two pieces and the hand-over, the register file by branch, KEY0 and compatibility mode, the divider by header, the no-boot fallback and the booted lists (section 2). <i>File: <code>gbc-machine-emulation-tab.js</code>.</i></li><li>3. <b>Double speed</b>: KEY1, the switch, the 32,769-cycle stall, the speed change counted in machine cycles, the divider&rsquo;s one reset, the picture&rsquo;s move, the frame sequencer&rsquo;s delay, what scales and what does not (section 3). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>4. <b>Work RAM</b>: eight banks, the register&rsquo;s 0-to-1 rule (section 4). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>5. <b>Video memory</b>: two banks, the attribute byte, the access rules and windows at both speeds (section 5). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>6. <b>Palette memory</b>: indexes, auto-increment and wrap, the busy window, colour conversion (section 6). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>7. <b>Priority</b>: the bit that means two things (section 7). <b>Objects</b>: the attribute byte, bank and palette, the priority order by mode (section 8). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>8. <b>Compatibility mode</b>: which registers are alive, the compatibility palette and what the host supplies for it (section 9). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>9. <b>The Color&rsquo;s picture timing</b>: the CPU-visible timing table, interrupt sources and LY, the LCDC train, the tile-data select glitches, the E.1 Color column, the window on the Color, the processor-to-dot phase (section 10). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>10. <b>Block transfers</b>: general-purpose and horizontal-blank, their timing at both speeds, cancel, display off (section 11). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>11. <b>Sprite-memory transfer on the Color</b>: the bus split, the conflict read (section 12). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>12. <b>Sound on the Color</b>: the unit off the processor&rsquo;s clock, the sample grid in double speed, <code>FF76</code>/<code>FF77</code>, 512 Hz in double speed, the wave rule, the power and length splits (section 13). <i>File: <code>gbc-apu-emulation-tab.js</code>.</i></li><li>13. <b>The undocumented registers</b> (section 14) and <b>the revision choices</b> this core makes (section 15). <i>Files: <code>gbc-timing-emulation-tab.js</code>, <code>gbc-machine-emulation-tab.js</code>.</i></li><li>14. <b>Every Color register, bit by bit</b> (appendix A). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li></ul>' +
+    '<p class="gbemu-key"><b>The build checklist: every part a build of the Color must implement.</b></p><ul class="gbemu-bullets" style="list-style:none;padding-left:4px"><li>1. <b>Everything on the Game Boy tab&rsquo;s checklist first.</b> The Color runs the original&rsquo;s machine underneath; where this page says nothing different, the original&rsquo;s rule holds. <i>File: the Game Boy tab&rsquo;s eight area files, <code>gb-*-emulation-tab.js</code>.</i></li><li>2. <b>The start</b>: the boot program&rsquo;s two pieces and the hand-over, the register file by branch, KEY0 and compatibility mode, the divider by header, the no-boot fallback and the booted lists (section 2). <i>File: <code>gbc-machine-emulation-tab.js</code>.</i></li><li>3. <b>Double speed</b>: KEY1, the switch, the 32,769-cycle stall, the speed change counted in machine cycles, the divider&rsquo;s one reset, the picture&rsquo;s move, the frame sequencer&rsquo;s delay, what scales and what does not (section 3). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>4. <b>Work RAM</b>: eight banks, the register&rsquo;s 0-to-1 rule (section 4). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>5. <b>Video memory</b>: two banks, the attribute byte, the access rules and windows at both speeds (section 5). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>6. <b>Palette memory</b>: indexes, auto-increment and wrap, the busy window, colour conversion (section 6). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>7. <b>Priority</b>: the bit that means two things (section 7). <b>Objects</b>: the attribute byte, bank and palette, the priority order by mode (section 8). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>8. <b>Compatibility mode</b>: which registers are alive, the compatibility palette and what the host supplies for it (section 9). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>9. <b>The Color&rsquo;s picture timing</b>: the CPU-visible timing table, interrupt sources and LY, the LCDC train, the tile-data select glitches, the E.1 Color column, the window on the Color, the processor-to-dot phase (section 10). <i>File: <code>gbc-ppu-emulation-tab.js</code>.</i></li><li>10. <b>Block transfers</b>: general-purpose and horizontal-blank, their timing at both speeds, cancel, display off (section 11). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>11. <b>Sprite-memory transfer on the Color</b>: the bus split, the conflict read (section 12). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>12. <b>Sound on the Color</b>: the unit off the processor&rsquo;s clock, the sample grid in double speed, <code>FF76</code>/<code>FF77</code>, 512 Hz in double speed, the wave rule, the power and length splits (section 13). <i>File: <code>gbc-apu-emulation-tab.js</code>.</i></li><li>13. <b>The undocumented registers</b> (section 14) and <b>the revision choices</b> this core makes (section 15). <i>Files: <code>gbc-timing-emulation-tab.js</code>, <code>gbc-machine-emulation-tab.js</code>.</i></li><li>14. <b>Every Color register, bit by bit</b> (appendix A). <i>File: <code>gbc-timing-emulation-tab.js</code>.</i></li><li>15. <b>The infrared port</b>: <code>FF56</code>&rsquo;s LED, read enable and received bit (appendix A), and the sensor behind it, which sees a linked second Colour&rsquo;s LED and, on a Colour alone, its own; the Advance has none (the Game Boy tab, appendix A.1.3). <i>Files: <code>gbc-timing-emulation-tab.js</code>, <code>gb-sgb-emulation-tab.js</code>.</i></li></ul>' +
     '<div class="gbemu-why"><b>Result of a build from these pages.</b> An independent build that read only the two tabs (the Game Boy tab and this one) wrote a Game Boy Color in plain JavaScript. It had none of our test programs; we ran them on it and compared it with our core. It is identical to ours, with the same verdict and every checkpoint byte for byte, on 94 of 94 Color test runs (73 of them sound), 167 of 167 Game Boy test runs (12 of them sound) and 3 of 3 Super Game Boy runs; it gives the same verdict as ours on all 60 AGE runs and the same picture as ours on all 24 mealybug cells it was scored on. The board figure beside the title is our core&rsquo;s.</div></div></section>' +
   gbcEmuAreaIndexHTML() +
 
@@ -430,7 +430,7 @@ function gbcMachineEmulationTabHTML(d) {
 
   /* ------------------------------------------------------------------- 3 */
   '<section class="sect" id="gbce-15"><h3 class="sect-h">15. Revisions, and why one core cannot be both</h3>' +
-    '<div class="gbemu-rule" id="gbcr-15-1"><b>Rule C15/1.</b> A build must decide which revision of the Color it models before it quotes any figure. There is revision 0, A, B, C, D and E, plus the Game Boy Advance running in its Color mode. This core targets <b>revision C</b>, and it is scored with the <b>revision-2 boot <em>program</em></b>: &ldquo;revision 2&rdquo; is the revision of the boot program image, a different axis from the silicon revision, and there is no silicon revision 2.</div>' +
+    '<div class="gbemu-rule" id="gbcr-15-1"><b>Rule C15/1.</b> A build must decide which revision of the Color it models before it quotes any figure. There is revision 0, A, B, C, D and E, plus the Game Boy Advance running in its Color mode. This core models every revision (0, A, B, C, D and E) and the Game Boy Advance in its Color mode. The site plays <b>revision E</b> unless you choose another machine in the play window&rsquo;s Machine list. Every figure on this page names the revision it was measured on. It is scored with the <b>revision-2 boot <em>program</em></b>: &ldquo;revision 2&rdquo; is the revision of the boot program image, a different axis from the silicon revision, and there is no silicon revision 2.</div>' +
     '<div class="gbemu-why"><b>Why.</b> <b>There is no such thing as &ldquo;the Game Boy Color&rdquo; for this ' +
     'purpose.</b> The revisions differ in ways that are visible on a screen. Without a chosen revision every figure you produce means ' +
     '&ldquo;agrees with one stored photograph&rdquo; and you will not know which.</div>' +
@@ -443,12 +443,11 @@ function gbcMachineEmulationTabHTML(d) {
       '<tr><td>Post-boot registers on the Advance</td><td><b>One rule, not two constants:</b> its <code>B</code> is an <code>inc</code> of the Color&rsquo;s, and its flags are what that one <code>inc</code> leaves, which is why two registers differ and only one thing changed</td></tr>' +
       '<tr><td>Power-on line phase</td><td>One dot earlier, <b>in Color double speed only</b></td></tr>' +
       '<tr><td>The sound unit&rsquo;s envelope write glitch</td><td><b>The cartridge that tests it says so itself</b>: <i>&ldquo;it appears to be different across revisions&rdquo;</i>. Its declared table is one revision&rsquo;s output, and this project&rsquo;s revision choice is Rule C15/1: the boot <em>program image</em> the board runs is revision 2 and the silicon targeted is revision C, two axes that must not be confused (&ldquo;revision 2&rdquo; is easy to read as a seventh console, and Rule C15/1 enumerates the silicon revisions). The same word appears once more below, in the length-clock row, where it comes from the documentation and <b>this project cannot map it onto 0&ndash;E either</b>; it is left quoted rather than translated. Matching that declared table anywhere else is convergence, not derivation</td></tr>' +
-      '<tr><td>Three sound frequency-change variants</td><td>They ship <b>side by side</b>, and <b>at most one can be correct for any one machine</b>. None is a board row here. Improving all three at once is therefore not three wins: it is a signal that wants explaining</td></tr>' +
+      '<tr><td>Three sound frequency-change variants</td><td>They ship <b>side by side</b>, and <b>at most one can be correct for any one machine</b>. None is a board row here. Improving all three at once is therefore not three wins: it is a signal that wants explaining. Here each passes only on the machines it names, because the timing follows the chosen revision (section 13, Rules C13/9 to C13/11)</td></tr>' +
       '<tr><td>The extra length-clock rule</td><td>A documented <b>revision-02 variant</b> in which the current enable state does not matter: it breaks one commercial title and was changed on later revisions. Not modelled here, and the rows that would score it are among the revision-dependent ones the board does not carry</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-why"><b>Two consequences this project lives with and states rather than ' +
-    'resolves.</b> <b>This site never chooses a revision at run time</b>: the core holds a few revision tests (the Advance&rsquo;s power-on B register, the no-boot divider of revision 0 and the Advance, and in the speed switch the timer step, the line-register read and the divider reset on revisions B and C against D and E), but the site always runs revision C, so none of them chooses a value here (every other model ' +
-    'comparison in it sits in a comment), so a behaviour whose reference splits by revision ' +
+    'resolves.</b> <b>The revision is a setting, never a guess</b>: the core models each revision (the Advance&rsquo;s power-on B register, the no-boot divider of revision 0 and the Advance, the speed switch&rsquo;s timer step, line-register read and divider reset on revisions B and C against D and E, and the picture and sound rules that split by revision), and the site runs revision E by default and any revision you choose, so a behaviour whose reference splits by revision ' +
     'cannot be settled here by choosing a value, and choosing one anyway is the definition of a ' +
     'fitted constant. And the recommendation on record is to carry the revision as a first-class ' +
     'setting, made <em>because</em> it moves the score by <b>zero pixels</b>: one knob already ' +
@@ -480,22 +479,23 @@ function gbcMachineEmulationTabHTML(d) {
     'document, which is the right instinct: a cartridge you wrote asserting your own expectation is ' +
     'not the same kind of evidence as one somebody else verified on silicon.</p>' +
     '<h4 class="gbemu-sub">Two newer Color suites: cgb-acid-hell and the AGE tests</h4>' +
-    '<p class="hw-readable">Our figure is measured on the core this site serves (its sha256 begins <code>ca5a2a32f97e</code>), with the same build, plan, judge and frame counts for every emulator. ' +
+    '<p class="hw-readable">Our figure is measured on the core this site serves (its sha256 begins <code>4e43ce760b3e</code>), with the same build, plan, judge and frame counts for every emulator. ' +
     'Neither suite is published ready to run, so we built both from their authors&rsquo; published source with the RGBDS assembler: ' +
     '<b>cgb-acid-hell</b> by Matt Currie (one frame that must match its author&rsquo;s reference picture pixel for pixel, in colour mode) and ' +
     'the <b>AGE tests</b> by Christoph Sprenger (47 tests of picture and processor timing, from <code>HALT</code> and the status register to sprite and video memory access and the speed switch). Both carry the MIT licence. ' +
     'Each AGE test names the machines its author checked it on: a DMG, or a Game Boy Color of revision B, C or E, either in colour mode or running a monochrome cartridge. ' +
-    '<b>We count the runs that name the machines this core models</b>, the DMG and the Color of revision C: 49 runs of the AGE tests, plus cgb-acid-hell. ' +
+    '<b>We count the runs that name the DMG and the Color of revision E</b>, the revision the site plays by default: 49 runs of the AGE tests, plus cgb-acid-hell. Set to revision C, the count is over the runs that name the DMG and revision C instead, again 49 runs plus cgb-acid-hell. ' +
     'A test that prints its own verdict (TEST PASSED or TEST FAILED) is judged by that verdict. A picture test is compared with its author&rsquo;s reference picture: colour at full 5-bit precision, and a monochrome picture allowing each emulator its own four shades. ' +
     'Every emulator was given the same real boot programs and the same frame counts, with colour correction off.</p>' +
     '<table class="gbemu-table"><thead><tr><th>Emulator</th><th>Version</th><th>Machine</th><th>Score</th></tr></thead><tbody>' +
-      '<tr><td><b>Ours</b></td><td>this site</td><td>DMG and Color revision C</td><td><b>49 of 50</b></td></tr>' +
+      '<tr><td><b>Ours</b></td><td>this site</td><td>DMG and Color revision E (the default)</td><td><b>49 of 50</b></td></tr>' +
+      '<tr><td><b>Ours</b></td><td>this site, set to revision C</td><td>DMG and Color revision C</td><td><b>49 of 50</b></td></tr>' +
       '<tr><td>SameBoy</td><td>1.0.5 (the official program)</td><td>DMG and Color revision C</td><td>39 of 50</td></tr>' +
       '<tr><td>DocBoy</td><td>1.3</td><td>DMG and Color (no revision named, no boot program)</td><td>17 of 50</td></tr>' +
       '<tr><td>Gambatte</td><td>v0.5.0 (libretro, cbda5ea)</td><td>DMG and Color (no revision chosen)</td><td>11 of 50</td></tr>' +
       '<tr><td>mGBA</td><td>0.11-dev (libretro, b256448)</td><td>DMG and Color (no revision chosen)</td><td>0 of 50</td></tr>' +
     '</tbody></table>' +
-    '<p class="hw-readable"><b>On these two suites we are ahead of SameBoy 1.0.5</b> (49 of 50 against its 39, on the same 50 runs). Set to the Color of revision E, SameBoy 1.0.5 passes 31 of the 36 runs that name that revision. ' +
+    '<p class="hw-readable"><b>On these two suites we are ahead of SameBoy 1.0.5</b> (set to revision C, 49 of 50 against its 39, on the same 50 runs; the other emulators&rsquo; figures above were taken on the revision C runs and have not been re-run on the revision E runs). Set to the Color of revision E, SameBoy 1.0.5 passes 31 of the 36 runs that name that revision. ' +
     'SameBoy and DocBoy were run on 7 Nov 2026; Gambatte and mGBA are the versions shown, run on 26 Oct 2026. DocBoy names no revision and runs without a boot program, so its 17 is probably a floor.</p>' +
     '<p class="hw-readable"><b>The timing edges our passing runs rest on</b>, each one the processor can see:</p>' +
     '<ul class="gbemu-bullets">' +
@@ -522,7 +522,7 @@ function gbcMachineEmulationTabHTML(d) {
       '<li><code>lcd-align-ly</code>: LY changes on the same dot on every line, and a read just before it changes returns the old and new values ANDed (section 10, Rule C10/36).</li>' +
     '</ul>' +
     '<p class="hw-readable">What fails: one run, <code>oam-write-dmgC</code>, sprite memory writes on the DMG just after the screen is switched on, on the rows its author marks as depending on when the LCD was last switched off. ' +
-    'Every other counted run passes, cgb-acid-hell included, pixel for pixel. The SameBoy and DocBoy columns are SameBoy 1.0.5 (Color revision C) and DocBoy 1.3; the Gambatte and mGBA columns are the versions in the table above.</p>' +
+    'Every other counted run passes, cgb-acid-hell included, pixel for pixel. The Ours column below is the core set to revision C, on the runs that name revision C. At revision E, the default, every run that names E passes too, and the DMG runs are the same. The SameBoy and DocBoy columns are SameBoy 1.0.5 (Color revision C) and DocBoy 1.3; the Gambatte and mGBA columns are the versions in the table above.</p>' +
     '<table class="gbemu-table"><thead><tr><th>Test</th><th>Machine</th><th>Ours</th><th>SameBoy 1.0.5</th><th>DocBoy 1.3</th><th>Gambatte</th><th>mGBA</th></tr></thead><tbody>' +
       '<tr><td><code>cgb-acid-hell</code></td><td>Color, colour mode</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
       '<tr><td><code>ei-halt-dmgC-cgbBCE</code></td><td>DMG</td><td>pass</td><td>pass</td><td>pass</td><td><b>fail</b></td><td><b>fail</b></td></tr>' +
@@ -589,15 +589,13 @@ function gbcMachineEmulationTabHTML(d) {
     '<p class="hw-readable">Separately from the colour pixel board below, there is the Game Boy ' +
     'Emulator Shootout&rsquo;s own enumeration: <b>264 rows</b> across nine suites, covering both ' +
     'machines from one core (97 Mooneye, 68 SameSuite, 51 Blargg, 24 mealybug tearoom, 9 ' +
-    'daid, 5 acid, 4 cpp, 3 ashiepaws, 3 ax6). This core stands at <b>259 PASS, 2 FAIL, 0 ERROR, 3 ' +
-    'unscoreable</b> on the core this site serves, measured by framebuffer <em>byte</em> comparison per row. ' +
+    'daid, 5 acid, 4 cpp, 3 ashiepaws, 3 ax6). This core stands at <b>261 PASS, 0 FAIL, 0 ERROR, 3 ' +
+    'unscoreable</b> on the core this site serves, with the Color at revision E, the default, measured by framebuffer <em>byte</em> comparison per row. ' +
     'The original machine&rsquo;s section 22 ' +
-    'names both failures; <b>both are Color rows</b>. ' +
-    '<b>Two of two, row by row:</b> ' +
-    '<code>daid/ppu_scanline_bgp.gb</code> is ' +
-    'declined <em>on the Color</em>, and <code>channel_4_freq_change</code> is a ' +
-    'Colour-side defect. <code>ashiepaws/strikethrough.gb</code>, on the original machine, and the colour-mode row <code>cgb-acid-hell.gbc</code> are not among the failures. ' +
-    '<code>channel_4_freq_change</code> has 4 wrong cells and FAILs. <b>A ' +
+    'names the two rows that failed before this core; <b>both were Color rows</b>, and both now pass: ' +
+    '<code>daid/ppu_scanline_bgp.gb</code> <em>on the Color</em> passes at revision E (its reference is a revision D or E picture; set to revision C it fails, as it should), and <code>channel_4_freq_change</code> passes 64 of 64 cells. ' +
+    '<code>ashiepaws/strikethrough.gb</code>, on the original machine, and the colour-mode row <code>cgb-acid-hell.gbc</code> pass too. ' +
+    'Set to revision C the board reads 256 PASS, 5 FAIL, 3 unscoreable: that row and four SameSuite sound rows whose references were taken on a revision E. <b>A ' +
     'defect narrowed is not a row won.</b></p>' +
     '<p class="gbemu-key"><b>Published comparisons are not like-for-like, and the error is worth ' +
     'three rows.</b> Totals in circulation count <code>INFO</code> rows (rows that ship no ' +
@@ -605,16 +603,16 @@ function gbcMachineEmulationTabHTML(d) {
     '), while this figure counts <code>PASS</code> only. And two of the comparison emulators ' +
     'were <b>never run on 3 of the 264 rows</b> (DocBoy 1.3 cannot run them), all three of which this core passes.</p>' +
     '<table class="gbemu-table"><thead><tr><th>Basis</th><th>Ours</th><th>SameBoy 1.0.5</th><th>Emulicious</th><th>DocBoy 1.3</th></tr></thead><tbody>' +
-      '<tr><td><b>PASS only, all 264</b></td><td><b>259</b></td><td>252</td><td>never run</td><td>cannot run 3</td></tr>' +
-      '<tr><td>PASS + INFO, all 264</td><td><b>262</b></td><td>255</td><td>never run</td><td>cannot run 3</td></tr>' +
-      '<tr><td>PASS only, shared 261</td><td><b>256</b></td><td>249</td><td>251</td><td>255</td></tr>' +
-      '<tr><td>PASS + INFO, shared 261</td><td><b>259</b></td><td>252</td><td>254</td><td>258</td></tr>' +
+      '<tr><td><b>PASS only, all 264</b></td><td><b>261</b></td><td>252</td><td>never run</td><td>cannot run 3</td></tr>' +
+      '<tr><td>PASS + INFO, all 264</td><td><b>264</b></td><td>255</td><td>never run</td><td>cannot run 3</td></tr>' +
+      '<tr><td>PASS only, shared 261</td><td><b>258</b></td><td>249</td><td>251</td><td>255</td></tr>' +
+      '<tr><td>PASS + INFO, shared 261</td><td><b>261</b></td><td>252</td><td>254</td><td>258</td></tr>' +
     '</tbody></table>' +
     '<p class="gbemu-key"><b>Only the first row of that table is a measurement; the other ' +
     'three are arithmetic from it, and are marked as such.</b> The three rows outside the shared 261 are three this core passes. <b>The SameBoy 1.0.5 and DocBoy 1.3 columns ' +
     'were taken by us on 7 Nov 2026 with the board&rsquo;s own tool and judge; the Emulicious column is the board&rsquo;s published run of 4 June 2026.</b></p>' +
     '<p class="hw-readable"><b>On the ordering: on the ' +
-    'two bases where DocBoy runs every row, this core passes one row more than DocBoy 1.3: 256 and 255, 259 and 258.</b> The Game Boy tab, section 21, names the five rows on which the two differ. The basis held here ' +
+    'two bases where DocBoy runs every row, this core passes three rows more than DocBoy 1.3: 258 and 255, 261 and 258.</b> The Game Boy tab, section 21, names the three rows on which the two differ. The basis held here ' +
     'is the first row. A figure three higher than ours is the <code>PASS + INFO</code> basis and is ' +
     'not comparable with it. And a trap from the same family: two scoring scripts in this project ' +
     'enumerate <b>264</b> and <b>288</b> rows. Both are useful; the totals must never be ' +
@@ -654,15 +652,14 @@ function gbcMachineEmulationTabHTML(d) {
     'sentence disposes of most of the ways a colour score gets over-read.</p>' +
     '<h4 class="gbemu-sub">The figures, and why there are two that must never be summed</h4>' +
     '<table class="gbemu-table"><thead><tr><th>Against</th><th>Score</th><th>Denominator</th></tr></thead><tbody>' +
-      '<tr><td><b>Revision C: current</b></td><td><b>0 px, 27 of 27 passing</b> <span class="gbemu-what">(measured on the core this site ships)</span></td><td>27 compatibility-mode renders</td></tr>' +
-      '<tr><td>Revision D</td><td>9,607 px, 8 of 20 passing, <b>not re-measured on the core this site ships</b></td><td>20: <b>a different denominator</b></td></tr>' +
+      '<tr><td><b>Revision C: current</b></td><td><b>0 px, 27 of 27 passing</b> <span class="gbemu-what">(measured on the core this site ships, set to revision C)</span></td><td>27 compatibility-mode renders</td></tr>' +
+      '<tr><td>Revision D</td><td><b>0 px, 20 of 20 passing</b>, measured on the core this site ships at revision E, its default</td><td>20: <b>a different denominator</b></td></tr>' +
       '<tr><td>Revision C restricted to D&rsquo;s cells</td><td>1,346 px, 14 of 20: <b>not re-measured on the core this site ships, also stale</b></td><td>The only like-for-like comparison</td></tr>' +
     '</tbody></table>' +
     '<p class="gbemu-key"><b>Read that table this way.</b> The ' +
-    'current figure is <b>0 px and 27 of 27</b>. <b>The two ' +
-    'revision-D rows are stale</b>: they have not been re-measured against the current core, and they are marked rather ' +
-    'than silently carried. Do not difference them against the 0.</p>' +
-    '<p class="hw-readable">One cell alone accounted for 6,217 px of the D column&rsquo;s excess. The ' +
+    'current figures are <b>0 px and 27 of 27</b> against the revision C pictures with the core set to revision C, and <b>0 px and 20 of 20</b> against the revision D pictures at revision E, the default: at E our Color matches the revision D column. <b>The like-for-like row is stale</b>: it has not been re-measured against the current core, and it is marked rather ' +
+    'than silently carried. Do not difference it against the 0.</p>' +
+    '<p class="hw-readable">With the core at revision C, one cell alone accounted for 6,217 px of the D column&rsquo;s excess. The ' +
     'scoring script <b>deliberately refuses to print a D total</b>, and that refusal stands: two ' +
     'totals on one page is an invitation to quote the flattering one.</p>' +
     '<p class="gbemu-key"><b>And the board is not a pass at any number, including zero.</b> Its own ' +
@@ -707,7 +704,7 @@ function gbcMachineEmulationTabHTML(d) {
         'three per-pixel outcomes occurs <b>varies between individual consoles, and within a single ' +
         'console</b>. <b>A hardware capture settles nothing general there</b>: there is no ' +
         'single right answer to go and measure. Its <em>Colour</em> half is a different row, ' +
-        'defined with one reference and an unambiguous rule, and it is declined: the residual is ' +
+        'defined with one reference and an unambiguous rule. On revision C it is declined, and at revision E, the default, it passes (the Game Boy tab, Rule 22/4): on revision C the residual is ' +
         'one pixel at each of eight boundaries, which is a one-dot quantity where the only axis ' +
         'available moves in fours, and <b>the one constant that reaches it wins the row and costs ' +
         'five protected colour cells</b> (both merge-rule cells among them). +1 for ' +
@@ -720,19 +717,19 @@ function gbcMachineEmulationTabHTML(d) {
         'named reference columns agreeing pixel for pixel with exactly one revision differing ' +
         ') belongs there, to a row declined on which revision this project claims, and not ' +
         'here.</li>' +
-      '<li><b>One sound row cannot be closed from this corpus</b>, and it ' +
+      '<li><b>One sound row looked as if it could not be closed from this corpus</b>, and it now passes, 64 of 64, by a structural account of the noise write (the Game Boy tab, section 22). Its argument ' +
         'carries a ' +
         'model-independent falsifier worth knowing: a write landing <em>one machine cycle later</em> ' +
         'moves the observed event <b>eight T-cycles earlier</b>, which refutes every rule whose ' +
         'schedule is non-decreasing in the write time (that is the entire family anyone would ' +
         'propose). Forty-eight structured rules were built and scored against all 64 declared cells; ' +
         'the best reaches 41 and none completes a single group. The original&rsquo;s section 22 has ' +
-        'it in full. The board carries <b>one</b> sound failure, ' +
-        '<code>channel_4_freq_change</code>: <code>ashiepaws/strikethrough.gb</code> is not a ' +
+        'it in full, with how the row came to pass. The board carried <b>one</b> sound failure, ' +
+        '<code>channel_4_freq_change</code>, and carries none now: <code>ashiepaws/strikethrough.gb</code> was never a ' +
         'failure, as the paragraph at the top of this section says. <b>So this list ' +
         'totals six, and must:</b> three with no reference, one instance-dependent, ' +
-        'one colour acid test, one sound row. <b>Six</b>, which is the three named failures ' +
-        'plus the three that ship nothing, and matches the original&rsquo;s section 22 exactly. ' +
+        'one colour acid test, one sound row. <b>Six</b>, which is the three rows that looked unwinnable ' +
+        'plus the three that ship nothing, and matches the original&rsquo;s section 22 exactly; today only the three that ship nothing are not passes. ' +
         '<b>A list of unwinnable rows is a figure with a dependent</b>, and its dependent is the ' +
         'board.</li>' +
       '<li><b>And a category rather than a row: anything that declares itself revision-dependent.</b> ' +

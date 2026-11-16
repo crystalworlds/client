@@ -253,7 +253,7 @@
     var v = null;
     try { v = pack.gameboy(id); } catch (e) { return Promise.resolve(null); }
     if (!v) return Promise.resolve(null);
-    if (v.rom) v = v.rom; else if (v.b64) v = v.b64;
+    if (v.b64) v = v.b64;
     if (typeof v !== 'string') {
       if (v instanceof Uint8Array) return Promise.resolve(v);
       if (v instanceof ArrayBuffer) return Promise.resolve(new Uint8Array(v));

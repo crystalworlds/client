@@ -17,11 +17,11 @@
  * SOUND: only through the Sink lent by CwPlayAudio, only while this window is open.
  */
 import { manifestProblems, coreProblems, VirtualClock, CoreError } from './core-api.mjs';
-import { Presenter } from './present.mjs?v=2.1.1';   // HOST MODULES: bump this tag (and present.mjs's own) when one changes
-import { Input, keyLabel } from './input.mjs?v=2.1.1';
-import * as S from './saves.mjs?v=2.1.1';
-import * as E from './save-envelope.mjs?v=2.1.1';
-import { Cheats } from './cheats.mjs?v=2.1.1';
+import { Presenter } from './present.mjs?v=2.2.0';   // HOST MODULES: bump this tag (and present.mjs's own) when one changes
+import { Input, keyLabel } from './input.mjs?v=2.2.0';
+import * as S from './saves.mjs?v=2.2.0';
+import * as E from './save-envelope.mjs?v=2.2.0';
+import { Cheats } from './cheats.mjs?v=2.2.0';
 import { API as CORE_API } from './core-api.mjs';
 
 const BUILD = '20261014-host1';
@@ -41,7 +41,7 @@ const $ = id => document.getElementById(id);
    the relay its old page used, which the site already answers. */
 const REGISTRY = {
   gb: {
-    core: '../cores/gb/core.mjs', art: '../cores/gb/art.mjs?v=2.1.1',
+    core: '../cores/gb/core.mjs?v=2.2.0', art: '../cores/gb/art.mjs?v=2.2.0',
     relay: { ask: 'gbNeedCart', answer: 'gbCart', game: g => 'gb-' + g, firmware: { dmg: 'bios', cgb: 'biosCgb' } },
     deviceId: g => 'gb-' + g, padSys: 'gb', slots: 20,
   },
@@ -59,20 +59,20 @@ const REGISTRY = {
   /* Game & Watch (Phase 5, the G&W migration, 2026-10-14): the classic units. The game is
      the site's device id (silver-ball); the one relay answers with its program and melody. */
   gnw: {
-    core: '../cores/gnw/core.mjs?v=2.1.1', art: '../cores/gnw/art.mjs?v=2.1.1',
+    core: '../cores/gnw/core.mjs?v=2.2.0', art: '../cores/gnw/art.mjs?v=2.2.0',
     relay: null,
     deviceId: g => g, padSys: 'gnw', slots: 20,
   },
   /* H1 (Tetris Jr. and the colour units, Phase 5, 2026-10-14). Tetris Jr. is the one
      built-in game: no file is asked for (manifest.files.game.builtIn, H2). */
   tetrisjr: {
-    core: '../cores/tetrisjr/core.mjs?v=2.1.1', art: '../cores/tetrisjr/art.mjs?v=2.1.1',
+    core: '../cores/tetrisjr/core.mjs?v=2.2.0', art: '../cores/tetrisjr/art.mjs?v=2.2.0',
     relay: null, deviceId: g => g, padSys: 'tj', slots: 20,
   },
   /* The two colour units: the game is the unit ('mario' / 'zelda'); its external flash comes
      as the game and its internal flash as firmware '<unit>:internal', through the one relay. */
   tft: {
-    core: '../cores/tft/core.mjs?v=2.1.1', art: '../cores/tft/art.mjs?v=2.1.1',
+    core: '../cores/tft/core.mjs?v=2.2.0', art: '../cores/tft/art.mjs?v=2.2.0',
     relay: null, deviceId: g => ({ mario: 'reissue-super-mario-bros', zelda: 'reissue-zelda' })[g] || g, padSys: 'twin', slots: 20,
   },
 };
@@ -89,8 +89,8 @@ for (const s of ['a2600', 'a5200', 'a7800', 'alynx']) REGISTRY[s] = atariReg(s);
    play/cores/<id>/ folder changes (its own sub-imports, e.g. the colour units' compose.mjs,
    carry their own tags inside core.mjs). The Ataris share one module, so one tag. */
 const CORE_V = {
-  gb: '2.1.1', nes: '2.1.1', pm: '20261029-pm10-srcrev1', gnw: '20261101-gnw13-gwpad2',
-  tetrisjr: '20261029-tj5-srcrev1', tft: '20261102-tft15-fix6a', atari: '20261101-atari35-biospref4',
+  gb: '2.2.0', nes: '2.2.0', pm: '20261029-pm10-srcrev1', gnw: '20261101-gnw13-gwpad2',
+  tetrisjr: '20261029-tj5-srcrev1', tft: '20261102-tft15-fix6a', atari: '2.2.0',
 };
 const tagged = (p, v) => p + (p.includes('?') ? '&' : '?') + 'v=' + v;
 for (const [s, r] of Object.entries(REGISTRY)) {
@@ -176,7 +176,7 @@ function setSpeed(x, why) {
   x = SPEEDS.includes(+x) ? +x : 1;
   if (x === speed) return;
   speed = x; owed = 0; lastT = 0;
-  if (sink) { sink.clear(); sink.setMuted(muted || speed > 2); }
+  if (sink) { sink.clear(); sink.setMuted(muted || speed > 2 || fastLoadWas > 0); }
   H.speed = speed;
   log(`speed ${speed}x${why ? ' (' + why + ')' : ''}`);
   // The current speed, briefly, on the screen (a small pill like the rewind readout).
@@ -193,14 +193,33 @@ function setSpeed(x, why) {
    display, the compositor and throttling (measured 30 Hz in headless Chrome; the NES page
    recorded 29.9 Hz in a visible tab, which ran its machine at half speed). */
 let dirtyPicture = false;
+/* FAST LOADING (15 Nov 2026): a core may ask to run fast while its machine waits on a slow drive (the
+   Disk System reading a disk): core.ext.fastLoad() answers 0 (normal) or how many frames to run for
+   each normal one. Only at normal speed and never while rewinding; the sound is skipped meanwhile, as
+   at 4x, and comes back the moment the drive stops. A short note shows on the screen while it lasts. */
+let fastLoadWas = 0;
+function fastLoadNow() {
+  let n = 0;
+  try { n = speed === 1 && !rewinding && core && core.ext && typeof core.ext.fastLoad === 'function' ? (+core.ext.fastLoad() || 0) : 0; } catch (_) { n = 0; }
+  n = n > 1 ? Math.min(8, Math.floor(n)) : 0;
+  if (n !== fastLoadWas) {
+    fastLoadWas = n; H.fastLoad = n;
+    if (sink) { sink.clear(); sink.setMuted(muted || n > 0); }
+    log(n ? `the disk is loading: running ${n}x, sound off` : 'the disk has stopped: normal speed');
+    const h = $('speedHud');
+    if (h) { clearTimeout(speedHudT); if (n) { h.textContent = '▶▶ Loading the disk  sound off'; h.classList.add('show'); } else h.classList.remove('show'); }
+  }
+  return n;
+}
 function tick() {
   const t = performance.now();
   lastTickAt = t;
   if (!ready || holding()) { lastT = t; return; }
   if (!lastT) { lastT = t; return; }
   const dt = Math.min(250, t - lastT); lastT = t;
-  owed += dt * result.fps * speed / 1000;
-  const cap = 4 * speed;
+  const fl = fastLoadNow();
+  owed += dt * result.fps * speed * (fl || 1) / 1000;
+  const cap = 4 * speed * (fl || 1);
   let n = Math.floor(owed);
   if (n > cap) { H.stats.dropped += n - cap; n = cap; owed = 0; } else owed -= n;
   let ran = 0;
@@ -232,7 +251,7 @@ function runOne() {
   clock.advance(1);
   framesRun++; H.stats.frames++;
   const a = core.audio();
-  if (a && a.frames && sink && speed <= 2) sink.push(a.data, a.frames, manifest.audio.channels, (result.audio.rate || sink.rate) * speed);
+  if (a && a.frames && sink && speed <= 2 && !fastLoadWas) sink.push(a.data, a.frames, manifest.audio.channels, (result.audio.rate || sink.rate) * speed);
   if (++capN >= capEvery) { capN = 0; capture(); }
 }
 /* THE STATUS LINE (2026-10-14): what the old Game Boy page's footer said, for every
@@ -577,7 +596,13 @@ let fwChoices = {};
    game needs another role, e.g. the PAL 7800 BIOS, manifest.firmwareRole) or 'specific' (pick: one
    file by its hash, chosen in Settings). The server's list was kept when the site connected; the
    file itself is asked for only now. A file kept for another role is never used for this one. */
-const fwRole = (id, bytes) => { try { return manifest.firmwareRole ? String(manifest.firmwareRole(bytes || gameBytes, id) || '') : ''; } catch (_) { return ''; } };
+/* (14 Nov) the core may read the stored options (by key) to choose a role: the Game Boy's Color slot asks for
+   the Advance's own program on an Advance machine. */
+const fwOptRead = o => { try { return localStorage.getItem(optKey(typeof o === 'string' ? { key: o } : { id: o.id, key: o.key, scope: o.scope })); } catch (_) { return null; } };   // an option by its key, or by its id and scope
+const fwRole = (id, bytes) => { try { return manifest.firmwareRole ? String(manifest.firmwareRole(bytes || gameBytes, id, fwOptRead) || '') : ''; } catch (_) { return ''; } };
+/* the roles the firmware in hand was fetched for; a restart that changes one fetches again (setOption) */
+let fwRolesAt = '';
+const fwRolesNow = bytes => (manifest.files.firmware || []).map(f => f.id + '=' + fwRole(f.id, bytes)).join(',');
 const fwCacheId = (id, role) => (role && role !== 'boot' ? id + '@' + role : id);
 function askFwChoices(id, ms = 8000) {
   if (!siteRelay()) return Promise.resolve([]);
@@ -601,11 +626,14 @@ let fwNote = null;
 async function loadFirmware(bytes) {
   const out = {};
   fwNote = null;
+  fwRolesAt = fwRolesNow(bytes);
   const want = manifest.firmwareFor ? new Set(manifest.firmwareFor(bytes)) : null;
   for (const f of (manifest.files.firmware || [])) {
     if (want && !want.has(f.id)) continue;            // a cartridge never asks for the disk drive's firmware
     const choice = fwChoiceOf(f), role = fwRole(f.id, bytes);
-    if (choice === 'none' && f.required === 'never') { H.source['firmware:' + f.id] = 'none, your choice'; log(`${f.label}: none, by your choice`); continue; }
+    if (choice === 'none' && f.required === 'never') { if (f.ours) out['none:' + f.id] = true; H.source['firmware:' + f.id] = 'none, your choice'; log(`${f.label}: none, by your choice`); continue; }
+    /* (14 Nov) the core's own start-up program, chosen from the list: no file is fetched, the core is told */
+    if (choice === 'ours' && f.ours) { out['ours:' + f.id] = true; H.source['firmware:' + f.id] = f.ours + ', your choice'; log(`${f.label}: ${f.ours}, by your choice`); continue; }
     if (choice === 'user') {
       const mine = await S.firmwareCached(manifest, fwPer(f.id) + ':yours').catch(() => null);
       if (mine && mine.bytes) { out[f.id] = mine.bytes; H.source['firmware:' + f.id] = 'yours, from this device'; log(`${f.label}: your file from this device`); continue; }
@@ -631,6 +659,7 @@ async function loadFirmware(bytes) {
       out[f.id] = got; H.source['firmware:' + f.id] = r.source;
       if (!f.perGame) S.firmwareKeep(manifest, fwCacheId(f.id, role), got, 'site');
     } else if (cached && !(choice === 'auto' && cached.from === 'user')) { out[f.id] = cached.bytes; H.source['firmware:' + f.id] = cached.legacy ? 'old page cache' : 'cache'; }
+    if (!out[f.id] && f.ours) H.source['firmware:' + f.id] = f.ours;        // none found: the core's own runs
   }
   return out;
 }
@@ -651,12 +680,13 @@ function firmwareRows() {
     const src = H.source['firmware:' + f.id];
     const choice = fwChoice(f.id), list = fwChoices[f.id] || [];
     add('auto', 'Automatic' + (src && !/your choice|from this device|^none/.test(src) ? ` (${src === 'yours' ? 'your file' : src})` : ''));
+    if (f.ours) add('ours', f.ours);                  // (14 Nov) the core's own start-up program, for anyone to pick
     for (const c of list) add('sha:' + c.sha256, c.name + (c.roleName && list.some(x => x.roleName && x.roleName !== c.roleName) ? ` (${c.roleName})` : '') + (c.auto ? ', the game server’s usual one' : ''));   // FW1: role names when the list mixes roles
     if (choice === 'user') add('user', 'Your file from this device');
     if (f.required === 'never') add('none', 'None (start without it)');
     add('file', 'Choose a file from this device…');
     sel.lastChild.dataset.padSkip = '1';
-    sel.value = choice === 'none' && f.required === 'never' ? 'none' : choice === 'user' ? 'user' : (/^sha:/.test(choice) && list.some(c => 'sha:' + c.sha256 === choice)) ? choice : 'auto';
+    sel.value = choice === 'ours' && f.ours ? 'ours' : choice === 'none' && f.required === 'never' ? 'none' : choice === 'user' ? 'user' : (/^sha:/.test(choice) && list.some(c => 'sha:' + c.sha256 === choice)) ? choice : 'auto';
     const was = sel.value;
     sel.addEventListener('change', async () => {
       const v = sel.value;
@@ -772,13 +802,13 @@ async function boot() {
   const wantWorker = typeof Worker === 'function' && ((manifest.thread === 'worker' && threadAsk !== 'main') || threadAsk === 'worker')   /* ?thread=worker: any core (the Core API's cores are page-free), for an A/B */;
   if (wantWorker) {
     try {
-      const { createWorkerCore } = await import('./runner-worker.mjs?v=2.1.1');
+      const { createWorkerCore } = await import('./runner-worker.mjs?v=2.2.0');
       core = await createWorkerCore(new URL(REG.core, import.meta.url).href, env, { channels: manifest.audio.channels || 1 });
       core.onFrame = () => { dirtyPicture = true; };
       /* R4 audio (2026-10-15): the worker's sound goes to the sink as it arrives, into a deeper
          queue (the sink's setBuffer), since a worker's frames arrive less evenly than the page's. */
       core.onAudio = (data, frames) => {
-        if (!sink || speed > 2 || rewinding || holding()) return;
+        if (!sink || speed > 2 || fastLoadWas || rewinding || holding()) return;
         sink.push(data, frames, manifest.audio.channels, ((result && result.audio && result.audio.rate) || sink.rate) * speed);
       };
       /* The core may declare its own queue (manifest.audio.latencyMs); ?wbuf= still wins for an A/B.
@@ -803,7 +833,7 @@ async function boot() {
      play/host/rewind-ring.mjs (XOR delta + deflate on a worker, first written for the Atari core);
      the host decides from the manifest's state size, never the core. */
   if (manifest.state.supported && manifest.state.approxBytes >= BIG_STATE) {
-    try { const R = (await import('./rewind-ring.mjs?v=2.1.1')).Ring; big = new R({ max: Math.round(REW_SECONDS * 1000 / REW_CAPTURE_MS), capBytes: REW_CAP_BYTES, approxBytes: manifest.state.approxBytes }); }
+    try { const R = (await import('./rewind-ring.mjs?v=2.2.0')).Ring; big = new R({ max: Math.round(REW_SECONDS * 1000 / REW_CAPTURE_MS), capBytes: REW_CAP_BYTES, approxBytes: manifest.state.approxBytes }); }
     catch (e) { big = null; log('rewind helper not available, raw states: ' + e.message); }
   }
 
@@ -859,6 +889,25 @@ async function start(g, bytesIn) {
     if (embedded) say('This cartridge isn’t on this machine.', `Nothing here holds “${gameTitle}”: not the content pack, not the built-in collection and not a linked game server. Open a content pack that has it in Settings, Content, then try again, or choose the cartridge file on this device. Nothing is uploaded.`, { open: true });
     else say('No cartridge for this game.', 'Choose the cartridge file on this machine. Nothing is uploaded.', { open: true });
     return;
+  }
+  /* A BAD COPY IS REPAIRED BEFORE ANYTHING ELSE (13 Nov 2026, firmware/site/repairs.js): a file the
+     site knows as a bad copy with a tiny patch becomes its clean copy here, in memory (the person's
+     own file is never changed), and from here on it IS the clean copy: the not-supported check, the
+     hash, the boot program, the saves (the clean copy's id) and the core all see only the clean
+     bytes. A repair that cannot be loaded or does not give the clean copy exactly is refused. */
+  if (!builtIn && window.CWSRepair) {
+    const fix = await window.CWSRepair.repair(bytes, { title: gameTitle }).catch(() => ({ repaired: false }));
+    if (fix.refused) {
+      say('Not supported yet', window.CWSUnsupported ? window.CWSUnsupported.message(fix.refused) : window.CWSRepair.REASON);
+      if (!PREVIEW && window.CWSUnsupported) { try { window.CWSUnsupported.refuse(fix.refused, { closeHost: embedded }); } catch (_) {} }
+      return;
+    }
+    if (fix.repaired) {
+      bytes = fix.bytes; H.repaired = { from: fix.from, to: fix.to };
+      const c12 = fix.to.slice(0, 12);
+      if (/x[0-9a-f]{12}$/.test(game) && game.slice(-12) === fix.from.slice(0, 12)) game = game.slice(0, -12) + c12;   // saves, slots and options under the clean copy's id
+      log(`a bad copy (${fix.from.slice(0, 12)}) was repaired in memory into its clean copy (${c12})`);
+    } else H.repaired = null;
   }
   const bad = builtIn ? null : await unsupported(bytes);
   if (bad) {
@@ -1008,6 +1057,7 @@ async function reveal() {
    for this cartridge (result.extensions.tilt / .camera) and gave calls for (core.ext). */
 const devices = {};
 H.devices = devices;
+H.coreExtras = () => { try { return core && core.extras ? core.extras : null; } catch (_) { return null; } };   // a core's own diagnostics, for the tests
 /* THE GAME BOY PRINTER (2026-10-21): not a bar menu like the devices above but a window
    of its own, the Control Bar's Print panel. Shown from the start for a title on the printer list
    (play/cores/gb/printer-titles.mjs), and for any other game once it talks to the printer; the
@@ -1020,9 +1070,9 @@ async function setupDevices() {
   if (printer) { try { printer.destroy(); } catch (_) {} printer = null; }
   const ex = (result && result.extensions) || {};
   if (ex.printer && core.ext && core.ext.printer && !PREVIEW) {
-    const P = await import('./peripherals.mjs?v=2.1.1');
+    const P = await import('./peripherals.mjs?v=2.2.0');
     let listed = false;
-    try { const T = await import('../cores/gb/printer-titles.mjs?v=2.1.1'); listed = !!(gameHash && T.PRINTER_TITLES.has(gameHash.slice(0, 16))); } catch (_) {}
+    try { const T = await import('../cores/gb/printer-titles.mjs?v=2.2.0'); listed = !!(gameHash && T.PRINTER_TITLES.has(gameHash.slice(0, 16))); } catch (_) {}
     printer = new P.Printer({ core: () => core, listed, log, onShow: () => changed(),
       /* 2026-10-22: the window opens 2 seconds after a print is detected, not at once.
          The paper still collects meanwhile; Back before then (a thrown-away print) keeps it shut. */
@@ -1034,15 +1084,24 @@ async function setupDevices() {
   }
   /* R.O.B. (2026-10-21): beside the game, always (play/host/rob-panel.mjs). */
   if (ex.rob && core.ext && core.ext.rob && !PREVIEW) {
-    const R = await import('./rob-panel.mjs?v=2.1.1');
+    const R = await import('./rob-panel.mjs?v=2.2.0');
     devices.rob = new R.RobPanel({ core: () => core, kind: ex.rob, stage: $('stage'), layout: () => presenter.layout(), log, toast });   // toast: the Test note (25 Oct)
     log(`r.o.b.: plugged in (${ex.rob === 'gyro' ? 'Gyromite: gyro trays on controller two' : 'Stack-Up'}); he watches the screen for commands`);
+  }
+  /* (14 Nov) A choice the core marks `bar` (the Game Boy's Machine list) is a bar item too, the same list as its
+     Settings row; the core's own menus (the Game Boy's music player) and an on-screen key panel (the Workboy's) likewise. */
+  if (!PREVIEW) {
+    for (const d of (result && result.options) || []) if (d.bar && !d.hidden && d.type === 'enum' && Array.isArray(d.values)) devices['opt-' + d.id] = optionMenu(d);
+    let menus = []; try { menus = core.ext && typeof core.ext.menus === 'function' ? core.ext.menus() || [] : []; } catch (_) { menus = []; }
+    for (const m of menus) devices['menu-' + m.id] = coreMenu(m);
+    let kp = null; try { kp = core.ext && typeof core.ext.keyPanel === 'function' ? core.ext.keyPanel() : null; } catch (_) { kp = null; }
+    if (kp) devices['keys-' + kp.id] = new KeyPanel(kp, $('stage'), log);
   }
   const matPort = result && result.ports ? result.ports.find(p => p.device === 'mat' || p.panel) : null;   // any accessory with a button panel
   trackballBound = null;
   if (core.ext && core.ext.trackball && !PREVIEW) bindTrackball(core.ext.trackball);
   if (!(ex.tilt || ex.camera || ex.microphone || ex.tape || ex.recorder || ex.barcode || matPort)) return;
-  const P = await import('./peripherals.mjs?v=2.1.1');
+  const P = await import('./peripherals.mjs?v=2.2.0');
   const x = core.ext || {};
   if (ex.tilt && x.tilt) { devices.tilt = new P.Tilt({ core: () => core, screen: $('screen'), log }); log('tilt sensor: keys I J K L, the right stick, or drag on the screen'); }
   if (ex.camera && x.camera) {
@@ -1070,6 +1129,54 @@ async function setupDevices() {
   if (ex.microphone) { devices.mic = new P.Microphone({ press: on => input.consoleKey('voice', on), log, toast }); log('microphone: the console has one; off until chosen in the bar (or hold M)'); }
   // A title known to use it (index.html NesConsole.usesMicrophone, the old page's ?mic=1) asks for it at once.
   if (devices.mic && !PREVIEW) { let uses = false; try { const N = window.parent.NesConsole; uses = !!(N && N.usesMicrophone && N.usesMicrophone(gameTitle)); } catch (_) {} if (uses) { log('microphone: this title uses it, asking for it'); devices.mic.start(); } }
+}
+/* a Settings choice as a bar menu: the same values, the same setOption */
+function optionMenu(d) {
+  const cur = () => String(optionValues[d.id] != null ? optionValues[d.id] : d.default);
+  return { item: { icon: 'switch', label: d.label }, label: () => d.label,
+    menu: () => d.values.map(x => ({ id: x.v, label: x.label, checked: x.v === cur() })),
+    choose: v => { if (String(v) !== cur()) return setOption(d, String(v)); },
+    state: () => null, destroy() {} };
+}
+/* a menu the core describes: { id, icon, label(), menu(), choose(id) } */
+function coreMenu(m) {
+  return { item: { icon: m.icon || 'keys', label: typeof m.label === 'function' ? m.label() : m.label },
+    label: () => (typeof m.label === 'function' ? m.label() : m.label), menu: () => m.menu(),
+    choose: id => { const r = m.choose(id); present(); return r; }, state: () => null, destroy() {} };
+}
+/* AN ON-SCREEN KEY PANEL (the Workboy's keys, for a phone, a TV remote or no keyboard): rows of keys from the
+   core ({ title, rows: [[label, key]], press(key, down) }), shown and hidden from its bar menu. */
+class KeyPanel {
+  constructor(kp, stage, log) {
+    this.kp = kp; this.log = log || (() => {}); this.shown = false; this.held = new Map();
+    const el = this.el = document.createElement('div');
+    el.className = 'host-keys'; el.hidden = true; el.setAttribute('aria-label', kp.title);
+    el.innerHTML = kp.rows.map(r => `<div class="host-keys-row">${r.map(([l, k]) => `<button type="button" class="host-keys-key" data-k="${String(k).replace(/"/g, '&quot;')}">${String(l).replace(/</g, '&lt;')}</button>`).join('')}</div>`).join('');
+    if (!document.getElementById('host-keys-css')) {
+      const st = document.createElement('style'); st.id = 'host-keys-css';
+      st.textContent = `.host-keys{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:4px;width:min(96%,640px);padding:8px;border-radius:12px;background:rgba(16,18,22,.88);border:1px solid var(--line);touch-action:none;user-select:none}
+.host-keys[hidden]{display:none}
+.host-keys-row{display:flex;gap:4px}
+.host-keys-key{flex:1;min-width:0;min-height:36px;border-radius:8px;border:1px solid var(--dim);background:rgba(255,255,255,.06);color:var(--ink);font:600 12px/1 ui-sans-serif,system-ui,sans-serif;padding:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;touch-action:none}
+.host-keys-key.down{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.35);border-color:var(--cw-bar-accent,#9be15d)}`;
+      document.head.appendChild(st);
+    }
+    stage.appendChild(el);
+    const set = (b, down) => { if (!b) return; b.classList.toggle('down', down); try { this.kp.press(b.dataset.k, down); } catch (_) {} };
+    el.addEventListener('pointerdown', e => { const b = e.target.closest && e.target.closest('.host-keys-key'); if (!b) return; e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (_) {} this.held.set(e.pointerId, b); set(b, true); });
+    const up = e => { const b = this.held.get(e.pointerId); if (!b) return; this.held.delete(e.pointerId); set(b, false); };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
+    /* a controller's or remote's press on a focused key */
+    el.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.k && !e.repeat) { e.preventDefault(); set(e.target, true); } });
+    el.addEventListener('keyup', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.k) { e.preventDefault(); set(e.target, false); } });
+  }
+  get item() { return { icon: 'keys', label: this.kp.title }; }
+  show(on) { this.shown = !!on; this.el.hidden = !this.shown; if (!this.shown) { for (const [, b] of this.held) { try { this.kp.press(b.dataset.k, false); } catch (_) {} b.classList.remove('down'); } this.held.clear(); } }
+  menu() { return [{ id: 'show', label: 'Show the keys on the screen', checked: this.shown }, { id: 'hide', label: 'Hide them (your keyboard still types)', checked: !this.shown }]; }
+  choose(id) { this.show(id === 'show'); this.log(`${this.kp.title} ${this.shown ? 'shown' : 'hidden'}`); }
+  label() { return this.kp.title; }
+  state() { return null; }
+  destroy() { this.show(false); this.el.remove(); }
 }
 const DEVICE_ITEMS = { tilt: { icon: 'tilt', label: 'Tilt' }, camera: { icon: 'camera', label: 'Camera off' }, mic: { icon: 'mic', label: 'Microphone off' }, mat: { icon: 'mat', label: 'Power Pad' }, tape: { icon: 'tape', label: 'No tape' }, recorder: { icon: 'tape', label: 'Data Recorder' }, rob: { icon: 'keys', label: 'R.O.B.' }, barcode: { icon: 'keys', label: 'Barcode reader' } };
 /* TAPES KEPT ON THIS DEVICE (the Data Recorder, 2026-10-18), in the common save format: each
@@ -1114,6 +1221,7 @@ function portsChanged() {
   input.setPorts(result.ports);
   input.latchOut();
   bindPointer();
+  if (bindTrackball.want && !bindTrackball.want() && document.pointerLockElement) { try { document.exitPointerLock(); } catch (_) {} }   // the device that held the mouse was unplugged
   paintKeys();
   log('controllers now: ' + result.ports.map(p => p.label || p.device).join(', '));
   changed();
@@ -1131,21 +1239,27 @@ function bindTrackball(tb) {
   bindTrackball.done = true;
   const box = $('screenBox');
   const locked = () => document.pointerLockElement === box;
+  /* Which device the held pointer drives: a port that asks (pointerLock: its name; the 2600's Trak-Ball
+     and mice), else the 5200's Trak-ball, which always may. Nothing else (a light gun, a paddle) locks. */
+  const want = () => { const p = ((result && result.ports) || []).find(x => x && x.pointerLock); return p ? { label: p.pointerLock, who: p.label || 'Player ' + (p.port + 1) } : SYS === 'a5200' ? { label: 'Trak-ball', who: 'player 1' } : null; };
+  bindTrackball.want = want;
   box.addEventListener('dblclick', () => {
-    if (!trackballBound || locked() || !box.requestPointerLock) return;
+    if (!trackballBound || locked() || !box.requestPointerLock || !want()) return;
     try { const r = box.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
   });
   document.addEventListener('pointerlockchange', () => {
     const on = locked();
     if (trackballBound) trackballBound.lock(on);
     log('trak-ball: ' + (on ? 'on' : 'off'));
-    if (on) toast('Trak-ball: the mouse is player 1\u2019s controller. Escape gives it back.');
+    const w = want();
+    if (on && w) toast(`${w.label}: the mouse is ${String(w.who).toLowerCase()}\u2019s controller. Escape gives it back.`);
   });
   document.addEventListener('mousemove', e => { if (locked() && trackballBound) trackballBound.move(e.movementX, e.movementY); });
   const bit = e => (e.button === 0 ? 1 : e.button === 2 ? 2 : 0);
   document.addEventListener('mousedown', e => { if (locked() && trackballBound) trackballBound.button(bit(e), true); });
   document.addEventListener('mouseup', e => { if (trackballBound) trackballBound.button(bit(e), false); });
   box.addEventListener('contextmenu', e => { if (locked()) e.preventDefault(); });
+  /* Escape gives the mouse back: the browser's own, and play/play-keys.js where the page gets the key. */
 }
 /* Pointer devices (a light gun, a paddle): the picture's own pointer events, mapped to
    0..1 of the picture. No hover needed: a press aims and fires (a desktop Chrome can read as a TV). */
@@ -1929,7 +2043,11 @@ async function setOption(d, v) {
   }
   const how = core.setOptionAsync ? await core.setOptionAsync(d.id, v).catch(() => 'unknown') : core.setOption ? core.setOption(d.id, v) : 'unknown';   // a worker core answers when it has it (2026-10-22)
   log(`option ${d.id} = ${v} (${how})`);
-  if (how === 'reload') { await batteryFlush('option'); stopRewind(); rewindReset(); await mount(); }   // a restart: the history before it belongs to the machine that was
+  if (how === 'reload') {
+    await batteryFlush('option'); stopRewind(); rewindReset();   // a restart: the history before it belongs to the machine that was
+    if (gameBytes && fwRolesNow(gameBytes) !== fwRolesAt) { firmware = await loadFirmware(gameBytes); if (!PREVIEW) loadFwChoices(); }   // (14 Nov) another machine, another program
+    await mount();
+  }
   else if (how === 'ports') portsChanged();
   else if (how === 'art') { presenter.configure(core.video()); await placeArt(); present(); }
   else present();
@@ -2046,6 +2164,113 @@ async function registerBar() {
       unseal(bytes);                                     // damaged, older, another game or another model: refused now
       await S.putSlot(manifest, game, model, i, { env: 1, ts: Date.now(), state: new Uint8Array(bytes) });
     },
+    /* (14 Nov) A state file another emulator reads and writes (the Game Boy's BESS): the core says which, and judges it. */
+    foreign() { const f = core.ext && core.ext.foreignStates; return f ? { label: f.label, ext: f.ext, accept: f.accept } : null; },
+    async exportForeign(i) {
+      const f = core.ext && core.ext.foreignStates; if (!f) throw new Error('This console has no such files.');
+      const rec = (await states.list())[i];
+      if (!rec) throw new Error(`slot ${i + 1} is empty`);
+      if (rec.damaged) throw new E.SaveError('damaged');
+      const st = unseal(rec.state);
+      if (!f.exportable(st.payload)) throw new Error(`This save was made before saves carried the ${f.label} part. Load it, save again, then export.`);
+      return { bytes: new Uint8Array(st.payload), ext: f.ext };
+    },
+    /* the file goes into the running game at once, then is kept as save i in this site's own form */
+    async importForeign(i, bytes) {
+      const f = core.ext && core.ext.foreignStates; if (!f) throw new Error('This console has no such files.');
+      let back = null; try { back = core.serialize(); } catch (_) { back = null; }
+      let h;
+      try { h = core.check(bytes); h = core.unserialize(bytes); }
+      catch (e) { if (back) { try { core.unserialize(back); } catch (_) {} } throw e; }
+      input.resync(); rewindReset(); present();
+      await states.save(i);
+      log(`imported a state from another emulator into slot ${i + 1}${h && h.warning ? ' (' + h.warning + ')' : ''}`);
+      return { note: [h && h.warning, h && h.foreign ? f.note : ''].filter(Boolean).join(' ') };
+    },
+  };
+  /* THE GAME'S OWN SAVE IN AND OUT (15 Nov 2026): the cartridge's battery save (not a save state) as
+     the plain file other emulators keep: .sav for the Game Boy and the NES, the disk image for the
+     Disk System, the EEPROM or memory image for the others. A Game Boy cartridge with a clock gets the
+     48-byte clock footer the common desktop emulators write after the save (five live registers, five
+     latched, each a 32-bit word, then the time of the save as 64-bit Unix seconds); a 44-byte footer
+     (32-bit time) and a file with no footer are read too. A file of the wrong size is refused. An import
+     replaces the save and restarts the game so it reads it. */
+  const GS_SKIP = new Set(['rtc', 'clock']);                 // a clock goes with the save, never alone
+  const gsLabel = b => ({ cram2: "Player 2's game save", eeprom2: "Player 2's game save", disk: 'Disk save', savekey: 'SaveKey memory',
+    hsc: 'High Score Cartridge', flash: 'Flash memory', turbofile: 'Turbo File', battlebox: 'Battle Box' })[b.id] || 'Game save';
+  const gsRegions = () => (PREVIEW || !core || !core.battery || !result ? [] : (result.battery || []).filter(b => !GS_SKIP.has(b.id)));
+  const gsHasRtc = () => (result.battery || []).some(b => b.id === 'rtc');
+  const gsKb = n => (n >= 1024 && n % 1024 === 0 ? `${n / 1024} KB` : `${n} bytes`);
+  async function gsCurrent(id) {
+    await batteryFlush('export');
+    const live = !core.worker && core.battery.read(id);
+    if (live && live.length) return new Uint8Array(live);
+    if (batteryLatest[id]) return new Uint8Array(batteryLatest[id]);
+    const keys = batteryKeys[id]; if (!keys) return null;
+    const got = await S.batteryLoad(manifest, keys).catch(() => null);
+    return got && got.bytes ? new Uint8Array(got.bytes) : null;
+  }
+  /* our 28-byte clock record (20 bytes of clock block, latched S M H DL DH then live S M H DL DH and the
+     core's own counters, then the time of the save in ms) to and from the common footer */
+  function rtcFooter(rec) {
+    const out = new Uint8Array(48), dv = new DataView(out.buffer), rv = new DataView(rec.buffer, rec.byteOffset, rec.byteLength);
+    for (let i = 0; i < 5; i++) { dv.setUint32(i * 4, rec[5 + i], true); dv.setUint32(20 + i * 4, rec[i], true); }
+    const secs = Math.floor(rv.getFloat64(20, true) / 1000) || Math.floor(Date.now() / 1000);
+    dv.setUint32(40, secs >>> 0, true); dv.setUint32(44, Math.floor(secs / 4294967296) >>> 0, true);
+    return out;
+  }
+  function rtcFromFooter(f, now) {
+    const dv = new DataView(f.buffer, f.byteOffset, f.byteLength), rec = new Uint8Array(28);
+    if (now && now.length === 28) rec.set(now.subarray(0, 20));
+    for (let i = 0; i < 5; i++) { rec[5 + i] = dv.getUint32(i * 4, true) & 0xFF; rec[i] = dv.getUint32(20 + i * 4, true) & 0xFF; }
+    let secs = dv.getUint32(40, true); if (f.length >= 48) secs += dv.getUint32(44, true) * 4294967296;
+    if (!(secs > 0) || secs * 1000 > Date.now() + 86400000) secs = Math.floor(Date.now() / 1000);   // no time, or one in the future: the clock goes on from now
+    new DataView(rec.buffer).setFloat64(20, secs * 1000, true);
+    return rec;
+  }
+  const gameSave = {
+    list: () => gsRegions().map(b => ({ id: b.id, label: gsLabel(b), ext: b.id === 'cram' || b.id === 'sram' ? '.sav' : b.id === 'cram2' ? '.sav' : b.ext || '.sav', bytes: b.bytes })),
+    async exportOf(id) {
+      const b = gsRegions().find(r => r.id === id); if (!b) throw new Error('This game keeps no such save.');
+      let bytes = await gsCurrent(id);
+      if (!bytes || !bytes.length) throw new Error('This game has not kept a save yet.');
+      if (id === 'cram' && gsHasRtc()) {
+        const rec = !core.worker && core.battery.read('rtc');
+        if (rec && rec.length === 28) { const o = new Uint8Array(bytes.length + 48); o.set(bytes); o.set(rtcFooter(rec), bytes.length); bytes = o; }
+      }
+      log(`game save exported (${bytes.length} bytes)`);
+      return { bytes, ext: gameSave.list().find(r => r.id === id).ext };
+    },
+    /* the file judged before the player is asked: null, or why it cannot be used */
+    check(id, raw) {
+      const b = gsRegions().find(r => r.id === id); if (!b) return 'This game keeps no such save.';
+      const n = raw.length, want = b.bytes;
+      if (n === want) return null;
+      if (id === 'cram' && SYS === 'gb' && (n === want + 44 || n === want + 48)) return null;
+      if (id === 'disk' && n === want + 16 && raw[0] === 0x46 && raw[1] === 0x44 && raw[2] === 0x53 && raw[3] === 0x1A) return null;
+      return `This file is ${gsKb(n)}, and this game's save is ${gsKb(want)}. Choose a save made for this game.`;
+    },
+    async importInto(id, raw) {
+      const why = gameSave.check(id, raw); if (why) throw new Error(why);
+      const b = gsRegions().find(r => r.id === id);
+      const parts = {};
+      if (id === 'disk' && raw.length === b.bytes + 16) parts.disk = raw.subarray(16);
+      else parts[id] = raw.subarray(0, b.bytes);
+      let clock = '';
+      if (id === 'cram' && raw.length > b.bytes && gsHasRtc()) { parts.rtc = rtcFromFooter(raw.subarray(b.bytes), !core.worker && core.battery.read('rtc')); clock = ' with its clock'; }
+      stopRewind();
+      const put = () => { for (const k of Object.keys(parts)) if (!core.battery.write(k, new Uint8Array(parts[k]))) throw new Error('The game did not take this save.'); };
+      put(); core.reset(); put();
+      for (const k of Object.keys(parts)) {
+        const keys = batteryKeys[k]; if (!keys) continue;
+        batteryLatest[k] = new Uint8Array(parts[k]);
+        await S.batterySave(manifest, keys, parts[k]);
+      }
+      input.resync(); rewindReset(); present();
+      if (holds.has('player')) setPaused(false);
+      log(`game save imported (${raw.length} bytes${clock}); the game restarted to read it`);
+      return { clock: !!clock };
+    },
   };
   const bar = {
     sys: SYS, label: manifest.label, padSys: REG.padSys || SYS,
@@ -2057,11 +2282,13 @@ async function registerBar() {
       transfer: !!manifest.state.supported, lastClosed: embedded, screenshot: true, mute: true, keys: true, help: embedded,
       fullscreen: true, settings: true, variant: embedded, overlay: !!overlay, speed: SPEEDS, statusLog: true,
       media: !!(core.ext && core.ext.media && result.extensions && result.extensions.media),
-      devices: Object.keys(devices).map(id => Object.assign({ id }, DEVICE_ITEMS[id])),
+      devices: Object.keys(devices).map(id => Object.assign({ id }, DEVICE_ITEMS[id] || devices[id].item || {})),
       consoleKeys: consoleKeysOf(), rotate: !!(core.ext && core.ext.rotation),
       printer: !!printer,
       cheats: !!(core.ext && core.ext.cheats) && !PREVIEW,
       padSwap: !PREVIEW,
+      gameSave: !PREVIEW && gsRegions().length > 0,
+      autofire: !PREVIEW && !!(input && input.autofireList().length),
     }),
     padSwap: { on: () => padSwap, set: setPadSwap, does: padSwapDoes, seen: () => padSeen },
     title: () => gameTitle,
@@ -2116,10 +2343,12 @@ async function registerBar() {
     setMuted(on) {
       muted = !!on;
       try { localStorage.setItem('cw.play.muted', muted ? '1' : '0'); } catch (_) {}
-      if (sink) { sink.setMuted(muted || speed > 2); if (!muted && sink.state() !== 'running') sink.resume(); }
+      if (sink) { sink.setMuted(muted || speed > 2 || fastLoadWas > 0); if (!muted && sink.state() !== 'running') sink.resume(); }
       changed();
     },
     states,
+    gameSave,
+    autofire: { list: () => input.autofireList(), set: (k, on) => input.setAutofire(k, on) },
     identity: () => ({ sys: SYS, game, title: gameTitle, device: model, gameHash: gameHash ? gameHash.slice(0, 16) : null, core: core.info && core.info.build }),
     continueRestore: rec => restoreRec(rec),
     screenshot: async () => presenter.shot('image/png'),
@@ -2151,7 +2380,7 @@ async function registerBar() {
 let pendingTape = null, localPick = null;
 const TAPE_FILE = /\.(study|studybox)$/i;
 const hasTapes = () => !!(manifest && (manifest.extensions || []).includes('tape'));
-const LFmod = () => import('./local-files.mjs?v=2.1.1');
+const LFmod = () => import('./local-files.mjs?v=2.2.0');
 async function openLocal(f) {
   if (!f) return;
   if (TAPE_FILE.test(f.name)) {

@@ -59,7 +59,7 @@
   })();
   const LS = 'gnw.variants.v1';
   /* The tables' own cache tag: bump it whenever build_variants.mjs is re-run. */
-  const TABLES = '2.1.1';
+  const TABLES = '2.2.0';
   const T = {};           // sys -> { by12: Map(sha12 -> row), ids: {}, groups: [] }
   const loading = {};     // sys -> Promise
   let version = 0;        // bumps when a table lands
@@ -103,6 +103,22 @@
       .catch(err => { console.warn('[variants] no table for ' + sys + ' (' + (err && err.message || err) + '); its titles stand alone'); T[sys] = null; return null; });
     return loading[sys];
   }
+  /* A BAD COPY REPAIRED ON LOAD IS ITS CLEAN COPY (13 Nov 2026, firmware/site/repairs.js): its id is
+     read as the clean copy's everywhere here, so it takes the clean copy's group, rank, label, shelf,
+     box art and clip; and where the clean copy itself is loaded too, the bad copy is not shown at all
+     (blocked below), so a drawer never lists the same game twice. */
+  function cleanOf(sha12) {
+    try { const c = sha12 && window.CWSRepair && window.CWSRepair.clean12(sha12); return c || sha12; } catch (e) { return sha12; }
+  }
+  let idSet = null;
+  function repairedTwin(d) {
+    try {
+      const R = window.CWSRepair, c = d && R && R.cleanId(d.id);
+      if (!c || typeof ALL_DEVICES === 'undefined') return false;
+      if (!idSet || idSet.n !== ALL_DEVICES.length) { idSet = { n: ALL_DEVICES.length, s: new Set(ALL_DEVICES.map(x => x && x.id)) }; setTimeout(() => { idSet = null; }, 0); }
+      return idSet.s.has(c);
+    } catch (e) { return false; }
+  }
   /** The table row for a title, or null (unknown hash, or table not here yet). */
   function info(d) {
     if (!d || !d.id) return null;
@@ -115,7 +131,7 @@
       if (t === undefined) load(sys);
       else if (t) {
         const m = /-x([0-9a-f]{12})$/.exec(d.id);
-        const sha = m ? m[1] : (t.ids[d.id] || '').slice(0, 12);
+        const sha = cleanOf(m ? m[1] : (t.ids[d.id] || '').slice(0, 12));
         const f = sha && t.by12.get(sha);
         if (f) e = { sys, sha: f.sha, g: f.row[0], rank: f.row[1], shelf: f.row[2], flags: f.row[3], label: f.row[6] || '', kind: (t.groups[f.row[0]] || [])[2] || '',
                      /* A HACK IS ALWAYS A VARIANT (3 Nov 2026: "hacks are clearly variants and need to always be
@@ -180,7 +196,7 @@
     if (t === undefined) { load(sys); return undefined; }
     if (!t) return null;
     const m = /-x([0-9a-f]{12})$/.exec(id || '');
-    const sha12 = m ? m[1] : (t.ids[id] || '').slice(0, 12);
+    const sha12 = cleanOf(m ? m[1] : (t.ids[id] || '').slice(0, 12));
     const f = sha12 && t.by12.get(sha12);
     if (!f) return null;
     if (String(f.row[3]).indexOf('R') >= 0) return { sha: f.sha, shelf: f.row[2], self: true };
@@ -260,6 +276,7 @@
      remote, and the public count in Settings keeps the number visible (see
      tools/unsupported/README.md). */
   function blocked(d) {
+    if (repairedTwin(d)) return true;   // a repaired bad copy whose clean copy is loaded too (see cleanOf)
     try { return !!(d && window.CWSUnsupported && window.CWSUnsupported.forDevice(d)); } catch (e) { return false; }
   }
   const supported = list => (Array.isArray(list) ? list.filter(d => !blocked(d)) : list);

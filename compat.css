@@ -87,6 +87,8 @@ html body .about-pop.cl-pop .gw-frame-screen { padding: 22px 22px 26px; }
 .cl-st.lad-untested { color: #2a1d02; }
 /* 28 Oct: Untested / not found (a known release not found, never counted): an outline, so it never reads as a bar colour */
 .cl-root .lad-notfound { background: transparent; box-shadow: inset 0 0 0 1.5px #8fa3b8; } .cl-st.lad-notfound { color: #c9d6e3; }
+.cl-root .lad-unseen { background: transparent; box-shadow: inset 0 0 0 1.5px #b39ac9; } .cl-st.lad-unseen { color: #dccbea; }
+.cl-root .lad-datatools { background: transparent; box-shadow: inset 0 0 0 1.5px #7fb0c9; } .cl-st.lad-datatools { color: #cfe3ee; }
 .cl-why { display: block; margin-top: 3px; font-size: 11.5px; line-height: 1.25; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cl-c-hash code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); }
 .cl-none { color: rgba(255,255,255,.5); }

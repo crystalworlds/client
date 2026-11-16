@@ -1,7 +1,7 @@
 {
  "format": "cw-overlay/1",
  "sys": "gb",
- "label": "Game Boy / Game Boy Color",
+ "label": "Game Boy / Game Boy Color / Game Boy Advance",
  "device": "float",
  "theme": {
   "press": "rgba(155,188,15,.62)",
@@ -215,6 +215,57 @@
      "w": 0.097,
      "h": 0.0256
     }
+   ],
+   "agb": [
+    {
+     "id": "dpad",
+     "label": "D-pad",
+     "shape": "dpad",
+     "x": 0.1757,
+     "y": 0.3694,
+     "w": 0.1158,
+     "h": 0.1959
+    },
+    {
+     "id": "b",
+     "label": "B",
+     "input": "KeyZ",
+     "shape": "circle",
+     "x": 0.7628,
+     "y": 0.3952,
+     "w": 0.0655,
+     "h": 0.1117
+    },
+    {
+     "id": "a",
+     "label": "A",
+     "input": "KeyX",
+     "shape": "circle",
+     "x": 0.8399,
+     "y": 0.3488,
+     "w": 0.0655,
+     "h": 0.1117
+    },
+    {
+     "id": "select",
+     "label": "SELECT",
+     "input": "ShiftRight",
+     "shape": "circle",
+     "x": 0.2346,
+     "y": 0.6546,
+     "w": 0.0363,
+     "h": 0.0619
+    },
+    {
+     "id": "start",
+     "label": "START",
+     "input": "Enter",
+     "shape": "circle",
+     "x": 0.2346,
+     "y": 0.5739,
+     "w": 0.0363,
+     "h": 0.0619
+    }
    ]
   }
  },
@@ -344,6 +395,11 @@
   {
    "what": "art buttons (the whole console, shown on a tall narrow screen, 2026-10-17)",
    "source": "measured 2026-10-17 by colour masks on the site's own art (play/cores/gb/art.mjs BEZEL images), checked on 3-4x gridded crops: GameBoyConsole.png 496x843: d-pad cross 58..170 x 479..591, B cap centre (340.5,547.5) dia 54, A (415,513.5) dia 53, SELECT pill centre (186,647), START (263,646.5), slant -25deg (the float pad's measured slant); GameBoyColorConsole.png and the four colour shells (all 505x852, identical to 2 px): d-pad 66..176 x 475..585, B (333.5,543.5) dia 52, A (416,517) dia 52, SELECT (219.5,661) 37x12, START (287.5,661); GameBoyColorPokemonConsole.svg rendered at 722x1250: d-pad 70..234 x 743..911, B (484.5,849.5) dia 81, A (614.5,807) dia 82, SELECT (304,1036.5) 56x19, START (411,1037.5) 58x23. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons about 1.25x, pills about 1.2x long and 1.4x to 2x thick). Used only while the whole console is shown (setArtView); the cropped band keeps the float pad",
+   "licence": "site-owned measurement of the site's own artwork"
+  },
+  {
+   "what": "art buttons on the Game Boy Advance (variant agb, the whole device on a wide stage, 2026-11-15)",
+   "source": "measured 2026-11-15 by colour masks on the site's own art (images/art/gba/GameBoyAdvanceConsole.webp, 993x582, built by WASM_Source/gba-shells), checked on 3x and 4x gridded crops: d-pad cross 121..228 x 162..268, B cap centre (757.5,230) dia 52, A (834,203) dia 53, START button centre (233,334) dia 24, SELECT (233,381) dia 24. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons 1.25x, Start and Select 1.5x as they are small). Used only while the whole device is shown; a portrait stage crops it to its screen and keeps the float pad",
    "licence": "site-owned measurement of the site's own artwork"
   },
   {

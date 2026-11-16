@@ -9,7 +9,7 @@
  * WHAT IT PLAYS. Every game file the play windows take, by the same lists the cores declare
  * (play/cores/<console>/core.mjs manifest files.game.exts), and a .zip of them, unpacked in the
  * browser by the content pack's own reader (firmware/site/content_pack.js readZip):
- *     Game Boy and Game Boy Color   .gb .gbc .sgb
+ *     Game Boy and Game Boy Color   .gb .gbc .sgb, and .gbs music files
  *     NES, Famicom, Disk System     .nes .unf .unif .fds
  *     Pokemon mini                  .min
  *     Atari 2600 / 5200 / 7800      .a26 / .a52 .car / .a78
@@ -56,7 +56,7 @@
     alynx: { label: 'Atari Lynx', max: MB16, cat: 'atarilynx' },
   };
   const EXT = {
-    gb: 'gb', gbc: 'gb', sgb: 'gb', cgb: 'gb',
+    gb: 'gb', gbc: 'gb', sgb: 'gb', cgb: 'gb', gbs: 'gb',
     nes: 'nes', unf: 'nes', unif: 'nes', fds: 'nes',
     min: 'pm',
     a26: 'a2600', a52: 'a5200', car: 'a5200', a78: 'a7800',
@@ -76,6 +76,7 @@
     if (ascii(u, 0, 4) === 'LYNX') return { sys: 'alynx' };
     // The Game Boy's boot logo at 0x104 (its first bytes are fixed: CE ED 66 66).
     if (u.length > 0x150 && u[0x104] === 0xCE && u[0x105] === 0xED && u[0x106] === 0x66 && u[0x107] === 0x66) return { sys: 'gb' };
+    if (ascii(u, 0, 3) === 'GBS' && u[3] === 1) return { sys: 'gb' };   // a GBS music file
     const e = extOf(name);
     if (EXT[e]) return { sys: EXT[e], fds: e === 'fds' };
     if (e === 'bin') return { err: 'bin' };
@@ -85,7 +86,7 @@
   const MSG = {
     bin: 'A .bin file carries no header, so nothing in it says which machine it is for. Rename it to .a26 (Atari 2600), .a52 (Atari 5200) or .a78 (Atari 7800) and choose it again. Game & Watch programs and the colour units\' flash go in a content pack, with their artwork.',
     gnw: 'Game & Watch units need their program, their artwork and their other parts together. Put them in one .zip and open it as a content pack (the Content pack tile).',
-    unknown: 'This is not a game file the site can play. It takes Game Boy (.gb, .gbc), NES and Famicom (.nes, .unf, .fds), Pokémon mini (.min), Atari (.a26, .a52, .a78, .lnx) files, and a .zip of them.',
+    unknown: 'This is not a game file the site can play. It takes Game Boy (.gb, .gbc, and .gbs music), NES and Famicom (.nes, .unf, .fds), Pokémon mini (.min), Atari (.a26, .a52, .a78, .lnx) files, and a .zip of them.',
     empty: 'There is no game file the site can play in this .zip.',
     big: 'This file is larger than any game the site plays.',
     zip: 'This .zip could not be read. It may be damaged, or packed in a way the browser cannot open.',

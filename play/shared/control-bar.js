@@ -120,9 +120,9 @@
   const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx']); // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
   const framed = window.parent && window.parent !== window;
   /* Screenshot -> phone photo library (play/shared/save-image.js), loaded now so it is ready before the tap. */
-  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.1.1', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
+  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.2.0', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
   /* The one save table (play/shared/save-table.js, 8 Nov 2026), loaded now; renderSaves waits for it. */
-  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.1.1', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
+  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.2.0', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
 
   /* ------------------------------------------------------------------ flag */
   /* One bar for every console, in the one play host (2026-10-15): the ?ui= switch is gone. */
@@ -140,6 +140,7 @@
   const MAGIC = [0x43, 0x57, 0x53, 0x41, 0x56, 0x45, 0x1a, 0x01];
   const CwSave = {
     FORMAT: 1, EXT: '.cwsave',
+    isCwSave(u) { return !!u && u.length >= 16 && MAGIC.every((b, i) => u[i] === b); },
     encode(meta, state) {
       const m = new TextEncoder().encode(JSON.stringify(Object.assign({ format: 1 }, meta)));
       const s = state instanceof Uint8Array ? state : new Uint8Array(state);
@@ -397,6 +398,10 @@
   .cb-menu button.cb-ch-on{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.16)}
   .cb-menu button.cb-ch-on:hover,.cb-menu button.cb-ch-on:focus-visible{background:rgba(var(--cw-bar-accent-rgb,155,225,93),.28)}
   .cb-menu button.cb-ch-on .own{color:#0a0e14;background:var(--cw-bar-accent,#9be15d);font-weight:700;border-radius:999px;padding:2px 8px}
+  /* The Print window's size list shows its current size as every drop-down list does (14 Nov 2026,
+     play/shared/select-list.js): the whole row in the accent, dark ink, and a separate focus ring. */
+  .cb-scale-list button[aria-selected="true"],.cb-scale-list button[aria-selected="true"]:hover{background:var(--cw-bar-accent,#9be15d);color:#0a0e14;font-weight:700}
+  .cb-scale-list button[aria-selected="true"]:focus-visible{background:var(--cw-bar-accent,#9be15d);color:#0a0e14;box-shadow:inset 0 0 0 2px #0a0e14,inset 0 0 0 4px var(--cw-bar-accent,#9be15d)}
   .cb-menu button.cb-up,.cb-menu button.cb-mmore{color:var(--cw-bar-accent-soft,#c9e7a9)}
   .cb-menu .cb-vr-find{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;margin:0 0 6px;padding:0 4px 0 9px;box-sizing:border-box;
     background:var(--cw-bar-menu,rgb(20,23,28));border:1px solid rgba(255,255,255,.28);border-radius:8px}
@@ -432,6 +437,11 @@
   .cb-table td{padding:6px 8px;border-bottom:1px solid var(--cw-bar-line-2,#22262d)}
   .cb-table td:first-child{color:var(--cw-bar-dim,#9aa1ad)}
   .cb-table td:last-child{text-align:right}
+  /* Auto-fire: one switch per button. */
+  .cb-af button{background:var(--cw-bar-field,#1d2026);border:1px solid var(--cw-bar-line,#2a2e36);color:var(--cw-bar-dim,#9aa1ad);border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;min-width:4.2em}
+  .cb-af button[aria-pressed="true"]{border-color:var(--cw-bar-accent-edge,#9bbc0f);color:var(--cw-bar-accent-ink,#d8f08a);background:rgba(var(--cw-bar-accent-rgb,155,225,93),.14)}
+  .cb-af button:hover,.cb-af button:focus-visible{border-color:var(--cw-bar-accent,#9be15d);outline:none;box-shadow:0 0 0 2px rgba(var(--cw-bar-accent-rgb,155,225,93),.55)}
+  .cb-af tr.cb-af-pl td{color:var(--cw-bar-ink,#e6e8ec);font-weight:600;padding-top:10px;text-align:left}
   .cb-kbd{display:inline-block;min-width:1.6em;padding:2px 7px;border:1px solid var(--cw-bar-kbd-line,#2f343d);border-bottom-width:2px;border-radius:6px;background:var(--cw-bar-card,#15181d);color:var(--cw-bar-ink,#e6e8ec);
     font:600 11.5px ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center;margin-left:3px}
   /* Saves: the table's own styles are in play/shared/save-table.js (8 Nov 2026). */
@@ -1291,10 +1301,11 @@
     p.innerHTML = `<div class="cb-tabs" role="tablist" aria-label="Keys">
         <button type="button" role="tab" data-tab="kb" aria-selected="true">Keyboard</button>
         <button type="button" role="tab" data-tab="pad" aria-selected="false">Gamepad</button>
-        <button type="button" role="tab" data-tab="win" aria-selected="false">Window</button></div>
+        <button type="button" role="tab" data-tab="win" aria-selected="false">Window</button>${caps.autofire ? '<button type="button" role="tab" data-tab="af" aria-selected="false">Auto-fire</button>' : ''}</div>
       <div class="cb-tabpanel" data-tp="kb" role="tabpanel"></div>
       <div class="cb-tabpanel" data-tp="pad" role="tabpanel" hidden></div>
       <div class="cb-tabpanel" data-tp="win" role="tabpanel" hidden></div>
+      <div class="cb-tabpanel" data-tp="af" role="tabpanel" hidden></div>
       <button type="button" class="cb-act" data-keybind>Change keys and buttons…</button>`;
     const kb = p.querySelector('[data-tp="kb"]');
     let content = null; try { content = C.keysContent && C.keysContent(); } catch (_) {}
@@ -1309,6 +1320,28 @@
     p.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'));
     p.querySelectorAll('[data-tp]').forEach(x => { x.hidden = x.dataset.tp !== t; });
     if (t === 'pad') renderPad();
+    if (t === 'af') renderAutofire();
+  }
+  /* AUTO-FIRE (15 Nov 2026): a switch for each of the console's buttons; a button switched on presses
+     itself again and again while it is held. Kept for this console on this device. */
+  function renderAutofire(focusKey) {
+    const el = panels.keys && panels.keys.querySelector('[data-tp="af"]'); if (!el) return;
+    let L = []; try { L = (C.autofire && C.autofire.list()) || []; } catch (_) { L = []; }
+    if (!L.length) { el.innerHTML = '<div class="cb-sub">This console has no buttons for auto-fire.</div>'; return; }
+    const players = new Set(L.map(r => r.player)).size;
+    let last = null, rows = '';
+    for (const r of L) {
+      if (players > 1 && r.player !== last) { rows += `<tr class="cb-af-pl"><td colspan="2">${esc(r.player)}</td></tr>`; last = r.player; }
+      rows += `<tr><td>${esc(r.label)}</td><td><button type="button" data-af="${esc(r.key)}" aria-pressed="${r.on}" aria-label="Auto-fire for ${esc(r.label)}${players > 1 ? ', ' + esc(r.player) : ''}">${r.on ? 'On' : 'Off'}</button></td></tr>`;
+    }
+    el.innerHTML = `<table class="cb-table cb-af">${rows}</table>
+      <div class="cb-sub">A button switched on presses itself again and again while you hold it, about 15 times a second. Off for every button unless you switch it on here; kept for this console on this device.</div>`;
+    el.querySelectorAll('[data-af]').forEach(b => b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      try { C.autofire.set(b.dataset.af, on); } catch (_) {}
+      renderAutofire(b.dataset.af);
+    }));
+    if (focusKey) { const b = Array.from(el.querySelectorAll('[data-af]')).find(x => x.dataset.af === focusKey); if (b) { try { b.focus({ focusVisible: true }); } catch (_) { b.focus(); } } }
   }
   function renderPad() {
     const el = panels.keys.querySelector('[data-tp="pad"]');
@@ -1410,15 +1443,79 @@
     const N = maxSaves(), title = (C.title && C.title()) || '';
     p.innerHTML = `<h3>Saves</h3><div class="cb-sub">${esc(title)}${title ? ' · ' : ''}${rows.length} of ${N} saves${lastClosed ? ' · 1 auto save' : ''}</div>` +
       '<div class="cb-sv-host" style="display:contents"></div>' +
-      '<div class="cb-sv-hint">Select a save, then Load or Save.<span class="kb"> Ctrl+S saves to the selected save, Ctrl+L loads it.</span></div>';
+      '<div class="cb-sv-hint">Select a save, then Load or Save.<span class="kb"> Ctrl+S saves to the selected save, Ctrl+L loads it.</span></div>' +
+      '<div class="cb-gs-host" style="display:contents"></div>';
     const w = parseFloat(String(cfg.shot || '').split('/')[0]) || 0;
     window.CwSaveTable.render(p.querySelector('.cb-sv-host'), {
       max: N, shot: cfg.shot, pixelated: w > 0 && w <= 512, rows,
       autos: lastClosed ? [{ key: 'last', label: 'Last closed', sub: 'Saved by itself when you last closed this game', ts: lastClosed.ts, thumb: lastClosed.thumb }] : [],
       selected: slot, focus: focusWhere || null,
-      can: { note: !!(C.states && typeof C.states.setNote === 'function'), transfer: !!caps.transfer },
-      on: { select: s => { slot = s; }, load: loadSlot, loadAuto: loadLast, save: saveSlot, del: deleteSlot, note: setNote, exportRow: exportSlot, importRow: importSlot },
+      can: { note: !!(C.states && typeof C.states.setNote === 'function'), transfer: !!caps.transfer, foreign: foreignKind() ? foreignKind().label : '' },
+      on: { select: s => { slot = s; }, load: loadSlot, loadAuto: loadLast, save: saveSlot, del: deleteSlot, note: setNote, exportRow: exportSlot, importRow: importSlot, exportForeign: exportForeignSlot },
     });
+    renderGameSave(p);
+  }
+  /* THE GAME'S OWN SAVE (15 Nov 2026): under the saves, the cartridge's battery save as the plain file
+     other emulators use, out and in. An import asks first, here in the panel, then the game restarts to
+     read it. The host judges the file (its size) before anything is asked. */
+  function renderGameSave(p) {
+    const at = p.querySelector('.cb-gs-host'); if (!at) return;
+    let list = []; try { list = caps.gameSave && C.gameSave ? C.gameSave.list() : []; } catch (_) { list = []; }
+    if (!list.length) return;
+    const box = document.createElement('div'); box.className = 'cb-gs'; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Game save');
+    box.innerHTML = '<div class="cb-gs-head"><b>Game save</b><span>The game&#39;s own save, as a file other emulators read and write. It is not one of the saves above.</span></div>';
+    for (const r of list) {
+      const row = document.createElement('div'); row.className = 'cb-gs-row';
+      row.innerHTML = `<span class="cb-gs-nm">${esc(r.label)} <small>${esc(r.ext)}</small></span><span class="cb-gs-acts"></span>`;
+      const acts = row.querySelector('.cb-gs-acts');
+      const btn = (label, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); acts.appendChild(b); return b; };
+      const fill = () => {
+        acts.textContent = '';
+        btn('Export', () => exportGameSave(r), 'minor').setAttribute('aria-label', `Export ${r.label}`);
+        btn('Import', () => importGameSave(r, row, fill), 'minor').setAttribute('aria-label', `Import ${r.label}`);
+      };
+      fill(); box.appendChild(row);
+    }
+    at.appendChild(box);
+  }
+  async function exportGameSave(r) {
+    try {
+      const x = await C.gameSave.exportOf(r.id);
+      const id = C.identity();
+      const clean = String(id.title || C.label || 'game').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'game';
+      download(new Blob([x.bytes], { type: 'application/octet-stream' }), clean + (r.id === 'cram2' || r.id === 'eeprom2' ? ' (player 2)' : '') + x.ext);
+      toast(`${r.label} exported`);
+    } catch (e) { toast('Could not export: ' + (e.message || e), true); }
+  }
+  function importGameSave(r, row, fill) {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.addEventListener('change', async () => {
+      const f = inp.files && inp.files[0]; if (!f) return;
+      let raw;
+      try { raw = new Uint8Array(await f.arrayBuffer()); } catch (_) { toast('That file could not be read.', true); return; }
+      const why = C.gameSave.check(r.id, raw);
+      if (why) { toast(why, true); return; }
+      /* asked first, in the row: the save the game has now is replaced */
+      const acts = row.querySelector('.cb-gs-acts'); acts.textContent = '';
+      const a = document.createElement('div'); a.className = 'cb-sv-ask'; a.setAttribute('role', 'group');
+      a.innerHTML = `<span>Replace this game's save with “${esc(f.name)}”? The game restarts to read it, and the save it has now is gone unless you export it first.</span>`;
+      acts.appendChild(a);
+      const mk = (label, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); a.appendChild(b); return b; };
+      mk('Replace', async () => {
+        a._cancel = null;
+        try {
+          const res = await C.gameSave.importInto(r.id, raw);
+          fill();
+          if (panel) closePanel(false);
+          toast(`${r.label} imported${res && res.clock ? ', with its clock' : ''}. The game has restarted to read it.`);
+        } catch (e) { fill(); toast('Could not import: ' + (e.message || e), true); }
+      }, 'main');
+      const no = mk('Cancel', () => a._cancel && a._cancel(), '');
+      a._cancel = () => { a._cancel = null; fill(); const b = acts.querySelector('button:last-child'); if (b) b.focus(); };
+      try { no.focus(); } catch (_) {}
+    });
+    inp.click();
   }
   async function freeIndex() { const list = await readSaves(), N = maxSaves(); for (let i = 0; i < N; i++) if (!list[i]) return i; return -1; }
   async function undoIt() {
@@ -1490,14 +1587,34 @@
       toast(`${saveName(i)} exported`);
     } catch (e) { toast('Could not export: ' + e.message, true); }
   }
+  /* (14 Nov) a state file other emulators read (the Game Boy's BESS), when the window offers one */
+  function foreignKind() { try { return C.states && typeof C.states.foreign === 'function' ? C.states.foreign() : null; } catch (_) { return null; } }
+  async function exportForeignSlot(i) {
+    try {
+      const x = await C.states.exportForeign(i);
+      const id = C.identity(), d = new Date(), z = n => String(n).padStart(2, '0');
+      const clean = String(id.title || 'game').replace(/[\\/:*?"<>|]+/g, '').trim() || 'game';
+      download(new Blob([x.bytes], { type: 'application/octet-stream' }), `${clean} ${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}${z(d.getMinutes())}${x.ext}`);
+      toast(`${saveName(i)} exported for other emulators`);
+    } catch (e) { toast('Could not export: ' + (e.message || e), true); }
+  }
   /* i: a save's index, or null (into a new save). */
   function importSlot(i) {
     const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = CwSave.EXT + ',application/octet-stream';
+    const fk = foreignKind();
+    inp.type = 'file'; inp.accept = CwSave.EXT + ',application/octet-stream' + (fk && fk.accept ? ',' + fk.accept.join(',') : '');
     inp.addEventListener('change', async () => {
       const f = inp.files && inp.files[0]; if (!f) return;
       try {
-        const { meta, state } = CwSave.decode(new Uint8Array(await f.arrayBuffer()));
+        const raw = new Uint8Array(await f.arrayBuffer());
+        /* not a .cwsave: another emulator's state, which the window judges and loads */
+        if (fk && !/\.cwsave$/i.test(f.name) && !CwSave.isCwSave(raw)) {
+          if (i == null) { i = await freeIndex(); if (i < 0) { toast(`All ${maxSaves()} saves are in use: delete one first`, true); return; } }
+          const r = await C.states.importForeign(i, raw);
+          slot = i; renderSaves('act'); toast(`Imported as ${saveName(i)}.` + (r && r.note ? ' ' + r.note : ''));
+          return;
+        }
+        const { meta, state } = CwSave.decode(raw);
         const why = CwSave.refusal(meta, Object.assign({ label: C.label }, C.identity()));
         if (why) { toast(why, true); return; }
         if (i == null) { i = await freeIndex(); if (i < 0) { toast(`All ${maxSaves()} saves are in use: delete one first`, true); return; } }

@@ -24,9 +24,9 @@
  *
  * The core this page describes (the factbox figures are moved by the install
  * generator from play/nes/CORE-VERSION.json; this comment follows them):
- *   eight source files   1,588,478 bytes over eight files, LF-normalised,
- *                        set hash 3fb90593f5f6de1f...
- *   the module           308,469 bytes, sha256 11bdfbfa1e99156a...
+ *   eight source files   1,663,760 bytes over eight files, LF-normalised,
+ *                        set hash 8f2a3c320593ad7f...
+ *   the module           322,158 bytes, sha256 37ab34623f2a1226...
  *
  * NO SCREENSHOTS. There is no NES render bundled in this repository's image
  * payloads, and a broken image is worse than an absent one.
@@ -108,24 +108,24 @@ function nesEmulationTabHTML(d) {
     'machine, and its number says nothing about this one.</p>' +
     '<table class="gbemu-table"><tbody>' +
       '<tr><td>Source</td><td>Eight files: ' +
-        '<code>nes.c</code> 281,338, <code>nes_apu.inc</code> 105,812, <code>nes_cpu.inc</code> ' +
-        '49,906, <code>nes_fds.inc</code> 83,987, <code>nes_input.inc</code> 74,202, ' +
-        '<code>nes_mapper.inc</code> 812,129, <code>nes_ppu.inc</code> 144,656, ' +
-        '<code>nes_vs.inc</code> 36,448 bytes. <b>1,588,478 bytes in total</b>, LF-normalised, set ' +
-        'hash <code>3fb90593f5f6de1f&hellip;</code>. <code>nes.c</code> includes the other seven, ' +
+        '<code>nes.c</code> 292,687, <code>nes_apu.inc</code> 107,465, <code>nes_cpu.inc</code> ' +
+        '49,874, <code>nes_fds.inc</code> 83,683, <code>nes_input.inc</code> 74,677, ' +
+        '<code>nes_mapper.inc</code> 868,207, <code>nes_ppu.inc</code> 150,729, ' +
+        '<code>nes_vs.inc</code> 36,438 bytes. <b>1,663,760 bytes in total</b>, LF-normalised, set ' +
+        'hash <code>8f2a3c320593ad7f&hellip;</code>. <code>nes.c</code> includes the other seven, ' +
         'so all eight are compiled.</td></tr>' +
       '<tr><td>Binary</td><td>The WebAssembly module, sha256 ' +
-        '<code>11bdfbfa1e99156a&hellip;</code>, <b>308,469 bytes</b>, 208 exported functions, ' +
-        '<b>0 imports</b>, ABI version 1, emulator context 159,024 bytes</td></tr>' +
+        '<code>37ab34623f2a1226&hellip;</code>, <b>322,158 bytes</b>, 208 exported functions, ' +
+        '<b>0 imports</b>, ABI version 1, emulator context 159,048 bytes</td></tr>' +
       '<tr><td>Build</td><td><code>clang --target=wasm32 -nostdlib -O2 -flto -ffreestanding</code>, ' +
         'no entry point, exports dynamic, 128 KiB stack, undefined symbols allowed. <b>It is ' +
-        'byte-reproducible.</b> The build recipe reproduces 308,469 bytes and that equals the ' +
+        'byte-reproducible.</b> The build recipe reproduces 322,158 bytes and that equals the ' +
         'module this site runs, byte for byte, which is what makes the hash checkable rather than ' +
         'a label.</td></tr>' +
     '</tbody></table>' +
     '<p class="hw-readable"><b>The export surface has grown by 115 and lost none</b> since the core had 93 exported functions: <b>208</b> now, <b>0 removed</b>, so a host written against an older version of this core still links. ' +
     '<b>That is not a claim that the older core is still correct</b>: the module is a different ' +
-    '308,469 bytes with a different hash, and every figure on this page is about the current ' +
+    '322,158 bytes with a different hash, and every figure on this page is about the current ' +
     'one.</p>' +
     '<p class="gbemu-key"><b>What none of this establishes is that the core is correct</b>: ' +
     'only that these bytes are the ones that built the module the site serves. A hash detects ' +
@@ -142,7 +142,7 @@ function nesEmulationTabHTML(d) {
     'for each one on the screen. Nothing outside the cartridge decides whether a test passed, so ' +
     'a pass means the behaviour matches what the cartridge was written against, not merely that ' +
     'it agrees with another emulator.</p>' +
-    '<p class="hw-readable"><b>Measured on 8 November 2026, on the core of this release, with the cartridge&rsquo;s 4 November 2026 build.</b> ' +
+    '<p class="hw-readable"><b>Measured on 16 November 2026, on the core of this release, with the cartridge&rsquo;s 13 November 2026 build.</b> ' +
     'The last test to pass was the hybrid-addresses test. <b>Why this number and not ' +
     'another:</b> anyone can run the same cartridge and read the same screen, on this site, on ' +
     'another emulator or on a console, and that is what makes a score public.</p>' +
@@ -316,14 +316,14 @@ function nesEmulationTabHTML(d) {
 
   /* ==================================================================== 9 */
   '<section class="sect" id="nese-9"><h3 class="sect-h">9. The mapper chips this core has, and the ones it does not</h3>' +
-    '<p class="gbemu-key"><b>301 mapper numbers are dispatched, and that figure is measured ' +
+    '<p class="gbemu-key"><b>315 mapper numbers are dispatched, and that figure is measured ' +
     'rather than listed.</b> A test builds a machine for each number, sweeps the whole cartridge ' +
     'address space and compares it against an identical mapper-0 control, so the count comes ' +
-    'from running the core (measured 9 November 2026). A hand-written list of what an emulator ' +
+    'from running the core (measured 12 November 2026). A hand-written list of what an emulator ' +
     'supports drifts away from the code; a measured one cannot. Anything undispatched falls ' +
     'through to a default that does nothing, which is the honest behaviour: a cartridge whose ' +
     'chip is absent runs as though it had no banking hardware, and shows it.</p>' +
-    '<p class="hw-readable"><b>The table below details 14 of the 301</b>: the ones with a ' +
+    '<p class="hw-readable"><b>The table below details 14 of the 315</b>: the ones with a ' +
     'failure mode worth naming to anyone re-implementing them. It is not the dispatch list and ' +
     'does not claim to be. <b>The Disk System&rsquo;s mapper 20 is not a mapper chip at all</b> ' +
     '(it is a RAM adapter with its own register window, and it has section&nbsp;11 to itself), ' +
@@ -332,8 +332,11 @@ function nesEmulationTabHTML(d) {
     '<p class="hw-readable">The numbers were added in order of how many files each one covers in a ' +
     'large library of cartridge dumps, found by a census of the files&rsquo; own headers rather ' +
     'than by reputation, and the measuring sweep covers the whole NES 2.0 range so that numbers ' +
-    'above 255 are measured rather than assumed absent. <b>A full sweep of 16,844 cartridge ' +
-    'files on 18 October 2026 drew a picture from 15,989 of them (94.92%).</b> It detects change ' +
+    'above 255 are measured rather than assumed absent. <b>A full sweep of 13,696 cartridge ' +
+    'files on 14 November 2026 drew a picture from 13,607 of them (99.35%).</b> Only correct copies ' +
+    'of real games are counted: a copy the site repairs as it loads counts as its clean copy, and ' +
+    'damaged or altered copies, fan hacks that cannot start, and programs that are not games ' +
+    '(menus, firmware, test programs and utilities) are left out. It detects change ' +
     'and gross breakage and nothing finer.</p>' +
     '<p class="hw-readable"><b>What a dispatched number is worth, stated once: it means the number ' +
     'reaches a chip that changes state.</b> That is all the measurement shows. <b>It catches a ' +
@@ -474,6 +477,16 @@ function nesEmulationTabHTML(d) {
     'channel, automatic disk changes, and three pinned drive firmwares.</b> A sweep of 433 disk ' +
     'images on 18 October 2026 loaded 411 of them, and Disk System saves are checked against a ' +
     'reference save on three titles (section&nbsp;5).</p>' +
+    '<p class="hw-readable"><b>An automatic disk change asks the game first.</b> Before it guesses, ' +
+    'it tries the change on a saved copy and puts in the side the game&rsquo;s own disk check asks ' +
+    'for. Where that check cannot tell two sides apart, one game uses an order we recorded by ' +
+    'playing it: Tenshi Tachi no Houkago, whose two A sides carry the same label.</p>' +
+    '<p class="hw-readable"><b>A disk loads faster.</b> While the drive is reading, from power-on ' +
+    'until the game starts, and while one disk is changed for another, the emulator runs four ' +
+    'frames for each normal one with the sound off, and returns to normal speed when the drive ' +
+    'stops. The game sees every frame it would see at normal speed: only the clock on the wall ' +
+    'runs faster. It is on unless &ldquo;Load disks faster&rdquo; is switched off in the Disk ' +
+    'System&rsquo;s machine settings.</p>' +
     '<h4 class="gbemu-sub">Three firmwares, and they are not three witnesses</h4>' +
     '<p class="hw-readable"><b>Every result names its drive revision, alongside the core and the ' +
     'fill.</b> Three revisions are pinned. <b>They are not three independent references:</b> one ' +

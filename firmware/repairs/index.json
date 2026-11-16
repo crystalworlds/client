@@ -1,0 +1,46 @@
+{
+ "format": 1,
+ "limit": {
+  "bytes": 8192,
+  "share": 0.25
+ },
+ "systems": {
+  "nes": {
+   "count": 5463,
+   "shards": 16,
+   "files": {
+    "nes-0.json": "e8e945c72a206c8a969b14fdadecd6684ab53154931de03f64cd1e8e128d5a7a",
+    "nes-1.json": "eabfbad110086d4a3b6b36025637a9fb4b4bc941b637ae59e40cf7aeda00d837",
+    "nes-2.json": "fbcaff4ee1fecf0caf194bbfe60a7ab10ceb33841ed667d5c1e1292010d8b4a0",
+    "nes-3.json": "1079f5167071d87d2634473f0cdb0f387d8a03d9f707064b767d0465a0bc3afe",
+    "nes-4.json": "446d9491545b42c0d31cfb94ba0652850e6767461a3c131577f9a76d5c63cf50",
+    "nes-5.json": "c5502a7f5036ae73c62d360eb3712982a80c14e923a15222734ae86e522b07a0",
+    "nes-6.json": "7dec9ea45872279dae88922da3be59cf119abfeb247d033143357b7fa06fc4c0",
+    "nes-7.json": "e36418ad2c7b94ed2ae57e39d229ca3d3b92254729a293efb668229367753ae8",
+    "nes-8.json": "e4e8c815c9ddb3e4e9905f29a28dd92aeb99313921cd6bf78520d4afd30051ca",
+    "nes-9.json": "990d18fd28cc5e7a5d84dbe10a106c53c6d6779869cb65e5fbe0f83521978d84",
+    "nes-a.json": "1f2159fd4ebc1167837c46826e76308b96bf38c1b8a1c51181363dbc1bf7c859",
+    "nes-b.json": "cb695ab60038c52da7d912eced0fef9fe2cfe13adcf1d28f4a3324c7e1429936",
+    "nes-c.json": "d251ead8e895516845a97ae6bfe88e581d7300b052a66a0dcefc7b30fd8f6336",
+    "nes-d.json": "e2ed43d021d46331964481c8055032a68b2424938e9e953dcce11b609964961f",
+    "nes-e.json": "884ee4d7d54b843c15f989b80a5c80f3d94291d19051a7bf121e0a72cdcf6f26",
+    "nes-f.json": "1d42833c229f9d0680cea72bf44226b9e46d21c0b9fc7e7db25ba5de3f2248cc"
+   }
+  },
+  "atari5200": {
+   "count": 32,
+   "shards": 1,
+   "files": {
+    "atari5200.json": "448adba7861c43050a6b39ddc744edc110fe1ccdacea317f6bcfef6c7904f472"
+   }
+  },
+  "atari7800": {
+   "count": 6,
+   "shards": 1,
+   "files": {
+    "atari7800.json": "e51749b467bd200be2ed38e6ab546ba804f320e8f0dc6d59d7d6b46849d64862"
+   }
+  }
+ },
+ "version": "14718172aa1733b2f909086b576c551b269671e8e209a9aac0bc4b3e7841abd7"
+}

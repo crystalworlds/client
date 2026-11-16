@@ -37,18 +37,27 @@
   'use strict';
   if (window.CompatList) return;
 
-  const VERSION = '2.1.1';
+  const VERSION = '2.2.0';
   const BASE = 'firmware/compat/';
   /* Status 4 (28 Oct 2026): a known release (No-Intro) that has not been found, so it has never been
      tested. Listed and filterable, never counted: not in the bar, its percentages or "games tested". */
-  const STATUS = ['Plays', 'Boots', 'Nothing', 'Not yet tested', 'Untested / not found'];
-  const STATUS_KEY = ['plays', 'boots', 'nothing', 'untested', 'notfound'];
+  /* Status 5 (15 Nov 2026): a game of which no good copy has reached us, only damaged or altered copies, so
+     it has never been tested ("unseen by us"). Listed and filterable, never counted, as status 4. */
+  /* 15 Nov 2026 (follow-up 2): status 3 is "Untested", a game or a version no run has read yet: it plays, and it
+     is counted neither way. Status 6 is "Data and tools": a program that runs but is not a game (a menu,
+     firmware, a test program or a utility), never counted. Both have their own key, with no figure. */
+  /* 15 Nov 2026 (follow-up 3): status 4 is "Unseen by us", a No-Intro entry of which no copy has reached us (it was
+     "Untested / not found"); status 5 is no longer written. */
+  const STATUS = ['Plays', 'Boots', 'Nothing', 'Untested', 'Unseen by us', 'Unseen by us', 'Data and tools'];
+  const STATUS_KEY = ['plays', 'boots', 'nothing', 'untested', 'notfound', 'unseen', 'datatools'];
   const STATUS_TEXT = [
     'The game plays on our emulator.',
     'The game starts on our emulator but does not play: the screen stays blank, freezes, or stops at its title.',
     'The game does not start on our emulator.',
-    '',
-    'A known release that has not been found, so it has not been tested. Listed, not counted.',
+    'Not tested yet: it plays, but no test has read it, so it is counted neither way.',
+    'A known release of which no copy has reached us, so it has not been tested. Listed, not counted.',
+    'No good copy of this game has reached us, only damaged or altered ones, so it has not been tested. Listed, not counted.',
+    'Not a game: a program that runs, such as a menu, firmware, a test program or a utility. Listed, not counted.',
   ];
   const KIND = { commercial: 'Commercial', unl: 'Unlicensed and pirate', homebrew: 'Homebrew and public domain', hack: 'Hacks and translations', proto: 'Prototypes and betas', demo: 'Demos and samples', test: 'Testing and diagnostics' };
   const KIND_SHORT = { commercial: 'Commercial', unl: 'Unlicensed', homebrew: 'Homebrew', hack: 'Hack', proto: 'Prototype', demo: 'Demo', test: 'Test' };
@@ -96,11 +105,9 @@
   };
   const DEVICE_ART = new Set(['gnw', 'tft', 'tj']);
   const urlOk = new Map();   // url -> true (loaded) | false (missed), this page load
-  /* The tiles' chain: our bucket(s) first, then the second source (gamemeta.js: libretro's thumbnails,
-     named by the file's No-Intro name). Game & Watch, the colour units and Tetris Jr.: the site's own box
+  /* The tiles' chain: our bucket(s), then the generic cover (13 Nov 2026: no second source; every
+     cover is in our own buckets). Game & Watch, the colour units and Tetris Jr.: the site's own box
      art (index.html BOX_ART_IMAGES, the Box Art mode's pictures), keyed by the device id. */
-  const LR = { gb: 'Nintendo - Game Boy', gbc: 'Nintendo - Game Boy Color', sgb: 'Nintendo - Game Boy', nes: 'Nintendo - Nintendo Entertainment System', famicom: 'Nintendo - Nintendo Entertainment System',
-    fds: 'Nintendo - Family Computer Disk System', pm: 'Nintendo - Pokemon Mini', atari2600: 'Atari - 2600', atari5200: 'Atari - 5200', atari7800: 'Atari - 7800', atarilynx: 'Atari - Lynx' };
   function coverUrls(shelf, art, name) {
     if (DEVICE_ART.has(shelf)) {
       try {
@@ -109,9 +116,7 @@
         return u ? [u] : [];
       } catch (_) { return []; }
     }
-    const out = art ? (COVER[shelf] || []).map(b => b + art + '.png') : [];
-    try { if (name && LR[shelf] && window.GameMeta && GameMeta.thumbUrl && !(GameMeta.refusedArt && GameMeta.refusedArt(LR[shelf], name))) out.push(GameMeta.thumbUrl(LR[shelf], name)); } catch (_) {}
-    return out;
+    return art ? (COVER[shelf] || []).map(b => b + art + '.png') : [];
   }
   const clipUrls = (shelf, art, sha) => {
     const id = art || (shelf === 'pm' && sha ? 'pm-x' + sha.slice(0, 12) : '');
@@ -255,7 +260,8 @@
           const files = g[5].map(f => ({ name: f[0], label: f[1], reg: f[2], sha: f[3], id: f[4], st: f[5], why: f[6], date: f[7], art: f[8], k: f[9] }));
           const G = { t: g[0], sh: g[1], st: g[2], k: g[3], c: g[4], f: files, a: Array.isArray(g[6]) ? g[6] : null, key: g[1] + ':' + games.length };
           G.date = files.reduce((a, x) => (x.date > a ? x.date : a), '');
-          G.why = G.st === 0 ? '' : (files.find(x => x.why && x.st === G.st) || files.find(x => x.why) || {}).why || '';
+          /* a game that plays shows only its face file's own note (16 Nov 2026: what the file is and how it behaves) */
+          G.why = G.st === 0 ? (files[0] && files[0].st === 0 && files[0].why) || '' : (files.find(x => x.why && x.st === G.st) || files.find(x => x.why) || {}).why || '';
           G.card = (CARDS.find(c => c[2].includes(G.sh)) || [''])[0];
           G.q = fold(G.t); G.p = _punctHay(G.t);
           for (const x of files) { x.q = fold(x.name) + ' ' + fold(x.id); x.p = _punctHay(x.name); }
@@ -310,7 +316,7 @@
       + '<div class="cl-rows" data-cl-rows></div>'
       + '</div>'
       + '<p class="cl-empty" data-cl-empty hidden>No game matches.</p>'
-      + '<p class="cl-foot">Plays: the game plays on our emulator. Boots: it starts but does not play (the screen stays blank, freezes, or stops at its title). Nothing: it does not start. Enter or OK (or the clip) shows the clip larger. Right and Left open and close a game&rsquo;s versions. Hash: the start of the file&rsquo;s SHA-256 (search takes six characters or more). Testing and diagnostics cartridges are listed but are not games, so they are not counted. Untested / not found: a known release that has not been found, so it has not been tested; these are listed but not counted.</p>'
+      + '<p class="cl-foot">Plays: the game plays on our emulator. Boots: it starts but does not play (the screen stays blank, freezes, or stops at its title). Nothing: it does not start. Enter or OK (or the clip) shows the clip larger. Right and Left open and close a game&rsquo;s versions. Hash: the start of the file&rsquo;s SHA-256 (search takes six characters or more). Testing and diagnostics cartridges are listed but are not games, so they are not counted. Unseen by us: a known release of which no copy has reached us, so it has not been tested; listed, not counted. Untested: not tested yet; it plays, and it is counted neither way. Data and tools: programs that run but are not games, such as menus, firmware, test programs and utilities; listed, not counted.</p>'
       + '</div></div></div></div></div>';
   }
 
@@ -339,9 +345,9 @@
     return c;
   }
   /* The "Untested / not found" key, shown with no figure, when the chosen system lists any */
-  function notFoundHere() {
+  function notFoundHere(st = 4) {
     const want = S.card ? CARDS.find(x => x[0] === S.card)[2] : null;
-    return games.some(g => g.st === 4 && (!want || want.includes(g.sh)) && (!S.kind || g.k === S.kind));
+    return games.some(g => (g.st === st || ((st === 3 || st === 4) && g.f.some(x => x.st === st))) && (!want || want.includes(g.sh)) && (!S.kind || g.k === S.kind));
   }
   function barHTML() {
     const c = counts(), total = c[0] + c[1] + c[2];
@@ -350,8 +356,10 @@
     const pct = i => (total ? (c[i] * 100 / total) : 0);
     const segs = [0, 1, 2].filter(i => c[i] > 0).map(i => `<span class="cl-seg lad-${STATUS_KEY[i]}" style="flex-grow:${c[i]}"></span>`).join('');
     const keys = [0, 1, 2].map(i => `<button type="button" class="cl-key${S.status === i ? ' on' : ''}" data-cl-status="${i}" aria-pressed="${S.status === i}" title="${esc(STATUS_TEXT[i])}"><i class="lad-${STATUS_KEY[i]}"></i>${STATUS[i]} <b>${n(c[i])}</b> <span>${pct(i) < 1 && c[i] ? '<1' : Math.floor(pct(i))}%</span></button>`).join('')
-      + (c[3] ? `<button type="button" class="cl-key${S.status === 3 ? ' on' : ''}" data-cl-status="3" aria-pressed="${S.status === 3}"><i class="lad-untested"></i>Not yet tested <b>${n(c[3])}</b></button>` : '')
+      + (c[3] || notFoundHere(3) ? `<button type="button" class="cl-key${S.status === 3 ? ' on' : ''}" data-cl-status="3" aria-pressed="${S.status === 3}" title="${esc(STATUS_TEXT[3])}"><i class="lad-untested"></i>${STATUS[3]}</button>` : '')
       + (notFoundHere() ? `<button type="button" class="cl-key${S.status === 4 ? ' on' : ''}" data-cl-status="4" aria-pressed="${S.status === 4}" title="${esc(STATUS_TEXT[4])}"><i class="lad-notfound"></i>${STATUS[4]}</button>` : '')
+      + (notFoundHere(5) ? `<button type="button" class="cl-key${S.status === 5 ? ' on' : ''}" data-cl-status="5" aria-pressed="${S.status === 5}" title="${esc(STATUS_TEXT[5])}"><i class="lad-unseen"></i>${STATUS[5]}</button>` : '')
+      + (notFoundHere(6) ? `<button type="button" class="cl-key${S.status === 6 ? ' on' : ''}" data-cl-status="6" aria-pressed="${S.status === 6}" title="${esc(STATUS_TEXT[6])}"><i class="lad-datatools"></i>${STATUS[6]}</button>` : '')
       + `<button type="button" class="cl-key cl-key-all${S.status < 0 ? ' on' : ''}" data-cl-status="-1" aria-pressed="${S.status < 0}">All</button>`;
     const said = [0, 1, 2].map(i => `${STATUS[i]} ${n(c[i])}`).join(', ');
     return `<p class="cl-line"><b>${n(total)} ${total === 1 ? 'game' : 'games'} tested (${Math.floor(c[0] * 100 / total)}%)</b>${c[3] ? `, ${n(c[3])} not yet` : ''}</p>
@@ -418,13 +426,13 @@
     const loading = filesFor(S.card).some(f => !loadedFiles.has(f));
     /* 28 Oct: the "Untested / not found" filter shows no count; it would say how many
        games the library lacks, and the site publishes compatibility only. */
-    if (el) el.textContent = loading ? 'Loading the list…' : S.status === 4 ? '' : `${n(shown)} ${shown === 1 ? 'game' : 'games'} shown`;
+    if (el) el.textContent = loading ? 'Loading the list…' : S.status >= 3 ? '' : `${n(shown)} ${shown === 1 ? 'game' : 'games'} shown`;
     const em = root.querySelector('[data-cl-empty]'); if (em) em.hidden = loading || shown > 0;
     showLoading();
     hts = rows.map(r => htOf.get(rKey(r)) || rowH);
     layTops();
     try { if (window.CwDeepLink) window.CwDeepLink.compatChanged(queryOf()); } catch (_) {}   // the link in the address bar follows the filters
-    rowsEl.setAttribute('aria-rowcount', S.status === 4 ? '-1' : String(rows.length));   // -1: not told (as the shown count)
+    rowsEl.setAttribute('aria-rowcount', S.status >= 3 ? '-1' : String(rows.length));   // -1: not told (as the shown count)
     for (const [, e] of live) e.remove();
     live.clear();
     stopClip();

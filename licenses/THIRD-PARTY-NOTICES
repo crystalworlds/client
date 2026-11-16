@@ -199,10 +199,12 @@ Also     : No-Intro (https://datomatic.no-intro.org/) for the canonical names;
            (https://github.com/OpenVGDB/OpenVGDB) for descriptions and release
            dates; it declares no licence, credited by name (approved
            2026-10-10; buildable without it: build.mjs --no-descriptions).
-Box art  : a tile with no cover of ours may show one from
-           thumbnails.libretro.com, loaded by the visitor's browser and never
-           copied into this repository. Those scans are the publishers' artwork
-           (see NOTICE).
+Box art  : some covers in the site's own picture library are scans from
+           the libretro-thumbnails collection
+           (https://github.com/libretro-thumbnails), copied there for games
+           that had no cover of ours. They are kept in the site's picture
+           storage, not in this repository. Those scans are the publishers'
+           artwork (see NOTICE).
 Sources  : WASM_Source/metadata/sources.json (URLs, versions, sha256).
 
 

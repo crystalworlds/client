@@ -1,5 +1,4 @@
-/* gamemeta.js -- built-in game details for the drawer, and a second place to
- * find box art when ours has none.
+/* gamemeta.js -- built-in game details for the drawer.
  *
  * THE DATA. metadata/*.json.gz, built by WASM_Source/metadata/build.mjs from
  * No-Intro (names), libretro-database (genre, developer, publisher, players,
@@ -15,9 +14,10 @@
  * once, from the bytes the open content pack already holds, header removed, and
  * looked up by SHA-1 instead.
  *
- * BOX ART. thumbnails.libretro.com, named by the No-Intro name. One request per
- * title; a miss is remembered for the session. Plain <img> only: that host sends
- * no CORS header, so the picture is never read back into a canvas.
+ * BOX ART (13 Nov 2026): every cover comes from our own buckets (emby.js). The
+ * pictures this file used to ask thumbnails.libretro.com for were downloaded and
+ * uploaded there (WASM_Source/cover-art/libretro-fill.py), so a tile our buckets
+ * have no cover for goes straight to its system's generic cover.
  *
  * Licences and sources: WASM_Source/metadata/sources.json.
  */
@@ -27,11 +27,9 @@
     try { var s = document.currentScript && document.currentScript.src; if (s) return s.replace(/[^/]*$/, '') + 'metadata/'; } catch (e) {}
     return 'metadata/';
   })();
-  var THUMBS = 'https://thumbnails.libretro.com/';
   var LICENCE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/';
-  var ART_MISS_KEY = 'gnw.meta.artMiss.v1';
   // Bumped with every pack rebuild so a cached index.json or shard is never mixed with new ones.
-  var DATA_TAG = '?v=2.1.1';   // 4 Nov: LaunchBox descriptions where no other source has one; one game, one group
+  var DATA_TAG = '?v=2.2.0';   // 4 Nov: LaunchBox descriptions where no other source has one; one game, one group
   // LaunchBox user ratings. Turned off 2026-10-14 when testing found the links opened wrong games; back on after the audit (every scored record: name, platform, rating, votes and linked page match). false hides them.
   var SHOW_LB = true;
 
@@ -81,9 +79,13 @@
   // Game & Watch units: no cartridge, so only a review score, keyed by the
   // device id (metadata/index.json `a` maps it to the gnw shelf).
   function isGnw(d) { return !!(d && !d.catalogue && d.series); }
+  /* A bad copy repaired on load is its clean copy (firmware/site/repairs.js, 13 Nov 2026): its
+     details are the clean copy's. */
   function keyOf(d) {
     var m = /-x([0-9a-f]{12})$/.exec(String(d.id || ''));
-    return m ? m[1] : null;
+    if (!m) return null;
+    var c = null; try { c = window.CWSRepair && window.CWSRepair.clean12(m[1]); } catch (e) { c = null; }
+    return c || m[1];
   }
 
   function findById(d) {
@@ -428,73 +430,16 @@
   }
 
   // ------------------------------------------------------------ box art
-  var _miss = null;
-  function missSet() {
-    if (_miss) return _miss;
-    try { _miss = JSON.parse(sessionStorage.getItem(ART_MISS_KEY) || '{}') || {}; } catch (e) { _miss = {}; }
-    return _miss;
-  }
-  function markMiss(u) { missSet()[u] = 1; try { sessionStorage.setItem(ART_MISS_KEY, JSON.stringify(_miss)); } catch (e) {} }
-  // libretro's thumbnail naming: these characters become '_'.
-  function thumbUrl(lr, name) {
-    return THUMBS + encodeURIComponent(lr) + '/Named_Boxarts/' + encodeURIComponent(String(name).replace(/[&*\/:`<>?\\|"]/g, '_')) + '.png';
-  }
-  /* Thumbnails checked by eye and refused (2026-10-22): the thumbnail
-     server answers these names with another game's box, so the tile skips it and shows
-     the generic cover. Keyed by thumbnail shelf + record name. */
-  var REFUSED_ART = {
-    'Atari - 2600|Extra Terrestrials (USA)': 'Atari E.T. box, a different game',
-    'Atari - 5200|5200 Menu (USA) (Proto)': 'the Atari 5200 console box',
-    'Atari - 5200|Atari PAM System Test (USA) (v1.02)': 'the Diagnostics cartridge picture',
-    'Nintendo - Game Boy|Mani 4 in 1 - R-Type II + Saigo no Nindou + Ganso!! Yancha Maru + Shisenshou - Match-Mania (China) (Ja)': 'a Tetris 4 in 1 box'
-  };
-  function refusedArt(lr, name) { return Object.prototype.hasOwnProperty.call(REFUSED_ART, lr + '|' + name); }
   function deviceFor(id) {
     try { return (typeof ALL_DEVICES !== 'undefined') ? ALL_DEVICES.find(function (x) { return x.id === id; }) : null; } catch (e) { return null; }
   }
 
-  /* Paint the secondary box art into a tile's art box. `isCurrent` says whether
-     the tile still wants it (the mode may have changed meanwhile). Used for a
-     tile our own buckets missed, and for tiles of shelves we have no bucket for. */
-  /* `onMiss` (2026-10-21): called when this source has nothing for the tile either
-     (no record, no thumbnail shelf, a known or fresh miss), so the caller can paint
-     its last source, the system's generic cover (emby.js paintGenericArt). */
-  function fallbackArt(card, box, isCurrent, onMiss) {
-    if (!card || !box) return;
-    var miss = function () { try { if (typeof onMiss === 'function') onMiss(); } catch (e) {} };
-    var d = deviceFor(card.dataset.id);
-    if (!d) return miss();
-    lookup(d).then(function (hit) {
-      if (!card.isConnected || (isCurrent && !isCurrent())) return;
-      if (!hit) return miss();
-      return index().then(function (ix) {
-        var lr = ix && ix.shelves[hit.shelf] && ix.shelves[hit.shelf].lr;
-        if (!lr || refusedArt(lr, hit.rec.n)) return miss();
-        var url = thumbUrl(lr, hit.rec.n);
-        if (missSet()[url]) return miss();
-        var img = new Image();
-        img.decoding = 'async';
-        img.alt = '';
-        img.className = 'gb-art-img gm-art-img';
-        img.referrerPolicy = 'no-referrer';
-        img.onload = function () {
-          if (!card.isConnected || (isCurrent && !isCurrent())) return;
-          box.appendChild(img);
-          markCoverSource(box, img);
-          requestAnimationFrame(function () { box.classList.add('gb-art-loaded'); });
-        };
-        img.onerror = function () { markMiss(url); miss(); };
-        img.src = url;
-      });
-    }).catch(function () { miss(); });
-  }
-
-  /* The Media grid's box-art modes for the shelves that have no bucket of ours
-     (Game Boy Color, the Atari machines, a Pokemon mini title with no box, and
-     the NES family until its buckets exist). Same shape as emby.js's
-     mountGbBoxArt(): the name is the floor, the cover fades in over it, and the
-     tile's live mount is removed in the same tick, before anything arms it.
-     A tile some other mount already claimed (data-gbart) is left alone. */
+  /* The Media grid's box-art modes for a game tile no cover mount of emby.js claimed
+     (every shelf has buckets of ours now, so normally none). Same shape as emby.js's
+     mountGbBoxArt(): the name is the floor and the tile's live mount is removed in the
+     same tick, before anything arms it. There is no second source any more (13 Nov 2026):
+     the tile shows its system's generic cover through emby.js (window.cwGenericArt), or
+     keeps its name. A tile some other mount already claimed (data-gbart) is left alone. */
   var _obs = null;
   function observer() {
     if (_obs) return _obs;
@@ -504,8 +449,10 @@
         obs.unobserve(e.target);
         var card = e.target, mode = card.dataset.gmart;
         var bx = card.querySelector(':scope > .img');
-        // no cover anywhere: the name stays, and the load blur stops waiting (index.html _tileRevealCheck)
-        fallbackArt(card, bx, function () { return card.dataset.gmart === mode; }, function () { if (bx && card.dataset.gmart === mode) bx.setAttribute('data-art-done', '1'); });
+        // no cover of ours: the generic cover, else the name stays and the load blur stops waiting (index.html _tileRevealCheck)
+        var done = function () { if (bx && card.dataset.gmart === mode) bx.setAttribute('data-art-done', '1'); };
+        try { if (typeof window.cwGenericArt === 'function' && window.cwGenericArt(card, bx, mode, function () { return card.dataset.gmart === mode; })) return; } catch (err) {}
+        done();
       });
     }, { rootMargin: '400px 300px' });
     return _obs;
@@ -596,7 +543,7 @@
     if (!gnwHook()) document.addEventListener('DOMContentLoaded', gnwHook, { once: true });
   } catch (e) {}
 
-  window.GameMeta = { fillYears: fillYears, fillScores: fillScores, ratingHTML: ratingHTML, markCoverSource: markCoverSource, lookup: lookup, decorateDrawer: decorateDrawer, fallbackArt: fallbackArt, mountBoxArt: mountBoxArt, thumbUrl: thumbUrl, refusedArt: refusedArt };
+  window.GameMeta = { fillYears: fillYears, fillScores: fillScores, ratingHTML: ratingHTML, markCoverSource: markCoverSource, lookup: lookup, decorateDrawer: decorateDrawer, mountBoxArt: mountBoxArt };
   // A far tile put back on the page (index.html) gets the ratings that came while it was away.
   // Only those tiles, looked up by index (patchTiles' whole-list search per tile cost 0.6 s per 14 swipes at 3,200 tiles).
   document.addEventListener('cw-wall-restored', function (ev) {

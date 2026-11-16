@@ -1,0 +1,62 @@
+{
+ "format": 1,
+ "list": "gbrejected",
+ "label": "Game Boy: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "game-boy"
+ ],
+ "internal": true,
+ "count": 10,
+ "entries": {
+  "1cb5d1f9451739273795e0ab2fac1e1272e55a7b44215f1e8d6af9d14234a8f4": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (GameShark Online) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "2297697e61cc97855f2f781b9ee7eed62fc79fafbc4ce9a4210499563d0b97d3": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged."
+  },
+  "4c1cb5c5d9ecb979a1a4bd7dca4e33bf2f50f9c11fb9932d11dfa1ec1bdf1df3": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Action Replay Xtreme - Special Edition for Pokemon Crystal) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "4f7bb70b7dd3c0f85592c12ce3771663524e270e3b8d4ae24affacbe49ef0700": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged."
+  },
+  "6d8ffb51bc3ba7712d88b1094c493fe3d6f14a937ca38abf09f9a5c422f87c16": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Xploder GB) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "8223d9aaa8c1ec16d837e6159b377e24dbf177dc45e25205d838db619dbae286": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Game Genie) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "988e4286ce159f095b585427bb5e84a2e77676bc85f9a2e34d6e0d8082e021f1": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Pro Action Replay) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "9a29ad42c3cac11272633a16ed949c78ca2354796b126da6ac955544cb2c007f": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged."
+  },
+  "aeaac7c1834e1f4a6ca065dd709d9c3ee72df04b26d830e016ea86f7be5e245d": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Xploder GB) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "c068cd85c469069cd796afb8b0840838652e7084ba2fbaddd6b77d93a20f903d": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Action Replay Online) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  }
+ }
+}

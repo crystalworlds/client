@@ -13,8 +13,8 @@
     "plays": 2806,
     "ingame": 0,
     "menus": 4,
-    "boots": 7,
-    "nothing": 9
+    "boots": 4,
+    "nothing": 1
    },
    "untested": 0,
    "byCat": {
@@ -30,8 +30,8 @@
      240,
      0,
      0,
-     6,
-     9,
+     3,
+     1,
      0
     ],
     "homebrew": [
@@ -93,52 +93,52 @@
   },
   "nes": {
    "rungs": {
-    "plays": 4440,
+    "plays": 4438,
     "ingame": 0,
     "menus": 1,
-    "boots": 72,
-    "nothing": 17
+    "boots": 57,
+    "nothing": 5
    },
    "untested": 0,
    "byCat": {
     "commercial": [
-     2109,
+     2111,
      0,
      0,
-     16,
-     2,
+     13,
+     0,
      0
     ],
     "unl": [
-     963,
+     951,
      0,
      1,
-     4,
-     8,
+     2,
+     5,
      0
     ],
     "homebrew": [
-     905,
+     911,
      0,
      0,
-     26,
-     6,
+     21,
+     0,
      0
     ],
     "hack": [
      5,
      0,
      0,
-     5,
+     1,
      0,
      0
     ],
     "proto": [
-     153,
+     155,
      0,
      0,
-     2,
      1,
+     0,
      0
     ],
     "demo": [
@@ -202,16 +202,16 @@
   },
   "a5200": {
    "rungs": {
-    "plays": 484,
+    "plays": 482,
     "ingame": 0,
     "menus": 0,
-    "boots": 10,
-    "nothing": 1
+    "boots": 9,
+    "nothing": 0
    },
    "untested": 0,
    "byCat": {
     "commercial": [
-     69,
+     68,
      0,
      0,
      0,
@@ -230,8 +230,8 @@
      365,
      0,
      0,
-     8,
-     1,
+     7,
+     0,
      0
     ],
     "hack": [
@@ -243,7 +243,7 @@
      0
     ],
     "proto": [
-     31,
+     30,
      0,
      0,
      0,
@@ -314,7 +314,7 @@
     "plays": 812,
     "ingame": 0,
     "menus": 0,
-    "boots": 48,
+    "boots": 17,
     "nothing": 0
    },
    "untested": 0,
@@ -323,7 +323,7 @@
      76,
      0,
      0,
-     1,
+     0,
      0,
      0
     ],
@@ -339,7 +339,7 @@
      562,
      0,
      0,
-     43,
+     13,
      0,
      0
     ],
@@ -432,31 +432,31 @@
  },
  "chips": {
   "nes": {
-   "mappers": 301,
+   "mappers": 315,
    "accessories": "Zapper, Arkanoid paddle, Power Pad, Family Trainer, Four Score, Famicom 4-player adapter, R.O.B. (Gyromite and Stack-Up), Bandai Hyper Shot (light gun), Konami Hyper Shot (run and jump buttons), Party Tap (six quiz buzzers), Pachinko controller (dial), Exciting Boxing punching bag, Jissen Mahjong controller, Oeka Kids drawing tablet, Barcode World reader, Pokkun Moguraa mat (whack-a-mole), Top Rider bike, Subor keyboard, Subor keyboard and mouse, Miracle Piano keyboard, Turbo File (save box), Battle Box (save box), Family BASIC keyboard, Famicom Data Recorder (tapes in and out), Famicom microphone (your own microphone), Datach barcode reader, Study Box tape deck"
   },
   "a7800": {
-   "accessories": "ProLine joystick, Paddles, Driving controller, Keypad, SaveKey (high scores), Mega7800 pad, XM expansion (with the High Score Cartridge)",
+   "accessories": "ProLine joystick, Paddles, Driving controller, Keypad, Light gun (XG-1), Super NES pad (SNES2Atari adaptor), SaveKey (high scores), Mega7800 pad, XM expansion (with the High Score Cartridge)",
    "boards": 12
   },
   "gb": {
    "licensed": 13,
    "unlicensed": 17,
-   "accessories": "Super Game Boy (borders, colours, up to four players), Game Boy Printer, Pocket Camera (your own camera), Pocket Sonar, Link cable to a second Game Boy (two players), Infrared between two linked Game Boy Color units, Barcode Boy card reader, Tilt sensor, Rumble"
+   "accessories": "Super Game Boy (borders, colours, up to four players), Game Boy Printer, Pocket Camera (your own camera), Pocket Sonar, Link cable to a second Game Boy (two players), Infrared between two linked Game Boy Color units, Barcode Boy card reader, Workboy keyboard, Tilt sensor, Rumble"
   },
   "pm": {
    "accessories": "Infrared link (two players on two Pokémon minis side by side), Rumble motor, Shake sensor (reed switch)"
   },
   "a2600": {
    "types": 50,
-   "accessories": "Joystick, Paddles, Driving controller, Keypad (keyboard controller), SaveKey (high scores), Kid Vid voice module (narration from your own tapes), Supercharger (tape loading), the Atari 5200’s VCS Cartridge Adapter (a Console choice)"
+   "accessories": "Joystick, Paddles, Driving controller, Keypad (keyboard controller), SaveKey (high scores), Light gun, Sega Genesis pad, CBS Booster Grip, Joy 2B+, Trak-Ball, Atari mouse, Amiga mouse, QuadTari (two joysticks on one port), Kid Vid voice module (narration from your own tapes), Supercharger (tape loading), the Atari 5200’s VCS Cartridge Adapter (a Console choice)"
   },
   "a5200": {
    "boards": 8,
    "accessories": "Analogue joystick with keypad, Trak-ball (your mouse)"
   },
   "alynx": {
-   "accessories": ""
+   "accessories": "ComLynx cable (two Lynxes side by side)"
   }
  }
 }

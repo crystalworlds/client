@@ -119,7 +119,7 @@ static const int APU_NOISE_DIV[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
  *
  * Why it converts here and did not there is section 9 of
  * our notes, ***WHICH IS
- * NOW IN THIS REPOSITORY*** (2026-09-19).  The companion account is
+ * NOW IN THIS REPOSITORY***.  The companion account is
  * our notes, also brought in that day.
  *
  * ***TWO WRONG VERSIONS STAND BELOW.  NEITHER IS DELETED*** --
@@ -135,7 +135,7 @@ static const int APU_NOISE_DIV[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
  * as a local file and resolved nowhere.  The phrase "combination pricing" is
  * this comment's paraphrase; the page itself does not use those two words.
  *
- * ***WRONG VERSION 2 -- what I replaced it with earlier on 2026-09-19, and it
+ * ***WRONG VERSION 2 -- what I replaced it with earlier, and it
  * was a WORSE error than the one it fixed:***
  *
  *     ***THAT FILE HAS NEVER EXISTED.***  Measured three ways: `find` over the
@@ -240,7 +240,7 @@ static const int APU_NOISE_DIV[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
 #define APU_NOISE_TRIGGER_HALF 1
 #endif
 
-/* ***LABEL CHANGE, 2026-09-18 -- RECORDED, NOT OVERWRITTEN (protocol clause 2).
+/* ***LABEL CHANGE -- RECORDED, NOT OVERWRITTEN (protocol clause 2).
  * THE BLOCK BELOW IS THE OLD READING AND IS KEPT WORD FOR WORD.***
  *
  * Everything from here to NOISE_RESTART_LEAD is bypassed when
@@ -444,7 +444,7 @@ static const int APU_NOISE_DIV[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
  * 8 T late).  No constant closes both.  That is the counter-reload boundary and
  * it is LEFT OPEN.  No glitch-correction table is implemented and none is wanted.
  *
- * LANDED IN THIS TREE 2026-09-18, re-measured against this tree's src/gb.c on
+ * LANDED IN THIS TREE, re-measured against this tree's src/gb.c on
  * the day, not trusted from the sandbox: channel 4 1082 -> 1096 of 1100, the
  * 368-cell fence intact, the 640 further LFSR cells unmoved, AUDIO SCORE 336
  * unmoved and docboy-agreement 253/572 unmoved through the REPAIRED
@@ -488,6 +488,41 @@ static const int APU_NOISE_DIV[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
  * from 128 differing to 0 across it. */
 #ifndef NOISE_RESTART_EXTRA_T
 #define NOISE_RESTART_EXTRA_T 2
+#endif
+/* NOISE_NR43_LATCH.  15 = ON (all four parts);
+ * 0 = OFF, the channel of core ca5a2a32f97e byte for byte.
+ * samesuite channel_4_freq_change had 4 cells of 64 left (G3 $18->$1a lead 1,
+ * G7 $09->$1a lead 1).  docboy passes the row; read in its apu.cpp (MIT), then
+ * both emulators traced on the same subtests: the same three counters as ours,
+ * and an NR43 write differs from ours in four places.  Each is a bit here:
+ *   bit 0  the write does NOT reload the divisor down-counter; the new divisor
+ *          becomes the reload value at the next expiry (ours reloaded at once,
+ *          which put G7's next counter step one examination late).
+ *   bit 1  the tap and width latches: the up-counter bit the LFSR follows, and
+ *          the LFSR width, change one APU tick after the register, so the
+ *          first examination after the write still uses the old ones; and the
+ *          write itself steps the LFSR once if the new tap reads 1 where the
+ *          old one read 0 (an edge detector after the tap selector: on the
+ *          counter value the coming examination makes, when it is about to
+ *          expire).
+ *   bit 2  the rate latch: a divisor of 0 written over a nonzero one keeps the
+ *          single-rate examination until the next expiry.
+ *   bit 3  the write lands BEFORE this machine cycle's two APU ticks, not after
+ *          them (NOISE_NR43_DEFER's end-of-cycle landing put G3's write after
+ *          a double-rate examination the hardware runs with the new divisor).
+ *          The width still reaches the LFSR one tick later through bit 1,
+ *          which is what NOISE_NR43_DEFER was measured for (lfsr_15_7).
+ * Measured: freq_change 60 -> 64 of 64 only with all four (15); every other
+ * combination is worse than 4 wrong.  LABEL: bits 0, 1 and 3 MECHANISM (a
+ * reload latch, an edge detector after a selector, one write landing);
+ * bit 2 SOURCE-READ (docboy's own comment says "seems"), reason NOT
+ * ESTABLISHED.  No table, no per-revision case.
+ * Latch state lives in spare bits of ns_pending, so the context layout and the
+ * save states do not change: bit 8 the pending write, bits 12-15 the old tap
+ * plus one, bit 16 the single-rate hold, bit 20 the width latch, bit 21 the old
+ * width. */
+#ifndef NOISE_NR43_LATCH
+#define NOISE_NR43_LATCH 15
 #endif
 
 /* APU_OFF_STOPS_CHANNELS -- A POWERED-OFF APU DOES NOT CLOCK ITS CHANNELS.
@@ -868,6 +903,52 @@ static void apu_frame_step(struct APU *a) {
 #define DUTY_OFF_UNTIL_FIRST_TRIGGER 1
 #endif
 
+/* DMG_DUTY_RUNS_AFTER_EXPIRY -- ON THE ORIGINAL GAME BOY A SQUARE CHANNEL'S
+ * DUTY CLOCK KEEPS RUNNING AFTER LENGTH OR SWEEP STOPS IT.
+ * SameBoy 1.0.5 (apu.c, square_clock_active; its commit ff986c1): on a
+ * physical DMG-B recording, length expiry and sweep overflow silence the
+ * channel but the frequency gates keep the duty sequencer running until the
+ * DAC or the APU is switched off; 49 of 62 bursts per channel were a whole duty
+ * step out before.  A stop by the DAC still holds the phase
+ * (DUTY_STOPPED_HOLDS_PHASE, channel_2_stop_restart).  The running flag is bit 1
+ * of duty_clocking (set by a trigger with the DAC on, cleared with the DAC or the
+ * power), so the saved state keeps its size.  LABEL: SOURCE-READ (one recorded
+ * unit, DMG-B; the Color keeps the old rule, where SameSuite's rows hold).
+ * Original Game Boy only.  Off arm: 0. */
+#ifndef DMG_DUTY_RUNS_AFTER_EXPIRY
+#define DMG_DUTY_RUNS_AFTER_EXPIRY 1
+#endif
+/* DMG_NOISE_FB_LATCH -- ON THE ORIGINAL GAME BOY THE NOISE FEEDBACK BIT IS
+ * TAKEN ON THE FALLING CLOCK EDGE.  SameBoy 1.0.5 (apu.c,
+ * noise_feedback_latch; its commit 3b0d5d4, from a DMG-B recording and the
+ * DMG-B schematic's JOTO stage): the feedback is latched when the selected
+ * counter bit falls and shifted in when it rises; a trigger clears the latch, so
+ * a rising edge before the first falling one shifts in the reset value.  Ours
+ * computed it at the rising edge.  The first pulse after a restart on a low
+ * clock is one period longer; the rest are unchanged.  The latch is kept in the
+ * noise channel's duty_clocking, which the noise channel never used, so the
+ * saved state keeps its size.  LABEL: SOURCE-READ (one recorded unit).
+ * Original Game Boy only.  Off arm: 0. */
+#ifndef DMG_NOISE_FB_LATCH
+#define DMG_NOISE_FB_LATCH 1
+#endif
+/* DMG_ALLOFF_HOLD -- ON THE ORIGINAL GAME BOY THE MIXER DISCONNECTS WHILE
+ * EVERY DAC IS OFF.  SameBoy 1.0.5 (apu.c render, its commits
+ * 82c17ac and 81c1216, from a DMG recording of LSDj NOIZE JAMS; Pan Docs
+ * "Audio details", obscure behaviour): with all four DACs off the output is
+ * silent and the coupling capacitor keeps its charge until a DAC comes back.
+ * Ours kept the capacitor connected, so every rest played a slow bass decay
+ * (23 dB too loud in the recording's rests).  Applies to both capacitor stages
+ * (APU_HIGHPASS and the host block).  LABEL: SOURCE-READ (one recorded unit).
+ * Original Game Boy only.  Off arm: 0. */
+#ifndef DMG_ALLOFF_HOLD
+#define DMG_ALLOFF_HOLD 1
+#endif
+static inline int apu_dmg_disconnected(const struct APU *a) {
+    return DMG_ALLOFF_HOLD && !a->dev_cgb
+        && !a->ch[0].dac && !a->ch[1].dac && !a->ch[2].dac && !a->ch[3].dac;
+}
+
 static int apu_period(struct APU *a, int i) {
     switch (i) {
         case 0: case 1: return (2048 - a->ch[i].freq) * 4;
@@ -920,6 +1001,31 @@ static void apu_trigger(struct APU *a, int i) {
      * restart's start delay to be one tick shorter than a cold trigger's.
      * See SQ_TRIG_PHASE in apu.h for both declarations and their unit. */
     int restart = c->enabled;
+#if MDL_SQTRIGSTEP
+    /* MDL_SQTRIGSTEP (A8): on Color revisions D and E, a trigger whose new
+     * period has bit 10 clear, landing while the period counter has bit 10 set,
+     * steps the duty position once.  A stopped channel's counter is the value
+     * it held at the stop; a running one's is read one 2 MHz tick back, and not
+     * on the tick it reloaded.  The counter's remaining count is the timer in
+     * 1 MHz steps, capped at the new period's while the start delay runs.
+     * SameBoy 1.0.5's NR14/NR24 trigger, "model == CGB_E || model == CGB_D" and
+     * "!(value & 4) && !(((sample_countdown - delay) / 2) & 0x400)".  The
+     * reason is NOT ESTABLISHED (a ripple counter whose top bit, falling at the
+     * reload, clocks the duty step as its overflow does, would give it).
+     * SOURCE-READ. */
+    if (i < 2 && a->dev_cgb && (apu_model(a) == GB_MODEL_CGB_D || apu_model(a) == GB_MODEL_CGB_E)
+        && !(c->freq & 0x400)) {
+        int t = (!restart && (a->sq_frz_ok & (1 << i))) ? a->sq_frz[i] : c->timer;
+        int full = (2048 - c->freq) * 4;
+        int r;
+        if (restart) t -= APU_TICK_T;
+        r = (t - 1) >> 2;
+        if (t > full) r = 2047 - c->freq;
+        if (!(r & 0x400) && !(restart && (a->sq_reload & (1 << i))))
+            c->duty_pos = (c->duty_pos + 1) & 7;
+    }
+    if (i < 2) a->sq_frz_ok &= (unsigned char)~(1 << i);
+#endif
     c->enabled = 1;
     if (c->length == 0) c->length = APU_LEN_MAX(i);
     /* The wave channel takes an extra 6 T before its first read after a
@@ -1001,6 +1107,9 @@ static void apu_trigger(struct APU *a, int i) {
              * double-speed row in the pool, and the speed-scaled form costs it
              * four cells while leaving every single-speed row untouched. */
             a->ns_trig = d + 4;
+#if NOISE_NR43_LATCH
+            a->ns_pending &= 0x1FF;   /* a trigger reloads both latches */
+#endif
         }
 #endif
 #if SQ_ENABLE_GRID
@@ -1029,6 +1138,20 @@ static void apu_trigger(struct APU *a, int i) {
             int lead = APU_TICK_T * APU_NTICKS(a);
             int adj  = (lead - (a->ns_t + c->timer)) & 3;
             c->timer += adj;
+#if MDL_SQDELAY
+            /* MDL_SQDELAY (A8): on Color revisions 0 to C, in double speed, a
+             * trigger into a stopped square channel that lands on the 1 MHz
+             * grid starts one grid step (4 T) later than on D, E and the
+             * Advance.  SameBoy's start delay, "6 + lf_div * (model < CGB_D &&
+             * double speed ? 1 : -1)"; restarts keep one delay on every model.
+             * Which grid phase is SameBoy's lf_div = 1 is read off SameSuite:
+             * with this phase channel_1/2_align, channel_1/2_duty and
+             * channel_1_freq_change_timing-cgb0BC match SameBoy set to C cell
+             * for cell, with the other phase six cells move away.  CONVERGENCE. */
+            if (!restart && a->dev_cgb && a->dev_speed && GB_MODEL_IS_CGB(apu_model(a))
+                && apu_model(a) <= GB_MODEL_CGB_C && adj == 0)
+                c->timer += 4;
+#endif
         }
 #endif
     }
@@ -1050,11 +1173,21 @@ static void apu_trigger(struct APU *a, int i) {
         a->wave_pos = 0;
     } else if (i == 3) {
         a->lfsr = 0x7FFF;
+        if (DMG_NOISE_FB_LATCH && !a->dev_cgb) c->duty_clocking = 1;   /* the latch's reset value */
     }
     if (i == 0 || i == 1) { if (!c->duty_clocking) c->duty_zero_1st = 1;
-                            c->duty_clocking = 1; }
+                            c->duty_clocking = 1 | ((DMG_DUTY_RUNS_AFTER_EXPIRY && !a->dev_cgb && c->dac) ? 2 : 0); }
     if (!c->dac) c->enabled = 0;   /* a trigger into a dead DAC produces nothing */
 }
+
+#if GB_MODELS
+/* The model of the machine this sound unit sits in.  The unit is always the
+ * `apu` member of struct GB (this file is compiled inside gb.c), so the machine
+ * is found from the member's own address. */
+static int apu_model(const struct APU *a) {
+    return ((const struct GB *)(const void *)((const char *)a - __builtin_offsetof(struct GB, apu)))->model;
+}
+#endif
 
 /* NRx4: length enable and trigger, with the extra length clock. */
 static void apu_write_nrx4(struct APU *a, int i, unsigned char v) {
@@ -1062,8 +1195,36 @@ static void apu_write_nrx4(struct APU *a, int i, unsigned char v) {
     int was = c->len_enable;
     int trigger = (v >> 7) & 1;
     c->len_enable = (v >> 6) & 1;
+#if MDL_SQFREQ
+    /* MDL_SQFREQ (A8): on Color revisions D and E, a write that takes a playing
+     * square's period from $7xx to below $700 without a trigger, landing one
+     * sound tick after the period counter reloaded, holds the sample: the next
+     * step replays it before the new period starts.  Earlier revisions and the
+     * Advance step as usual.  Only double speed puts a write on that tick: at
+     * single speed the machine cycle is two ticks long and its writes land on
+     * the other phase.  SameSuite channel_1_freq_change_timing-cgbDE against -A
+     * and -cgb0BC; SameBoy's NR14/NR24 write, "model == CGB_E || model == CGB_D
+     * || sample_countdown & 1".  CONVERGENCE. */
+    if (i < 2 && !trigger && c->enabled && a->dev_cgb && a->dev_speed
+        && (apu_model(a) == GB_MODEL_CGB_D || apu_model(a) == GB_MODEL_CGB_E)
+        && (c->freq >> 8) == 7 && (v & 7) != 7 && (a->sq_reload & (1 << i)))
+        a->sq_hold |= (unsigned char)(1 << i);
+#endif
     if (i != 3) c->freq = (c->freq & 0xFF) | ((v & 7) << 8);
 
+#if MDL_LEN
+    /* MDL_LEN (A10): on Color revisions 0, A and B the extra length clock comes
+     * whatever the new length-enable bit is, so a write that leaves length
+     * disabled still takes one step (Pan Docs Audio_details: "CGB-02 ... fixed
+     * on CGB-04 and CGB-05"; SameSuite extra_length_clocking-cgb0B and the
+     * channel 3 -cgb0 / -cgbB tests, checked on those revisions; SameBoy:
+     * "Current value is irrelevant on CGB-B and older").  MECHANISM.  Prehistorik
+     * Man depends on it on those consoles (Pan Docs). */
+    if (a->dev_cgb && apu_model(a) <= GB_MODEL_CGB_B && GB_MODEL_IS_CGB(apu_model(a))
+        && !was && !c->len_enable && !apu_next_clocks_length(a) && c->length > 0) {
+        if (--c->length == 0 && !trigger) c->enabled = 0;
+    }
+#endif
     if (!was && c->len_enable && !apu_next_clocks_length(a) && c->length > 0) {
         if (--c->length == 0 && !trigger) c->enabled = 0;
     }
@@ -1148,7 +1309,6 @@ static void apu_write_nrx4(struct APU *a, int i, unsigned char v) {
 #ifndef DUTY_STOPPED_HOLDS_PHASE
 #define DUTY_STOPPED_HOLDS_PHASE 2
 #endif
-
 static void apu_set_dac(struct APU *a, int i, int on) {
     a->ch[i].dac = on ? 1 : 0;
 #if DUTY_STOPPED_HOLDS_PHASE >= 2
@@ -1165,11 +1325,15 @@ static void apu_set_dac(struct APU *a, int i, int on) {
      * stop lands mid-sample is exact, and every block whose stop lands in a
      * sample's LAST machine cycle is one step behind.  That is the whole
      * residual -- one class, no free parameter. */
-    if (!on && i < 2 && a->ch[i].enabled && a->ch[i].timer <= 4
+    if (!on && i < 2 && (a->ch[i].enabled || (DMG_DUTY_RUNS_AFTER_EXPIRY && !a->dev_cgb && (a->ch[i].duty_clocking & 2)))
+        && a->ch[i].timer <= 4
         && (!DUTY_OFF_UNTIL_FIRST_TRIGGER || a->ch[i].duty_clocking))
         a->ch[i].duty_pos = (a->ch[i].duty_pos + 1) & 7;
 #endif
     if (!on) a->ch[i].enabled = 0;
+#if DMG_DUTY_RUNS_AFTER_EXPIRY
+    if (!on && i < 2) a->ch[i].duty_clocking &= ~2;   /* the DAC stops the clock (see the knob) */
+#endif
 }
 
 static void apu_power_off(struct APU *a) {
@@ -1185,6 +1349,9 @@ static void apu_power_off(struct APU *a) {
         c->env_timer = 0; c->out = 0; c->env_bug = 0;
         c->length = keep_len;
     }
+#if MDL_SQFREQ || MDL_PCMREAD
+    a->sq_reload = a->sq_hold = a->pcm_edge = 0;
+#endif
     a->sw_pace = a->sw_dir = a->sw_shift = 0;
     a->sw_shadow = a->sw_timer = a->sw_on = a->sw_neg_used = 0;
     a->sw_stop = a->sw_trigvoid = 0;
@@ -1203,6 +1370,11 @@ static void apu_power_off(struct APU *a) {
 static void apu_power_on(struct APU *a) {
     a->power = 1;
     a->ns_t = 0;         /* the free-running divisor phase starts here */
+#if MDL_SQTRIGSTEP
+    /* A fresh sound unit's period counters sit at their top (bit 10 clear in
+     * the remaining count's sense of the MDL_SQTRIGSTEP test, so no step). */
+    a->sq_frz[0] = a->sq_frz[1] = 0; a->sq_frz_ok = 3;
+#endif
 #if NOISE_COUNTER_MODEL
     /* The ONLY reset of the three cascaded stages.  The down-counter comes up
      * loaded (divisor 0 reloads as 1), so the first examination already
@@ -1237,6 +1409,13 @@ static unsigned char apu_read(struct APU *a, unsigned short addr) {
         if (a->ch[2].enabled) {
             /* A read8 reaches here AFTER apu_tick4 has run this machine cycle,
              * so the flag is current. */
+#if MDL_AGBWAVE
+            /* MDL_AGBWAVE (A2): on the Advance, wave RAM is shut while channel 3
+             * plays: reads give $FF and writes are lost (SameSuite
+             * channel_3_wave_ram_locked_write; Pan Docs Audio_details; SameBoy
+             * "model > CGB_E").  MECHANISM. */
+            if (a->dev_cgb && GB_MODEL_IS_AGB(apu_model(a))) return 0xFF;
+#endif
             if (WAVE_CGB_RULE && a->dev_cgb) return a->wave[a->wave_pos >> 1];
             if (a->wave_read_2nd) return a->wave[a->wave_pos >> 1];
             return 0xFF;
@@ -1256,6 +1435,25 @@ static unsigned char apu_read(struct APU *a, unsigned short addr) {
  * register and the same write behaviour; the only thing that differs is which
  * channel it lands on.  Writing it once is what makes the channel_1/channel_2
  * pairs one defect instead of two. */
+#if MDL_ZOMBIE && ENV_ZOMBIE_NRX2
+/* One NRx2 write's volume glitch, as apu_write_nrx2 below computes it, from a
+ * given old (pace, direction) to a given new value. */
+static void apu_zombie_step(struct APUChan *c, int old_pace, int old_dir, unsigned char v) {
+    int new_dir = (v >> 3) & 1;
+    int adj = (old_pace == 0) ? 1 : (old_dir ? 0 : 2);
+#if ENV_ZOMBIE_PACE0_GATE
+    if (old_pace == 0) {
+        int live = (v & 0x0F) != 0;
+        if (old_dir != new_dir) c->vol = (16 - (c->vol + (live ? 1 : 0))) & 15;
+        else if (live)          c->vol = (c->vol + (old_dir ? 1 : -1)) & 15;
+        return;
+    }
+#endif
+    if (old_dir != new_dir)   c->vol = (16 - (c->vol + adj)) & 15;
+    else if (old_dir)         c->vol = (c->vol + adj) & 15;
+}
+#endif
+
 static void apu_write_nrx2(struct APU *a, int i, unsigned char v) {
     struct APUChan *c = &a->ch[i];
 #if ENV_ZOMBIE_NRX2 || ENV_ENABLE_EVEN_TICK
@@ -1264,6 +1462,17 @@ static void apu_write_nrx2(struct APU *a, int i, unsigned char v) {
      * of a->reg[] would depend on where in apu_write the shadow is stamped. */
     int old_pace = c->env_pace, old_dir = c->env_dir;
     int playing  = c->enabled;
+#endif
+#if MDL_ZOMBIE && ENV_ZOMBIE_NRX2
+    /* MDL_ZOMBIE (A4): Color revisions 0 to C behave as if $FF were written
+     * first and then the new value (SameBoy nrx2_glitch, "model <= CGB_C");
+     * D, E and the Advance take the value directly, which is the form below
+     * and the one SameSuite's nrx2 tests (checked on a CPU CGB E) fix.
+     * SOURCE-READ for 0 to C.  The original Game Boy keeps this core's form. */
+    if (playing && a->dev_cgb && GB_MODEL_IS_CGB(apu_model(a)) && apu_model(a) <= GB_MODEL_CGB_C) {
+        apu_zombie_step(c, old_pace, old_dir, 0xFF);
+        apu_zombie_step(c, 7, 1, v);
+    } else
 #endif
 #if ENV_ZOMBIE_NRX2
     if (playing) {
@@ -1316,6 +1525,58 @@ static void apu_write_nrx2(struct APU *a, int i, unsigned char v) {
     apu_set_dac(a, i, (v & 0xF8) != 0);
 }
 
+#if NOISE_COUNTER_MODEL && NOISE_NR43_LATCH
+/* NOISE_NR43_LATCH: an NR43 write in docboy's form (see the knob).  ns_pending
+ * spare bits: 12-15 old tap + 1, 16 single-rate hold, 20 width latch live,
+ * 21 old width. */
+static void apu_nr43_latch(struct APU *a, unsigned char v) {
+    const int oshift = a->ns_shift, odiv = a->ns_div, ow7 = a->lfsr_w7;
+    int keep = a->ns_pending & 0x10000;
+    a->ns_shift = (v >> 4) & 15;
+    a->lfsr_w7  = (v >> 3) & 1;
+    a->ns_div   = v & 7;
+#if NOISE_NR43_LATCH & 4
+    if (a->ns_div == 0 && (odiv != 0 || keep)) keep = 0x10000; else keep = 0;
+#else
+    (void)odiv; keep = 0;
+#endif
+#if NOISE_NR43_LATCH & 2
+    {
+        int nclk = (a->ns_clk + 1) & 3;
+        int dz = (a->ns_div == 0) && !keep;
+        int up = a->ns_up;
+        if (a->ns_trig == 0 && a->ns_down == 1
+         && (nclk == NOISE_EXAM_PHASE || (dz && nclk == NOISE_EXAM_PHASE2)))
+            up = (up + 1) & 0x3FFF;
+        int ob = oshift < 14 && ((up >> oshift) & 1);
+        int nb = a->ns_shift < 14 && ((up >> a->ns_shift) & 1);
+#if DMG_NOISE_FB_LATCH
+        /* DMG_NOISE_FB_LATCH: the write's own falling edge takes the feedback,
+         * and its rising edge shifts in what was taken. */
+        if (!a->dev_cgb && a->ch[3].enabled && a->ns_trig == 0 && ob && !nb)
+            a->ch[3].duty_clocking = (a->lfsr ^ (a->lfsr >> 1)) & 1;
+#endif
+        if (a->ch[3].enabled && a->ns_trig == 0 && !ob && nb) {
+#if DMG_NOISE_FB_LATCH
+            int x = !a->dev_cgb ? (a->ch[3].duty_clocking & 1) : ((a->lfsr ^ (a->lfsr >> 1)) & 1);
+#else
+            int x = (a->lfsr ^ (a->lfsr >> 1)) & 1;
+#endif
+            a->lfsr = (a->lfsr >> 1) | (x << 14);
+            if (ow7) a->lfsr = (a->lfsr & ~0x40) | (x << 6);
+        }
+        keep |= ((oshift + 1) << 12) | 0x100000 | (ow7 << 21);
+    }
+#else
+    (void)oshift; (void)ow7;
+#endif
+#if !(NOISE_NR43_LATCH & 1)
+    if (a->ns_div) a->ns_down = a->ns_div;
+#endif
+    a->ns_pending = keep;
+}
+#endif
+
 static void apu_write(struct APU *a, unsigned short addr, unsigned char v) {
     int i = (int)addr - 0xFF10;
     if (i < 0 || i > 0x2F) return;
@@ -1330,6 +1591,9 @@ static void apu_write(struct APU *a, unsigned short addr, unsigned char v) {
          * one-tick window, computed at the other phase -- the asymmetry is in
          * the core's bus, not in the APU, so the APU absorbs it rather than
          * asking for a seam change. */
+#if MDL_AGBWAVE
+        if (a->dev_cgb && GB_MODEL_IS_AGB(apu_model(a))) return;   /* A2 */
+#endif
         if (WAVE_CGB_RULE && a->dev_cgb) {
             a->wave[WAVE_CGB_WRITE_LOOKAHEAD ? (((a->wave_pos + 1) & 31) >> 1)
                                              : (a->wave_pos >> 1)] = v;
@@ -1425,7 +1689,13 @@ static void apu_write(struct APU *a, unsigned short addr, unsigned char v) {
              * cycle, so applying NR43 here lets THIS cycle's LFSR steps already
              * see the new width. Deferring puts the write at the end of the
              * cycle, where the bus leaves it. */
+#if NOISE_NR43_LATCH & 8
+            apu_nr43_latch(a, v); break;   /* lands before this cycle's ticks */
+#elif NOISE_NR43_LATCH
+            a->ns_pending = (a->ns_pending & ~0x1FF) | 0x100 | v; break;
+#else
             a->ns_pending = 0x100 | v; break;
+#endif
 #endif
             a->ns_shift = (v >> 4) & 15;
             a->lfsr_w7  = (v >> 3) & 1;
@@ -1467,11 +1737,34 @@ static void apu_chan_tick(struct APU *a) {
         if (a->sw_shift) a->ch[0].enabled = 0;
     }
 #endif
+#if MDL_SQFREQ || MDL_PCMREAD
+    a->sq_reload = 0; a->pcm_edge = 0;
+#endif
+#if MDL_SQTRIGSTEP && APU_FAST
+    /* APU_FAST: MDL_SQTRIGSTEP's bookkeeping for both squares, taken before the
+     * loop.  Nothing in the first square's pass reads or writes the second
+     * square's enable or timer or these bits, so doing both here is the same as
+     * doing each at the top of its own pass; and when every bit already says
+     * what the enables say, there is nothing to do at all. */
+    if ((a->sq_frz_ok & 3) != ((a->ch[0].enabled ? 0u : 1u) | (a->ch[1].enabled ? 0u : 2u)))
+        for (int i = 0; i < 2; i++) {
+            struct APUChan *c = &a->ch[i];
+            if (c->enabled) a->sq_frz_ok &= (unsigned char)~(1 << i);
+            else if (!(a->sq_frz_ok & (1 << i))) { a->sq_frz[i] = c->timer; a->sq_frz_ok |= (unsigned char)(1 << i); }
+        }
+#endif
     for (int i = 0; i < 2; i++) {                     /* the two squares */
         struct APUChan *c = &a->ch[i];
+#if MDL_SQTRIGSTEP && !APU_FAST
+        if (c->enabled) a->sq_frz_ok &= (unsigned char)~(1 << i);
+        else if (!(a->sq_frz_ok & (1 << i))) { a->sq_frz[i] = c->timer; a->sq_frz_ok |= (unsigned char)(1 << i); }
+#endif
         c->timer -= APU_TICK_T;
         while (c->timer <= 0) {
             c->timer += (2048 - c->freq) * 4;
+#if MDL_SQFREQ || MDL_PCMREAD
+            a->sq_reload |= (unsigned char)(1 << i);
+#endif
 #if DUTY_WRITE_DELAYED
             /* The sample just finished: a duty written during it takes effect
              * now. OUTSIDE the duty_clocking gate -- that gate is about the
@@ -1484,9 +1777,17 @@ static void apu_chan_tick(struct APU *a) {
             c->duty = c->duty_pending;
 #endif
             if ((!DUTY_OFF_UNTIL_FIRST_TRIGGER || c->duty_clocking)
-             && (!DUTY_STOPPED_HOLDS_PHASE || c->enabled)) {
+             && (!DUTY_STOPPED_HOLDS_PHASE || c->enabled
+                 || (DMG_DUTY_RUNS_AFTER_EXPIRY && !a->dev_cgb && (c->duty_clocking & 2)))) {
+#if MDL_SQFREQ
+                if (a->sq_hold & (1 << i)) a->sq_hold &= (unsigned char)~(1 << i);
+                else
+#endif
                 c->duty_pos = (c->duty_pos + 1) & 7;
                 c->duty_zero_1st = 0;
+#if MDL_PCMREAD
+                if (c->out == 0) a->pcm_edge |= (unsigned char)(1 << i);
+#endif
             }
         }
     }
@@ -1510,11 +1811,27 @@ static void apu_chan_tick(struct APU *a) {
         /* (b) the divisor down-counter, examined at one phase -- and at a second
          *     phase too while the LATCHED divisor is 0, which is the whole of
          *     "code 0 runs at double rate". */
+#if NOISE_NR43_LATCH
+        int tap = a->ns_shift;
+#if NOISE_NR43_LATCH & 2
+        if (a->ns_pending & 0xF000) tap = ((a->ns_pending >> 12) & 15) - 1;
+#endif
+        int dz = a->ns_div == 0;
+#if NOISE_NR43_LATCH & 4
+        if (a->ns_pending & 0x10000) dz = 0;
+#endif
+#else
+#define tap a->ns_shift
+#define dz (a->ns_div == 0)
+#endif
         if (a->ns_clk == NOISE_EXAM_PHASE
-         || (a->ns_div == 0 && a->ns_clk == NOISE_EXAM_PHASE2)) {
+         || (dz && a->ns_clk == NOISE_EXAM_PHASE2)) {
             a->ns_down = (a->ns_down - 1) & 15;
             if (a->ns_down == 0) {
                 a->ns_down = a->ns_div ? a->ns_div : 1;
+#if NOISE_NR43_LATCH & 4
+                a->ns_pending &= ~0x10000;
+#endif
                 /* (c) the 14-bit up-counter, and the tap. */
                 int prev = a->ns_up;
                 a->ns_up = (a->ns_up + 1) & 0x3FFF;
@@ -1522,12 +1839,27 @@ static void apu_chan_tick(struct APU *a) {
                  * not elapsed.  THE COUNTER RUNS; THE LFSR DOES NOT.  That is
                  * the same split the whole model rests on -- the divisor stage
                  * never stops, the shift register is what waits. */
-                if (c->enabled && a->ns_trig == 0 && a->ns_shift < 14
-                 && !((prev >> a->ns_shift) & 1)
-                 && ((a->ns_up >> a->ns_shift) & 1)) {
+#if DMG_NOISE_FB_LATCH
+                /* DMG_NOISE_FB_LATCH: the feedback is taken on the falling edge. */
+                if (!a->dev_cgb && c->enabled && a->ns_trig == 0 && tap < 14
+                 && ((prev >> tap) & 1) && !((a->ns_up >> tap) & 1))
+                    c->duty_clocking = (a->lfsr ^ (a->lfsr >> 1)) & 1;
+#endif
+                if (c->enabled && a->ns_trig == 0 && tap < 14
+                 && !((prev >> tap) & 1)
+                 && ((a->ns_up >> tap) & 1)) {
+#if DMG_NOISE_FB_LATCH
+                    int x = !a->dev_cgb ? (c->duty_clocking & 1) : ((a->lfsr ^ (a->lfsr >> 1)) & 1);
+#else
                     int x = (a->lfsr ^ (a->lfsr >> 1)) & 1;
+#endif
                     a->lfsr = (a->lfsr >> 1) | (x << 14);
+#if NOISE_NR43_LATCH & 2
+                    if ((a->ns_pending & 0x100000) ? ((a->ns_pending >> 21) & 1) : a->lfsr_w7)
+                        a->lfsr = (a->lfsr & ~0x40) | (x << 6);
+#else
                     if (a->lfsr_w7) a->lfsr = (a->lfsr & ~0x40) | (x << 6);
+#endif
                 }
             }
         }
@@ -1539,6 +1871,16 @@ static void apu_chan_tick(struct APU *a) {
             a->ns_up = 0;
             a->ns_down = a->ns_div ? a->ns_div : 1;
         }
+#if NOISE_NR43_LATCH & 2
+#if APU_FAST
+        if (a->ns_pending & 0x30F000)
+#endif
+        a->ns_pending &= ~0x30F000;  /* the tap and width latches follow the register */
+#endif
+#if !NOISE_NR43_LATCH
+#undef tap
+#undef dz
+#endif
 #else
         c->timer -= APU_TICK_T;
         while (c->timer <= 0) {
@@ -1589,6 +1931,30 @@ static int apu_dac(struct APU *a, int i) {
 
 static void apu_mix(struct APU *a, int *l, int *r) {
     int sl = 0, sr = 0;
+#if MDL_AGBMIX
+    /* MDL_AGBMIX (A1): the Advance has no per-channel DACs.  The four channels
+     * are summed digitally whatever their DAC bits say; a channel left out of
+     * NR51 still adds its silence level to that side; channel 3 is inverted
+     * with its own silence level; a square or noise channel that is playing
+     * adds its current volume as a bias (Pan Docs Audio_details, "Game Boy
+     * Advance audio"; SameBoy's update_sample, "model > CGB_E").  In this
+     * file's polarity (2 x out - 15).  MECHANISM for the structure; the levels
+     * are SameBoy's. */
+    if (a->dev_cgb && GB_MODEL_IS_AGB(apu_model(a))) {
+        for (int i = 0; i < 4; i++) {
+            if (a->mute & (1 << i)) continue;
+            int v = a->ch[i].enabled ? a->ch[i].out : 0, b = 0, sil = 0;
+            if (i == 2) { v ^= 0xF; sil = 14; }
+            else if (a->ch[i].enabled) b = a->ch[i].vol;
+            int on = 2 * v + b - 15, off = sil - 15;
+            sl += (a->route & (0x10 << i)) ? on : off;
+            sr += (a->route & (1 << i)) ? on : off;
+        }
+        *l = sl * (a->vol_l + 1);
+        *r = sr * (a->vol_r + 1);
+        return;
+    }
+#endif
     for (int i = 0; i < 4; i++) {
         int o = apu_dac(a, i);
         if (a->route & (0x10 << i)) sl += o;
@@ -1598,13 +1964,14 @@ static void apu_mix(struct APU *a, int *l, int *r) {
     *r = sr * (a->vol_r + 1);
 }
 
-#if APU_HIGHPASS
+#if APU_CAPTURE_HIGHPASS
 /* One capacitor step per APU tick. out = in - charge, then the charge relaxes
  * toward the input: the standard first-order DC block, and what takes a
  * powered-DAC idle level off its rail and back to zero (which is the click in
  * sect. 14, closed at source rather than papered over in the shell). */
 static void apu_hp_step(struct APU *a) {
     int l, r;
+    if (apu_dmg_disconnected(a)) { a->an_l = a->an_r = 0; return; }   /* DMG_ALLOFF_HOLD */
     apu_mix(a, &l, &r);
     double il = (double)l, ir = (double)r;
     double ol = il - a->hp_l, orr = ir - a->hp_r;
@@ -1666,24 +2033,60 @@ static void apu_capture(struct APU *a) {
  * and zero is normal; on overflow the OLDEST frames are dropped, because in an
  * audio pipeline stale samples are worse than a discontinuity.
  */
+#if APU_INTERFERENCE
+/* THE BUZZ (APU_INTERFERENCE in apu.h).  The level is the host's setting, not
+ * machine state: it is not in `struct APU`, so a save state neither carries it
+ * nor changes size, and two linked machines share it.  g_interf_bias is the
+ * machine's offset for the current machine cycle, in SameBoy's units (one
+ * channel's full swing = 0xFF0), set by gb.c just before apu_tick4 and read
+ * only while the level is above 0.  The hiss is a fixed-seed xorshift, so a
+ * run with the buzz on is still repeatable. */
+static int      g_interf_level;          /* 0..100, 0 = off (default)          */
+static int      g_interf_bias;           /* SameBoy units, this machine cycle  */
+static unsigned g_interf_seed = 0x9E3779B9u;
+#define APU_SB_PER_CH 4080.0             /* SameBoy MAX_CH_AMP, one channel    */
+static unsigned apu_interf_rand(void) {
+    unsigned x = g_interf_seed;
+    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    return g_interf_seed = x;
+}
+#endif
+
 static void apu_out(struct APU *a) {
     if (!a->out_step) return;
     int l, r;
     apu_output_pair(a, &l, &r);
 #if APU_HOST_DCBLOCK
+    if (apu_dmg_disconnected(a)) l = r = 0;                         /* DMG_ALLOFF_HOLD */
+    else
     {   /* the output capacitor, per tick (APU_HOST_DCBLOCK in apu.h); the
          * charge per model is APU_HOST_HP_PER_MODEL. A tick is 2 T of the
          * 4194304 Hz clock at either CGB speed (APU_NTICKS), so one per-tick
          * factor serves both speeds. */
         const double k = (APU_HOST_HP_PER_MODEL && a->dev_cgb) ? APU_HP_CHARGE_CGB
                                                                 : APU_HP_CHARGE;
-        double ol = (double)l - a->hb_l, orr = (double)r - a->hb_r;
-        a->hb_l = (double)l - ol * k;
-        a->hb_r = (double)r - orr * k;
+        double xl = (double)l, xr = (double)r;
+#if APU_INTERFERENCE
+        /* The buzz enters ahead of the capacitor.  One channel's full swing is
+         * 240 of our units (2 x 15 x 8) against SameBoy's 0xFF0. */
+        if (g_interf_level) {
+            double b = g_interf_bias * (g_interf_level / 100.0) * (240.0 / APU_SB_PER_CH);
+            xl += b; xr += b;
+        }
+#endif
+        double ol = xl - a->hb_l, orr = xr - a->hb_r;
+        a->hb_l = xl - ol * k;
+        a->hb_r = xr - orr * k;
         l = (int)ol; r = (int)orr;
     }
 #endif
     a->out_l += l; a->out_r += r; a->out_n++;
+#if SGB_SOUND
+#if APU_FAST
+    if (a->sgbs_ext_l | a->sgbs_ext_r)      /* adding nothing changes nothing */
+#endif
+    { a->sgbs_acc_l += a->sgbs_ext_l; a->sgbs_acc_r += a->sgbs_ext_r; }
+#endif
     a->out_acc += (unsigned)(APU_TICK_T << 16);
     if (a->out_acc < a->out_step) return;
     a->out_acc -= a->out_step;
@@ -1693,6 +2096,25 @@ static void apu_out(struct APU *a) {
      * exceeds about 136 accumulated ticks, which a low host rate reaches. */
     long long wl = ((long long)a->out_l * 32767) / (APU_HOST_FS * n);
     long long wr = ((long long)a->out_r * 32767) / (APU_HOST_FS * n);
+#if APU_INTERFERENCE
+    if (g_interf_level) {
+        /* The hiss: SameBoy's rand() % (0xFF0 / 12), one value per output sample
+         * on both sides, here centred (its mean is a level no capacitor passes)
+         * and taken into our output units: 32767 x 240 / (960 x 0xFF0) per
+         * SameBoy unit, about 2.008. */
+        double u = (double)(apu_interf_rand() % 340u) - 169.5;
+        long long h = (long long)(u * (g_interf_level / 100.0)
+                                  * (32767.0 * 240.0 / ((double)APU_HOST_FS * APU_SB_PER_CH)));
+        wl += h; wr += h;
+    }
+#endif
+#if SGB_SOUND
+    /* the SNES side's sound joins the Game Boy's in the SNES mixer (sgbsnd.c, SGBS_GAIN_Q10) */
+    wl += a->sgbs_acc_l / n; wr += a->sgbs_acc_r / n;
+    a->sgbs_acc_l = a->sgbs_acc_r = 0;
+    if (wl > 32767) wl = 32767; else if (wl < -32767) wl = -32767;
+    if (wr > 32767) wr = 32767; else if (wr < -32767) wr = -32767;
+#endif
 #if APU_HOST_DCBLOCK
     /* Centred, the swing can reach twice the rail-to-rail half (a full positive
      * step after a long rail-low silence). With APU_HOST_HEADROOM the scale
@@ -1722,11 +2144,21 @@ static void apu_out(struct APU *a) {
  * caller makes at most once per audio block. rate <= 0 idles the output. */
 static int apu_pull(struct APU *a, short *dst, int frames, int rate) {
     if (rate <= 0) { a->out_step = 0; a->out_rate = 0; return 0; }
+#if MDL_SGBCLK
+    /* the step follows the model too (S4), which can change at a reset */
+    if ((unsigned)rate != a->out_rate
+        || a->out_step != (unsigned)(((unsigned long long)GB_MODEL_HZ(apu_model(a)) << 16) / (unsigned)rate)) {
+        if ((unsigned)rate != a->out_rate) a->out_acc = 0;
+        a->out_rate = (unsigned)rate;
+        a->out_step = (unsigned)(((unsigned long long)GB_MODEL_HZ(apu_model(a)) << 16) / (unsigned)rate);
+    }
+#else
     if ((unsigned)rate != a->out_rate) {
         a->out_rate = (unsigned)rate;
         a->out_step = (unsigned)((4194304ULL << 16) / (unsigned)rate);
         a->out_acc = 0;
     }
+#endif
     int n = 0;
     while (n < frames && a->ring_tail != a->ring_head) {
         dst[n * 2]     = a->ring[a->ring_tail * 2];
@@ -1741,7 +2173,7 @@ static int apu_pull(struct APU *a, short *dst, int frames, int rate) {
  * core's 16-bit DIV counter. The frame sequencer is clocked by the falling
  * edge of DIV bit 4 — bit 12 of that counter — on real hardware, so it is
  * clocked by it here rather than by a divider of the APU's own. */
-/* SPSW_APU (7 Nov 2026), 0 = none of this.  MECHANISM, read in the
+/* SPSW_APU, 0 = none of this.  MECHANISM, read in the
  * AGE emulator and on his spsw-ch2-lc-delay table: the first switch to double
  * speed delays the frame sequencer by one machine cycle, the next takes the delay
  * away, and so on; a divider write keeps it; sound off clears it, and with sound
@@ -1763,6 +2195,9 @@ static void apu_stop_div_glitch(struct APU *a, unsigned int div_counter) {
 }
 
 static void apu_tick4(struct APU *a, unsigned int div_counter) {
+#if SGB_SOUND
+    if (a->sgbs_slot) sgbs_tick(a);
+#endif
     int shift = (APU_DIV_BIT_SPEED && a->dev_cgb && a->dev_speed) ? 13 : 12;
     if (SPSW_APU && (a->div_bit & 2) && a->dev_speed) {
         /* The frame sequencer sees the divider one machine cycle late. */
@@ -1788,7 +2223,7 @@ static void apu_tick4(struct APU *a, unsigned int div_counter) {
          * the LAST tick can coincide with one. */
         if (t == nticks - 1) a->wave_read_2nd = (a->wave_pos != wpos);
         else if (a->wave_pos != wpos) a->wave_read_2nd = 0;
-#if APU_HIGHPASS
+#if APU_CAPTURE_HIGHPASS
         apu_hp_step(a);
 #endif
         apu_out(a);
@@ -1806,8 +2241,20 @@ static void apu_tick4(struct APU *a, unsigned int div_counter) {
         }
 #endif
 #if NOISE_NR43_DEFER
+#if NOISE_NR43_LATCH
+    if (a->ns_pending & 0x100) {
+#else
     if (a->ns_pending) {
+#endif
         unsigned char v = (unsigned char)(a->ns_pending & 0xFF);
+#if NOISE_COUNTER_MODEL && NOISE_NR43_LATCH
+        apu_nr43_latch(a, v);
+#else
+#if NOISE_COUNTER_MODEL && DMG_NOISE_FB_LATCH
+        if (!a->dev_cgb && a->ch[3].enabled && a->ns_shift < 14
+            && ((a->ns_up >> a->ns_shift) & 1) && !((a->ns_up >> ((v >> 4) & 15)) & 1))
+            a->ch[3].duty_clocking = (a->lfsr ^ (a->lfsr >> 1)) & 1;   /* DMG_NOISE_FB_LATCH */
+#endif
         a->ns_shift = (v >> 4) & 15;
         a->lfsr_w7  = (v >> 3) & 1;
         a->ns_div   = v & 7;
@@ -1818,8 +2265,11 @@ static void apu_tick4(struct APU *a, unsigned int div_counter) {
          * -- that is the whole hypothesis, and the residual the reload leaves is
          * what makes a later write produce an earlier step. */
         if (a->ns_div) a->ns_down = a->ns_div;
-#endif
         a->ns_pending = 0;
+#else
+        a->ns_pending = 0;
+#endif
+#endif
     }
 #endif
 }
@@ -1869,7 +2319,13 @@ static void apu_reset(struct APU *a, int post_boot) {
     int mute = a->mute;
     int dev_cgb = a->dev_cgb;
     int dev_speed = a->dev_speed;
+#if SGB_SOUND
+    unsigned char sgbs_slot = a->sgbs_slot;     /* a Game Boy reset is not an SNES reset */
+#endif
     for (unsigned i = 0; i < sizeof(struct APU); i++) ((unsigned char *)a)[i] = 0;
+#if SGB_SOUND
+    a->sgbs_slot = sgbs_slot;
+#endif
     a->mute = mute;
     a->dev_cgb = dev_cgb;
     a->dev_speed = dev_speed;
@@ -1884,6 +2340,9 @@ static void apu_reset(struct APU *a, int post_boot) {
      * to 15.  Every samesuite cartridge power-cycles, so nothing in the pool
      * sees it -- which is exactly why it is written here rather than left. */
     a->ns_down = 1;
+#endif
+#if MDL_SQTRIGSTEP
+    a->sq_frz[0] = a->sq_frz[1] = 0; a->sq_frz_ok = 3;   /* as apu_power_on */
 #endif
 
     if (post_boot) {

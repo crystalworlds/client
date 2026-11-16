@@ -4030,8 +4030,7 @@ const _GNW_PROGRAMS_URL = (function () {
 function _gnwApplyPrograms(files) {
   for (const k in files) {
     if (!GAMES[k]) continue;
-    /* `rom` is the key a gnw_games.json built before 24 Oct 2026 used; read it too. */
-    const program = files[k].program || files[k].rom;
+    const program = files[k].program;
     if (program)         GAMES[k].programB64 = program;
     if (files[k].melody) GAMES[k].melodyB64 = files[k].melody;
   }

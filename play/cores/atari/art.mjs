@@ -80,6 +80,9 @@ async function build(turn) {
 
 /** The art description the presenter draws, or null (no archive: the plain screen). */
 export async function describe(ctx = {}) {
+  /* Two Lynxes on one cable: two screens side by side are wider than the console's glass, so they are
+     shown as the plain screen (as two linked Game Boys are). */
+  if (ctx.model === 'alynx-link') return null;
   let turn = 0;
   if (SYS === 'alynx') {
     const r = ctx.rotation != null ? ctx.rotation : (ctx.video && ctx.video.rotation);

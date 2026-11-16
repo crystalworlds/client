@@ -1,0 +1,47 @@
+{
+ "format": 1,
+ "list": "gbcrejected",
+ "label": "Game Boy Color: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "game-boy"
+ ],
+ "internal": true,
+ "count": 7,
+ "entries": {
+  "1cfb4d7021b3e17dc6a1b7a240090232c8e18d082247f40df60a7327fcd50f02": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (Action Replay Pro) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "343aa6cbce4bd7f174c1ac2c4b01cd545e4377360d3f8be0d5331a7bcd5c6c0c": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (GameShark MX) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "5f22b311117de4a8dd8947cb3a6819504468c4444d6754ffc94da53442f4ced6": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is an e-mail program for a modem add-on: a tool, not a game."
+  },
+  "76c20009d8d566b1a4f266330db30d64a976dae1e8a30171d99e649d2fc5e15d": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "9cc348085798eb31fa359a42813142b1aa0c8859fac725c9cefa097d639a502f": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged. A clean copy of the same game plays."
+  },
+  "db15fb847e2daef4f51743647180251100dc5c0334d799470243cb6407f763e7": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged."
+  },
+  "f73159e18d7974585a1270419772b6e8fcae53828bfe7d5a9bb68aaaa48443a9": {
+   "kind": "cartridge",
+   "code": "BAD_COPY",
+   "reason": "This file is a bad copy: it was copied wrongly from its cartridge or disk, so parts of the game are damaged."
+  }
+ }
+}

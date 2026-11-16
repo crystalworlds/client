@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   if (window.CwEmuCards) return;
-  const IMG = k => 'images/consoles/' + k + '.webp?v=2.1.1';
+  const IMG = k => 'images/consoles/' + k + '.webp?v=2.2.0';
   const P = (img, name) => ({ img, name });
   const N = name => ({ name });
 
@@ -91,7 +91,7 @@
   const SITE_VERSION = (() => {
     const el = document.querySelector('#vault-overlay .modal-title');
     const m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.1.1';
+    return m ? m[1] : '2.2.0';
   })();
   const COMPARE = {
     /* GB versions (2026-10-18): the board (gbdev.io/GBEmulatorShootout, run 'Updated On Thu, 04 Jun 2026')
@@ -99,39 +99,43 @@
        date: LIJI32/SameBoy v1.0.3 (2026-03-04; v1.0.4 2026-10-09), Docheinstein/docboy 1.2 (2026-03-22;
        1.3 2026-06-20). Emulicious downloads from emulicious.net with no version history: not stated.
        2026-11-07: SameBoy 1.0.5 and DocBoy 1.3 run by us with the board's own tool, rows and judge: the same answers as the
-       4 June run on all 261 shared rows. Ours 256 / 259 on the 261 from core 37c1741215a4 (8 Nov 2026), and the same on core ca5a2a32f97e (9 Nov 2026, every row byte-identical).
+       4 June run on all 261 shared rows. Ours 256 / 259 on the 261 from core 37c1741215a4 (8 Nov 2026), and the same on core ca5a2a32f97e (9 Nov 2026, every row byte-identical). 14 Nov 2026: core a6d8af554488 (every model, the Color at revision E by default), 261 PASS / 0 FAIL / 3 INFO on all 264, so 258 / 261 on the shared 261 (the two rows that moved since 9 Nov are among the shared rows; the 3 Super Game Boy rows still pass). 15 Nov 2026: core 1e21c1319008 (channel 1 timing by Colour revision, the dispatch clear, the printer, timed buttons), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 82c160bc54dc (the trigger duty step at Colour D and E, the first-model DMG 0), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core d3df03e99c03 (a Colour alone sees its own infrared LED), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 29116ae70271 (the original and the Pocket with no start-up program begin where their own start-up program hands over), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 4e43ce760b3e (the same emulator with less work per cycle, so it runs faster), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO.
        mGBA added 2026-10-30: the board's own cells for the mGBA column, counted from the page
        read 30 Oct 2026, same run: 145 PASS + 3 INFO on the shared 261 (147 / 150 on all 264, the page's
        "mGBA (150/264)"); mgba-emu/mgba newest release on that date 0.10.5 (2025-03-09), still the newest. */
     gb: { test: 'The public Game Boy accuracy board (264 rows), on the 261 rows every column was run on. Score: PASS only, then PASS plus INFO.',
       rows: [
-        ['Ours', SITE_VERSION, '256 / 259', '9 Nov 2026'],
+        ['Ours', SITE_VERSION, '258 / 261', '15 Nov 2026'],
         ['DocBoy', '1.3', '255 / 258', '7 Nov 2026'],
         ['Emulicious', 'not stated', '251 / 254', '4 Jun 2026'],
         ['SameBoy', '1.0.5', '249 / 252', '7 Nov 2026'],
         ['mGBA', '0.10.5', '145 / 148', '4 Jun 2026'],
       ],
-      note: 'On the 261 tests every emulator was run on, we pass 256 and DocBoy 1.3 passes 255. We ran SameBoy 1.0.5 and DocBoy 1.3 ourselves on 7 November 2026 with the board’s own tool and judge: on these 261 tests they gave the same answers as the board’s published run of 4 June 2026. Emulicious and mGBA are the board’s own run of 4 June 2026; we have not re-run them. In that run the board left three Super Game Boy tests blank for DocBoy and Emulicious (they were not tested, rather than failed), so this table compares the 261 tests every emulator was run on. Across all 264 tests, including those three, we score 259. mGBA 0.10.5 is still its newest release. Emulicious publishes no release history.' },
+      note: 'On the 261 tests every emulator was run on, we pass 258 and DocBoy 1.3 passes 255. We ran SameBoy 1.0.5 and DocBoy 1.3 ourselves on 7 November 2026 with the board’s own tool and judge: on these 261 tests they gave the same answers as the board’s published run of 4 June 2026. Emulicious and mGBA are the board’s own run of 4 June 2026; we have not re-run them. In that run the board left three Super Game Boy tests blank for DocBoy and Emulicious (they were not tested, rather than failed), so this table compares the 261 tests every emulator was run on. Across all 264 tests, including those three, we score 261. mGBA 0.10.5 is still its newest release. Emulicious publishes no release history.' },
     /* 8 Nov 2026 (AccuracyCoin 66e8711, 4 Nov 2026, 147 scored tests): every emulator its newest release, each
        from its project's own release page, run by script (Mesen and FCEUX read from RAM, Nestopia UE
        and puNES from the picture, every reading equal to the cartridge's own tally). Ours: 147 / 147 at alignments
        0, 1 and 2 on the release core.
        9 Nov 2026 (same cartridge): NintendulatorNRS 202611061000 (its author's page, read from the picture)
        and FCEUmm libretro e0f3086 (the official libretro buildbot build, read from RAM by our own libretro runner); run 2 of
-       every arm agrees with run 1 on every pass and fail. */
-    nes: { test: 'AccuracyCoin, its 4 November 2026 build (147 scored tests, NTSC), each emulator on its default settings, judged by the cartridge itself.',
+       every arm agrees with run 1 on every pass and fail.
+       16 Nov 2026 (AccuracyCoin 48e596f, 13 Nov 2026, 147 scored tests; it adds a register mirror check to DMA Landing
+       on Write): every row re-run twice on the new cartridge, same programs, plus FCEUmm's buildbot build of 15 Nov
+       (core 86f0eea). Ours 147 / 147 at alignments 0, 1 and 2 on 37ab34623f2a. Every score as on 66e8711; the one
+       difference between runs is NintendulatorNRS's Delta Modulation Channel (failed in run 1, passed in run 2). */
+    nes: { test: 'AccuracyCoin, its 13 November 2026 build (147 scored tests, NTSC), each emulator on its default settings, judged by the cartridge itself.',
       rows: [
-        ['Ours', SITE_VERSION, '147 / 147', '8 Nov 2026'],
-        ['Nestopia UE', '2.0.0', '145 / 147', '8 Nov 2026'],
-        ['MesenCE', '2.2.1', '141 / 147', '8 Nov 2026'],
-        ['MesenCE', '2.2.0', '141 / 147', '8 Nov 2026'],
-        ['NintendulatorNRS', '6 Nov 2026 build', '132 / 147', '9 Nov 2026'],
-        ['Mesen2', '2.1.1', '128 / 147', '8 Nov 2026'],
-        ['puNES', '0.111', '102 / 147', '8 Nov 2026'],
-        ['FCEUX', '2.7.0', '84 / 147', '8 Nov 2026'],
-        ['FCEUmm (libretro)', '2 Nov 2026 build', '84 / 147', '9 Nov 2026'],
+        ['Ours', SITE_VERSION, '147 / 147', '16 Nov 2026'],
+        ['Nestopia UE', '2.0.0', '145 / 147', '16 Nov 2026'],
+        ['MesenCE', '2.2.1', '141 / 147', '16 Nov 2026'],
+        ['MesenCE', '2.2.0', '141 / 147', '16 Nov 2026'],
+        ['NintendulatorNRS', '6 Nov 2026 build', '132 / 147', '16 Nov 2026'],
+        ['Mesen2', '2.1.1', '128 / 147', '16 Nov 2026'],
+        ['puNES', '0.111', '102 / 147', '16 Nov 2026'],
+        ['FCEUX', '2.7.0', '84 / 147', '16 Nov 2026'],
+        ['FCEUmm (libretro)', '15 Nov 2026 build', '84 / 147', '16 Nov 2026'],
       ],
-      note: 'We pass all 147; no other emulator measured here does. Nestopia UE 2.0.0 passes 145: it fails DMA Landing on Write and DMC Reload Timing, and every other emulator measured here fails DMC Reload Timing too. The newest test in this build, DMC Playback Rate, is passed by Nestopia UE, NintendulatorNRS and every Mesen release, and failed by puNES, FCEUX and FCEUmm. On its defaults FCEUX 2.7.0 scores 84, with 3 tests skipped by the cartridge; with its New PPU option on it scores 89. FCEUmm, the libretro core, passes the same 84 tests as FCEUX on its defaults, with the same 3 skipped. With every documented accuracy option on, MesenCE 2.2.1 scores 137. Each emulator is its newest release (FCEUmm has no releases, so it is the newest official libretro build), run by us on 8 and 9 November 2026. Every emulator was run twice, with the same pass or fail on every test.' },
+      note: 'We pass all 147; no other emulator measured here does. Nestopia UE 2.0.0 passes 145: it fails DMA Landing on Write and DMC Reload Timing, and every other emulator measured here fails DMC Reload Timing too. This build adds one check to DMA Landing on Write, that the picture unit’s registers also answer at their mirror addresses: every emulator measured here that reaches the check passes it, and no score moved from the 4 November build. DMC Playback Rate, new in the 4 November build, is passed by Nestopia UE, NintendulatorNRS and every Mesen release, and failed by puNES, FCEUX and FCEUmm. On its defaults FCEUX 2.7.0 scores 84, with 3 tests skipped by the cartridge; with its New PPU option on it scores 89. FCEUmm, the libretro core, passes the same 84 tests as FCEUX on its defaults, with the same 3 skipped. With every documented accuracy option on, MesenCE 2.2.1 scores 137. Each emulator is its newest release (FCEUmm has no releases, so it is the newest official libretro build), run by us on 16 November 2026. Every emulator was run twice, with the same pass or fail on every test, except NintendulatorNRS on Delta Modulation Channel: it failed in one run and passed in the other, and its row counts it as failed.' },
     /* 7800 (2026-10-18: #1 with a scoreboard saying why): the Atari ranking of
        18 Oct 2026: scoreboard of 7 Oct 2026 (ours 27, A7800 11 with 1 fail and 15 unable to run,
        ProSystem 1; common set 12 vs 11), library run of 23 Oct 2026 (A7800 refuses 98 of
@@ -161,7 +165,7 @@
         ['Stella', '7.0c', '15 of 18', '7 Oct 2026'],
         ['Gopher2600', '79ce82a', '14 of 18', '7 Oct 2026'],
       ],
-      note: 'Level with Stella. The 3 processor tests cannot be given to Stella or Gopher2600, so they count for nothing against either; on the 15 test cartridges all three can run, we pass 15, Stella 15 and Gopher2600 14. Games, tested on us and Stella (2,089 files, 23 Oct 2026): Stella’s run counted 3 files as playing that ours did not, all unfinished prototypes; checked one by one, none is a fault in our emulator (two play on ours too, and the third asks for a part of the game the file does not have). Our core and Stella both have the same 58 cartridge types; 50 of them reach this site (the core’s multicart sizes and Movie Cart are never chosen here). Controllers: we support 18 and Stella 17. Both have the Kid Vid and play its tapes’ narration, from audio files the player supplies; only we have the SNES pad adaptor. Only we can load Supercharger games through the real Supercharger’s own firmware, if supplied, from a tape signal made from the file. Both have a rewind. We never let a cartridge contact outside servers.',
+      note: 'Level with Stella. The 3 processor tests cannot be given to Stella or Gopher2600, so they count for nothing against either; on the 15 test cartridges all three can run, we pass 15, Stella 15 and Gopher2600 14. Games, tested on us and Stella (2,089 files, 23 Oct 2026): Stella’s run counted 3 files as playing that ours did not, all unfinished prototypes; checked one by one, none is a fault in our emulator (two play on ours too, and the third asks for a part of the game the file does not have). Our core and Stella both have the same 58 cartridge types; 50 of them reach this site (the core’s multicart sizes and Movie Cart are never chosen here). Controllers: both support the same 17, and both have the Kid Vid and play its tapes’ narration, from audio files the player supplies. Only we can load Supercharger games through the real Supercharger’s own firmware, if supplied, from a tape signal made from the file. Both have a rewind. We never let a cartridge contact outside servers.',
       download: { href: '/downloads/atari2600-tests/atari2600-test-cartridges.zip', label: 'our 15 test cartridges in one zip, with a read-me and their source' } },
     /* 5200: rung 1 (Acid5200, a public suite): ours 47, Altirra 46 (as installed), Atari800 20, so #1 (28 Oct
        2026, after the cycle-exact ANTIC DMA; before that #2 with ours 41). */
@@ -240,19 +244,22 @@
       score: { big: 'Real firmware', text: 'boots each unit’s own encrypted firmware. No public test suite exists for these units, so there is no public score yet, but we are building one', date: '' },
       proof: { fn: 'tftEmulationTabHTML', args: [{ id: 'reissue-super-mario-bros', model: 'HXA-001' }], anchor: '', title: 'Game & Watch colour: the ARM digital twin' } },
 
-    { name: 'Game Boy', count: 1, rank: ['#1'], lib: 'gb', sub: 'One core for all three machines',
+    { name: 'Game Boy', count: 1, rank: ['#1'], lib: 'gb', sub: 'One core for every model, from 1989 to the Advance',
       plays: [P('gb', 'Game Boy'), P('gbc', 'Game Boy Color'), P('sgb', 'Super Game Boy')],
-      key: ['Sharp SM83 CPU', 'DMG and Color picture units', 'Super Game Boy (ICD2 and the Super NES side)', '{chips.gb.licensed} licensed and {chips.gb.unlicensed} unlicensed cartridge chips'],
+      key: ['Every model, 1989 to the Advance', 'Sharp SM83 CPU', 'DMG and Color picture units', 'Super Game Boy (ICD2 and the Super NES side)', '{chips.gb.licensed} licensed and {chips.gb.unlicensed} unlicensed cartridge chips'],
       chips: [
+        ['Models', 'The Game Boy and its first model (1989), the Pocket and Light, the Game Boy Color from its first model through revisions A to E, the Game Boy Advance, the Advance SP and Game Boy Player, the Super Game Boy on an NTSC or a PAL Super NES, and the Super Game Boy 2, each at its own speed'],
         ['Processor', 'Sharp SM83, with the Color’s double-speed mode'],
-        ['Picture', 'The original (DMG) picture unit, dot by dot; the Color picture unit (revision C) with its palettes, video memory banks and HDMA block transfer'],
-        ['Sound', 'The four-channel sound unit, both machines'],
+        ['Picture', 'The original (DMG) picture unit, dot by dot; the Color picture unit of every revision (E by default) with its palettes, video memory banks and HDMA block transfer; the Advance’s darker screen with Colour correction on'],
+        ['Sound', 'The four-channel sound unit, with each model’s own timing, each Colour revision included; Console buzz, the faint hum of a real console’s screen and processor, when you switch it on'],
         ['System', 'Timer, sprite DMA, interrupts, serial port, the Color’s infrared port'],
-        ['Super Game Boy', 'The ICD2 chip that hands the Game Boy’s picture and command packets to the Super NES; the Super NES side at a high level: borders (the game’s own, or the Super Game Boy’s own read from your firmware), colours and palettes, the screen mask, up to four players'],
+        ['Super Game Boy', 'The ICD2 chip that hands the Game Boy’s picture and command packets to the Super NES; the Super NES side at a high level: borders (the game’s own, or the Super Game Boy’s own read from your firmware), colours and palettes, the screen mask, up to four players; the sound effects a game asks the Super NES to play, from the Super Game Boy’s SNES program on your game server'],
+        ['Start-up', 'Nintendo’s start-up program for each model when your game server has it, else our own CrystalWorlds start-up, which leaves the machine exactly as Nintendo’s does'],
         ['Cartridges', '{chips.gb.licensed} licensed: MBC1, MBC2, MBC3 with its clock, MBC5, MBC6, MBC7 (tilt), HuC1, HuC3, MMM01, M161, TAMA5, Pocket Camera (a real webcam), Pocket Sonar. {chips.gb.unlicensed} unlicensed: Sintax, Vast Fame, Sachen MMC1 and MMC2, Wisdom Tree, Rocket Games, Li Cheng, Hitek, BBD, Makon, NT, PKJD, GGB-81, Story of Lasama, Chongwu, New GB Color HK0701 and HK0819, Gowin'],
         ['Accessories', '{chips.gb.accessories}'],
+        ['Files', 'GBS music files play in the Game Boy player; game saves go in and out as .sav files, with the clock; save states go in and out as BESS, the format other Game Boy emulators read'],
       ],
-      score: { big: '259 of 264', text: 'on the public Game Boy accuracy board, with mealybug 24 of 24, Mooneye 97 of 97 and Blargg 51 of 51 on its rows; Game Boy Color mealybug 27 of 27. Two newer Game Boy Color suites, cgb-acid-hell and the AGE tests, built from their published source: 49 of 50 on the machines we model, against SameBoy 1.0.5’s 39 on the same 50 (every result is on the Game Boy Color tab). {games} games tested ({files} files). {play}.', date: '9 Nov 2026 (tests, Color suites and games)' },
+      score: { big: '261 of 264', text: 'on the public Game Boy accuracy board, with mealybug 24 of 24, Mooneye 97 of 97 and Blargg 51 of 51 on its rows; Game Boy Color mealybug 20 of 20 on revision E, the default, and 27 of 27 set to revision C. Two newer Game Boy Color suites, cgb-acid-hell and the AGE tests, built from their published source: 49 of 50 on revision E and 49 of 50 set to revision C, against SameBoy 1.0.5’s 39 on the same 50 at revision C (every result is on the Game Boy Color tab). {games} games tested ({files} files). {play}.', date: '14 Nov 2026 (tests and Color suites; games 9 Nov 2026)' },
       proof: { fn: 'gbEmulationTabHTML', args: [{ system: 'gb' }], anchor: 'gbe-score', title: 'Game Boy: the score' } },
 
     { name: 'NES', count: 1, rank: ['#1'], lib: 'nes', sub: 'NES, Famicom and the Disk System',
@@ -261,12 +268,12 @@
       chips: [
         ['Processor and sound', 'Ricoh 2A03 (NTSC) and 2A07 (PAL), plus Dendy timing'],
         ['Picture', 'Ricoh 2C02 and 2C07; the Vs. System RGB picture units 2C03, 2C04 (four versions) and 2C05 (five versions)'],
-        ['Disk System', 'The RAM adapter (32 KB RAM, timer interrupt), the disk drive and its wavetable sound'],
+        ['Disk System', 'The RAM adapter (32 KB RAM, timer interrupt), the disk drive and its wavetable sound; each disk named as the game names it, changed by itself to the side the game asks for, and loaded four times faster if you like'],
         ['Cartridge sound', 'MMC5, Namco 163, Konami VRC6 and VRC7 (FM), Sunsoft 5B'],
         ['Cartridges', '{chips.nes.mappers} mapper numbers plus the Disk System: MMC1, MMC2, MMC3, MMC4, MMC5, MMC6, FME-7, Konami VRC1 to VRC7, Namco 163, Tengen RAMBO-1, Bandai FCG, Irem G-101, the Study Box, homebrew boards such as Action 53 and GTROM, and many more'],
         ['Accessories', '{chips.nes.accessories}'],
       ],
-      score: { big: '147 of 147', text: 'on AccuracyCoin (its 4 November 2026 build), the public NES accuracy test cartridge, judged by the cartridge itself. R.O.B. is built in too: a 3D R.O.B. stands beside the game, reads its screen flashes and plays Gyromite and Stack-Up, with no add-on to install. {games} games tested ({files} files). {play}.', date: '8 Nov 2026 (tests), 25, 26 and 30 Oct, 1 Nov and 8 Nov 2026 (games), 8 Nov 2026 (core)' },
+      score: { big: '147 of 147', text: 'on AccuracyCoin (its 13 November 2026 build), the public NES accuracy test cartridge, judged by the cartridge itself. R.O.B. is built in too: a 3D R.O.B. stands beside the game, reads its screen flashes and plays Gyromite and Stack-Up, with no add-on to install. {games} games tested ({files} files). {play}.', date: '16 Nov 2026 (tests), 25, 26 and 30 Oct, 1, 8 and 14 Nov 2026 (games), 13 Nov 2026 (core)' },
       proof: { fn: 'nesEmulationTabHTML', args: [{ id: 'nes-proof', system: 'nes', catalogue: 'nes' }], anchor: 'nese-2', title: 'NES: the score, AccuracyCoin' } },
 
     { name: 'Pokémon mini', count: 1, rank: ['#1'], lib: 'pm', sub: '',
@@ -332,6 +339,7 @@
         ['Suzy', 'Sprite engine, maths unit, buttons and the cartridge port'],
         ['Cartridges', '.lnx, LNX2 and headerless images, BLL homebrew programs, cartridge RAM, save EEPROMs 93C46 to 93C86'],
         ['Boot', 'Atari’s boot program when your game server has it, else our own; Atari’s is never needed'],
+        ['Accessories', '{chips.alynx.accessories}'],
       ],
       score: { big: '128 of 129', text: 'on the Lynx hardware test suite, whose answers were recorded on real Lynx consoles', date: '7 Oct 2026 (tests), 29 Oct 2026 (games)' },
       proof: { fn: 'atariEmulationTabHTML', args: [{ catalogue: 'atarilynx' }], anchor: 'atarilynxemu-11-interface', title: 'Atari Lynx: the interface and the board' } },

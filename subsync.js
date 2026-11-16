@@ -1192,8 +1192,8 @@
   async function speechFromServer(L, I, onProgress, signal, note) {
     const a = I.api();
     const audio = L.audio || ((L.src && L.src.MediaStreams) || []).find(s => s.Type === 'Audio' && s.IsDefault) || ((L.src && L.src.MediaStreams) || []).find(s => s.Type === 'Audio');
-    const id = encodeURIComponent(L.item.Id), ai = audio && audio.Index != null ? String(audio.Index) : null;
-    const mk = (path, o) => { const q = new URLSearchParams(o); if (ai != null) q.set('AudioStreamIndex', ai); q.set(a.tokenParam ? a.tokenParam() : 'api_key', a.token()); return a.base() + path + '?' + q.toString(); };
+    const id = encodeURIComponent(L.item.Id), audioIdx = audio && audio.Index != null ? String(audio.Index) : null;
+    const mk = (path, o) => { const q = new URLSearchParams(o); if (audioIdx != null) q.set('AudioStreamIndex', audioIdx); q.set(a.tokenParam ? a.tokenParam() : 'api_key', a.token()); return a.base() + path + '?' + q.toString(); };
     const audioQ = { MediaSourceId: L.src.Id, AudioCodec: 'mp3', AudioSampleRate: String(SR), AudioChannels: '1', AudioBitRate: '32000' };
     const cands = [
       ['/Audio/stream.mp3', mk('/Audio/' + id + '/stream.mp3', Object.assign({}, audioQ, { EnableAutoStreamCopy: 'false', DeviceId: a.deviceId() }))],

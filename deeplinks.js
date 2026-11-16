@@ -355,7 +355,7 @@
     let title = r.title, desc = r.description;
     const m = /^\/(?:device|play)\/([^/]+)/.exec(p);
     /* The tab reads only the site name on every address (28 Oct 2026: shorter, never cut). */
-    title = META.site || 'Crystal Worlds'; desc = desc || META.default.description;
+    title = META.site || 'CrystalWorlds'; desc = desc || META.default.description;
     if (document.title !== title) document.title = title;
     setAttr('meta[name="description"]', 'content', desc);
     if (window.__cwPaths) {   // this copy's own address
@@ -366,7 +366,7 @@
   const metaSoon = () => { if (!metaT) metaT = setTimeout(meta, 0); };
   (function loadMeta() {
     if (typeof fetch !== 'function' || !/^https?:$/.test(location.protocol)) return;
-    fetch('site-routes.json?v=2.1.1', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
+    fetch('site-routes.json?v=2.2.0', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
     for (const k of ['pushState', 'replaceState']) {
       const orig = history[k];
       if (typeof orig !== 'function') continue;

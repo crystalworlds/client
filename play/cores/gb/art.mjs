@@ -10,6 +10,11 @@
  * GBC SHELLS: the site picks one release colour per page load and passes it as
  * ?shell=<key>&for=<slot> (openGbPlay in index.html). The host never picks: it wears
  * what the tile wore, and the Dandelion photograph when no key names this slot.
+ *
+ * THE ADVANCE: when the Machine is the Game Boy Advance (and, until they have photographs of
+ * their own, the Advance SP and the Game Boy Player), the window wears the Advance instead
+ * (WASM_Source/gba-shells). The Advance is a wide device, so it is shown whole, its buttons
+ * pressed on the picture as on a Game & Watch; on a portrait stage it is cropped to its screen.
  */
 import { MatrixOverlay, storedMatrixOn, storedMatrixStrength, clampStrength } from '../../gameboy/matrix.js';
 import { artFileUrl } from '../artfile.mjs';
@@ -25,7 +30,15 @@ export const BEZEL = {
      panel's 3 px bevel: 264x235 from 121,94. The same numbers are in index.html's
      [data-art="cgb-atomic"] block. */
   cgbAtomic: { key: 'GameBoyColorConsoleAtomicPurple.webp', ar: 505 / 852, l: 0.2396, t: 0.1103, w: 0.5228, h: 0.2758 },
+  /* The Advance: 993x582. Its LCD (240 x 160) measures 362x244 from 310,110; a Game Boy picture is the
+     centred 160 x 144 inside it, 241.33x219.60 from 370.33,122.20 (WASM_Source/gba-shells/clean.py, which
+     also bakes the unlit border around it into the glass). `portrait`: the screen and its black surround,
+     255..725 x 60..450, shown instead of the whole device when the stage is taller than it is wide. */
+  agb: { key: 'GameBoyAdvanceConsole.webp', ar: 993 / 582, l: 0.3729, t: 0.2100, w: 0.2430, h: 0.3773, whole: true,
+    portrait: { l: 255 / 993, t: 60 / 582, w: 470 / 993, h: 390 / 582 } },
 };
+/* The Machines that wear the Advance (core.mjs MACHINES keys). */
+const ADVANCE = new Set(['agb', 'ags']);
 export const BAND = { above: 0.30, below: 0.38 };
 /* Keep in step with index.html GBC_SHELLS and WASM_Source/gbc-shells/manifest.txt. */
 export const GBC_SHELLS = ['GameBoyColorConsole.png', 'GameBoyColorConsoleBerry.webp', 'GameBoyColorConsoleGrape.webp',
@@ -38,6 +51,8 @@ const POKEMON_SLOTS = new Set(['crystal']);
 /** Which art a title wears: { kind, shellKey }. */
 export function artKindFor({ model, game, title, params }) {
   if (model !== 'cgb') return { kind: 'dmg', shellKey: null };
+  /* An Advance runs only as a colour machine (model 'cgb'); a preview keeps the Color as before. */
+  if (ADVANCE.has(GB_MODE.machine) && !(params && params.get('preview') === '1')) return { kind: 'agb', shellKey: null };
   const name = String(title || game || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   if (POKEMON_SLOTS.has(String(game).toLowerCase()) || /pokemon/.test(name)) return { kind: 'cgbPokemon', shellKey: null };
   const k = params && params.get('shell');
@@ -51,12 +66,23 @@ export async function describe(ctx) {
   /* 2026-10-24: the Super Game Boy's television picture and two linked consoles are
      wider than the console's glass: they are shown as the plain screen. */
   if (GB_MODE.wide) return null;
-  const { kind, shellKey } = artKindFor(ctx);
-  const g = BEZEL[kind];
+  let { kind, shellKey } = artKindFor(ctx);
+  let g = BEZEL[kind];
   let src = null;
   if (shellKey && shellKey !== BEZEL.cgb.key) src = await artFileUrl(shellKey);
   if (!src) src = await artFileUrl(g.key);
+  /* No Advance picture in the index (an index cached from before it): the Color, as before. */
+  if (!src && kind === 'agb') { kind = 'cgb'; g = BEZEL.cgb; src = await artFileUrl(g.key); }
   if (!src) return null;
+  if (g.whole) {
+    return { kind, src, ar: g.ar, l: g.l, t: g.t, w: g.w, h: g.h, opaque: false, measureGlass: true,
+      /* the whole device, clear of the Control Bar, as a Game & Watch unit */
+      band: { above: g.t / g.h, below: (1 - g.t - g.h) / g.h }, headroom: true,
+      /* the photograph is cut out with its own shadow: the frame draws none of its own */
+      cutout: true,
+      /* a portrait stage: the screen area only (present.mjs); the buttons then stand down for the float pad */
+      portrait: g.portrait, overlayView: { variant: kind } };
+  }
   return { kind, src, ar: g.ar, l: g.l, t: g.t, w: g.w, h: g.h, opaque: !!g.opaque, band: BAND, measureGlass: true,
     /* The whole console, top to bottom: the presenter shows it instead of the screen band on a tall,
        narrow screen (a phone held upright, a Fold's cover screen; 2026-10-17). */

@@ -271,6 +271,15 @@ function gbApuEmulationTabHTML(d) {
 
     '<div class="gbemu-rule" id="gbr-17-23"><b>Rule 17/23.</b> <b>A powered-off sound unit should not clock its channels, and our core does not implement that rule: its channels keep clocking while the unit is off</b>, with the price written down. A build that matches our core must keep running the period timers while the unit is off, within the limits of Rule 17/22.</div>' +
     '<div class="gbemu-why"><b>Why, and the price.</b> The documentation says the pulse phase &ldquo;is only ever reset by turning the sound unit off&rdquo;, which it cannot be if the off state keeps advancing it. Measured with every other arm held on, so the attribution is a control and not an inference: it buys <b>nothing</b> on the board, and it makes the audio instrument <b>worse by 156</b>, taking two pulse tracks that were exact to 0.49. It is kept as a switch rather than deleted, because two exact tracks going to 0.49 is not a phase error, and whatever it is, <b>this arm exposed it rather than created it</b>.</div>' +
+
+    '<div class="gbemu-rule" id="gbr-17-24"><b>Rule 17/24.</b> <b>Original Game Boy only: the mixer disconnects while all four DACs are off.</b> While every channel&rsquo;s DAC is off, the output is silent and the coupling capacitor keeps its charge, in both capacitor stages, until a DAC is switched on again. So a rest in which every channel is off is silence, with no slow bass decay. The Color keeps its capacitor connected as before.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> SOURCE-READ: SameBoy 1.0.5, from a recording of one original Game Boy (Pan Docs, Audio details, lists the behaviour). With the capacitor left connected, every rest played a slow bass decay, 23&nbsp;dB louder than the recording&rsquo;s rests (<code>DMG_ALLOFF_HOLD</code>).</div>' +
+
+    '<div class="gbemu-rule" id="gbr-17-25"><b>Rule 17/25.</b> <b>Original Game Boy only: a square channel&rsquo;s duty clock runs on after length or sweep stops it.</b> When length expiry or a sweep overflow silences channel 1 or 2, its period counter and duty position keep stepping until its DAC or the sound unit is switched off; a stop by the DAC still holds the phase (Rule 17/22). So a restart after a length stop starts from where the waveform has run to. On the Color, a stop by length or sweep holds the phase, as before.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> SOURCE-READ: SameBoy 1.0.5, from a recording of one original Game Boy (DMG-CPU B), where 49 of 62 bursts per channel were a whole duty step out under the old rule (<code>DMG_DUTY_RUNS_AFTER_EXPIRY</code>).</div>' +
+
+    '<div class="gbemu-rule" id="gbr-17-26"><b>Rule 17/26.</b> <b>Original Game Boy only: the noise feedback bit is latched on the falling clock edge.</b> The feedback (bit&nbsp;0 XOR bit&nbsp;1, Rule 17/9) is taken when the noise clock falls and shifted in when it rises. A trigger clears the latch, so a rising edge before the first falling one shifts in the cleared value: the first pulse after a restart on a low clock is one clock period longer, and the rest are unchanged. On the Color, the feedback is taken at the rising edge, as before.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> SOURCE-READ: SameBoy 1.0.5, from a recording of one original Game Boy and the original Game Boy&rsquo;s schematic (<code>DMG_NOISE_FB_LATCH</code>).</div>' +
   '</section>' +
 
   /* ---------------------------------------------------------------- 9 */
@@ -445,8 +454,8 @@ function gbApuEmulationTabHTML(d) {
     '<em>instead</em>, draining the upper stages) is observationally identical to ours for as ' +
     'long as narrow mode is held, so no test that triggers the channel fresh can separate them, and ' +
     'fitted with a free offset both score a perfect 1.0000, <b>which means nothing at all</b>. ' +
-    'Section 17 carries the full account. <b>Falsifier, and it is the only one: widen a ' +
-    '<em>running</em> channel</b>: nothing in the corpus does.</div>' +
+    'Section 17 carries the full account. <b>This would be wrong if:</b> <b>a ' +
+    '<em>running</em> channel were widened</b>. That is the only case, and nothing in the corpus does it.</div>' +
 
     '<h4 class="gbemu-sub">B.7: Length counters, and the interaction that costs a week</h4>' +
     '<div class="gbemu-rule" id="gbr-B-7-1"><b>Rule B.7/1.</b> <b>Two widths.</b> Channel 3&rsquo;s length counter is <b>8 bits, maximum 256</b>; channels 1, ' +
@@ -645,6 +654,8 @@ function gbApuEmulationTabHTML(d) {
     'twice the half-range (a full step up after a long silence at the rail), the scaled sample must be ' +
     'saturated. Labels: the capacitor is MECHANISM; the ' +
     'factor is taken from the documentation and its magnitude is not established by us.</div>' +
+    '<div class="gbemu-rule" id="gbr-B-12-4"><b>Rule B.12/4.</b> <b>Console buzz, on the host path only.</b> A real console&rsquo;s speaker picks up interference from the screen and the processor. The play window adds it as a setting, Settings &gt; Console buzz: <b>Off</b> (the default, which adds nothing), <b>Soft</b>, or <b>As a real console</b>. The states it listens to are read from our machine: halt, the LCD on bit (<code>LCDC</code> bit 7), the picture mode the processor sees, the sound unit&rsquo;s power bit (<code>NR52</code> bit 7), and on the Color the infrared port&rsquo;s bit. On the original Game Boy and the Super Game Boy it plays at a quarter of the level.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> The states are MECHANISM, read from our machine. The levels are SOURCE-READ: SameBoy&rsquo;s, which were sized by ear, so no measurement stands behind them. No board row depends on it.</div>' +
 
     '<h4 class="gbemu-sub">B.13: The envelope write glitch, with every constant in it</h4>' +
     '<div class="gbemu-rule" id="gbr-B-13-1"><b>Rule B.13/1.</b> <b>A write to NRx2 of channel 1, 2 or 4 while that channel is enabled does not ' +

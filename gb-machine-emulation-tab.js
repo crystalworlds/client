@@ -10,16 +10,16 @@ function gbMachineEmulationTabHTML(d) {
   return '<div class="gbemu-area" id="gbemu-area-machine">' +
 
   '<section class="gbemu-hero">' +
-    '<div class="gbemu-hero-num"><b>259</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy that is actually correct</h3>' +
+    '<div class="gbemu-hero-num"><b>261</b>\n<span>of 264</span>\n</div><div class="gbemu-hero-txt"><h3>How to build a Game Boy that is actually correct</h3>' +
       '<p>This is the research, not the result. Everything below is what this project had to ' +
-      'establish to reach <b>259 passing rows of 264</b> on the public Game Boy Emulator Shootout ' +
+      'establish to reach <b>261 passing rows of 264</b> on the public Game Boy Emulator Shootout ' +
       'board (and zero differing pixels on every mealybug tearoom cartridge) ' +
       'written out so the next person does not have to derive it again. Section&nbsp;21 says ' +
       'exactly what that number is measured on and why published comparisons are not ' +
       'like-for-like; section&nbsp;22 names the rows <em>nobody</em> can win honestly, because a ' +
       'reader chasing those will lose weeks. The proof is at the bottom; the useful part is above it.</p>' +
-      '<p>The figure counts whole rows. Section 17 records a closed defect on a row that still fails, ' +
-      'and it does not count toward the board, because <b>118 of 120 pixels is ' +
+      '<p>The figure counts whole rows. A defect closed on a row that still fails ' +
+      'does not count toward the board, because <b>118 of 120 pixels is ' +
       'not 118/120 of a row</b>. Every dependent figure on this page (the suite table, the ' +
       'ceiling ladder, the staged build order in appendix&nbsp;G.4, and the Colour page&rsquo;s ' +
       'equivalents) states the same board, and the ladder&rsquo;s own invariant is that ' +
@@ -341,7 +341,7 @@ function gbMachineEmulationTabHTML(d) {
       '<dt>Pass-reference / fail-reference</dt><dd>a reference PNG a row ships: by default the cartridge&rsquo;s path with <code>.png</code>; a <code>.fail.png</code> is the fail-reference (Rule G.1/3)</dd>' +
       '<dt>Match</dt><dd>no pixel of the absolute greyscale difference (8-bit, no dithering) exceeds 50 (Rule G.1/1)</dd>' +
       '<dt>Stage, worth, cumulative</dt><dd>a step of the build order; the board rows its gates contain; the running sum of worths from stage 0 (a projection, not a measured history) (G.4 table; Rule G.4/2)</dd>' +
-      '<dt>Falsifier</dt><dd>the observation that would show a measurement wrong; its scope is the axis swept, never the row (Rule G.5/1, step 4)</dd>' +
+      '<dt>This would be wrong if</dt><dd>the observation that would show a measurement wrong; its scope is the axis swept, never the row (Rule G.5/1, step 4)</dd>' +
       '<dt>Census</dt><dd>counting how many lines, cartridges and cells reach a clause, by instrumenting the clause (Rule G.6/3)</dd>' +
       '<dt>Frozen origin / monotone watch / pixel identities</dt><dd>the baseline written once; the best value per cell ever seen; the wrong pixels at the state that set each best (G.4, stage 5 bullet)</dd>' +
       '<dt>Gate, check, relation</dt><dd>the figures program (<code>tools/check-emulation-figures.js</code>); one assertion in it; what a check asserts between figures (never a value) (G.7; Rule G.7/1)</dd>' +
@@ -401,10 +401,10 @@ function gbMachineEmulationTabHTML(d) {
     'happens only if the dot on which mode 0 begins at SCX&nbsp;=&nbsp;0 is the <em>last</em> dot of ' +
     'a machine cycle. Put the two clocks in phase and it is the first, which merges the groups into ' +
     'two where hardware has three, and the test fails on its opening iteration. Setting it ' +
-    'correctly costs nothing anywhere else. <b>INSTRUMENT-MEASURED</b> on the shipped core with a per-dot probe (it logs every dot the picture unit processes, the machine cycle it was processed in, and where each bus access fell). <b>Falsifier:</b> a read in the cycle covering 253 to 256 that does not see mode 0 on an object-free line at SCX&nbsp;=&nbsp;0.</div>' +
+    'correctly costs nothing anywhere else. <b>INSTRUMENT-MEASURED</b> on the shipped core with a per-dot probe (it logs every dot the picture unit processes, the machine cycle it was processed in, and where each bus access fell). <b>This would be wrong if:</b> a read in the cycle covering 253 to 256 did not see mode 0 on an object-free line at SCX&nbsp;=&nbsp;0.</div>' +
     '<div class="gbemu-rule" id="gbr-1-5"><b>Rule 1/5.</b> The phase of Rule 1/4 must be reached from each start as this table gives.</div>' +
     '<table class="gbemu-table"><thead><tr><th>Start</th><th>Which dots the first machine cycles cover (absolute dots of the line named, appendix E&rsquo;s scale)</th><th>Label</th></tr></thead><tbody>' +
-      '<tr><td><b>The hand-over with no boot program</b> (section 3)</td><td>The machine has already processed dot 0 of line 0 when the cartridge&rsquo;s first instruction starts, and owes the picture unit nothing. So the first machine cycle (the read of the opcode at <code>0100</code>) processes no dot of its own and its read lands between dot 0 and dot 1; the second cycle covers dots 1 to 4, and the phase of Rule 1/4 holds from there on.</td><td>INSTRUMENT-MEASURED</td></tr>' +
+      '<tr><td><b>The hand-over with no boot program</b> (section 3)</td><td>On the original and the Pocket the machine has already processed dot 397 of line 153 when the cartridge&rsquo;s first instruction starts (on a Super Game Boy, dot 0 of line 0), and owes the picture unit nothing. So the first machine cycle (the read of the opcode at <code>0100</code>) processes no dot of its own and its read lands between dot 397 and dot 398 (dot 0 and dot 1); the second cycle covers dots 398 to 401 (1 to 4), and the phase of Rule 1/4 holds from there on. Both are the same phase: every line is a whole number of machine cycles long, and 397 is one more than a multiple of 4.</td><td>INSTRUMENT-MEASURED</td></tr>' +
       '<tr><td><b>After the display is switched on</b> (E.2)</td><td>The cycle carrying the enable write processes no dot (the display is off until the write lands) and the dot counter starts at 8. The first cycle after the write covers dots 8 to 11 of the power-on line, and the c-th covers <code>8 + 4(c &minus; 1)</code> to <code>8 + 4c &minus; 1</code>; its read sees that last dot and not <code>8 + 4c</code>, which is what E.2&rsquo;s &ldquo;cycle-c read landing on dot 8 + 4c&rdquo; means. The power-on line ends on dot 458 (451 dots from 8), and the cycle covering 456, 457 and 458 also covers dot 0 of line 1, so line 1 opens with a cycle covering dots 1 to 4: the same phase the no-boot hand-over reaches. On the original a booted run and a no-boot run therefore run at one phase, and every program that switches the display on lands on it again.</td><td>INSTRUMENT-MEASURED</td></tr>' +
       '<tr><td><b>The Colour</b> (the Colour tab has it)</td><td><b>The phase is different.</b> After a single-speed switch-on the power-on line is 450 dots, so from line 1 on a cycle covers 4k&nbsp;+&nbsp;2 to 4k&nbsp;+&nbsp;5; in double speed a cycle covers two dots, an even-numbered dot and the odd one after it (the Colour tab, section 10). A Colour started with no boot program reaches the same phase: it starts at the booted hand-over (line 148, dot 354, or line 144, dot 166 for a Color-flagged cartridge), arrived at by running the picture unit from line 0 (the Colour tab, section 2).</td><td>INSTRUMENT-MEASURED; the Colour&rsquo;s 450 itself is FITTED (the Colour tab says so)</td></tr>' +
     '</tbody></table>' +
@@ -425,7 +425,7 @@ function gbMachineEmulationTabHTML(d) {
       '<tr><td><code>FFFF</code></td><td>Interrupt enable</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-rule" id="gbr-1-7"><b>Rule 1/7.</b> On the original, a read of <code>FEA0&ndash;FEFF</code> must return <b><code>0xFF</code></b> and a write there must be discarded, to match this core. That is a statement about <em>this core</em>, not about the machine: <b>do not attribute this constant to the hardware.</b> <b>Do not carry it to a Color</b>: the Colour tab&rsquo;s section 10 has the revision split and what our core does there instead.</div>' +
-    '<div class="gbemu-why"><b>Why.</b> <b>&ldquo;Unusable&rdquo; is not an answer to what a read returns.</b> Published accounts of the original give <b><code>0x00</code></b> here, so the number we ship is not just unmeasured, it is <b>the opposite of the only account anyone has written down</b>. <b>Our constant is read from source</b> (<code>src/gb.c</code>, <code>UNUSABLE_READ</code>, annotated there as documented DMG behaviour: an annotation the published disagreement puts in doubt). There is <b>no cartridge on the board covering this range at all</b>, on either machine, and no render instrument in the estate can see a bus read, so <b>nothing we own can settle it</b>: <b>NOT ESTABLISHED</b>, with a named disagreement rather than a silent one. <b>Falsifier:</b> a cartridge that reads this range on an original and reports the byte; <code>0x00</code> would retire our constant outright. Section 5&rsquo;s sprite-memory corruption window reaches into this range, which is the one place the page touches it twice.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> <b>&ldquo;Unusable&rdquo; is not an answer to what a read returns.</b> Published accounts of the original give <b><code>0x00</code></b> here, so the number we ship is not just unmeasured, it is <b>the opposite of the only account anyone has written down</b>. <b>Our constant is read from source</b> (<code>src/gb.c</code>, <code>UNUSABLE_READ</code>, annotated there as documented DMG behaviour: an annotation the published disagreement puts in doubt). There is <b>no cartridge on the board covering this range at all</b>, on either machine, and no render instrument in the estate can see a bus read, so <b>nothing we own can settle it</b>: <b>NOT ESTABLISHED</b>, with a named disagreement rather than a silent one. <b>This would be wrong if:</b> a cartridge that reads this range on an original and reports the byte reported another value; <code>0x00</code> would retire our constant outright. Section 5&rsquo;s sprite-memory corruption window reaches into this range, which is the one place the page touches it twice.</div>' +
     '<p class="hw-readable">Cartridge mappers needed to run the commercial shelf at the bottom of ' +
     'this page: <b>none</b> (32 KB titles), <b>MBC1</b>, <b>MBC2</b>, <b>MBC3</b> (with its clock) ' +
     'and <b>MBC5</b>. The mealybug cartridges themselves need none of them, so a core can ' +
@@ -443,41 +443,24 @@ function gbMachineEmulationTabHTML(d) {
       '<tr><td>Registers</td><td><code>A=01 F=B0 B=00 C=13 D=00 E=D8 H=01 L=4D SP=FFFE PC=0100</code> (F = zero, half-carry and carry set)</td></tr>' +
       '<tr><td>Divider</td><td>Internal counter <code>0xABC8</code>: the visible register reads <code>0xAB</code>. The low bits are the rest of the 16-bit counter and they matter: a cartridge that probes the <em>phase</em> is what separates <code>0xABC8</code> from the coarser <code>0xABCC</code>. The counter holds that value at the start of the machine cycle that fetches the opcode at <code>0x0100</code>, before that cycle&rsquo;s four timer ticks. See the note below</td></tr>' +
       '<tr><td>Timer</td><td><code>TAC = 0xF8</code> (disabled), <code>IF = 0xE1</code>, <code>SC = 0x7E</code>. These are stored, not only read back: our no-boot start stores TAC as <code>0xF8</code> (enable bit 2 clear), IF&rsquo;s five bits as <code>0x01</code> (vertical blank pending) and SC as <code>0x7E</code> (bits 7 and 0 clear, bits 1 to 6 set). On the original the read-back masks make the difference invisible; on the Colour in colour mode the stored SC bit 1 reads back as 1, which selects the fast serial clock until the cartridge writes SC</td></tr>' +
-      '<tr><td>Picture</td><td><code>LCDC = 0x91</code>, <code>STAT = 0x85</code>: <b>only bits 3&ndash;6 of that byte are adopted; see Rule 3/3</b>: <code>LY = LYC = 0</code>, <code>SCY = SCX = 0</code>, <code>WY = WX = 0</code>, <b>mode 2</b></td></tr>' +
+      '<tr><td>Picture</td><td><code>LCDC = 0x91</code>, <code>STAT = 0x85</code>: <b>only bits 3&ndash;6 of that byte are stored; see Rule 3/3</b>: <code>LY = LYC = 0</code> as read, <code>SCY = SCX = 0</code>, <code>WY = WX = 0</code>. The picture unit stands where the boot program leaves it: <b>line 153, dot 397, mode 1</b>; on line 153 the LY register already reads 0 (section 14). A Super Game Boy is the exception (Rule 3/6)</td></tr>' +
       '<tr><td>Palettes</td><td><code>BGP = 0xFC</code>, <code>OBP0 = OBP1 = 0xFF</code>. The <code>0xFF</code> pair is the circulated table&rsquo;s value and is what our no-boot start stores on the original. It is <b>not</b> what a booted run leaves: the boot program never writes OBP0 or OBP1, so after it they hold their power-on value, which is 0 in our core (Rule 3/5). The Colour&rsquo;s no-boot start stores 0 for the same reason (the Colour tab, section 2)</td></tr>' +
       '<tr><td>Pad select</td><td><code>P1</code> select bits stored as <code>0x00</code> (both groups selected), so the pad reads <code>0xCF</code> with nothing pressed; on the Colour <code>0x30</code>. Rule 3/7 has why</td></tr>' +
       '<tr><td>Everything else</td><td><code>0x00</code>: every byte of work RAM and high RAM; <code>IE</code>, <code>TIMA</code>, <code>TMA</code>, <code>SB</code> and <code>FF46</code>. The processor: IME 0, no enable scheduled by EI, not halted. Read from our source (the reset clears the whole machine state and then stores the rows above); sound is Rule 3/11</td></tr>' +
     '</tbody></table>' +
     '<div class="gbemu-why"><b>Why.</b> The divider row is MECHANISM, read from our source (the no-boot reset stores it, and every opcode fetch advances the timer by four before its read). What a real console powers on with in OBP0 and OBP1 is not established.</div>' +
 
-    '<div class="gbemu-rule" id="gbr-3-3"><b>Rule 3/3.</b> <b>STAT at the hand-over.</b> The <code>STAT = 0x85</code> in the table is a circulated byte, not a ' +
-    'byte to store. <b>The low three bits of STAT are read-only</b>: bits 0&ndash;1 are the mode and bit 2 is the coincidence flag, all three produced by ' +
-    'the display and none of them stored. <b>This core takes the tabulated byte for its writable ' +
-    'bits only</b>, <code>0x85 &amp; 0x78 = 0x00</code>, so <b>no STAT interrupt source is enabled ' +
-    'at handover</b>, and it sets the display state separately: <b>mode 2, coincidence flag ' +
-    'clear</b>. <b>Compose STAT from the mode and the enables; never store this byte ' +
-    'whole.</b> The first value a real <code>LDH A,(41)</code> or <code>LD A,(FF41)</code> returns is <b><code>0x86</code></b> (bit 7, coincidence, mode 2), and it stays <code>0x86</code> until the line or the mode changes. ' +
-    'The stored mode 2 is a starting state, not a frame ' +
-    'wrap: the machine cycle of mode 0 that section 14 gives line 0 on its first five access dots belongs to every later wrap into line 0 (from the first frame after the ' +
-    'hand-over on), never to the hand-over itself.</div>' +
-    '<div class="gbemu-example"><b>Example.</b> Decode <code>0x85</code> by this page&rsquo;s own rules and it ' +
-    'is <b>bit 7 set, coincidence set, mode 1</b>; mode 2 would be <code>0x86</code>. So the row&rsquo;s byte and its &ldquo;mode 2&rdquo; read ' +
-    'as a contradiction, and an implementer who resolves it the obvious ' +
-    'way gets a wrong register. Stored, only <code>0x85 &amp; 0x78 = 0x00</code> is kept. Composed at the hand-over instant STAT is ' +
-    '<code>0x80 | 0x00 | 0x00 | 2 = 0x82</code>: neither <code>0x85</code> nor anything ' +
-    'composed from it. <b>But no instruction can read it at that instant.</b> LY and LYC are both 0, and the comparator sets the coincidence flag as dot 0 is processed, before the first opcode fetch&rsquo;s read (Rule 1/5: the machine has processed dot 0 when the cartridge starts), so the first read returns <code>0x80 | 0x04 | 2 = 0x86</code>. <code>0x82</code> is the composed state, not a readable one.</div>' +
-    '<div class="gbemu-why"><b>Why.</b> This is <em>not</em> the reported-against-internal split of section 14: the ' +
-    'reported mode here is 2 as well. <b>Read from source</b>: <code>src/gb.c</code>, the ' +
-    'no-boot-image fallback, <code>gb-&gt;stat = 0x85 &amp; 0x78</code> beside ' +
-    '<code>ppu_mode = mode_report = 2</code>. The first read of <code>0x86</code> is INSTRUMENT-MEASURED (the probe <code>test/tabprobe</code>: the flag reads set from the first access dot after the hand-over).</div>' +
-    '<div class="gbemu-rule" id="gbr-3-4"><b>Rule 3/4.</b> <b>The interrupt side at the hand-over</b>: the interrupt-logic mode (the second wire of section 14) must be stored as &ldquo;none&rdquo;, not 2, and the status line low. <b>Line 0 then runs on as an ordinary line 0 from dot 1</b>, in these steps (dots of line 0 on appendix E&rsquo;s scale, event scale):' +
+    '<div class="gbemu-rule" id="gbr-3-3"><b>Rule 3/3.</b> <b>STAT at the hand-over.</b> The <code>STAT = 0x85</code> in the table is the value read, not a byte to store. <b>The low three bits of STAT are read-only</b>: bits 0&ndash;1 are the mode and bit 2 is the coincidence flag, all three produced by the display and none of them stored. <b>This core takes the tabulated byte for its writable bits only</b>, <code>0x85 &amp; 0x78 = 0x00</code>, so <b>no STAT interrupt source is enabled at the hand-over</b>, and the display state comes from where the picture unit stands: <b>line 153, dot 397, mode 1</b>. <b>Compose STAT from the mode and the enables; never store this byte whole.</b> The first value a real <code>LDH A,(41)</code> or <code>LD A,(FF41)</code> returns is <b><code>0x85</code></b> (bit 7, coincidence, mode 1), and it stays <code>0x85</code> until line 0 begins, about 15 machine cycles later.</div>' +
+    '<div class="gbemu-example"><b>Example.</b> Decode <code>0x85</code> by this page&rsquo;s own rules: <b>bit 7 set, coincidence set, mode 1</b>. That is the last line of the frame after its LY reading has turned to 0, which equals LYC = 0. Nintendo&rsquo;s own programs, run on this core to <code>PC = 0x0100</code> (the original&rsquo;s on the original, the Pocket&rsquo;s on the Pocket), leave the picture unit on line 153, dot 397. The start with no boot program runs the picture unit on from line 0 to that same place, so every internal picture state is the natural one there, and the first read is the table&rsquo;s own byte.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> MECHANISM: the state the boot program leaves, measured by running it on this core; Pan Docs&rsquo; Power Up Sequence table gives the same STAT <code>0x85</code> with LY <code>0x00</code> for the original and the Pocket. Read from source: <code>src/gb.c</code>, <code>DMG_NOBOOT_HANDOVER</code>. Before 15 Nov 2026 this start stood on line 0 in mode 2 and the first read was <code>0x86</code>. The divider already held the booted value and the machine-cycle phase is unchanged (Rule 1/5), so all 115 Mooneye tests read the same with and without it.</div>' +
+    '<div class="gbemu-rule" id="gbr-3-4"><b>Rule 3/4.</b> <b>The interrupt side at the hand-over.</b> On the original and the Pocket it is the natural state of line 153 at dot 397, reached by running the picture unit on from line 0: the interrupt-logic mode (the second wire of section 14) is 1, the status line is low (no source is enabled, Rule 3/3), and the frame runs on into line 0 as every frame does. <b>On a Super Game Boy, which starts at line 0 (Rule 3/6)</b>, the interrupt-logic mode must be stored as &ldquo;none&rdquo;, not 2, and the status line low. <b>Line 0 then runs on as an ordinary line 0 from dot 1</b>, in these steps (dots of line 0 on appendix E&rsquo;s scale, event scale):' +
     '<ol class="gbemu-steps">' +
       '<li>Dot 0 is already processed before the first opcode fetch&rsquo;s read (Rule 1/5); with LY and LYC both 0 the comparator sets the coincidence flag on it (Rule 3/3). The start-of-line blind window (Rule 14/14) is not running on this dot: only a wrap arms it, and the hand-over is not a wrap.</li>' +
       '<li>Dot 3: the mode-2 source rises. Dot 4: it falls, like every wrap into line 0. Nothing is selected (no STAT source is enabled, Rule 3/3), so nothing is raised.</li>' +
       '<li>From dot 5: the scan takes its slots.</li>' +
       '<li>Dot 84: drawing starts.</li>' +
     '</ol></div>' +
-    '<div class="gbemu-why"><b>Why.</b> Read from our source (<code>int_mode = -1</code> in the same block).</div>' +
+    '<div class="gbemu-why"><b>Why.</b> Read from our source (the run-on in the same block, <code>DMG_NOBOOT_HANDOVER</code>; <code>int_mode = -1</code> where the Super Game Boy keeps the line-0 start). On a Super Game Boy the first STAT read is <code>0x86</code> (bit 7, coincidence, mode 2).</div>' +
 
     '<div class="gbemu-rule" id="gbr-3-5"><b>Rule 3/5.</b> <b>The other start: power-on, when a boot program is run.</b> Rule 3/2&rsquo;s table ' +
     'is only the hand-over. With a boot program the machine must start from this cleared state and let the ' +
@@ -501,16 +484,8 @@ function gbMachineEmulationTabHTML(d) {
     '</tbody></table>' +
     '<div class="gbemu-why"><b>Why.</b> On a real console work memory is not known to come up zeroed; our core zeroes ' +
     'it and models no power-on pattern.</div>' +
-    '<div class="gbemu-rule" id="gbr-3-6"><b>Rule 3/6.</b> <b>A Super Game Boy must start exactly as the original does</b>, ' +
-    'on both paths: with no boot program it takes Rule 3/2&rsquo;s hand-over table unchanged (the same ' +
-    '<code>A=01 F=B0 B=00 C=13</code> and the rest), and with one it runs the original&rsquo;s boot ' +
-    'program from the cleared machine of Rule 3/5. The only additions are the packet receiver and the ' +
-    'multi-player pad of appendix A.6, both idle until the cartridge writes to the pad register.</div>' +
-    '<div class="gbemu-why"><b>Why.</b> A real ' +
-    'Super Game Boy runs a boot program of its own, and its hand-over register values are not modelled ' +
-    'here: a cartridge that tells the two machines apart by those registers sees an original. ' +
-    'MECHANISM, read from our source (the reset routine, the no-boot table, which has no Super Game Boy ' +
-    'branch, and the sound unit&rsquo;s reset).</div>' +
+    '<div class="gbemu-rule" id="gbr-3-6"><b>Rule 3/6.</b> <b>A Super Game Boy must start as the original does</b>, on both paths, with two differences on the path with no boot program: its registers are the ones its own boot program leaves (Pan Docs; Mooneye <code>boot_regs-sgb</code> and <code>boot_regs-sgb2</code>), and its picture unit starts at line 0, dot 1, in mode 2 (Rule 3/4), not at the original&rsquo;s line 153. With a boot program it runs the original&rsquo;s boot program from the cleared machine of Rule 3/5. The only additions are the packet receiver and the multi-player pad of appendix A.6, both idle until the cartridge writes to the pad register.</div>' +
+    '<div class="gbemu-why"><b>Why.</b> The registers are MECHANISM (the documented hand-over). The picture position is <b>NOT ESTABLISHED</b>: Pan Docs gives no STAT or LY at the hand-over for the Super Game Boys, whose own boot program waits on the Super NES, and none is here to measure, so the line-0 start is kept. Read from our source (the reset routine and the sound unit&rsquo;s reset).</div>' +
 
     '<div class="gbemu-rule" id="gbr-3-7"><b>Rule 3/7.</b> The pad-select register at <code>0xFF00</code> must ' +
     'start at the value each model&rsquo;s own test declares, and the two models differ: <b>on the original, ' +
@@ -619,12 +594,15 @@ function gbMachineEmulationTabHTML(d) {
     'program hands over was not measured, and 0 keeps the start silent. The rest are this core&rsquo;s ' +
     'choices for a start with no boot program, MECHANISM only in the sense that they are what the code ' +
     'does. With channel 1 left stopped, <code>FF26</code> reads <code>0xF0</code> and a no-boot start fails that row on exactly that byte.</div>' +
+    '<div class="gbemu-rule" id="gbr-3-12"><b>Rule 3/12.</b> <b>The first model (DMG 0, the DMG-CPU 0 board of 1989).</b> With its own boot program it runs that program, as Rule 3/1 (a) says. With no boot program it starts at <code>0x0100</code> as Rules 3/2 to 3/11 say, with these differences: the registers are <code>A=01 F=00 B=FF C=13 D=00 E=C1 H=84 L=03 SP=FFFE</code>, the divider&rsquo;s internal counter is <code>0x182C</code> (the visible register reads <code>0x18</code>), and the picture unit stands on line 145, dot 93, in mode 1. In everything else the first model behaves as the later boards (DMG-CPU A, B and C).</div>' +
+    '<div class="gbemu-why"><b>Why.</b> MECHANISM. The registers are what Gekkio&rsquo;s Mooneye tests <code>boot_regs-dmg0</code>, <code>boot_div-dmg0</code> and <code>boot_hwio-dmg0</code> expect, measured by their author on a DMG 0, and what Pan Docs gives. The divider and the picture position are what Nintendo&rsquo;s own DMG 0 boot program leaves when it runs on this core; the same method, run with the later boot program, gives exactly the divider of Rule 3/2. All three dmg0 tests pass with no boot program and with Nintendo&rsquo;s, and the dmgABC tests fail on this model, as on the board. No other source proves a difference, so none is built.</div>' +
+    '<p class="hw-readable">A real first-model Game Boy (DMG 0) fails the <code>stat_irq_blocking</code> test, and ours passes it. Nobody has yet found out what that board does differently, so our DMG 0 follows the later boards here.</p>' +
     '</section>' +
 
   /* ---------------------------------------------------------------- M4 */
   '<section class="sect" id="gbe-gaps"><h3 class="sect-h">24. What this page does not cover</h3>' +
     '<p class="hw-readable">Stated plainly, because a build guide that does not draw its own edge is ' +
-    'worse than one that stops sooner. Everything above is what was needed to reach 259 of 264 on ' +
+    'worse than one that stops sooner. Everything above is what was needed to reach 261 of 264 on ' +
     'the board in section 21 and zero differing pixels on every mealybug tearoom cartridge, plus ' +
     'the machine around the picture processor that had to be right first. Two things a build guide ' +
     'might be expected to omit are here rather than absent, because a reader who lacks either ' +

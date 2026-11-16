@@ -35,7 +35,12 @@
  *   .forId(id)        entry for a content-addressed id (<prefix>-x<sha12>)
  *   .forDevice(d)     the same for a catalogue entry (also d.sha256)
  *   .check(bytes)     Promise<entry|null>: hash the bytes, look them up
- *   .message(entry)   "This game isn't supported yet: <reason>"
+ *   .message(entry)   "This game isn't supported yet: <reason>" (an internal list's entry: its reason alone)
+ *
+ * INTERNAL LISTS (15 Nov 2026). index.json also names one internal list per system
+ * (<list>rejected.json, internal: true): bad and altered copies and unplayable fan hacks, which are not
+ * true games. They are refused exactly as before, but the dialog says the file can't be played (not "not
+ * supported yet": no fix to the emulator will change it), and nothing counts or shows them.
  *   .refuse(entry, {onClose})  the warning, with Close; resolves on close
  *
  * No cartridge bytes leave the page and none are logged. Silent: no sound.
@@ -59,10 +64,11 @@
       fetch(BASE + ix.lists[L].file, { cache: 'no-cache' })
         .then(r => { if (!r.ok) throw new Error(L + ' HTTP ' + r.status); return r.json(); })
         .then(doc => {
-          lists[L] = { label: doc.label || ix.lists[L].label || L, count: 0, guards: doc.guards || [] };
+          const internal = !!(doc.internal || ix.lists[L].internal);
+          lists[L] = { label: doc.label || ix.lists[L].label || L, count: 0, guards: doc.guards || [], internal };
           for (const sha in (doc.entries || {})) {
             if (!/^[0-9a-f]{64}$/.test(sha)) continue;
-            const e = Object.assign({ list: L, sha256: sha }, doc.entries[sha]);
+            const e = Object.assign({ list: L, sha256: sha }, doc.entries[sha], internal ? { internal: true } : null);
             bySha.set(sha, e);
             by12.set(sha.slice(0, 12), e);
             lists[L].count++;
@@ -76,9 +82,13 @@
     });
 
   function lookup(sha) { return (sha && bySha.get(String(sha).toLowerCase())) || null; }
+  /* A bad copy repaired on load (firmware/site/repairs.js, 13 Nov 2026) is its clean copy: an id of
+     one is looked up as the clean copy's, so the clean copy's own entry (if any) applies to it. */
   function forId(id) {
     const m = /-x([0-9a-f]{12})$/.exec(String(id || ''));
-    return m ? (by12.get(m[1]) || null) : null;
+    if (!m) return null;
+    const c = window.CWSRepair && window.CWSRepair.clean12(m[1]);
+    return by12.get(c || m[1]) || null;
   }
   function forDevice(d) {
     if (!d) return null;
@@ -114,6 +124,8 @@
 
   function message(e) {
     if (!e) return '';
+    /* A bad or altered copy's or an unplayable hack's reason is a whole sentence of its own ("This file is a bad copy: ..."). */
+    if (e.internal || e.code === 'BAD_COPY' || e.code === 'ALTERED_COPY' || e.code === 'UNPLAYABLE_HACK') return String(e.reason || '');
     const what = e.kind === 'firmware' ? 'This firmware isn’t supported yet' : 'This game isn’t supported yet';
     return what + ': ' + String(e.reason || 'it does not run correctly here yet.');
   }
@@ -143,7 +155,7 @@
     el.innerHTML =
       '<div style="max-width:440px;width:100%;box-sizing:border-box;padding:22px 22px 18px;border-radius:16px;' +
       'background:var(--panel,#161a21);color:var(--text,#e7ecf2);border:1px solid rgba(255,255,255,.14);box-shadow:0 20px 50px -20px rgba(0,0,0,.9);">' +
-      '<h2 id="cws-unsupported-h" style="margin:0 0 8px;font-size:18px;font-weight:700;">Not supported yet</h2>' +
+      '<h2 id="cws-unsupported-h" style="margin:0 0 8px;font-size:18px;font-weight:700;">' + (e && e.internal ? 'This file can’t be played' : 'Not supported yet') + '</h2>' +
       '<p id="cws-unsupported-m" style="margin:0 0 6px;font-size:14.5px;line-height:1.5;">' + esc(message(e)) + '</p>' +
       (e && e.title ? '<p style="margin:0 0 16px;font-size:12.5px;color:var(--muted,#9aa4b2);">' + esc(e.title) + '</p>' : '<div style="height:10px"></div>') +
       '<div style="display:flex;justify-content:flex-end;"><button type="button" data-cws-unsupported-close ' +

@@ -59,8 +59,8 @@
        Jellyfin. Both can be signed in; one is in use at a time, the one switched on (31 Oct). */
     { id: 'jellyfin', name: 'Media server', kind: 'Jellyfin', content: 'Films and series', where: 'Server',
       provides: 'Your own films and series from your Jellyfin server, shown on the content page and played in the site\'s player. Sign in with the server\'s address and your Jellyfin user name and password, or with Quick Connect when the server has it switched on.' },
-    { id: 'cws', name: 'Game server', kind: 'Crystal Worlds Game Server', content: 'Games and firmware', where: 'Local or Server',
-      provides: 'Your own games from a Crystal Worlds Game Server.' },
+    { id: 'cws', name: 'Game server', kind: 'CrystalVault Server', content: 'Games and firmware', where: 'Local or Server',
+      provides: 'Your own games from a CrystalVault Server.' },
     { id: 'pack', name: 'Content pack', kind: '.zip file', content: 'Games, firmware and artwork', where: 'File',
       provides: 'One .zip of your own firmware, game files, segment artwork and colour-unit flash, opened from this device. The site identifies everything by its content. It is kept in this browser.' },
     /* Stories (7 Nov): for 16-Bit sponsors, read from GitHub with their own sign-in (stories.js). This tile holds no story content. */
@@ -346,7 +346,7 @@
             '<div class="src-field"><label for="src-cws-addr">Server address</label>' +
             '<input id="src-cws-addr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="192.168.1.20:34580"></div>' +
             '<div class="src-msg" id="src-cws-msg" role="status"></div>' +
-            '<p class="src-note">Type the address of a game server on your home network, or one whose owner gave you its address. The server\'s owner finds it on the server\'s Dashboard, under <b style="color:var(--text)">Connecting devices</b>.<br><small>The server\'s owner still decides: your vault code must be approved on the server, and you will need your profile\'s PIN.</small></p>' +
+            '<p class="src-note">Type the address of a game server on your home network, or one whose owner gave you its address. The server\'s owner finds it on the server\'s Dashboard, under <b style="color:var(--text)">Connecting devices</b>.<br><small>The server\'s owner still decides: they approve your login on the server the first time.</small></p>' +
           '</form>' +
         '</div>' +
         '<div class="src-body" data-for="pack" hidden></div>' +
@@ -443,7 +443,7 @@
       return { on, off, detail: off ? 'Switched off' : on ? 'Signed in' : '' };
     }
     if (id === 'cws') {
-      const rows = Array.from(document.querySelectorAll('#cws-list .cws-row'));
+      const rows = Array.from(document.querySelectorAll('#cws-list > .cws-row'));   // a real server row, not a set-aside line inside a choice
       if (!rows.length) return { on: false, detail: '' };
       if (!switchOn('cws')) return { on: true, off: true, detail: 'Switched off' };
       const ready = rows.filter(r => r.dataset.state === 'ready').length;
@@ -527,20 +527,21 @@
     sheet.querySelectorAll('.src-body').forEach(b => { const want = b.dataset.for !== openId; if (b.hidden !== want) b.hidden = want; });
     // Game server: the address box to set up; the server rows (cws.js) once one is there.
     const cwsForm = sheet.querySelector('.src-cws-setup'), cwsSec = document.getElementById('cws-section');
-    if (cwsForm) { const h = openId === 'cws' && st.on; if (cwsForm.hidden !== h) cwsForm.hidden = h; cwsForm.style.display = h ? 'none' : ''; }
-    if (cwsSec) { const h = !st.on; cwsSec.style.display = h ? 'none' : ''; }
+    /* 12 Nov: cws.js's own tile explains both ways first (at home by Direct connect, over the internet
+       with the connection key), so it shows while setting up too, and the old address box does not. */
+    if (cwsForm) { if (!cwsForm.hidden) cwsForm.hidden = true; cwsForm.style.display = 'none'; }
+    if (cwsSec) { if (cwsSec.style.display) cwsSec.style.display = ''; }
     // The footer: one primary while setting up, then Done.
     const prim = document.getElementById('src-primary'), cancel = document.getElementById('src-cancel');
     let label = '', disabled = false;
     if (mode === 'setup') {
       if (isMedia(openId)) { const b = document.getElementById('emby-submit'); label = b ? b.textContent.trim() : 'Sign in'; disabled = !b || b.disabled; }
-      else if (openId === 'cws') { label = cwsBusy ? 'Connecting…' : 'Connect'; disabled = cwsBusy; }
       else if (openId === 'pack') { const b = document.getElementById('content-pack-btn'); label = b ? b.textContent.trim() : 'Open content pack (.zip)…'; disabled = !window.__GNW_PACK; }
       else if (openId === 'stories') label = 'Sign in with GitHub';
     }
     if (prim) {
       // The other media server's tile while one is signed in shows its own Sign out, no form.
-      const hide = mode !== 'setup' || s.plain || (isMedia(openId) && !document.getElementById('emby-login-form'));
+      const hide = mode !== 'setup' || s.plain || openId === 'cws' || (isMedia(openId) && !document.getElementById('emby-login-form'));
       if (prim.hidden !== hide) prim.hidden = hide;
       if (prim.textContent !== label) prim.textContent = label;
       if (prim.disabled !== disabled) prim.disabled = disabled;
@@ -548,7 +549,7 @@
     /* No Done, and no Cancel on the content pack (24 Oct): the "All sources" back button
        already leaves the panel. Cancel stays only beside a set-up form you can type into. */
     if (cancel) {
-      const hide = mode !== 'setup' || openId === 'pack' || s.plain || (isMedia(openId) && !document.getElementById('emby-login-form'));
+      const hide = mode !== 'setup' || openId === 'pack' || openId === 'cws' || s.plain || (isMedia(openId) && !document.getElementById('emby-login-form'));
       if (cancel.hidden !== hide) cancel.hidden = hide;
       if (cancel.textContent !== 'Cancel') cancel.textContent = 'Cancel';
     }

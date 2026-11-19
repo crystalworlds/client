@@ -5,6 +5,39 @@ All notable changes to this project are recorded here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Family Noraebang karaoke cartridges play, with their music.** These five Korean NES karaoke cartridges carry their own music chip, a copy of a Yamaha chip with nine voices and a built-in drum kit, and the emulator did not have it, so they would not start. They now start and play their songs with melody, bass and drums, and only the cartridge's own music is heard, as on the real cartridge, which cuts out the console's own sound.
+
+## [2.2.2] - 2026-11-20
+
+### Changed
+
+- **Log in and Sign up.** The welcome's two tabs are now called Log in and Sign up, with Log in first and chosen when the welcome opens. Their buttons, messages and help, the log out notice, Settings and the Features page use the same words, and the Logout button in Settings, Your vault, now reads Log out.
+- **Logging in, in plain words.** The Log in tab no longer assumes you have another device: it asks for your vault code, says you were given it when you signed up, and that Settings, Your vault, shows it on any device where you are logged in. Forgot your vault code? under it opens the email recovery in place; it was called Lost your code?, here and in Settings.
+- **One Info menu.** Compatibility, the Timeline and About moved from three buttons on the search bar into one Info button (an (i) with a down arrow) at its right end, with Emulator Research added: on a computer its systems open in a sub-menu beside the menu, and on a phone they open in place; each opens that system's Emulation page. The menu works with a mouse, a finger, the keys and a controller, and every page keeps its own address.
+- **One Filter beside the search box.** The Filter button (a funnel with a down arrow, and a number while filters are on) now sits right of the search box whatever the wall shows, and opens one panel: the order of the games and of the films and series, the kinds of game (Commercial, Homebrew, Demos, Diagnostic and Unknown, now with their names), the film choices (Unwatched, Favourites, 4K / HDR, Genre and Decade), Jump to A to Z, the artwork (Live devices or Box art) and the Continue row. On a computer it opens under the search bar in four columns (two on a smaller screen); on a phone it is a sheet with four tabs. F on the keyboard and LT on a controller open it.
+- **What is on, at a glance.** Under the search box a chip names each choice that differs from the start, each with its own cross to take it off, and Clear all at the end. Clear all puts the kinds of game back to Commercial and Unknown and turns the film choices off; the order, the artwork and the systems stay as they are.
+- **The Systems menu is the systems.** Its top row keeps the collections and Close; the order, the artwork, the Continue row and the kinds of game moved to Filter. Its tab is now called Systems.
+- **Jump to A to Z for games.** With only games on the wall, a letter puts the games in name order and goes to the first one with that letter.
+- **Nothing matches, for games too.** When the kinds of game leave no games on the wall, it says so, names what is on and offers Clear filters, as it does for films.
+- **Films off, from the Filter.** With films and series off, the Filter offers Show films and series in place.
+- **Your recovery email is no longer kept.** The vault keeps a scrambled fingerprint of it and a short reminder like p•••@gmail.com, which Settings shows with Change and Remove (both need your PIN); Forgot your vault code? mails your code to the address you type when it and your PIN match.
+- **Game Boy, Game Boy Color and Super Game Boy tile clips match the emulator again.** Every clip was recorded afresh from power-on on the current Game Boy emulator and compared frame by frame with the one on the tile; each clip that no longer matched was replaced, and games whose tiles had no clip now have one.
+- **Atari 2600 and 7800 colours.** Both now start their colour wheel where the console's colour signal starts, as the 5200 does: on the 2600, Pitfall!'s ground and Pac-Man's walls are yellow; on the 7800, Joust's ledges are gold. PAL colours follow the same rule. Every 2600 and 7800 tile clip is recorded again with the new colours.
+- **Atari 5200 colours.** The 5200 now has colours of its own, worked out from how the console makes its colour signal and the setting Atari's service procedure gives it. Blues that showed as teal are blue, and every 5200 tile clip was recorded again with the new colours.
+- **Atari 5200 replacement firmware.** Our own firmware now has a start-up screen routine where the console's own one sits. Programs that copy that routine to show their title, such as several Donkey Kong and Adventure II versions, now start on our firmware instead of showing a black screen: 481 of 522 files play without the original BIOS, up from 454.
+- **Super Mario Bros. for the Atari 5200 is listed under Demos.** It is a music demo, not a game.
+
+### Fixed
+
+- **Sachen multicarts on the original Game Boy.** The 14 Sachen cartridges made for the Color now start on an original Game Boy with Nintendo's own start-up program, showing Sachen's logo, as the real cartridges did; they used to stop at the logo. With our own start-up program every Sachen cartridge now starts the same way as with Nintendo's.
+- **Sachen cartridges start on the machine their header names.** Sachen stored the header scrambled, so the play window now reads it the way the console does: 13 of the Color ones start on the Color (the original Game Boy is a choice in the Machine list), and Beast Fighter on the original Game Boy.
+- **Lagrange Point's music is closer to the real chip.** Two small faults in the emulator's Konami VRC7 music chip are fixed: the two halves of each voice now restart together when a note starts, and one step that was off on every low sample is corrected. Notes now start more cleanly, and strongly coloured sounds no longer drift away from the real chip's.
+- **The Japanese Pokémon Crystal keeps its whole save.** Its cartridge has 64 KB of save memory in eight banks, on the larger MBC30 chip that only this game used. The emulator reached only four banks, so what the game wrote to banks 4 and 5 landed on top of banks 0 and 1. All eight now keep their own data, and the save keeps all of it when you load it again.
+- **A busy game server no longer stops a game loading.** A server is now given 15 seconds, not 3, to start sending a game; while it is slow the loading bar says the server is busy, and if it still sends nothing the message says it didn't answer in time, with a Try again button.
+- **Steadier sound on the Atari Lynx with a 44.1 kHz sound device.** The play window now keeps the sound in step with the game on every console, also when the console's sound rate equals the sound device's, so the delay no longer creeps up until the sound drops out for a moment.
+
 ## [2.2.1] - 2026-11-16
 
 ### Added
@@ -166,8 +199,8 @@ files and your own media server.
   - Atari Lynx: 128 of 129 on the Lynx hardware test suite (Gearlynx: 124).
 - **Games that play**, from the compatibility list: Game Boy and Color 2,806 of
   2,826 games; NES, Famicom and Disk System 4,348 of 4,530; Atari 2600 805 of
-  808; Atari 5200 484 of 495 with the original BIOS; Atari 7800 314 of 317;
-  Atari Lynx 812 of 860; Pokémon mini 17 of 17; Game & Watch 61 of 61.
+  808; Atari 5200 482 of 491 with the original BIOS; Atari 7800 314 of 317;
+  Atari Lynx 809 of 829; Pokémon mini 17 of 17; Game & Watch 61 of 61.
 - **The console's own firmware comes first.** The Game Boy, Game Boy Color,
   Super Game Boy, Disk System, Pokémon mini, Atari 5200, 7800 and Lynx start
   on your own console firmware whenever you have it. Without it, the Atari
@@ -323,11 +356,11 @@ files and your own media server.
 ### Known limits
 - **NES:** 182 of the 4,530 games tested do not play yet (73 boot but do not
   play, 109 show nothing).
-- **Atari 5200:** with the original BIOS, 11 of 495 games do not play; on our
-  own replacement firmware 454 of 522 files play, and the 32 games that use
+- **Atari 5200:** with the original BIOS, 9 of 491 games do not play; on our
+  own replacement firmware 481 of 522 files play, and the five programs that use
   Atari's own code need the original.
 - **Atari 7800:** 183 files show nothing without the console's BIOS.
-- **Atari Lynx:** 48 of 860 games boot but do not play.
+- **Atari Lynx:** 20 of 829 games boot but do not play.
 - **Pokémon mini:** our emulator does not match the console on two of our
   twelve tests, the save memory and the clock at start-up.
 - **Plex** is not supported.

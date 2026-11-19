@@ -37,9 +37,9 @@ this repository.
 
 ---
 
-## Version 2.2.1
+## Version 2.2.2
 
-This is version 2.2.1. What changed in each release is in
+This is version 2.2.2. What changed in each release is in
 [`CHANGELOG.md`](CHANGELOG.md). The first release, 2.0.0, in short:
 
 - **Emulators and systems.** Eleven emulators written for this project, plus
@@ -57,7 +57,8 @@ This is version 2.2.1. What changed in each release is in
   against ours. All nine match ours: Game & Watch, Pokémon mini, Game Boy,
   Game Boy Color, NES, Atari 2600, 5200, 7800 and Lynx. The results, with
   dates and the fingerprint of each emulator file checked, are on the Home
-  page.
+  page. The Lynx emulator has since learnt one game's cartridge layout
+  (dsr_tinycompo), which is not part of that check.
 - **Documentation.** A Hardware page, an Emulation page and a compatibility
   list for every system.
 - **The wall.** Films, shows and games on one wall, with search as you type,

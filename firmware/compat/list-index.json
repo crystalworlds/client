@@ -25,7 +25,7 @@
   {
    "key": "gb",
    "file": "list-gb.json.gz",
-   "tested": "2026-11-09",
+   "tested": "2026-11-17",
    "counts": [
     1321,
     0,
@@ -36,7 +36,7 @@
   {
    "key": "gbc",
    "file": "list-gb.json.gz",
-   "tested": "2026-11-09",
+   "tested": "2026-11-17",
    "counts": [
     1484,
     8,
@@ -47,7 +47,7 @@
   {
    "key": "sgb",
    "file": "list-gb.json.gz",
-   "tested": "2026-11-09",
+   "tested": "2026-11-17",
    "counts": [
     1,
     0,
@@ -146,10 +146,10 @@
   {
    "key": "atarilynx",
    "file": "list-alynx.json.gz",
-   "tested": "2026-11-15",
+   "tested": "2026-11-19",
    "counts": [
-    812,
-    17,
+    809,
+    20,
     0,
     0
    ]

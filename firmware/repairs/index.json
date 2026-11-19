@@ -28,10 +28,10 @@
    }
   },
   "atari5200": {
-   "count": 32,
+   "count": 33,
    "shards": 1,
    "files": {
-    "atari5200.json": "448adba7861c43050a6b39ddc744edc110fe1ccdacea317f6bcfef6c7904f472"
+    "atari5200.json": "be8cc91453869c34f102cc32aaa6b49e09f60ebe0ea9b16f8d4dfc82e3954472"
    }
   },
   "atari7800": {
@@ -42,5 +42,5 @@
    }
   }
  },
- "version": "14718172aa1733b2f909086b576c551b269671e8e209a9aac0bc4b3e7841abd7"
+ "version": "e424815a5ccba44981e24c2158125dfcdf31f8e2d5c6c7d400a07442f28dd5f8"
 }

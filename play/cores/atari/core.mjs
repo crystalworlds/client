@@ -31,7 +31,8 @@
  * and the turn (R). Paddles and wheels are turned by held keys (or a pad's d-pad).
  */
 import { CoreError } from '../../host/core-api.mjs';
-import { cheatEngine } from '../cheats-core.mjs?v=2.2.1';
+import { cheatEngine } from '../cheats-core.mjs?v=2.2.2';
+import { HEADERLESS_REGION_7800 } from '../../atari7800/web/region7800.js?v=2.2.2-atari9';
 
 export const SYS = new URL(import.meta.url).searchParams.get('sys') || 'a2600';
 /* The wrapper's own version tag (its URL is built here, so the page's tags never reach it). */
@@ -166,6 +167,47 @@ const TWO_PORT_FW = new Set(['2048:c2ba2613']);
    cartridge started on the player's own BIOS gets the PAL console's BIOS or nothing, and an NTSC one never
    gets it. Known by identity: Atari 7800 BIOS (198x)(Atari)(PAL), 16,384 bytes. */
 const PAL_7800_FW = new Set(['16384:d5b61170']);
+/* THE 7800'S TV SYSTEM, DECIDED ONCE (19 Nov 2026): as the core decides it (pilot src/7800/cart7800.c):
+   a .a78 header gives it in byte 57 (bit 0); without one, the core's per-hash table of known files
+   (web/region7800.js, generated from the core's own tables) by the file's SHA-256; else NTSC. The same
+   answer sets the BIOS role (the PAL console's BIOS for PAL) and is handed to the core before the
+   load, and each load checks the core reached it, so the BIOS and the timing cannot disagree. */
+function sha256hex(b) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const n = b.length, total = ((n + 9 + 63) >> 6) << 6, m = new Uint8Array(total);
+  m.set(b); m[n] = 0x80;
+  const bits = n * 8, dv = new DataView(m.buffer);
+  dv.setUint32(total - 8, Math.floor(bits / 0x100000000)); dv.setUint32(total - 4, bits >>> 0);
+  const w = new Uint32Array(64), r = (x, k) => (x >>> k) | (x << (32 - k));
+  for (let o = 0; o < total; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + 4 * i);
+    for (let i = 16; i < 64; i++) w[i] = (w[i - 16] + (r(w[i - 15], 7) ^ r(w[i - 15], 18) ^ (w[i - 15] >>> 3)) + w[i - 7] + (r(w[i - 2], 17) ^ r(w[i - 2], 19) ^ (w[i - 2] >>> 10))) >>> 0;
+    let [a, bb, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (r(e, 6) ^ r(e, 11) ^ r(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0;
+      const t2 = ((r(a, 2) ^ r(a, 13) ^ r(a, 22)) + ((a & bb) ^ (a & c) ^ (bb & c))) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = bb; bb = a; a = (t1 + t2) >>> 0;
+    }
+    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + bb) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+  }
+  return H.map(x => x.toString(16).padStart(8, '0')).join('');
+}
+const hasHeader7800 = b => !!b && b.length >= 128 && String.fromCharCode.apply(null, b.subarray(1, 10)) === 'ATARI7800';
+function region7800(b) {
+  if (!b) return 0;
+  if (hasHeader7800(b)) return b[57] & 1;
+  const row = HEADERLESS_REGION_7800[sha256hex(b)];
+  return row === 1 ? 1 : 0;
+}
 /* THE CONSOLE'S OWN FIRMWARE FIRST (1 Nov 2026; "We should always use the
    commercial BIOS first if it's available"). The 5200, 7800 and Lynx start on the player's own
    console firmware whenever the site, a content pack or a game server has it, and on this site's
@@ -175,43 +217,18 @@ const PAL_7800_FW = new Set(['16384:d5b61170']);
    - NEEDS_ORIGINAL_5200: plays with Atari's firmware and not with ours (it copies or calls
      Atari's code; 5200 Doom was traced to the byte). It always starts on the player's
      firmware, whatever the setting, and without one stops with the needs-firmware message
-     instead of a black screen (runs run-atari5200-41698c7f-va294bb09-bios-seatA5X and -seatA5Xown).
+     instead of a black screen (runs run-atari5200-41698c7f-va294bb09-bios-seatA5X and -seatA5Xown; on 18 Nov 2026
+     our firmware gained the start-up screen routine those programs copy, and 27 of the 32 left the list:
+     run-atari5200-d2721a32-v362f2c3f-seatATARIFWown).
    - KEEP_OURS_5200: plays with ours and not with Atari's: always ours (the same two runs).
    - KEEP_NONE_7800: plays started directly and not through the NTSC BIOS: always started
      directly (runs run-atari7800-41698c7f-vf89c1ab4-bios-seatATSWEEPbios and -seatATSWEEP). */
 const NEEDS_ORIGINAL_5200 = new Set([
   '06a6cbc575182f119cd5a5846de2b438202f1907fd54c2ae1f73bf8557f419d1',   // Benchmark Test A8 XL XE 5200 Rev2 doppel
-  '077b7deae253d181ea83d76c5885634a98826baf511b7facdcba95ce1648da9c',   // Combat II Demo
-  '087deada67c5e165fde90d07137b121ce8fed619781769775c8e257a742dcbe2',   // PONG_5200__EPROM_32k_
-  '1ff51d60952d530423e3e96458c96b0baced7ce649062e70edde418153dedc00',   // Donkey Kong And Dk Jr. 8bit 5200 Hack
-  '23dc585596eb3e2a0903cb5664448134e3ad63ec04fdf8df338b8c13f90f6973',   // Adventure II demos
-  '268574c2b81bb4435b0edee993ea6d7b2f6a03a26dba7398d47b771f80927fb6',   // Adventure 2 Demo
-  '2be188305df8f2ab62d4e70f81c416736b1e24aa8a62ce8474f5d29a5ab01330',   // Adventure II
-  '3739349e0ec4c7fc1c457c75590972d864573eb1986517d006f4186fb1c09ce8',   // Koffi - Yellow Kopter Demo-Nov 15
-  '4d174520e2d8b44eef4799551dda975971fb20c86174ccd96d5bd41ccc4b60e9',   // Programming The 5200
-  '5c564618408126628a4ddb7523779bce367a29768e557803283aa588ffc4dd4c',   // New Adventure Ii 5200 Demo
-  '68cf1a0eaa5a318ab65a15c52b50cbc7cb3b26788673af63ac6027cc805ade2b',   // Jumpong v2
-  '6905b02aa2237f3adc7bdcbd17c6cdd0b8e1873e799a8fc4d0f6a652bbcc7be9',   // 5200Basic - 5200 Doom by Jeffry Johnston
-  '76fb1fe00c642bc89c420baa0c55f74a8b46a53c4392928e592db301f62de88c',   // DKArcade_5200_v7.4
   '84851ed8fb378498b44db38b9a1e3c94cf63e5a55845cfbbd081567428c17619',   // Yellow Submarine Demo
   '8dbac556f89a96cdf9132dce2b8f8d586bb0f21a09a48bab542a91b4ae287d8c',   // Boogie Demo
   '8eea898b3b293c74ef867c186d93c1efbb1b0511de0c0945263fa7474f0c9ad1',   // Space Race
-  '98023ed2bbfae95a86c91fd754095381be07a07df3f5147f86f9f176cd0eb3be',   // DKJr_5200
   '99f0e374a80edd1301e514f153d95a350248409bb402d01ba2e83e2acdc2a731',   // Acid5200 1.2 - full suite
-  'af85e7599accc3ae59eef0dce87de1ca1e3416c146f7f853b8a6a981ffe0caf4',   // 256_colors_2006_by_bb
-  'bca35870d02edaaf41f530433f576601a218c33f215adb825476a8b1baa7952a',   // Donkey Kong
-  'bee67a515d0d3f9d8bf7c750a71fb66c7c3d8c19b97069e2d7375424b81f256a',   // DonkeyKongArcade_5200_6.8
-  'c9696e4551ffb60fc1e1e136a1390970dfa991ccc926bd497a013353154f0a78',   // DK5200_v7.4_AltColor
-  'ce8e09624f52f7a488cbb592c11304d0c05340c64e3443cc3d0f9d19926df7fd',   // Koffi - Yellow Kopter
-  'd9ee80c665b5df04374443abbd60456ba7ac5b918d45c8520f5818580ff8f113',   // Hunting With Dick Atari 5200
-  'db82dab57f6aaba6182e09bd37acebd60c860b0e3e39d5537471bda83aa949f1',   // Donkey Kong Jr
-  'de9b429143f6376d30e8dc426ea38cd734c7c2987f4dfbc6ce3dc2f4c36d9a9a',   // DonkeyKongArcade_5200-v7
-  'df224e900d24ed5a0ff8f9026630e5cd4b776a04a22b989d6560cfa20c7d8f12',   // DonkeyKongArcade_5200_5.0
-  'dfe91dc7bdca5d4e39071940d4b4ebebff11db3c21ab8367aab971cd278cd686',   // Adventure II Philly Classic 5 demo
-  'e2d4c8d1d357e4c17c4e6011670c14f1e2aed4c163c33a5328fe941d7d96292c',   // JOYTEST
-  'e3208a0089ab0a75a44544a684529a4e178d4c7d07470a69195f8d5adf4cc773',   // DK5200_Arcade
-  'f2b3da3261b9bff387872810e29ddd24773a81374f69d2fc40d9f518e5ffecb2',   // floppy bird
-  'f9a99054aa9bd6bafb81835f66daa96db79ac9fd8d7f200ea4995749f4f5a298',   // Castle Blast
 ]);
 const KEEP_OURS_5200 = new Set([
   '2b136a71eb8bce3eccd6b8ff45da41ada7cd083020b46dc25b543133ede59226',   // Gauntlet
@@ -421,16 +438,10 @@ const NEEDS_BIOS_7800 = new Set([
   'ff4ac4c5c0215ed743edef8be531e0c3a6920c92cbd5a4f69f24350a89831237',   // Pac-Land Break Time Tune
 ]);
 
-/* The Lynx: plays through this site's boot program and not through the player's (runs
-   run-atarilynx-41698c7f-v2be050c9-bios-seatBIOSPREF and -seatATSWEEP, 885 files: 817 play on both,
-   4 only through Atari's, these 5 only through ours). */
-const KEEP_OURS_LYNX = new Set([
-  '2e6273d496c1b185afea437f1d95b1d369d6b4ae5d5516ca6b7144053d84f77e',   // Dice Board Game sage 2005
-  '5c389a8d2fb45f6b33492993bc452d2f1970ca8b809eb6079d7b263a83f7439a',   // Anti A-Bomb Aircraft Artillery
-  '61d4fab8cba5f9fc39e3e919954e107ec8f30d85e5af1e9469c5be10cf4cbb76',   // scroll wip2
-  '97421b05e07dccc7d319903c904a5e75fa789c0fdbbf4aff4fcae7401514788c',   // palette
-  'fb34189b22801cdd160161722c7ee952b84ed8a757b16c0905f8d19e64fc9179',   // cart demo
-]);
+/* The Lynx (19 Nov 2026, ATARI-D98): every file follows the start-up firmware order, the player's own
+   boot program first. The five files once kept on this site's (they played only because its old boot
+   program left the machine otherwise than the console's) follow the original like every other file. */
+
 const shaOf = r => String((r && r.game && r.game.sha256) || '').toLowerCase();
 let crcTable = null;
 function crc32(b) {
@@ -496,8 +507,7 @@ export const manifest = {
      A PAL 7800 cartridge (its A78 header's TV byte, as the core reads it: cart7800.c data[57] & 1)
      asks for the PAL BIOS; every other game for the usual one. A 5200 game made for the two-port
      console (TWO_PORT_5200 below) asks for that console's firmware. */
-  firmwareRole: SYS === 'a7800' ? ((bytes, id) => id === 'hsc' ? 'highscore' : (id === 'bios' && bytes && bytes.length >= 128 &&
-    String.fromCharCode.apply(null, bytes.subarray(1, 10)) === 'ATARI7800' && (bytes[57] & 1)) ? 'boot-pal' : 'boot')
+  firmwareRole: SYS === 'a7800' ? ((bytes, id) => id === 'hsc' ? 'highscore' : (id === 'bios' && bytes && region7800(bytes) === 1) ? 'boot-pal' : 'boot')
     : SYS === 'a5200' ? ((bytes, id) => (id === 'bios' && twoPort5200(bytes)) ? 'boot-2port' : 'boot') : undefined,
   video: {
     kind: 'raster',
@@ -612,7 +622,7 @@ const EXTRA_KINDS_2600 = [
   { v: 'stmouse', label: 'Atari mouse', needs: 'atari_move_pointer' },
   { v: 'amigamouse', label: 'Amiga mouse', needs: 'atari_move_pointer' },
   { v: 'lightgun', label: 'Light gun', needs: 'atari_set_lightgun' },
-  { v: 'mindlink', label: 'MindLink', needs: 'atari_set_mindlink', hidden: true },   // hidden until it is checked against the games: neither offered nor chosen; the code below stays
+  { v: 'mindlink', label: 'MindLink', needs: 'atari_set_mindlink' },   // shown again 19 Nov (ATARI-D95: the core equals Stella; each game now gets it on the port it reads)
   { v: 'quadtari', label: 'QuadTari (two joysticks)', needs: 'atari_set_controller' }];
 /* The 2600 has no header to name its controller: these games are known by identity (the first 12
    hex digits of the file's SHA-256), the library's files whose own instructions name the device.
@@ -626,10 +636,12 @@ const GAME_CTRL_2600 = {
   'bff49aa4c6b4': ['lightgun'], 'ceefa35ca872': ['lightgun'], 'c185dd85dab5': ['lightgun'], 'b85bd0103a0d': ['lightgun'], 'e1c7e691972b': ['lightgun'],
   '03421b617b27': ['booster'],      // Omega Race (Booster Grip)
   '56e312df61ac': ['booster'],      // Omega Race (prototype)
-  'cc2761a74d6a': ['mindlink'],     // Bionic Breakthrough
-  '01720a56ff5a': ['mindlink'],     // Bionic Breakthrough (an earlier prototype)
-  'afcca1af5b8c': ['mindlink'],     // Telepathy
-  'a32beea483f9': ['mindlink'],     // Mind Maze
+  /* The MindLink on the port each game reads (ATARI-D95, 19 Nov 2026, each checked against Stella): Bionic
+     Breakthrough the left, its 06-22-1984 prototype the right; Telepathy the right, with a joystick on the left
+     whose fire starts it. Mind Maze reads a joystick, not the MindLink, so it is not listed. */
+  'cc2761a74d6a': ['mindlink'],                 // Bionic Breakthrough
+  '01720a56ff5a': ['joystick', 'mindlink'],     // Bionic Breakthrough (an earlier prototype, 06-22-1984)
+  'afcca1af5b8c': ['joystick', 'mindlink'],     // Telepathy
 };
 function extraButtons2600(kind, who) {
   const fire = FIRE_2600[who];
@@ -666,9 +678,9 @@ export async function create(env) {
   const wasmUrl = new URL(WASM[SYS], base).href + '?v=' + (stamp && stamp.sha256 ? stamp.sha256.slice(0, 12) : 'dev');
   const ball = { on: false, dx: 0, dy: 0, b: 0, lb: 0 };   // the 5200 Trak-ball (ext.trackball)
   const P = { a2600: null, a7800: null, a5200: null };
-  if (SYS === 'a2600') P.a2600 = await import(new URL('web/palette.js', base).href);
-  if (SYS === 'a7800') { P.a7800 = await import(new URL('web/palette7800.js', base).href); P.a2600 = await import(new URL('../atari2600/web/palette.js', base).href); }
-  if (SYS === 'a5200') P.a5200 = await import(new URL('web/palette7800.js', base).href);
+  if (SYS === 'a2600') P.a2600 = await import(new URL('web/palette.js?v=2.2.2-atarifw', base).href);
+  if (SYS === 'a7800') { P.a7800 = await import(new URL('web/palette7800.js?v=2.2.2-atarifw', base).href); P.a2600 = await import(new URL('../atari2600/web/palette.js?v=2.2.2-atarifw', base).href); }
+  if (SYS === 'a5200') P.a5200 = await import(new URL('web/palette5200.js', base).href);   // the 5200's own colours (18 Nov 2026)
 
   /* A fresh instance per cartridge, as the old pages: atari_create() grows wasm memory and
      never gives it back. One spare is made ahead, so load() (synchronous) never waits. */
@@ -1469,7 +1481,7 @@ export async function create(env) {
         /* The BIOS for the cartridge's TV system (manifest.firmwareRole), never the other one.
            THE CONSOLE'S OWN FIRMWARE FIRST (1 Nov 2026): a PAL game without the PAL BIOS starts
            directly, as it did before the player's BIOS became the default (it was refused). */
-        const pal = manifest.firmwareRole(bytes, 'bios') === 'boot-pal';
+        const want = region7800(bytes), pal = want === 1;   // THE 7800'S TV SYSTEM, DECIDED ONCE
         const needs = NEEDS_BIOS_7800.has(shaOf(r));
         let fw = KEEP_NONE_7800.has(shaOf(r)) ? null : pickFirmware(needs || opts.bios !== '0', [4096, 16384]);
         if (fw && PAL_7800_FW.has(idOf(fw)) !== pal) fw = null;
@@ -1486,14 +1498,22 @@ export async function create(env) {
           if (hfw && hfw.length === 4096) { m.u8(m.scratch, 4096).set(hfw); hscFw = m.X.a7800_set_hsc_firmware(m.ctx, m.scratch, 4096) === 0; }
           else { m.X.a7800_set_hsc_firmware(m.ctx, 0, 0); hscFw = false; }
         }
+        if (typeof m.X.a7800_set_region === 'function') m.X.a7800_set_region(m.ctx, want);
         m.loadCartridge(bytes);
         region = m.region();
+        /* the core must reach the same TV system (else the BIOS and the timing would disagree): if it
+           ever does not, the cartridge starts again without the BIOS, at the core's own timing */
+        if (region !== want && firmwareUsed && !m.inTwoSixHundredMode()) {
+          console.warn('[atari 7800] the core chose ' + (region ? 'PAL' : 'NTSC') + ' where the site decided ' + (want ? 'PAL' : 'NTSC') + ': started without the BIOS');
+          m.X.a7800_set_bios(m.ctx, 0, 0); firmwareUsed = null;
+          m.loadCartridge(bytes); region = m.region();
+        }
       } else {
         /* The Lynx: the player's own boot program when it is there (THE CONSOLE'S OWN FIRMWARE
            FIRST), else this site's, which the core has built in. Set before the load (its power on
            runs it); size 0 takes it out of a machine used before. */
         if (typeof m.X.lynx_set_firmware === 'function') {
-          const fw = KEEP_OURS_LYNX.has(shaOf(r)) ? null : pickFirmware(opts.bios !== '0', [512]);
+          const fw = pickFirmware(opts.bios !== '0', [512]);
           if (fw) { m.u8(m.scratch, fw.length).set(fw); if (m.X.lynx_set_firmware(m.ctx, m.scratch, fw.length) === 0) firmwareUsed = 'user'; }
           else m.X.lynx_set_firmware(m.ctx, 0, 0);
         }

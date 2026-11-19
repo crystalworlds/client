@@ -479,7 +479,7 @@ function gbcMachineEmulationTabHTML(d) {
     'document, which is the right instinct: a cartridge you wrote asserting your own expectation is ' +
     'not the same kind of evidence as one somebody else verified on silicon.</p>' +
     '<h4 class="gbemu-sub">Two newer Color suites: cgb-acid-hell and the AGE tests</h4>' +
-    '<p class="hw-readable">Our figure is measured on the core this site serves (its sha256 begins <code>4e43ce760b3e</code>), with the same build, plan, judge and frame counts for every emulator. ' +
+    '<p class="hw-readable">Our figure is measured on the core this site serves (its sha256 begins <code>559f488ff5b5</code>), with the same build, plan, judge and frame counts for every emulator. ' +
     'Neither suite is published ready to run, so we built both from their authors&rsquo; published source with the RGBDS assembler: ' +
     '<b>cgb-acid-hell</b> by Matt Currie (one frame that must match its author&rsquo;s reference picture pixel for pixel, in colour mode) and ' +
     'the <b>AGE tests</b> by Christoph Sprenger (47 tests of picture and processor timing, from <code>HALT</code> and the status register to sprite and video memory access and the speed switch). Both carry the MIT licence. ' +

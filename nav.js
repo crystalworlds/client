@@ -297,6 +297,17 @@
     const c = document.querySelector('#view-media .vg-tab');
     return c && visible(c) && !gamesMenuOpen() ? c : null;
   }
+  /* Two boxes on one row: they overlap up and down by at least a quarter of the smaller one (the person
+     button is centred on the site's mark, which can sit a little lower than the bar's buttons). */
+  function sameRow(p, q) { return Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top) >= Math.min(p.height, q.height) / 4; }
+  /* The round person button (cws-reach.mjs), when it is on screen beside a (to its right). */
+  function besideMe(a, dir) {
+    const me = document.querySelector('#cw-me .cw-me-btn');
+    if (!me || !visible(me) || me === a) return null;
+    const p = rectOf(a), q = rectOf(me);
+    if (!sameRow(p, q)) return null;
+    return dir === 'right' && q.left >= p.right - 8 ? me : null;
+  }
   function tabMove(a, dir) {
     if (dir === 'left') return go(recalled(zoneById('grid')) || liveItems(zoneById('grid'))[0] || firstSensible(), false);
     return true;
@@ -852,6 +863,8 @@
       if (intoPage && z.id === 'search') continue;
       let items = liveItems(z);
       if (z.id === 'page') items = items.filter(el => !(TIMELINE.root() && TIMELINE.root().contains(el)));
+      /* Up reaches the person button only where it is above (16 Nov 2026): beside the bar it is reached with Right. */
+      if (z.id === 'nav' && dir === 'up') items = items.filter(el => rectOf(el).bottom <= r.top + 8);
       if (!items.length) continue;
       // Focus mode (shortcuts.js) hides the toolbar and library strip: Up past the top row brings them back.
       if (dir === 'up' && z.id === 'nav' && onMedia() && window.GnwShortcuts && window.GnwShortcuts.revealAbove && window.GnwShortcuts.revealAbove()) return leave(from, dir);
@@ -1136,12 +1149,21 @@
     if (gamesMenuOpen() && !ZONE_DIRS.has(dir)) { const it = menuItems(); const lit = it.find(b => b.classList.contains('active') && b.closest('.vggrid')); if (it.length) return go(lit || it[0], false); }
     if (a.classList && a.classList.contains('vg-tab')) return tabMove(a, dir);
 
+    /* A HOOK FOR THE WELCOME (cws-reach.mjs, 16 Nov 2026): without a vault, Down from the person button
+       and Right from Home's film slide the tucked welcome out. True: the press was taken there. */
+    if (typeof window.cwNavHook === 'function') { try { if (window.cwNavHook(a, dir)) return true; } catch (_) {} }
     const at = zoneOf(a);
     if (!at) {
       if (ZONE_DIRS.has(dir)) return false;
       return go(firstSensible(), false);
     }
     const { z } = at;
+    /* THE ROUND PERSON BUTTON FOLLOWS THE LAYOUT (16 Nov 2026): where it sits beside the bar (a PC),
+       Right past the bar's last button goes to it and Left comes back; where it sits above the bar (a
+       phone, a narrow window), Up reaches it (leave(), only when it is really above) and Right does
+       nothing. The measure is where the button is on screen, not a width. */
+    if (dir === 'right' && z.id === 'toolbar') { const s = step(a, liveItems(z), dir); if (!s) { const me = besideMe(a, 'right'); if (me) return go(me, false); } }
+    if (dir === 'left' && z.id === 'nav' && a.closest && a.closest('#cw-me')) { const tb = liveItems(MEDIA_ZONES[1]).filter(b => sameRow(rectOf(a), rectOf(b)) && rectOf(b).right <= rectOf(a).left + 8); if (tb.length) return go(nearest(rectOf(a), tb, 'left') || tb[tb.length - 1], false); }
     if (z.id === 'grid' && a.parentElement === at.r && visible(at.r) && gridItemOk(a)) { const r = gridMove(a, at.r, dir); if (r !== null) return r; }   // the wall's quick pass
     let items = liveItems(z);
     if (z.id === 'page') items = items.filter(el => !(TIMELINE.root() && TIMELINE.root().contains(el)));

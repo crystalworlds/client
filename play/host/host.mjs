@@ -17,11 +17,11 @@
  * SOUND: only through the Sink lent by CwPlayAudio, only while this window is open.
  */
 import { manifestProblems, coreProblems, VirtualClock, CoreError } from './core-api.mjs';
-import { Presenter } from './present.mjs?v=2.2.1';   // HOST MODULES: bump this tag (and present.mjs's own) when one changes
-import { Input, keyLabel } from './input.mjs?v=2.2.1';
-import * as S from './saves.mjs?v=2.2.1';
-import * as E from './save-envelope.mjs?v=2.2.1';
-import { Cheats } from './cheats.mjs?v=2.2.1';
+import { Presenter } from './present.mjs?v=2.2.2';   // HOST MODULES: bump this tag (and present.mjs's own) when one changes
+import { Input, keyLabel } from './input.mjs?v=2.2.2';
+import * as S from './saves.mjs?v=2.2.2';
+import * as E from './save-envelope.mjs?v=2.2.2';
+import { Cheats } from './cheats.mjs?v=2.2.2';
 import { API as CORE_API } from './core-api.mjs';
 
 const BUILD = '20261014-host1';
@@ -41,7 +41,7 @@ const $ = id => document.getElementById(id);
    the relay its old page used, which the site already answers. */
 const REGISTRY = {
   gb: {
-    core: '../cores/gb/core.mjs?v=2.2.1', art: '../cores/gb/art.mjs?v=2.2.1',
+    core: '../cores/gb/core.mjs?v=2.2.2', art: '../cores/gb/art.mjs?v=2.2.2',
     relay: { ask: 'gbNeedCart', answer: 'gbCart', game: g => 'gb-' + g, firmware: { dmg: 'bios', cgb: 'biosCgb' } },
     deviceId: g => 'gb-' + g, padSys: 'gb', slots: 20,
   },
@@ -59,20 +59,20 @@ const REGISTRY = {
   /* Game & Watch (Phase 5, the G&W migration, 2026-10-14): the classic units. The game is
      the site's device id (silver-ball); the one relay answers with its program and melody. */
   gnw: {
-    core: '../cores/gnw/core.mjs?v=2.2.1', art: '../cores/gnw/art.mjs?v=2.2.1',
+    core: '../cores/gnw/core.mjs?v=2.2.2', art: '../cores/gnw/art.mjs?v=2.2.2',
     relay: null,
     deviceId: g => g, padSys: 'gnw', slots: 20,
   },
   /* H1 (Tetris Jr. and the colour units, Phase 5, 2026-10-14). Tetris Jr. is the one
      built-in game: no file is asked for (manifest.files.game.builtIn, H2). */
   tetrisjr: {
-    core: '../cores/tetrisjr/core.mjs?v=2.2.1', art: '../cores/tetrisjr/art.mjs?v=2.2.1',
+    core: '../cores/tetrisjr/core.mjs?v=2.2.2', art: '../cores/tetrisjr/art.mjs?v=2.2.2',
     relay: null, deviceId: g => g, padSys: 'tj', slots: 20,
   },
   /* The two colour units: the game is the unit ('mario' / 'zelda'); its external flash comes
      as the game and its internal flash as firmware '<unit>:internal', through the one relay. */
   tft: {
-    core: '../cores/tft/core.mjs?v=2.2.1', art: '../cores/tft/art.mjs?v=2.2.1',
+    core: '../cores/tft/core.mjs?v=2.2.2', art: '../cores/tft/art.mjs?v=2.2.2',
     relay: null, deviceId: g => ({ mario: 'reissue-super-mario-bros', zelda: 'reissue-zelda' })[g] || g, padSys: 'twin', slots: 20,
   },
 };
@@ -89,8 +89,8 @@ for (const s of ['a2600', 'a5200', 'a7800', 'alynx']) REGISTRY[s] = atariReg(s);
    play/cores/<id>/ folder changes (its own sub-imports, e.g. the colour units' compose.mjs,
    carry their own tags inside core.mjs). The Ataris share one module, so one tag. */
 const CORE_V = {
-  gb: '2.2.0', nes: '2.2.0', pm: '20261029-pm10-srcrev1', gnw: '20261101-gnw13-gwpad2',
-  tetrisjr: '20261029-tj5-srcrev1', tft: '20261102-tft15-fix6a', atari: '2.2.0',
+  gb: '2.2.2-gbmbc30', nes: '2.2.2-neskaraoke', pm: '20261029-pm10-srcrev1', gnw: '20261101-gnw13-gwpad2',
+  tetrisjr: '20261029-tj5-srcrev1', tft: '20261102-tft15-fix6a', atari: '2.2.2-atari9e',
 };
 const tagged = (p, v) => p + (p.includes('?') ? '&' : '?') + 'v=' + v;
 for (const [s, r] of Object.entries(REGISTRY)) {
@@ -251,7 +251,7 @@ function runOne() {
   clock.advance(1);
   framesRun++; H.stats.frames++;
   const a = core.audio();
-  if (a && a.frames && sink && speed <= 2 && !fastLoadWas) sink.push(a.data, a.frames, manifest.audio.channels, (result.audio.rate || sink.rate) * speed);
+  if (a && a.frames && sink && speed <= 2 && !fastLoadWas) sink.push(a.data, a.frames, manifest.audio.channels, (result.audio.rate || sink.rate) * speed, !result.audio.rate);   // rate 0: the core follows rateHint() itself
   if (++capN >= capEvery) { capN = 0; capture(); }
 }
 /* THE STATUS LINE (2026-10-14): what the old Game Boy page's footer said, for every
@@ -802,14 +802,14 @@ async function boot() {
   const wantWorker = typeof Worker === 'function' && ((manifest.thread === 'worker' && threadAsk !== 'main') || threadAsk === 'worker')   /* ?thread=worker: any core (the Core API's cores are page-free), for an A/B */;
   if (wantWorker) {
     try {
-      const { createWorkerCore } = await import('./runner-worker.mjs?v=2.2.1');
+      const { createWorkerCore } = await import('./runner-worker.mjs?v=2.2.2-audioservo');
       core = await createWorkerCore(new URL(REG.core, import.meta.url).href, env, { channels: manifest.audio.channels || 1 });
       core.onFrame = () => { dirtyPicture = true; };
       /* R4 audio (2026-10-15): the worker's sound goes to the sink as it arrives, into a deeper
          queue (the sink's setBuffer), since a worker's frames arrive less evenly than the page's. */
       core.onAudio = (data, frames) => {
         if (!sink || speed > 2 || fastLoadWas || rewinding || holding()) return;
-        sink.push(data, frames, manifest.audio.channels, ((result && result.audio && result.audio.rate) || sink.rate) * speed);
+        sink.push(data, frames, manifest.audio.channels, ((result && result.audio && result.audio.rate) || sink.rate) * speed, !(result && result.audio && result.audio.rate));
       };
       /* The core may declare its own queue (manifest.audio.latencyMs); ?wbuf= still wins for an A/B.
          (2 Nov 2026: the adaptive queue of 29 Oct / 1 Nov is gone; every console has the one
@@ -833,7 +833,7 @@ async function boot() {
      play/host/rewind-ring.mjs (XOR delta + deflate on a worker, first written for the Atari core);
      the host decides from the manifest's state size, never the core. */
   if (manifest.state.supported && manifest.state.approxBytes >= BIG_STATE) {
-    try { const R = (await import('./rewind-ring.mjs?v=2.2.1')).Ring; big = new R({ max: Math.round(REW_SECONDS * 1000 / REW_CAPTURE_MS), capBytes: REW_CAP_BYTES, approxBytes: manifest.state.approxBytes }); }
+    try { const R = (await import('./rewind-ring.mjs?v=2.2.2')).Ring; big = new R({ max: Math.round(REW_SECONDS * 1000 / REW_CAPTURE_MS), capBytes: REW_CAP_BYTES, approxBytes: manifest.state.approxBytes }); }
     catch (e) { big = null; log('rewind helper not available, raw states: ' + e.message); }
   }
 
@@ -1070,9 +1070,9 @@ async function setupDevices() {
   if (printer) { try { printer.destroy(); } catch (_) {} printer = null; }
   const ex = (result && result.extensions) || {};
   if (ex.printer && core.ext && core.ext.printer && !PREVIEW) {
-    const P = await import('./peripherals.mjs?v=2.2.1');
+    const P = await import('./peripherals.mjs?v=2.2.2');
     let listed = false;
-    try { const T = await import('../cores/gb/printer-titles.mjs?v=2.2.1'); listed = !!(gameHash && T.PRINTER_TITLES.has(gameHash.slice(0, 16))); } catch (_) {}
+    try { const T = await import('../cores/gb/printer-titles.mjs?v=2.2.2'); listed = !!(gameHash && T.PRINTER_TITLES.has(gameHash.slice(0, 16))); } catch (_) {}
     printer = new P.Printer({ core: () => core, listed, log, onShow: () => changed(),
       /* 2026-10-22: the window opens 2 seconds after a print is detected, not at once.
          The paper still collects meanwhile; Back before then (a thrown-away print) keeps it shut. */
@@ -1084,7 +1084,7 @@ async function setupDevices() {
   }
   /* R.O.B. (2026-10-21): beside the game, always (play/host/rob-panel.mjs). */
   if (ex.rob && core.ext && core.ext.rob && !PREVIEW) {
-    const R = await import('./rob-panel.mjs?v=2.2.1');
+    const R = await import('./rob-panel.mjs?v=2.2.2');
     devices.rob = new R.RobPanel({ core: () => core, kind: ex.rob, stage: $('stage'), layout: () => presenter.layout(), log, toast });   // toast: the Test note (25 Oct)
     log(`r.o.b.: plugged in (${ex.rob === 'gyro' ? 'Gyromite: gyro trays on controller two' : 'Stack-Up'}); he watches the screen for commands`);
   }
@@ -1101,7 +1101,7 @@ async function setupDevices() {
   trackballBound = null;
   if (core.ext && core.ext.trackball && !PREVIEW) bindTrackball(core.ext.trackball);
   if (!(ex.tilt || ex.camera || ex.microphone || ex.tape || ex.recorder || ex.barcode || matPort)) return;
-  const P = await import('./peripherals.mjs?v=2.2.1');
+  const P = await import('./peripherals.mjs?v=2.2.2');
   const x = core.ext || {};
   if (ex.tilt && x.tilt) { devices.tilt = new P.Tilt({ core: () => core, screen: $('screen'), log }); log('tilt sensor: keys I J K L, the right stick, or drag on the screen'); }
   if (ex.camera && x.camera) {
@@ -2029,9 +2029,74 @@ function settingsGroups() {
     (by[d.group] || by.machine).push(r);
   }
   if (core.note) { const n = document.createElement('div'); n.className = 'cb-row host-note'; n.textContent = core.note; (by[core.noteGroup] || by.display).push(n); }
+  const pre = preloadRow(); if (pre) by.machine.push(pre);
   by.firmware = firmwareRows();
   by.cassettes = cassetteRows();
   return Object.keys(by).filter(k => by[k].length).map(k => ({ section: GROUP_TITLE[k], nodes: by[k] }));
+}
+/* PRE-LOAD ON DEVICE (18 Nov 2026; the site's preload.js holds the list and the copies). One switch in
+   this game's Machine section: on, the game is kept in this browser and starts with no download wait;
+   20 games at most. A 21st is refused here, with the 20 listed so one can be turned off in place.
+   Only a game a joined game server lists has it; Game & Watch units are built into the site. The line
+   under it says where it is: waiting for sign-in, downloading, ready on this device, or not enough space. */
+const NO_PRELOAD = new Set(['gnw', 'tft', 'tetrisjr']);
+function preloadApi() { try { return (embedded && !PREVIEW && window.parent.CwPreload) || null; } catch (_) { return null; } }
+function preloadRow() {
+  const P = preloadApi();
+  if (!P || NO_PRELOAD.has(SYS) || !game) return null;
+  const id = REG.deviceId(game);
+  let ok = false; try { ok = !!P.applies(id); } catch (_) { ok = false; }
+  if (!ok) return null;
+  const r = document.createElement('div'); r.className = 'cb-row host-preload';
+  r.innerHTML = '<label class="cb-lab" for="opt-preload">Pre-load on device</label>';
+  const c = document.createElement('input'); c.type = 'checkbox'; c.id = 'opt-preload';
+  const note = document.createElement('span'); note.className = 'host-note'; note.setAttribute('aria-live', 'polite');
+  c.setAttribute('aria-describedby', 'opt-preload-note'); note.id = 'opt-preload-note';
+  const full = document.createElement('div'); full.className = 'host-preload-full'; full.hidden = true;
+  full.style.cssText = 'flex-basis:100%;margin:6px 0 2px;';
+  r.appendChild(c); r.appendChild(note); r.appendChild(full);
+  const paint = () => {
+    let s = { on: false, state: 'off' };
+    try { s = P.state(id); } catch (_) {}
+    c.checked = !!s.on;
+    note.textContent = P.text(s);
+  };
+  const showFull = (list, max) => {
+    full.hidden = false;
+    full.textContent = '';
+    const h = document.createElement('div'); h.className = 'host-note';
+    h.textContent = `${max} of ${max} games are pre-loaded. Turn one off to make room for this game:`;
+    full.appendChild(h);
+    const ul = document.createElement('ul'); ul.style.cssText = 'list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;';
+    for (const g of list) {
+      const li = document.createElement('li'); li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+      const nm = document.createElement('span'); nm.textContent = g.name + (g.system ? ' (' + g.system + ')' : ''); nm.style.cssText = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cb-act host-preload-off'; b.textContent = 'Turn off'; b.dataset.plId = g.id;
+      b.setAttribute('aria-label', 'Turn off pre-load for ' + g.name);
+      b.addEventListener('click', () => {
+        /* Room made: this game takes the place, as the note said. */
+        P.set(g.id, false).then(() => P.set(id, true)).then(() => {
+          full.hidden = true; full.textContent = '';
+          c.focus({ preventScroll: true });
+          paint();
+        }).catch(() => paint());
+      });
+      li.appendChild(nm); li.appendChild(b); ul.appendChild(li);
+    }
+    full.appendChild(ul);
+  };
+  c.addEventListener('change', () => {
+    const want = c.checked;
+    full.hidden = true; full.textContent = '';
+    P.set(id, want).then(res => {
+      if (res && res.full) { c.checked = false; note.textContent = ''; showFull(res.list || [], res.max || 20); const b = full.querySelector('button'); if (b) b.focus({ preventScroll: true }); return; }
+      paint();
+    }).catch(() => paint());
+  });
+  const onEv = () => { if (!r.isConnected) { try { window.parent.removeEventListener('cw:preload', onEv); } catch (_) {} return; } paint(); };
+  try { window.parent.addEventListener('cw:preload', onEv); } catch (_) {}
+  paint();
+  return r;
 }
 async function setOption(d, v) {
   optionValues[d.id] = v;
@@ -2380,7 +2445,7 @@ async function registerBar() {
 let pendingTape = null, localPick = null;
 const TAPE_FILE = /\.(study|studybox)$/i;
 const hasTapes = () => !!(manifest && (manifest.extensions || []).includes('tape'));
-const LFmod = () => import('./local-files.mjs?v=2.2.1');
+const LFmod = () => import('./local-files.mjs?v=2.2.2');
 async function openLocal(f) {
   if (!f) return;
   if (TAPE_FILE.test(f.name)) {

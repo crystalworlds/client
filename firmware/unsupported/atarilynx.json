@@ -5,7 +5,7 @@
  "guards": [
   "atarilynx"
  ],
- "count": 40,
+ "count": 43,
  "entries": {
   "0ae9576e36445c07ce57605f8a2e2151b9506be8cd4784cb4cade4c540d02c2b": {
    "kind": "cartridge",
@@ -55,6 +55,12 @@
    "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
    "title": "Sound Demo by Bastian Schick"
   },
+  "2e6273d496c1b185afea437f1d95b1d369d6b4ae5d5516ca6b7144053d84f77e": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Dice Board Game sage 2005"
+  },
   "3a2bd5ead381bfd015ae8bdca13c692b6ae23530fca087413cacddef26b32304": {
    "kind": "cartridge",
    "code": "BLANK_SCREEN",
@@ -63,26 +69,26 @@
   },
   "3bf2f46681630e2d11d236f969b89cabf18cec4fb2076eaaf895e99f5b1e6cca": {
    "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it shows nothing.",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its start-up code fails the console's own start-up check, so a real Lynx refuses this file too.",
    "title": "Bll - My Broken Setup... Help!"
   },
   "4f6aea2d7cf38a0508105380057419340ae31b368f5b3e6fb7b03d12b96fe030": {
    "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its start-up code fails the console's own start-up check, so a real Lynx refuses this file too.",
    "title": "Pong 5"
   },
   "50818d99fcf644ff300aec09b5b4a591060741980cdff1e4f9c238bb2e7a69f9": {
    "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it shows nothing.",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its start-up code fails the console's own start-up check, so a real Lynx refuses this file too.",
    "title": "Bll - My Broken Setup... Help!"
   },
   "53ff44616476b364e8ca358be42f6ba93b11ad567c858ab32f244e43b95d4f0f": {
    "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it shows nothing.",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its start-up code fails the console's own start-up check, so a real Lynx refuses this file too.",
    "title": "Bll - My Broken Setup... Help!"
   },
   "54fbfb28aa9360b197770afe881637733242302169aa08f86dc20a7d7e46c563": {
@@ -99,8 +105,8 @@
   },
   "5fe9cb9df028b26a463909da28bf7af5b407e1efc7c2889ff94ee8db8d21c88c": {
    "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it shows nothing.",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its start-up code fails the console's own start-up check, so a real Lynx refuses this file too.",
    "title": "Bll - My Broken Setup... Help!"
   },
   "614bee58e5710a403d2a1bf1522253f94e9cc150f2e3306394b269e5cd4dc126": {
@@ -108,6 +114,12 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Puzzler 2000 V0.2 Demo"
+  },
+  "61d4fab8cba5f9fc39e3e919954e107ec8f30d85e5af1e9469c5be10cf4cbb76": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "scroll wip2"
   },
   "6f4eb9609658aaab4fb75db75de2a70472ea462b1e8d259956292702fc5c2b0e": {
    "kind": "cartridge",
@@ -117,8 +129,8 @@
   },
   "849ca73feb70020e873839bbf968b964f0a63ea12eeea73205682389d97cb7fc": {
    "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it shows nothing.",
+   "code": "HANGS_AT_BOOT",
+   "reason": "its start-up code fails the console's own start-up check, so a real Lynx refuses this file too.",
    "title": "Just sharing..."
   },
   "8c8216cd7ced131f722b2706ffd11d36de44db10242513dc6f074003921f485a": {
@@ -132,6 +144,12 @@
    "code": "BLANK_SCREEN",
    "reason": "it shows nothing.",
    "title": "Lynx Othello"
+  },
+  "97421b05e07dccc7d319903c904a5e75fa789c0fdbbf4aff4fcae7401514788c": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "palette"
   },
   "98570d9d978bf830b4626bdf1c44617dc1e29678bd72de26df11d93acd890d00": {
    "kind": "cartridge",
@@ -223,12 +241,6 @@
    "reason": "it shows nothing.",
    "title": "cube3"
   },
-  "ea8dfee4108b639f340628b42a7f488803637f183954f9358e4fb792924afcaf": {
-   "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "it shows nothing.",
-   "title": "dsr_tinycompo"
-  },
   "eba050f52a3f4fcc5bd877c0fbc71be1c02d05502a0dbae267764f2ef4e6c5e2": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
@@ -246,6 +258,12 @@
    "code": "BLANK_SCREEN",
    "reason": "it does not start, and other emulators do not start this copy either, so the copy itself is probably unfinished or damaged.",
    "title": "Castle Of Khon-Gis, The"
+  },
+  "fb34189b22801cdd160161722c7ee952b84ed8a757b16c0905f8d19e64fc9179": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "cart demo"
   }
  }
 }

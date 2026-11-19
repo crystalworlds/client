@@ -111,7 +111,7 @@
     c.innerHTML = '<div class="aw-head"><span class="aw-name">Hide systems with no games</span>' +
       '<label class="aw-switch"><input type="checkbox" id="cfg-hide-empty"' + (on ? ' checked' : '') + ' aria-label="Hide systems with no games"><span class="aw-slider"></span></label></div>' +
       '<p class="cfg-note">Systems that have no games to show are left out of the Systems menu and of the system switcher ' +
-      '(the shoulder buttons). The game type buttons in the Systems menu count too: a system whose games are all of a type ' +
+      '(the shoulder buttons). The kinds of game chosen in Filter count too: a system whose games are all of a kind ' +
       'that is switched off is left out as well. Off: every system is shown, with its count. Saved only in this browser.</p>';
     c.querySelector('input').addEventListener('change', e => { try { if (window.Emby && window.Emby.setHideEmptySystems) window.Emby.setHideEmptySystems(e.target.checked); } catch (_) {} });
     hideEl = c;

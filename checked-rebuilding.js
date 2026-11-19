@@ -13,6 +13,9 @@
  * took to build the emulator from the tab: the Build time column, after Date), built (from the documents alone: the
  * line under the table is drawn only while every row is 'Yes'), pass (true when the build matched
  * ours on everything scored: a green row with "Matches", else red with "Not yet"), score.
+ * A row's emulator can move on by a per-game fact the Emulation tab does not describe (a hand-kept
+ * table entry for one file, such as the Lynx board table's row of 19 Nov 2026): the score then says
+ * which, and the rebuild is not run again for it.
  *
  * A real table at every size (rows stay rows): on a narrow screen the date moves under the system
  * name and the type gets smaller. Colour is never the only sign (tick or cross, and the words).
@@ -34,7 +37,7 @@
     { sys: 'atari2600', name: 'Atari 2600', date: '2 Nov 2026', at: '2624d06e085f', time: '68 min', built: 'Yes', pass: true, score: 'Identical to ours: 167 of 167 runs in picture, every processor step, sound and memory' },
     { sys: 'atari7800', name: 'Atari 7800', date: '2 Nov 2026', at: '9fcf64924bbd', time: '38 min', built: 'Yes', pass: true, score: '332 of 332 runs identical in picture, sound and every processor step' },
     { sys: 'atari5200', name: 'Atari 5200', date: '2 Nov 2026', at: '7fc3ff99d1fa', time: '39 min', built: 'Yes', pass: true, score: 'Identical to ours: 68 of 68 runs in picture, sound, every processor step and memory' },
-    { sys: 'atarilynx', name: 'Atari Lynx', date: '2 Nov 2026', at: 'b516021267aa', time: '32 min', built: 'Yes', pass: true, score: '40 of 40 runs identical in picture, sound and every processor step' },
+    { sys: 'atarilynx', name: 'Atari Lynx', date: '2 Nov 2026', at: 'b516021267aa', time: '32 min', built: 'Yes', pass: true, score: '40 of 40 runs identical in picture, sound and every processor step. Since 19 Nov 2026 the emulator also knows one game’s cartridge layout (dsr_tinycompo), which is not part of this check' },
   ];
   /* "Built from the documents alone" is not a column (1 Nov: every row is Yes): the line
      under the table says it once. */

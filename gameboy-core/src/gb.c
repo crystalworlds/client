@@ -14005,6 +14005,41 @@ static int cart_bank0(struct GB *gb) {
     return 0;
 }
 
+/* MBC30_CHIP -- THE MBC30: AN MBC3 WITH ONE MORE ROM BANK LINE AND ONE MORE
+ * RAM BANK LINE.  1 = an MBC3 header that asks for more than 32 KB of RAM
+ * ($0149 = $04 or $05) or a chip of more than 2 MB is an MBC30: the ROM bank
+ * register is 8 bits ($01-$FF, 0 still reads as 1) and the RAM bank is 3 bits
+ * ($00-$07, eight 8 KB banks, 64 KB); $08-$0C are the clock, as on the MBC3,
+ * and $0D-$0F select nothing (reads $FF, writes are lost).  The clock is the
+ * MBC3's own, unchanged.  0 = the MBC3 masks, 7-bit ROM bank and 2-bit RAM
+ * bank, so banks 4-7 read $FF and their writes land on banks 0-3 (the main
+ * save).
+ * MECHANISM: Pan Docs MBC3 ("MBC30 ... capable of addressing twice as much
+ * memory for both ROM and RAM", RAM bank $00-$07); Pan Docs cartridge header
+ * ("MBC3 with 64 KiB of SRAM refers to MBC30", Pocket Monsters Crystal Version,
+ * Japan).  The identification is SOURCE-READ, three sources agreeing:
+ * SameBoy 1.0.5 Core/mbc.c (is_mbc30 when ROM > 2 MB or RAM > 32 KB; the
+ * masks in memory.c and mbc.c apply only when it is not), Gambatte
+ * (libgambatte cartridge.cpp: rombanks > $80 or rambanks > 4 makes an Mbc30,
+ * masks $FF and 7); mGBA 0.10.5 src/gb/mbc.c _GBMBC3 (8-bit ROM bank on a
+ * 2 MB or larger chip, RAM banks 0-7 always).  The chip size is the file's
+ * (ROM_BANKS_FROM_FILE), as in all three.  Reason: the board has no other way
+ * to tell the chip which it is; the bigger chip is the one fitted when the
+ * header asks for the bigger memories.
+ * Census (6,028 Game Boy, Colour and Super Game Boy files): 2 reach it, the
+ * Japanese Crystal (64 KB of RAM) and 36 in 1 (Taiwan) (SL36-0032) (4 MB on a
+ * 2 MB header).  Disproved by: an MBC3 board with 64 KB of RAM shown to fold
+ * banks 4-7 onto 0-3.  Off arm: -DMBC30_CHIP=0. */
+#ifndef MBC30_CHIP
+#define MBC30_CHIP 1
+#endif
+#if MBC30_CHIP
+static int mbc30(const struct GB *gb) {
+    return gb->mapper == MAP_MBC3 && (gb->cram_len > 0x8000 || gb->rom_banks > 128)
+        && gb->rom && gb->rom_len > 0x147 && gb->rom[0x147] >= 0x0F && gb->rom[0x147] <= 0x13;
+}
+#endif
+
 /* ROM bank feeding the 0x4000-0x7FFF window. */
 static int cart_bankN(struct GB *gb) {
     int mask = gb->rom_banks - 1;
@@ -14022,7 +14057,11 @@ static int cart_bankN(struct GB *gb) {
             return lo & mask;
         }
         case MAP_MBC3: {
+#if MBC30_CHIP
+            int lo = gb->romb_lo & (mbc30(gb) ? 0xFF : 0x7F);
+#else
             int lo = gb->romb_lo & 0x7F;
+#endif
             if (lo == 0) lo = 1;
             return lo & mask;
         }
@@ -14098,6 +14137,20 @@ static u8 bbd_data_wire(const struct GB *gb, u8 v) {
     return wire8(t[gb->bbd_data & 7], v);
 }
 
+/* SACHEN_PHASE_EDGE (20 Nov 2026): each Sachen chip phase is
+ * exactly 48 header reads and the next read belongs to the next phase (see
+ * cart_read_rom).  0 = the old count, where the read that ended a phase went
+ * out with RA7 low and counted for neither. */
+#ifndef SACHEN_PHASE_EDGE
+#define SACHEN_PHASE_EDGE 1
+#endif
+/* SACHEN_BOOT_CHECKS (20 Nov 2026): the Sachen chip starts locked
+ * only behind a boot program that carries the logo block (see gb_reset).
+ * 0 = locked behind any boot program. */
+#ifndef SACHEN_BOOT_CHECKS
+#define SACHEN_BOOT_CHECKS 1
+#endif
+
 /* THE SACHEN HEADER SCRAMBLE.  For a CPU read of $0100-$01FF the
  * chip swaps address lines on the way to the cartridge chip: A0<->A6 and
  * A1<->A4 (RA0 <= A6, RA6 <= A0, RA1 <= A4, RA4 <= A1); every other line and
@@ -14169,12 +14222,60 @@ static u8 cart_read_rom(struct GB *gb, u16 addr) {
                  * in its CGB phase), so the boot program's FIRST pass over the
                  * logo reads the maker's logo at $0184 and its second pass the
                  * genuine one at $0104. */
+#if SACHEN_PHASE_EDGE
+                /* (20 Nov 2026) EACH PHASE IS EXACTLY 48 READS, AND
+                 * THE NEXT READ ALREADY BELONGS TO THE NEXT PHASE.  The chip's
+                 * counter is clocked by the A15 edges between cartridge reads,
+                 * not by the reads themselves, so the phase moves on BETWEEN
+                 * read 48 and read 49: no read is served by the phase it ends.
+                 * MMC1: reads 1-48 hold RA7, read 49 is straight (unchanged).
+                 * MMC2 with no work-RAM access first (a Game Boy): reads 1-48
+                 * straight (the DMG boot program's drawing pass shows the
+                 * maker's logo), reads 49-96 hold RA7 (its compare meets the
+                 * genuine logo), from read 97 straight (its header checksum,
+                 * $0134-$014D, reads the real header).  MMC2 after a work-RAM
+                 * access (the Color): reads 1-48 hold, 49 on straight
+                 * (unchanged).
+                 * Before this the read that ended the DMG phase was served
+                 * straight and counted as nobody's, so on a Game Boy the first
+                 * compare read of $0104 met the maker's logo and the boot
+                 * program stopped at $00E9 (19 Nov: all 6
+                 * Colour-shelf Sachen carts LOGO_REJECTED on a Game Boy; all
+                 * 14 MMC2 images stop there).
+                 * Sources (read, no code taken): hhugboy
+                 * MbcUnlSachenMMC2::readMemory (count to $30 per phase, the
+                 * mode moves before its RA7 test on the same call, and the
+                 * new phase counts that read): 48 + 48, as here.  The
+                 * Tauwasser wiki's hardware page Sachen_MMC2 (via a search
+                 * summary; the page itself refused our connection): $30
+                 * low-to-high A15 transitions from locked-DMG to locked-CGB,
+                 * $30 more to unlocked, counter reset at the switch.  mGBA
+                 * _GBSachenMMC2Read agrees on the switch read but holds RA7
+                 * one read longer (49 reads), which on a Game Boy makes the
+                 * first checksum read ($0134) come from $01B4: 6 of the 14
+                 * MMC2 images then stop at $00FA.  Not taken.
+                 * Labels: convergence (hhugboy and the hardware page agree)
+                 * until measured on a cart; MECHANISM for the DMG boot
+                 * program's read order.  Disproved by: an MMC2 cart that
+                 * stops at the logo or the checksum on a real Game Boy with
+                 * Nintendo's boot program.  Off arm: -DSACHEN_PHASE_EDGE=0
+                 * (the served core of 16 Nov, byte for byte). */
+                if (gb->sa_count == 0x30) {
+                    gb->sa_count = 0;
+                    gb->sa_lock = (gb->sachen == 2 && gb->sa_lock == 1) ? 2 : 0;
+                }
+                if (gb->sa_lock) {
+                    gb->sa_count++;
+                    if (gb->sachen == 1 || gb->sa_lock == 2) addr |= 0x80;
+                }
+#else
                 if (++gb->sa_count == 0x31) {
                     gb->sa_count = 0;
                     gb->sa_lock = (gb->sachen == 2 && gb->sa_lock == 1) ? 2 : 0;
                 } else if ((gb->sachen == 1) || gb->sa_lock == 2) {
                     addr |= 0x80;
                 }
+#endif
             }
             addr = sachen_scramble(addr);
         }
@@ -14269,7 +14370,11 @@ static int cart_ram_bank(struct GB *gb) {
     int bank;
     switch (gb->mapper) {
         case MAP_MBC1: bank = gb->mbc_mode ? (gb->romb_hi & 3) : 0; break;
+#if MBC30_CHIP
+        case MAP_MBC3: bank = gb->ramb & (mbc30(gb) ? 7 : 3); break;
+#else
         case MAP_MBC3: bank = gb->ramb & 3; break;
+#endif
         case MAP_MBC5: bank = gb->ramb & 0x0F; break;
         case MAP_HUC1: case MAP_HUC3: bank = gb->ramb & 0x03; break;
         case MAP_CAMERA: bank = gb->ramb & 0x0F; break;  /* "at least 2 bits" */
@@ -14369,7 +14474,11 @@ static u8 cart_read_ram(struct GB *gb, u16 addr) {
         int sel = gb->ramb & 0x0F;
         if (sel >= 0x08 && sel <= 0x0C)
             return gb->ram_enable ? gb->rtc[sel - 0x08] : 0xFF;
+#if MBC30_CHIP
+        if (sel > (mbc30(gb) ? 0x07 : 0x03)) return 0xFF;
+#else
         if (sel > 0x03) return 0xFF;
+#endif
     }
 #else
     if (gb->mapper == MAP_MBC3 && gb->ramb >= 0x08 && gb->ramb <= 0x0C) {
@@ -14535,6 +14644,9 @@ static void cart_write_ram(struct GB *gb, u16 addr, u8 v) {
         }
         return;
     }
+#if MBC30_CHIP
+    if (mbc30(gb) && (gb->ramb & 0x0F) > 0x07) return;   /* MBC30: $0D-$0F select nothing */
+#endif
     if (!gb->ram_enable || gb->cram_len == 0) return;
     int off = cart_ram_bank(gb) * 0x2000 + (addr - 0xA000);
     if (CRAM_SMALL_MIRROR && gb->cram_len < 0x2000) off = (addr - 0xA000) & (gb->cram_len - 1);
@@ -14639,8 +14751,12 @@ static void cart_write_mbc(struct GB *gb, u16 addr, u8 v) {
             break;
         case MAP_MBC3:
             if (addr < 0x2000)      gb->ram_enable = ((v & 0x0F) == 0x0A);
+#if MBC30_CHIP
+            else if (addr < 0x4000) gb->romb_lo = v & (mbc30(gb) ? 0xFF : 0x7F);
+#else
             else if (addr < 0x4000) gb->romb_lo = v & 0x7F;
-            else if (addr < 0x6000) gb->ramb = v;      /* 0-3 RAM, 0x08-0x0C RTC */
+#endif
+            else if (addr < 0x6000) gb->ramb = v;      /* 0-3 RAM (MBC30 0-7), 0x08-0x0C RTC */
             else {                                     /* RTC latch register */
                 if (RTC_LATCH_ANY_WRITE || (gb->rtc_latch_prev == 0 && v == 1))
                     for (int i = 0; i < 5; i++) gb->rtc[i] = gb->rtc_live[i];
@@ -18969,7 +19085,10 @@ static void cart_parse(struct GB *gb) {
      * locked from power-on; MMC2 (Color carts) starts in a DMG phase, moves to
      * its CGB phase on the first work-RAM access (which the Color boot program
      * makes before reading the logo and the DMG one does not), and holds RA7
-     * in the CGB phase.  Each phase ends after 48 header reads.  Banking: an
+     * in the CGB phase.  Each phase is 48 header reads, and the 49th read is
+     * already the next phase's first (SACHEN_PHASE_EDGE, 20 Nov
+     * 2026: without it a Game Boy refused every MMC2 cart at the logo).
+     * Banking: an
      * outer bank and mask, writable only while the inner bank has bits 4-5 set
      * (multicart menus), and an inner bank.  The dump's header is therefore
      * unreadable straight; nothing in $0147-$0149 means what it says.
@@ -19672,7 +19791,38 @@ void gb_reset(struct GB *gb){
         gb->rk_lock = gb->rk_logo >= 0 ? 1 : 0;
     }
     if (wisdom) gb->romb_lo = 0;
-    if (sachen) { gb->sa_bank = 1; gb->sa_lock = (bios && bios_len >= 0x100) ? 1 : 0; }  /* Sachen */
+    if (sachen) {                                                    /* Sachen */
+        gb->sa_bank = 1;
+#if SACHEN_BOOT_CHECKS
+        /* (20 Nov 2026) THE CHIP IS LOCKED ONLY BEHIND A BOOT
+         * PROGRAM THAT CHECKS THE LOGO, the Rocket Games rule above: a
+         * program that carries the logo block (CRC-32 46195417, found in
+         * place, never copied) is Nintendo's kind and reads the header as the
+         * chip expects; our replacement start-up programs (gb-boot.js) carry
+         * no logo, make no check and read the header a different number of
+         * times, so behind them the chip starts open, as it is when
+         * Nintendo's program hands over.  Measured before this: behind our
+         * Game Boy start-up the chip was still locked when the game began
+         * (lock 1 or 2 at frame 900 on 16 of 24 images), and those games ran
+         * header bytes from the wrong half.  Labels: FITTED (a stand-in for
+         * the state Nintendo's program leaves, as for Rocket).  Off arm:
+         * -DSACHEN_BOOT_CHECKS=0 (locked behind any boot program). */
+        /* The Super Game Boys are left as they were: their programs carry no
+         * logo (the SNES side does the checking), they read the header to send
+         * it across, and nothing here measures what that leaves; behind them
+         * the chip starts locked as before (measured: it is open again by the
+         * hand-over on all 5 images tried, 20 Nov). */
+        int checks = GB_MODEL_IS_SGBF(gb->model) && bios && bios_len >= 0x100;
+        if (!checks && bios && bios_len >= 0x100) {
+            int lim = bios_len < 0x1000 ? bios_len : 0x1000;
+            for (int i = 0; i + 0x30 <= lim && !checks; i++)
+                if (cart_crc32(bios + i, 0x30) == 0x46195417u) checks = 1;
+        }
+        gb->sa_lock = checks ? 1 : 0;
+#else
+        gb->sa_lock = (bios && bios_len >= 0x100) ? 1 : 0;
+#endif
+    }
     if (bbd == 2) { gb->bbd_data = 7; gb->bbd_bank = 7; }   /* Hitek power-on modes */
     gb->romb_lo = 1;                     /* power-on ROM bank register = 1 */
     gb->chip_caps = chip_caps; gb->chip_ram_len = chip_ram_len;
@@ -20857,7 +21007,11 @@ static int cht_cram_off(struct GB *gb, int bank, u16 addr, int *len) {
         if (gb->chip_mode != 0x0 && gb->chip_mode != 0xA) return -1;
         *len = gb->chip_ram_len;
     }
+#if MBC30_CHIP
+    if (gb->mapper == MAP_MBC3 && (gb->ramb & 0x0F) > (mbc30(gb) ? 0x07 : 0x03)) return -1;
+#else
     if (gb->mapper == MAP_MBC3 && (gb->ramb & 0x0F) > 0x03) return -1;
+#endif
     if (*len <= 0) return -1;
     if (gb->mapper == MAP_MBC2) return addr & 0x1FF;
     int b;
@@ -21227,7 +21381,7 @@ void gb_cart_reset(void){
  *
  * ADDED: LICHENG_MARK_MBC5 (an MBC1 header on a Li Cheng
  * board), SINTAX_CHIP, BBD_HITEK_CHIP, VASTFAME_CHIP,
- * MAKON_CHIP and BOARD_TABLE, SACHEN_CHIP and
+ * MAKON_CHIP and BOARD_TABLE, SACHEN_CHIP, SACHEN_PHASE_EDGE, SACHEN_BOOT_CHECKS and
  * PKJD_CHIP, MINOR_UNL_CHIPS, ROCKET_CHIP,
  * ordinary top-level knobs placed here on landing.
  *
@@ -21281,7 +21435,7 @@ void gb_cart_reset(void){
     !defined(TSEL_SET_LASTU) || !defined(ROMONLY_OVERSIZE_MBC) || \
     !defined(CRAM_SMALL_MIRROR) || !defined(ROM_BANKS_FROM_FILE) || !defined(LICHENG_MARK_MBC5) || \
     !defined(SINTAX_CHIP) || !defined(BBD_HITEK_CHIP) || !defined(VASTFAME_CHIP) || \
-    !defined(MAKON_CHIP) || !defined(SACHEN_CHIP) || !defined(BOARD_TABLE) || \
+    !defined(MAKON_CHIP) || !defined(SACHEN_CHIP) || !defined(SACHEN_PHASE_EDGE) || !defined(SACHEN_BOOT_CHECKS) || !defined(BOARD_TABLE) || \
     !defined(PKJD_CHIP) || !defined(MINOR_UNL_CHIPS) || !defined(ROCKET_CHIP) || \
     !defined(CGB_PALIDX_DEVICE) || !defined(CGB_UNDOC_DEVICE) || !defined(STAT_M2_144_LEAD_CGB) || \
     !defined(CHIP_HUC1) || !defined(CHIP_HUC3) || !defined(CHIP_MBC7) || !defined(CHIP_MMM01) || \

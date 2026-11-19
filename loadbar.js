@@ -16,6 +16,9 @@
  *     boot program) show as one bar: bytes so far of all the bytes. A size that is not known
  *     gives a bar that moves without a number.
  *   - It goes when the last load ends (the game then starts), or when the play window closes.
+ *   - A busy game server (20 Nov 2026): cws:slow says a server was asked and has sent nothing for
+ *     3 s. The bar then reads "Your game server is busy right now. Still loading…" and moves without
+ *     a number until the first bytes come (cws:progress), when it is the usual bar again.
  * Sound: none. Text: plain words, no dashes.
  */
 (function () {
@@ -63,15 +66,18 @@
   function paint() {
     if (!loads.size) { hide(); return; }
     const now = performance.now();
-    let oldest = Infinity, got = 0, size = 0, unknown = false;
-    for (const l of loads.values()) { oldest = Math.min(oldest, l.t0); got += l.got; if (l.size > 0) size += l.size; else unknown = true; }
+    let oldest = Infinity, got = 0, size = 0, unknown = false, slow = false;
+    for (const l of loads.values()) { oldest = Math.min(oldest, l.t0); got += l.got; if (l.size > 0) size += l.size; else unknown = true; if (l.slow) slow = true; }
     if (now - oldest < SHOW_AFTER_MS) { clearTimeout(timer); timer = setTimeout(paint, SHOW_AFTER_MS - (now - oldest) + 10); return; }
     const b = ensure();
-    const known = !unknown && size > 0;
+    const known = !unknown && size > 0 && !slow;   // busy: the bar moves, with no number, until bytes come
     b.classList.toggle('lb-unknown', !known);
+    b.classList.toggle('lb-slow', slow);
+    const words = slow ? 'Your game server is busy right now. Still loading…' : 'Loading the game';
+    b.querySelector('.lb-t').textContent = words; b.setAttribute('aria-label', words);
     const pct = known ? Math.max(0, Math.min(100, got / size * 100)) : 0;
     b.querySelector('.lb-fill').style.width = known ? pct.toFixed(1) + '%' : '';
-    b.querySelector('.lb-n').textContent = known ? amount(got, size) : got ? (got < 1048576 ? Math.round(got / 1024) + ' KB' : mb(got) + ' MB') : '';
+    b.querySelector('.lb-n').textContent = slow ? '' : known ? amount(got, size) : got ? (got < 1048576 ? Math.round(got / 1024) + ' KB' : mb(got) + ' MB') : '';
     if (known) { b.setAttribute('aria-valuemin', '0'); b.setAttribute('aria-valuemax', '100'); b.setAttribute('aria-valuenow', String(Math.round(pct))); }
     else { b.removeAttribute('aria-valuenow'); }
     b.hidden = false;
@@ -87,8 +93,10 @@
   }
   function step(k, got, size) {
     const l = loads.get(k); if (!l) return;
+    const was = l.slow;
     l.got = got; if (size > 0) l.size = size;
-    if (el && !el.hidden) paint();
+    l.slow = false;
+    if ((el && !el.hidden) || was) paint();
   }
   function done(k) { if (loads.delete(k)) paint(); }
 
@@ -108,6 +116,8 @@
     loads.set(k, { got: d.from || 0, size: d.size > 0 ? d.size : 0, t0: performance.now() });
     paint();
   });
+  /* A busy server: shown at once if the bar is up (or when it comes up at 2 s); cws:progress clears it. */
+  window.addEventListener('cws:slow', e => { const l = loads.get(sk(e.detail || {})); if (l && !l.slow) { l.slow = true; paint(); } });
   window.addEventListener('cws:progress', e => { const d = e.detail || {}; const k = sk(d); if (loads.has(k)) step(k, d.got || 0, d.size || 0); });
   for (const t of ['cws:verified', 'cws:download-failed']) window.addEventListener(t, e => done(sk(e.detail || {})));
 

@@ -24,9 +24,9 @@
  *
  * The core this page describes (the factbox figures are moved by the install
  * generator from play/nes/CORE-VERSION.json; this comment follows them):
- *   eight source files   1,663,760 bytes over eight files, LF-normalised,
- *                        set hash 8f2a3c320593ad7f...
- *   the module           322,158 bytes, sha256 37ab34623f2a1226...
+ *   eight source files   1,685,857 bytes over eight files, LF-normalised,
+ *                        set hash 9ddc9d332f0279aa...
+ *   the module           326,475 bytes, sha256 a185823c6ff79093...
  *
  * NO SCREENSHOTS. There is no NES render bundled in this repository's image
  * payloads, and a broken image is worse than an absent one.
@@ -108,24 +108,24 @@ function nesEmulationTabHTML(d) {
     'machine, and its number says nothing about this one.</p>' +
     '<table class="gbemu-table"><tbody>' +
       '<tr><td>Source</td><td>Eight files: ' +
-        '<code>nes.c</code> 292,687, <code>nes_apu.inc</code> 107,465, <code>nes_cpu.inc</code> ' +
+        '<code>nes.c</code> 293,956, <code>nes_apu.inc</code> 108,338, <code>nes_cpu.inc</code> ' +
         '49,874, <code>nes_fds.inc</code> 83,683, <code>nes_input.inc</code> 74,677, ' +
-        '<code>nes_mapper.inc</code> 868,207, <code>nes_ppu.inc</code> 150,729, ' +
-        '<code>nes_vs.inc</code> 36,438 bytes. <b>1,663,760 bytes in total</b>, LF-normalised, set ' +
-        'hash <code>8f2a3c320593ad7f&hellip;</code>. <code>nes.c</code> includes the other seven, ' +
+        '<code>nes_mapper.inc</code> 888,162, <code>nes_ppu.inc</code> 150,729, ' +
+        '<code>nes_vs.inc</code> 36,438 bytes. <b>1,685,857 bytes in total</b>, LF-normalised, set ' +
+        'hash <code>9ddc9d332f0279aa&hellip;</code>. <code>nes.c</code> includes the other seven, ' +
         'so all eight are compiled.</td></tr>' +
       '<tr><td>Binary</td><td>The WebAssembly module, sha256 ' +
-        '<code>37ab34623f2a1226&hellip;</code>, <b>322,158 bytes</b>, 208 exported functions, ' +
-        '<b>0 imports</b>, ABI version 1, emulator context 159,048 bytes</td></tr>' +
+        '<code>a185823c6ff79093&hellip;</code>, <b>326,475 bytes</b>, 208 exported functions, ' +
+        '<b>0 imports</b>, ABI version 1, emulator context 159,144 bytes</td></tr>' +
       '<tr><td>Build</td><td><code>clang --target=wasm32 -nostdlib -O2 -flto -ffreestanding</code>, ' +
         'no entry point, exports dynamic, 128 KiB stack, undefined symbols allowed. <b>It is ' +
-        'byte-reproducible.</b> The build recipe reproduces 322,158 bytes and that equals the ' +
+        'byte-reproducible.</b> The build recipe reproduces 326,475 bytes and that equals the ' +
         'module this site runs, byte for byte, which is what makes the hash checkable rather than ' +
         'a label.</td></tr>' +
     '</tbody></table>' +
     '<p class="hw-readable"><b>The export surface has grown by 115 and lost none</b> since the core had 93 exported functions: <b>208</b> now, <b>0 removed</b>, so a host written against an older version of this core still links. ' +
     '<b>That is not a claim that the older core is still correct</b>: the module is a different ' +
-    '322,158 bytes with a different hash, and every figure on this page is about the current ' +
+    '326,475 bytes with a different hash, and every figure on this page is about the current ' +
     'one.</p>' +
     '<p class="gbemu-key"><b>What none of this establishes is that the core is correct</b>: ' +
     'only that these bytes are the ones that built the module the site serves. A hash detects ' +
@@ -316,14 +316,14 @@ function nesEmulationTabHTML(d) {
 
   /* ==================================================================== 9 */
   '<section class="sect" id="nese-9"><h3 class="sect-h">9. The mapper chips this core has, and the ones it does not</h3>' +
-    '<p class="gbemu-key"><b>315 mapper numbers are dispatched, and that figure is measured ' +
+    '<p class="gbemu-key"><b>316 mapper numbers are dispatched, and that figure is measured ' +
     'rather than listed.</b> A test builds a machine for each number, sweeps the whole cartridge ' +
     'address space and compares it against an identical mapper-0 control, so the count comes ' +
-    'from running the core (measured 12 November 2026). A hand-written list of what an emulator ' +
+    'from running the core (measured 20 November 2026). A hand-written list of what an emulator ' +
     'supports drifts away from the code; a measured one cannot. Anything undispatched falls ' +
     'through to a default that does nothing, which is the honest behaviour: a cartridge whose ' +
     'chip is absent runs as though it had no banking hardware, and shows it.</p>' +
-    '<p class="hw-readable"><b>The table below details 14 of the 315</b>: the ones with a ' +
+    '<p class="hw-readable"><b>The table below details 14 of the 316</b>: the ones with a ' +
     'failure mode worth naming to anyone re-implementing them. It is not the dispatch list and ' +
     'does not claim to be. <b>The Disk System&rsquo;s mapper 20 is not a mapper chip at all</b> ' +
     '(it is a RAM adapter with its own register window, and it has section&nbsp;11 to itself), ' +

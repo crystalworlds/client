@@ -52,7 +52,7 @@
   function loadReach() {
     if (_reachP) return _reachP;
     /* Through Function, so a browser that cannot read import() still reads this file. */
-    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.2.1'); })
+    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.2.2-recoverhash'); })
       .then(function (m) { R = m && m.default; return R; }, function (e) { warn('reach not loaded', e && e.message); return null; });
     return _reachP;
   }
@@ -69,7 +69,11 @@
   var SID_RE = /^[a-z2-7]{26}$/;
   var SHA_RE = /^[0-9a-f]{64}$/;
 
-  var T_ATTEMPT = 3000, T_FIRST_BYTE = 3000, T_STALL = 10000;
+  /* T_FIRST_BYTE (20 Nov 2026, 3 s -> 15 s): a game server whose library drive was busy took 3.8 and 7.7 s to
+     start sending a 128 KB Game Boy file, and the old 3 s gave up on it. T_SLOW_NOTE: after this long with no
+     bytes from a server that answered, the loading bar says the server is busy (the 'slow' event). */
+  var T_ATTEMPT = 3000, T_FIRST_BYTE = 15000, T_STALL = 10000, T_SLOW_NOTE = 3000;
+  var R_SLOW = 'your game server didn’t answer in time.';
   var T_FAIL_MEMORY = 5 * 60 * 1000, T_BAD_HASH = 30 * 60 * 1000;
   var T_REFRESH = 5 * 60 * 1000;
   var MAX_PARALLEL = 3;
@@ -253,7 +257,7 @@
   function siteVersion() {
     var el = document.querySelector('#vault-overlay .modal-title');
     var m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.0.0';
+    return m ? m[1] : '2.2.2';
   }
   function deviceDescription() {
     var ua = navigator.userAgent || '', m, browser = 'Web browser', os = 'Unknown system';
@@ -921,11 +925,12 @@
   var FAIL_NOTE_MS = 6000, _failNote = null;
   var FAIL_PLURAL = {
     'none of your servers could send it just now.': 'none of your servers could send them just now.',
-    'it is on a server that isn’t reachable right now.': 'they are on a server that isn’t reachable right now.'
+    'it is on a server that isn’t reachable right now.': 'they are on a server that isn’t reachable right now.',
+    'your game server didn’t answer in time.': 'your game server didn’t answer in time.'
   };
   function failNoteText(n) {
     var one = n.items[0];
-    if (n.items.length === 1) return 'Couldn’t load “' + one.t + '” from your game servers: ' + one.r;
+    if (n.items.length === 1) return 'Couldn’t load “' + one.t + '”' + (one.r === R_SLOW ? ': ' : ' from your game servers: ') + one.r;
     var g = 0, f = 0, same = one.r;
     n.items.forEach(function (x) { if (x.fw) f++; else g++; if (x.r !== same) same = null; });
     var what = [g ? g + (g === 1 ? ' game' : ' games') : '', f ? f + (f === 1 ? ' firmware file' : ' firmware files') : ''].filter(Boolean).join(' and ');
@@ -992,9 +997,46 @@
       if (x) x.click();
     }, FAIL_NOTE_MS);
   }
+  /* TRY AGAIN (20 Nov 2026): a file the game server did not start sending in time (R_SLOW) gets a
+     Try again button on the notice. It starts the same load again, from the same servers (a server
+     that was only slow is not set aside): the open play window loads its game again, as its Play
+     button did; with no play window open, the files are asked for again. */
+  var PLAY_OPENERS = { 'gb-play-overlay': 'openGbPlay', 'nes-play-overlay': 'openNesPlay', 'atari-play-overlay': 'openAtariPlay', 'pm-play-overlay': 'openPmPlay' };
+  function retryLoads(items) {
+    var cur = null; try { cur = typeof _openPlayDeviceId !== 'undefined' ? _openPlayDeviceId : null; } catch (x) { cur = null; }   // eslint-disable-line no-undef
+    var ov = cur && document.querySelector('[id$="-play-overlay"].open');
+    var fn = ov && PLAY_OPENERS[ov.id] && window[PLAY_OPENERS[ov.id]];
+    ev('retry', { id: cur || '', ids: items.map(function (x) { return x.id; }) });
+    if (typeof fn === 'function') { fn(cur); return; }
+    items.forEach(function (x) { if (x.id) fetchBytes(x.id); });
+  }
+  function failNoteRetry(n) {
+    var slow = n.items.filter(function (x) { return x.r === R_SLOW; });
+    if (!slow.length || (n.retry && n.retry.isConnected)) return;
+    var b = n.retry = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Try again';
+    b.addEventListener('click', function () {
+      var again = n.items.filter(function (x) { return x.r === R_SLOW; });
+      if (_failNote === n) _failNote = null;
+      if (n.cw) { try { n.cw.close('action'); } catch (x) {} }
+      else { var c = n.el && n.el.querySelector('.toast-close'); if (c) c.click(); else if (n.el) n.el.remove(); }
+      retryLoads(again);
+    });
+    if (n.cw) {
+      b.className = 'cwn-act';
+      var acts = n.el.querySelector('.cwn-acts');
+      if (acts) acts.insertBefore(b, acts.firstChild); else return;
+    } else {
+      var body = n.el.querySelector('.toast-body') || n.el;
+      b.className = 'toast-more';
+      b.style.cssText = 'display:block;background:none;border:0;padding:6px 0 2px;margin:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer';
+      body.appendChild(b);
+    }
+  }
   function noteFailed(e, id, reason) {
     var t = String((e.entry && (e.entry.title || e.entry.name)) || id);
-    var item = { sha: e.sha256, t: t, r: String(reason || ''), fw: !!(C.bootAll && C.bootAll[e.sha256] === e) };
+    var item = { sha: e.sha256, id: id, t: t, r: String(reason || ''), fw: !!(C.bootAll && C.bootAll[e.sha256] === e) };
     /* A Game & Watch file is listed by its model number (AC-01): the list names the device too. */
     try {
       if (e.kind === 'gnw' && typeof DEVICES !== 'undefined') {
@@ -1008,7 +1050,7 @@
       try {
         var nn = { el: null, items: [item], open: false, timer: 0, cw: null };
         var h = window.cwNotify(failNoteText(nn), { kind: 'warn', id: 'cws-load-failed', onClose: function () { if (_failNote === nn) _failNote = null; } });
-        if (h) { nn.cw = h; nn.el = h.el; _failNote = nn; return; }
+        if (h) { nn.cw = h; nn.el = h.el; _failNote = nn; failNoteRetry(nn); return; }
       } catch (err) { warn('notice failed', err && err.message); }
     }
     if (!n && typeof toast !== 'function') { toastSafe('Couldn’t load “' + item.t + '” from your game servers: ' + item.r, 'error'); return; }
@@ -1023,13 +1065,29 @@
         if (!dup) n.items.push(item);
         failNoteDraw(n);
       }
+      failNoteRetry(n);
       failNoteTimer(n);
     } catch (err) { warn('notice failed', err && err.message); }
   }
+  /* A start-up file a game being played asks for: preload.js keeps it with that game when the game is
+     pre-loaded (the model, the role or the file the player chose), from the bytes already here. */
+  function noteFw(e, u) {
+    if (!u || e.what !== 'boot-firmware') return;
+    try { var PL = window.CwPreload; if (PL && typeof PL.noteFirmware === 'function') PL.noteFirmware(e.sha256, u, { size: e.size, system: (e.entry || {}).system || '', name: String((e.entry || {}).title || (e.entry || {}).name || (e.entry || {}).file_name || '') }); } catch (x) {}
+  }
   function fetchEntry(e, id) {
-    if (_mem[e.sha256]) return Promise.resolve(_mem[e.sha256]);
+    if (_mem[e.sha256]) { noteFw(e, _mem[e.sha256]); return Promise.resolve(_mem[e.sha256]); }
     if (_inflight[e.sha256]) return _inflight[e.sha256];
-    var p = cacheGet(e.sha256).then(function (hit) {
+    /* PRE-LOAD ON DEVICE (18 Nov 2026, preload.js): a game the player set to pre-load is kept in this
+       browser under its SHA-256, so its copy is used first, with no download. A copy of another
+       fingerprint is not this file and is never used. */
+    var PL = window.CwPreload;
+    var pre = (PL && typeof PL.bytes === 'function') ? Promise.resolve().then(function () { return PL.bytes(e.sha256); }).catch(function () { return null; }) : Promise.resolve(null);
+    var p = pre.then(function (b) {
+      if (b && b.length === e.size) { _mem[e.sha256] = b; ev('cache-hit', { id: id, from: 'preload' }); return b; }
+      return cacheGet(e.sha256);
+    }).then(function (hit) {
+      if (hit && _mem[e.sha256] === hit) return hit;   // the pre-loaded copy, above
       if (hit && hit.length === e.size) { _mem[e.sha256] = hit; ev('cache-hit', { id: id }); return hit; }
       ev('download-wait', { id: id, size: e.size });   // asked for and not here: loadbar.js starts its clock (2026-10-29)
       /* The game being opened to play goes before the wall's own live tiles in the queue (2026-10-29:
@@ -1038,7 +1096,7 @@
          file opened from this device has no catalogue id, so its firmware waited 5.5 s behind the tiles. */
       var playing = null; try { playing = typeof _openPlayDeviceId !== 'undefined' ? _openPlayDeviceId : null; } catch (x) { playing = null; }   // eslint-disable-line no-undef
       return queued(function () { return download(e); }, playing === id || e.what === 'boot-firmware');
-    }).then(function (u) { delete _inflight[e.sha256]; return u; }, function (err) {
+    }).then(function (u) { delete _inflight[e.sha256]; noteFw(e, u); return u; }, function (err) {
       delete _inflight[e.sha256];
       noteFailed(e, id, err.message);
       warn('download failed', id, err.message);
@@ -1077,8 +1135,10 @@
     }, function () { return false; });
   }
   function markDown(s) { s.base = ''; s.retryAt = Date.now() + T_FAIL_MEMORY; setState(s, 'unreachable', 'Not reachable from here right now.'); }
-  function download(e) {
-    var size = e.size, buf = new Uint8Array(size), got = 0, contributors = {}, excluded = {}, last = null, rechecked = {}, waited = false;
+  /* spare: a download for the pre-load list (preloadFetch). Its bytes go to preload.js's own
+     store only, so neither this page's memory nor the 200 MB cache holds a second copy. */
+  function download(e, spare) {
+    var size = e.size, buf = new Uint8Array(size), got = 0, contributors = {}, excluded = {}, last = null, rechecked = {}, waited = false, late = false;
     function attempt() {
       var cands = reachable(e).filter(function (s) { return !excluded[s.id]; });
       if (!cands.length && !waited) {
@@ -1093,7 +1153,8 @@
       }
       if (!cands.length) {
         var anyHolder = Object.keys(e.holders).some(function (sid) { var s = C.servers[sid]; return s && s.state === 'ready'; });
-        return Promise.reject(new Error(anyHolder ? 'none of your servers could send it just now.' : 'it is on a server that isn’t reachable right now.'));
+        /* late: a server answered but sent nothing for T_FIRST_BYTE (busy): it said so plainly (20 Nov 2026). */
+        return Promise.reject(new Error(late ? R_SLOW : anyHolder ? 'none of your servers could send it just now.' : 'it is on a server that isn’t reachable right now.'));
       }
       var s = cands[0];
       var from = got;
@@ -1118,6 +1179,9 @@
         last = s.id;
         excluded[s.id] = true;
         ev('download-failover', { id: e.id, server: s.id, at: got, reason: err.code || err.message });
+        /* Busy, not gone (20 Nov 2026): it sent nothing for T_FIRST_BYTE. It is not asked again for this
+           file, and not set aside for others either (they may be on another drive, and Try again uses it). */
+        if (err.code === 'slow') { late = true; return attempt(); }
         if (err.code === 'device_revoked' || err.code === 'token_invalid') onAuthError(s, err);
         else if (err.status === 404) s.absent[e.sha256] = Date.now() + T_FAIL_MEMORY;
         else if (err.code === 'range_not_satisfiable') { got = 0; contributors = {}; }
@@ -1134,9 +1198,69 @@
       });
     }
     return attempt().then(function (u) {
+      if (spare) return u;
       _mem[e.sha256] = u;
       cachePut(e.sha256, u, Object.keys(e.holders));
       return u;
+    });
+  }
+  /* PRE-LOAD ON DEVICE (18 Nov 2026): one listed title's verified bytes for preload.js. A copy this
+     page already holds (in memory, or in the cache) is handed over with no network; otherwise,
+     unless `local`, it is downloaded in the queue behind the games being opened, at most one at
+     a time from preload.js. Resolves null when the title is not listed or not reachable now. */
+  function preloadFetch(id, local) {
+    var e = C.byId[id];
+    if (!e || e.kind === 'gnw' || e.kind === 'cassette' || e.kind === 'tape') return Promise.resolve(null);
+    if (_mem[e.sha256]) return Promise.resolve({ sha256: e.sha256, bytes: _mem[e.sha256] });
+    return cacheGet(e.sha256).then(function (hit) {
+      if (hit && hit.length === e.size) return { sha256: e.sha256, bytes: hit };
+      if (local || !available(id)) return null;
+      ev('preload-download', { id: id, size: e.size });
+      return queued(function () { return download(e, true); }, false).then(function (u) { return u ? { sha256: e.sha256, bytes: u } : null; });
+    });
+  }
+  /* THE START-UP FIRMWARE A PRE-LOADED GAME NEEDS (18 Nov 2026), so it starts after a log out with no
+     download at all. The start-up firmware order (12 Nov): the original first, as the manufacturer made
+     it; only the files a server lists count, and never a clone, an unlicensed or a bad copy (bootRank
+     -1, BOOT_NEVER); our own firmware is built into the site and needs nothing kept. Per game:
+       Game Boy: the Game Boy and Game Boy Color start-up programs the site would choose (every model
+       plays with one of them), and a role-aware server's generic files for those systems; a game on the
+       Super Game Boy shelf also its Super Game Boy files. Disk System: the drive firmware. Pokemon mini:
+       its start-up program. Atari 5200, 7800, Lynx: the console's start-up images the site would offer
+       (atariBios). Atari 2600 and NES cartridges need none (a 2600 game's own extras, such as the
+       Supercharger's, are kept when the game is played: preload.js noteFirmware). No tape audio (.wav).
+     Names, sizes and hashes only: nothing is downloaded here. */
+  function preloadFirmware(id) {
+    var e = C.byId[id];
+    if (!e || !e.entry) return [];
+    var sys = e.entry.system, want = [];
+    if (e.kind === 'gb') want = e.sgb || sys === 'sgb' ? ['gb', 'gbc', 'sgb'] : ['gb', 'gbc'];
+    else if (e.kind === 'nes') want = sys === 'fds' ? ['fds'] : [];
+    else if (e.kind === 'pm') want = ['pokemini'];
+    else if (e.kind === 'atari') want = sys === 'a2600' ? [] : [sys];
+    if (!want.length) return [];
+    var out = {}, WAV = /\.wav$/i;
+    var add = function (b) {
+      var n = b.entry || {};
+      if (want.indexOf(n.system) < 0 || WAV.test(String(n.file_name || '')) || !reachable(b).length) return;
+      out[b.sha256] = { sha256: b.sha256, size: b.size, system: n.system, name: String(n.title || n.name || n.file_name || 'Start-up program') };
+    };
+    Object.keys(C.boot).forEach(function (k) { add(C.boot[k]); });   // the site's own choice per slot (rank 0 to 3 only)
+    var all = C.bootAll || {};
+    Object.keys(all).forEach(function (h) { var b = all[h], n = b.entry || {}; if (b.rank >= 0 && (n.generic === true || n['default'] === true)) add(b); });
+    return Object.keys(out).map(function (h) { return out[h]; });
+  }
+  /* One start-up file's verified bytes for preload.js, by its SHA-256 (as preloadFetch). */
+  function preloadFetchSha(sha, local) {
+    var e = (C.bootAll && C.bootAll[sha]) || null;
+    if (!e) Object.keys(C.boot).forEach(function (k) { if (C.boot[k].sha256 === sha) e = C.boot[k]; });
+    if (!e) return Promise.resolve(null);
+    if (_mem[sha]) return Promise.resolve({ sha256: sha, bytes: _mem[sha] });
+    return cacheGet(sha).then(function (hit) {
+      if (hit && hit.length === e.size) return { sha256: sha, bytes: hit };
+      if (local || !reachable(e).length) return null;
+      ev('preload-download', { id: e.id, size: e.size, firmware: true });
+      return queued(function () { return download(e, true); }, true).then(function (u) { return u ? { sha256: sha, bytes: u } : null; });
     });
   }
   function rangeFrom(s, e, buf, start, sameServer) {
@@ -1144,8 +1268,11 @@
     if (!tok) return Promise.reject(Object.assign(new Error('no token'), { status: 401, code: 'token_missing', pos: start }));
     var h = { Authorization: 'Bearer ' + tok.device_token };
     if (start > 0) { h.Range = 'bytes=' + start + '-'; if (sameServer) h['If-Range'] = '"' + e.sha256 + '"'; }
-    var ctl = new AbortController(), pos = start;
-    var timer = setTimeout(function () { ctl.abort(); }, T_FIRST_BYTE);
+    var ctl = new AbortController(), pos = start, late = false, sent = false;
+    var timer = setTimeout(function () { late = true; ctl.abort(); }, T_FIRST_BYTE);
+    /* Asked and nothing yet after T_SLOW_NOTE: loadbar.js shows that the server is busy (20 Nov 2026).
+       Cleared by the first bytes (cws:progress), or by the end of the download. */
+    var slowT = setTimeout(function () { if (!sent) ev('slow', { id: e.id, server: s.id, size: e.size }); }, T_SLOW_NOTE);
     var url = s.base + '/api/v1/' + e.what + '/' + e.sha256 + '/data';
     var go = /^rtc:/.test(url) ? (R ? R.fetch(url, { headers: h, signal: ctl.signal }, 864e5) : Promise.reject(new Error('not connected')))   // REACH: the timers here still rule
       : fetch(url, { headers: h, mode: 'cors', credentials: 'omit', cache: 'no-store', signal: ctl.signal });
@@ -1163,6 +1290,7 @@
         timer = setTimeout(function () { ctl.abort(); }, T_STALL);
         return reader.read().then(function (x) {
           clearTimeout(timer);
+          if (!sent) { sent = true; clearTimeout(slowT); }
           if (x.done) return pos;
           if (pos + x.value.length > buf.length) { try { ctl.abort(); } catch (y) {} throw Object.assign(new Error('longer than listed'), { status: 0, code: 'size', pos: 0 }); }
           buf.set(x.value, pos); pos += x.value.length;
@@ -1172,8 +1300,11 @@
       }
       return read();
     }).catch(function (err) {
-      clearTimeout(timer);
-      if (err && err.code) { if (err.pos === undefined) err.pos = pos; throw err; }
+      clearTimeout(timer); clearTimeout(slowT); sent = true;
+      /* First: an abort is a DOMException whose own code is the number 20, which the line after this one
+         used to pass on as if it were a server's answer (20 Nov 2026). */
+      if (late) throw Object.assign(new Error('no answer in time'), { status: 0, code: 'slow', pos: pos });
+      if (err && typeof err.code === 'string' && err.code) { if (err.pos === undefined) err.pos = pos; throw err; }
       throw Object.assign(new Error('connection lost'), { status: 0, code: 'network', pos: pos });
     });
   }
@@ -2123,6 +2254,7 @@
        holds in its sgb folder, whether or not a copy is also in gb or gbc. */
     sgbIds: function () { return Object.keys(C.byId).filter(function (id) { var e = C.byId[id]; return e.kind === 'gb' && e.sgb; }); },
     fetchBytes: fetchBytes, fetchB64: fetchB64,
+    preloadFetch: preloadFetch, preloadFirmware: preloadFirmware, preloadFetchSha: preloadFetchSha,   // preload.js (18 Nov 2026)
     bootChoices: bootChoices, fetchBootSha: fetchBootSha, bootFileByName: bootFileByName,
     bootGeneric: bootGeneric, firmwareList: firmwareList,   // FW1 (2026-10-22)
     pmAvailability: pmAvailability, pmGameFiles: pmGameFiles,

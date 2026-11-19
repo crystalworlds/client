@@ -5,7 +5,7 @@
  "guards": [
   "atari5200"
  ],
- "count": 21,
+ "count": 20,
  "entries": {
   "28ff13b0587f9e5f9d0a9f1a07e6285cb717a557c881cc159cb6512d9f799d17": {
    "kind": "cartridge",
@@ -40,7 +40,7 @@
   "3d476d2430032f9932c36d6e59bc3ae5c4aa38fc767bd201c795441074eac306": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
-   "reason": "it hangs at start.",
+   "reason": "this early build sets the keypad in a way the 5200's keypad cannot work with, so no key press ever reaches it, on a real console too.",
    "title": "Burger Time For The 5200"
   },
   "4e4750a2127d79fb3afb6b09af8e213e1f9d044f3506fd37b166be18a0a0859a": {
@@ -73,12 +73,6 @@
    "reason": "it needs a cartridge board that isn't built yet.",
    "title": "Adventure II demos"
   },
-  "8dc75711a9fd9897abb6059ea773830ba79e890c01b5c14c66cb46acee161f89": {
-   "kind": "cartridge",
-   "code": "BLANK_SCREEN",
-   "reason": "this copy's header names the wrong cartridge board, so it shows nothing, and other emulators show nothing with it either. Other copies of the game play.",
-   "title": "Star Wars - The Arcade Game"
-  },
   "a9e833ab56512edadbe787ad119509b71367c84be2ec3ebdd18d8533b598a802": {
    "kind": "cartridge",
    "code": "CRASHES_AT_BOOT",
@@ -100,7 +94,7 @@
   "c60469569b52daee0e60d863ba4d6965d5f231cb1becad29a161582d66277893": {
    "kind": "cartridge",
    "code": "HANGS_AT_BOOT",
-   "reason": "it hangs at start.",
+   "reason": "this early build sets the keypad in a way the 5200's keypad cannot work with, so no key press ever reaches it, on a real console too.",
    "title": "Burger Time For The 5200"
   },
   "c64e83e1fb265c01679558839e697b6823dde83e837085ab1af6826954c1ac84": {

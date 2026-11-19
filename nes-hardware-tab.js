@@ -253,6 +253,7 @@ function nesHardwareTabHTML(d) {
       <section class="sect">${hwSectH('Famicom expansion audio')}
         <p class="hw-readable">Because the Famicom's sound passes through the cartridge, a Japanese game could bring its own sound chip. Six did so in the licensed library:</p>
         ${expAudio}
+        <p class="hw-readable">Unlicensed cartridges did the same. The Korean <b>Family Noraebang</b> karaoke cartridges carry a full copy of the YM2413, the <b>K-663A</b>: 9 FM channels, or 6 plus a built-in drum section (bass drum, snare, tom-tom, cymbal and hi-hat). The board does not pass the console's own sound through, so the chip is all you hear.</p>
       </section>
 
       ${isFDS ? '' : fdsSection}

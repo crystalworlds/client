@@ -37,7 +37,7 @@
   'use strict';
   if (window.CompatList) return;
 
-  const VERSION = '2.2.1';
+  const VERSION = '2.2.2';
   const BASE = 'firmware/compat/';
   /* Status 4 (28 Oct 2026): a known release (No-Intro) that has not been found, so it has never been
      tested. Listed and filterable, never counted: not in the bar, its percentages or "games tested". */
@@ -762,7 +762,7 @@
     if (!inRoot) {
       /* Any of the bar's buttons (4 Nov), not only the list's own: Down from them steps over the search
          box into the list, as nav.js does for the other pages, so the list is not closed by the box. */
-      if (e.key === 'ArrowDown' && t && t.closest && (t.id === 'video-compat-btn' || t.closest('#video-body .collection-toolbar .view-mode-row') || (t.closest('#video-body .collection-toolbar .filter-bar') && !(t.id === 'video-search' && !t.readOnly)))) {
+      if (e.key === 'ArrowDown' && t && t.closest && !t.closest('.vtb-menu') && (t.id === 'video-compat-btn' || t.closest('#video-body .collection-toolbar .view-mode-row') || (t.closest('#video-body .collection-toolbar .filter-bar') && !(t.id === 'video-search' && !t.readOnly)))) {
         const first = ctrlItems()[0];   // none while the window is shut (its copy stays in the page, hidden)
         if (first) { e.preventDefault(); e.stopImmediatePropagation(); first.focus(); }
       }
@@ -800,7 +800,8 @@
     const nx = nearest(t, dir);
     if (nx) { glide(nx); return; }
     if (dir === 'down' && rows.length) { focusRow(cur); return; }
-    if (dir === 'up') { const b = document.getElementById('video-compat-btn'); if (b) b.focus(); }
+    /* Up out of the list: to the Info button (20 Nov 2026: Compatibility is an item of its menu now). */
+    if (dir === 'up') { let b = document.getElementById('video-compat-btn'); if (b && !b.getClientRects().length) b = document.getElementById('video-info-btn'); if (b) b.focus(); }
   }
   function startTyping() { const q = root.querySelector('[data-cl-q]'); q.readOnly = false; q.removeAttribute('inputmode'); try { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } catch (_) {} }
   function endTyping() { const q = root.querySelector('[data-cl-q]'); q.readOnly = true; q.setAttribute('inputmode', 'none'); }

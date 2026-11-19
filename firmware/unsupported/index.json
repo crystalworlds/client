@@ -41,8 +41,8 @@
   },
   "atari5200": {
    "file": "atari5200.json",
-   "count": 21,
-   "sha256": "138fae8dfcb664e6971f0038265ebba91001e8a31381a3ee65a3953054bcab78",
+   "count": 20,
+   "sha256": "bf4c873c61c688031238a4dd75630f2417329b38bff4049da0035433a2b9041d",
    "label": "Atari 5200",
    "guards": [
     "atari5200"
@@ -59,8 +59,8 @@
   },
   "atarilynx": {
    "file": "atarilynx.json",
-   "count": 40,
-   "sha256": "16f87d23a4ba6fc0774590d9b17afa088a485d3eef43d7b3ac502cf043a4b334",
+   "count": 43,
+   "sha256": "40768d38f1451fe6a3c31eb93fd46ae0e7ae4e9ca1b759e4a91168fe926c001d",
    "label": "Atari Lynx",
    "guards": [
     "atarilynx"
@@ -196,6 +196,6 @@
    "internal": true
   }
  },
- "total": 1679,
- "version": "37892ffff452ce64e8c3e8057778a8884ecf2085c25fec8a3443db3a7529802b"
+ "total": 1681,
+ "version": "89a5b3a24ee5e9370a9a7f5094c9fac9c1f6ac8f9bb87565697b3a7a3137cefe"
 }

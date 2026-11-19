@@ -26,7 +26,7 @@
   'use strict';
   if (window.CwPlayAudio) return;
 
-  const BUILD = '20261102-host6-fix6a';
+  const BUILD = '20261120-audioservo';
   const IDLE_MS = 4000;
   const FADE_TC = 0.004;                     // setTargetAtTime constant: ~12 ms to silence
   const SCRIPT_URL = (document.currentScript && document.currentScript.src) || '';
@@ -196,8 +196,10 @@
       const k = Math.max(-0.005, Math.min(0.005, (t - q) / t * 0.01));
       this.servo = 1 + k;
     },
-    /* data: Int16Array or Float32Array, interleaved when channels = 2, at srcRate. */
-    push(data, frames, channels, srcRate) {
+    /* data: Int16Array or Float32Array, interleaved when channels = 2, at srcRate.
+       paced: the core makes its sound at rateHint() (a core that reports rate 0), so the servo is
+       already in its blocks and is not applied again here. */
+    push(data, frames, channels, srcRate, paced) {
       if (!this.alive || this.held) return 0;
       if (!this.node && !this.ring) { this.lostBeforeReady += frames; return 0; }
       if (this.queuedMs() > this.maxMs) { this.trim(); }
@@ -209,8 +211,13 @@
       // after its creation: the servo stayed at the +0.5 % it got with an empty queue, every block was
       // stretched by 0.5 %, the queue climbed 5-15 ms a second past its target and was emptied by trim()
       // every 20 s (a 220 ms gap), and a sound effect sat 150-230 ms in the queue instead of the target.
-      if (srcRate && Math.abs(srcRate - outRate) > 1) this.updateServo();
-      const step = (srcRate || outRate) / (outRate * (srcRate && Math.abs(srcRate - outRate) > 1 ? this.servo : 1));
+      // (20 Nov 2026) The servo runs for every core at its own fixed rate, also one that equals the
+      // device's rate. It was skipped within 1 Hz of the device, which left the Lynx (44,100 Hz) on a
+      // 44.1 kHz device with no servo: its queue drifted (42 ppm measured) until trim() cleared it.
+      // That test was also what kept a rate-0 core from getting the servo twice; `paced` says so now.
+      const servoHere = !!srcRate && !paced;
+      if (servoHere) this.updateServo();
+      const step = (srcRate || outRate) / (outRate * (servoHere ? this.servo : 1));
       let out;
       if (Math.abs(step - 1) < 1e-9) {
         out = new Float32Array(frames * 2);

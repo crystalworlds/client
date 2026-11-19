@@ -22,8 +22,8 @@ import { CoreAudioSource, coreHasAudio, discardCoreAudio } from '../../gameboy/w
 import { PALETTES, DEFAULT_PALETTE, saveState, stateHeader, cartFingerprint,
          STATE_HEADER, STATE_MAGIC, STATE_VERSION, STATE_FLAG_BIOS } from '../../gameboy/web/shell.js';
 import { cgbAssignmentFor, cgbAppliesTo, cgbConfigName, cgbExplain, cgbDefaultManual } from '../../gameboy/cgb-assign.js';
-import { cgbStartup } from '../../gameboy/cgb-boot.js?v=2.2.1';
-import { logoLayout, GLYPHS, cartLogoScreen } from '../../gameboy/gb-boot.js?v=2.2.1';
+import { cgbStartup } from '../../gameboy/cgb-boot.js?v=2.2.2';
+import { logoLayout, GLYPHS, cartLogoScreen } from '../../gameboy/gb-boot.js?v=2.2.2';
 import { CGB_MANUAL } from '../../gameboy/cgb-palettes.js';
 import { CoreError } from '../../host/core-api.mjs';
 /* 2026-10-24: the extra hardware around the console. The Super Game Boy's SNES side
@@ -34,11 +34,11 @@ import { GB_MODE } from './mode.mjs';
 /* 25 Oct: the Super Game Boy shelf. Opened with ?console=sgb, the game always plays as on
    a Super Game Boy; the border is the game's own, else Nintendo's default read from the player's own SNES
    program (firmware 'sgb', from the game server; sgb-border.mjs), else plain black; or fan art. */
-import { biosBorder, builtinBorders } from './sgb-border.mjs?v=2.2.1';
-import { ourSgbBorder } from '../../gameboy/sgb-border-ours.js?v=2.2.1';
-import { cheatEngine } from '../cheats-core.mjs?v=2.2.1';
-import { TEAL, colourCorrectionTable } from './colour.mjs?v=2.2.1';
-import { PANELS, slowScreen } from './lcd.mjs?v=2.2.1';
+import { biosBorder, builtinBorders } from './sgb-border.mjs?v=2.2.2';
+import { ourSgbBorder } from '../../gameboy/sgb-border-ours.js?v=2.2.2';
+import { cheatEngine } from '../cheats-core.mjs?v=2.2.2';
+import { TEAL, colourCorrectionTable } from './colour.mjs?v=2.2.2';
+import { PANELS, slowScreen } from './lcd.mjs?v=2.2.2';
 const ON_SGB_SHELF = (() => { try { return new URLSearchParams(globalThis.location.search).get('console') === 'sgb'; } catch (_) { return false; } })();
 const SGB_FANART = 'https://pub-5656d877345d49ae96626afa8d6ebd56.r2.dev';   // sgb-borders: <SHA-1 of the cartridge>.jpg, 1920x1080
 
@@ -151,18 +151,19 @@ const onColor = v => !!(MACHINES[v] && MACHINES[v].device === 'cgb');
    the two in step). read(o) is the stored value of option o ({ id, key, scope }, as the host stores it); the host
    asks before the game starts, so each slot can ask for the program of the model that will run (firmwareRole). */
 function machinePlan(bytes, read, has) {
+  const H = consoleHeader(bytes);   // (20 Nov) the header as the console reads it (a Sachen cartridge's through its chip)
   const r = o => { try { const v = read ? read(o) : null; return v == null || v === '' ? null : String(v); } catch (_) { return null; } };
   const pick = (v, list, d) => (v != null && list.includes(v) ? v : d);
-  const flag = cgbFlagOf(bytes), HAS_SGB = !has || has.sgb !== false, HAS_LINK = !has || has.link !== false;
+  const flag = cgbFlagOf(H), HAS_SGB = !has || has.sgb !== false, HAS_LINK = !has || has.link !== false;
   const choice = flag === 'dmg' ? pick(r({ id: 'machine', key: 'gb.machine' }), LIST_ORIG, 'gb') : flag === 'cgb-only' ? pick(r({ id: 'machineColour', key: 'gb.machineColour' }), LIST_COLOUR, 'gbc')
     : pick(r({ id: 'machineDual', key: 'gb.machineDual' }), LIST_DUAL, 'gbc');
-  const stubWanted = flag === 'dmg' && onColor(choice) && cgbAppliesTo(bytes);
+  const stubWanted = flag === 'dmg' && onColor(choice) && cgbAppliesTo(H);
   const dualOnGb = flag === 'cgb-enhanced' && !onColor(choice);
-  const sgbAsks = ON_SGB_SHELF && HAS_SGB && flag === 'cgb-only' && sgbEnhanced(bytes);
+  const sgbAsks = ON_SGB_SHELF && HAS_SGB && flag === 'cgb-only' && sgbEnhanced(H);
   const forceSgb = ON_SGB_SHELF && (flag !== 'cgb-only' || sgbAsks) && HAS_SGB;
   const cgb = !forceSgb && (stubWanted || (flag !== 'dmg' && !dualOnGb));
   const sgbOpt = r({ id: 'sgb', scope: 'console' }) || 'auto', linkOpt = r({ id: 'link', scope: 'game' }) || 'auto';
-  const sgbWill = HAS_SGB && !cgb && !(linkOpt === 'gb' && HAS_LINK) && (forceSgb || sgbOpt === 'all' || (sgbOpt === 'auto' && sgbEnhanced(bytes)));
+  const sgbWill = HAS_SGB && !cgb && !(linkOpt === 'gb' && HAS_LINK) && (forceSgb || sgbOpt === 'all' || (sgbOpt === 'auto' && sgbEnhanced(H)));
   const machKey = sgbWill ? pick(r({ id: 'machineSgb', key: 'gb.machineSgb' }), LIST_SGB, 'sgb') : cgb ? (onColor(choice) ? choice : 'gbc') : (onColor(choice) ? 'gb' : choice);
   return { cgb, sgbWill, machKey, boot: MACHINES[machKey].boot };
 }
@@ -193,7 +194,7 @@ export const manifest = {
       { id: 'sgb', label: 'Super Game Boy SNES program', required: 'never' },
     ],
   },
-  firmwareFor: bytes => (ON_SGB_SHELF || sgbEnhanced(bytes)) ? ['dmg', 'cgb', 'sgb'] : ['dmg', 'cgb'],
+  firmwareFor: bytes => (ON_SGB_SHELF || sgbEnhanced(consoleHeader(bytes))) ? ['dmg', 'cgb', 'sgb'] : ['dmg', 'cgb'],
   /* (14 Nov) each slot asks for the program of the model that will run: the Pocket's, the Super Game Boy's, the SGB2's, the Advance's */
   firmwareRole: firmwareRoleOf,
   video: { kind: 'raster', maxWidth: SCREEN_W * 2 + LINK_GAP, maxHeight: 224, screens: 1 },   // the SGB television, two linked screens
@@ -230,6 +231,47 @@ const CONTROLS = [
 ];
 if (BTN.A !== 0 || BTN.B !== 1 || BTN.SELECT !== 2 || BTN.START !== 3 || BTN.RIGHT !== 4 || BTN.LEFT !== 5 || BTN.UP !== 6 || BTN.DOWN !== 7) {
   throw new Error('gb core module: web/core.js BTN order changed; the control table must follow it');
+}
+
+/* (20 Nov) THE HEADER AS THE CONSOLE READS IT. Sachen's two boards (MMC1 for the Game Boy, MMC2 for
+   the Color) store the header area 0100-01FF with address lines swapped (A0 with A6, A1 with A4), and the chip
+   swaps them back on every read, so the bytes at 0143 and 0146 in the file are not the flags a console reads there.
+   Recognised as the emulator does (pilot src/gb.c, the Sachen boards in cart_parse): the 48 logo bytes read through
+   the swap at 0104 (MMC1) or 0184 (MMC2) have the CRC-32 46195417 (the logo block every licensed header carries)
+   while the file's own 0104 does not. For such a cartridge the header rules read 0100-01FF through the swap, which
+   is what the start-up program reads once the chip has opened; every other cartridge is read as it is. The game
+   itself is always given the file unchanged. */
+const LOGO_CRC = 0x46195417;
+const sachenSwap = a => (a & ~0x53) | ((a >> 6) & 1) | ((a >> 3) & 2) | ((a << 3) & 0x10) | ((a << 6) & 0x40);
+function crc32of(get, n) {
+  let c = ~0;
+  for (let i = 0; i < n; i++) { c ^= get(i); for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xEDB88320 & -(c & 1)); }
+  return (~c) >>> 0;
+}
+/* 1 = Sachen MMC1, 2 = Sachen MMC2, 0 = any other cartridge */
+function sachenKind(bytes) {
+  if (!bytes || bytes.length < 0x8000) return 0;
+  if (crc32of(i => bytes[0x104 + i], 0x30) === LOGO_CRC) return 0;
+  const at = base => crc32of(i => bytes[sachenSwap(base + i)], 0x30);
+  return at(0x104) === LOGO_CRC ? 1 : at(0x184) === LOGO_CRC ? 2 : 0;
+}
+function consoleHeader(bytes) {
+  if (!sachenKind(bytes)) return bytes;
+  const v = bytes.slice(0, 0x8000);
+  for (let a = 0x100; a < 0x200; a++) v[a] = bytes[sachenSwap(a)];
+  return v;
+}
+/* For our own start-up program (gb-boot.js), which builds the logo it leaves in video memory and the Color's
+   settings from the header it is given: the header as the console reads it, with 0104-0133 holding what Nintendo's
+   program reads on its drawing pass. On MMC1, and on MMC2 on a Color (its program touches work memory first), the
+   chip holds A7 high there, so the drawing pass reads 0184-01B3; on MMC2 on a Game Boy it reads 0104-0133 straight.
+   That is Sachen's logo in every case but MMC2 on a Color, where it is the Nintendo logo. */
+function startupHeader(bytes, cgb) {
+  const k = sachenKind(bytes);
+  if (!k) return bytes;
+  const v = consoleHeader(bytes), from = (k === 1 || cgb) ? 0x184 : 0x104;
+  for (let i = 0; i < 0x30; i++) v[0x104 + i] = bytes[sachenSwap(from + i)];
+  return v;
 }
 
 function cgbFlagOf(bytes) {
@@ -279,7 +321,7 @@ export async function create(env) {
   let intro = 0, bridge = 0, introPic = null, guard = 0, lettersPic = null;
   /* the picture the start-up leaves on the Game Boy's screen: the cartridge's own logo, as on the console */
   function sameAsLetters(f) {
-    if (!lettersPic) { lettersPic = cartLogoScreen(cart); }
+    if (!lettersPic) { lettersPic = cartLogoScreen(startupHeader(cart, false)); }
     for (let i = 0; i < lettersPic.length; i++) if ((f[i] & 3) !== lettersPic[i]) return false;
     return true;
   }
@@ -474,9 +516,10 @@ export async function create(env) {
     correct = r.options.colourCorrection === 'on';
     response = r.options.screenResponse === 'off' ? 'off' : 'real';
     const fw = r.firmware || {};
-    const flag = cartFlag = cgbFlagOf(bytes);
+    const H = consoleHeader(bytes);                        // (20 Nov) the header as the console reads it
+    const flag = cartFlag = cgbFlagOf(H);
     hasCgbFw = true;                                        // the Color program: the visitor's own, or ours (gb-boot.js)
-    cgbInfo = cgbAppliesTo(bytes) ? cgbAssignmentFor(bytes) : null;
+    cgbInfo = cgbAppliesTo(H) ? cgbAssignmentFor(H) : null;
     /* the Machine choice for this kind of cartridge (machineRows), a value outside its list read as the default */
     const pick = (v, list, d) => (list.includes(String(v)) ? String(v) : d);
     const choice = flag === 'dmg' ? pick(r.options.machine, LIST_ORIG, 'gb') : flag === 'cgb-only' ? pick(r.options.machineColour, LIST_COLOUR, 'gbc')
@@ -488,7 +531,7 @@ export async function create(env) {
        Game Boy's functions (In the Dark, homebrew: $C0 with $03/$33) runs on the Game Boy inside it,
        sends its own border and palettes, and plays, so the shelf plays it so. A Color-only cartridge
        without that flag (Hugo Black Diamond Fever, Wetrix GB) still plays as a Color game. */
-    const sgbAsks = ON_SGB_SHELF && HAS_SGB && flag === 'cgb-only' && sgbEnhanced(bytes);
+    const sgbAsks = ON_SGB_SHELF && HAS_SGB && flag === 'cgb-only' && sgbEnhanced(H);
     /* The Super Game Boy shelf plays every cartridge a Super Game Boy can run (all but Color-only) on its DMG. */
     const forceSgb = ON_SGB_SHELF && (flag !== 'cgb-only' || sgbAsks) && HAS_SGB;
     const cgb = !forceSgb && (stubWanted || (flag !== 'dmg' && !dualOnGb));
@@ -496,7 +539,7 @@ export async function create(env) {
        machine exactly as the console's own does, so the game starts the same either way. */
     const linkWill = String(r.options.link || 'auto') === 'gb' && HAS_LINK ? 'gb' : 'other';
     const sgbWill = HAS_SGB && !cgb && linkWill !== 'gb' && (forceSgb || String(r.options.sgb || 'auto') === 'all'
-      || (String(r.options.sgb || 'auto') === 'auto' && sgbEnhanced(bytes)));
+      || (String(r.options.sgb || 'auto') === 'auto' && sgbEnhanced(H)));
     /* the model that runs: the Super Game Boy's, else the choice on its own device */
     machKey = sgbWill ? pick(r.options.machineSgb, LIST_SGB, 'sgb') : cgb ? (onColor(choice) ? choice : 'gbc') : (onColor(choice) ? 'gb' : choice);
     const M = MACHINES[machKey], HAS_MODELS = typeof X.gb_set_model === 'function';
@@ -504,7 +547,7 @@ export async function create(env) {
     const own = cgb ? (fw['ours:cgb'] ? null : fw.cgb) : (fw['ours:dmg'] ? null : fw.dmg);
     /* an explicit None in the Boot program list starts without any start-up program, as it says */
     const none = cgb ? !!fw['none:cgb'] : !!fw['none:dmg'];
-    ours = own || none ? null : cgbStartup(cgb && stubWanted && !cgbInfo.assigned ? cgbManual() : undefined, bytes, M.boot);
+    ours = own || none ? null : cgbStartup(cgb && stubWanted && !cgbInfo.assigned ? cgbManual() : undefined, startupHeader(bytes, cgb), M.boot);
     onStub = cgb && !!ours && !!cgbInfo;
     host.setBios(fw.dmg || null, 'dmg');
     host.setBios(fw.cgb || null, 'cgb');
@@ -526,7 +569,7 @@ export async function create(env) {
       : (linkChoice === 'workboy' || (linkChoice === 'auto' && isWorkboy(bytes))) && HAS_WB ? 'workboy' : 'none';
     sgb = null; objAt = objCol = null; intro = 0; bridge = 0; sgbSound = false; lettersPic = null;
     sgbDefault = false; sgbOwn = false; fanart = ''; fanartFor = '';
-    if (HAS_SGB && !cgb && link !== 'gb' && (forceSgb || sgbChoice === 'all' || (sgbChoice === 'auto' && sgbEnhanced(bytes)))) {
+    if (HAS_SGB && !cgb && link !== 'gb' && (forceSgb || sgbChoice === 'all' || (sgbChoice === 'auto' && sgbEnhanced(H)))) {
       X.gb_set_sgb(machine.ctx, 1);
       if (HAS_MODELS) X.gb_set_model(machine.ctx, M.model);   // the Super Game Boy, on PAL, or the Super Game Boy 2
       X.gb_reset(machine.ctx);                // the Game Boy inside a Super Game Boy, from power-on

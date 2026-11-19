@@ -4,8 +4,8 @@
  *
  * THE RASTER is 384 x 240 bytes (the core interface "Picture"), each GTIA's
  * colour byte: hue in bits 7-4, luminance in 3-0, the same layout as MARIA's,
- * so the core project's 5200 page maps it through palette7800.js's NTSC table and so
- * does this one (web/palette7800.js, vendored byte-identical from the core's own project).
+ * so the core project's 5200 page maps it through palette5200.js's NTSC table (GTIA's own colours) and so
+ * does this one (web/palette5200.js, vendored byte-identical from the core's own project).
  * Only columns 24-359 are drawn; the 24 blank columns either side are cropped
  * here, so blanking never reaches the aperture as a black band, which would read
  * as the artwork being misaligned.
@@ -16,7 +16,7 @@
  * reason for letting the aperture do the stretch.
  */
 import { RASTER_W, RASTER_H, DRAWN_X, DRAWN_W } from './core.js';
-import { NTSC } from './palette7800.js';
+import { NTSC } from './palette5200.js';
 
 /* 0xRRGGBB -> 0xFFBBGGRR, the little-endian view of RGBA bytes, once. */
 const LUT = new Uint32Array(256);

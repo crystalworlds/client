@@ -54,8 +54,11 @@
  * screens refreshes together, never blinking tile by tile). The clip's own
  * duration decides it, at loadedmetadata.
  *
- * SUPERSEDED ON TILES 2026-10-12 (decided: tiles play the game clip only; see
- * TILE_BOOT below). The chain described next is kept but switched off.
+ * BACK ON 2026-11-19 (switched off 2026-10-12, when tiles played the game clip
+ * only; see TILE_BOOT below). The shared start-up clip is now recorded WITH A
+ * DISK IN, as the play window starts the drive (eject, side A in at frame 8):
+ * it holds the frames every disk shows from power-on, before the disk's own
+ * screens begin.
  * DISK SYSTEM TILES PLAY THE DRIVE'S BOOT FIRST (2026-10-06: "capture
  * the boot screen on FDS games just like we did with the animation of the Game
  * Boy ... as a separate file ... and just play one animation after another").
@@ -97,14 +100,14 @@
   var MAX_VID = 20;           /* clips kept after scrolling away, as GBVIDEO */
 
   var ENABLED = true;         /* NESVIDEO.setEnabled(false) -> today's tiles */
-  /* TILES PLAY THE GAME CLIP ONLY (2026-10-12: "tiles show the game
-     clip only, never the boot clip, for every system"). The Disk System's
-     shared boot clip is no longer chained in front of the game clip on a tile;
-     the chain (attachFds) is kept, switched off here, for a stitched
-     boot-then-game player elsewhere. Starting a game still boots normally:
-     that is the play window, which this file never touches. The game clip
-     itself is unchanged: same FDS bucket, same <id>.webm, same 404 fallback. */
-  var TILE_BOOT = false;
+  /* DISK SYSTEM TILES PLAY THE DRIVE'S START-UP FIRST, AGAIN (2026-11-19). From
+     2026-10-12 to 2026-11-19 tiles played the game clip only ("tiles show the
+     game clip only, never the boot clip, for every system"), so a Disk System
+     tile showed none of the drive's start-up program, which every game clip
+     starts after. The shared start-up clip (re-recorded with a disk in) plays
+     before the game clip through attachFds. The game clip is unchanged: same
+     FDS bucket, same <id>.webm, same 404 fallback. */
+  var TILE_BOOT = true;
   /* id -> true after a 404/error. Memory only: one request per tile per page
      load, and a page load later a newly uploaded clip is asked for again. */
   var MISSING = Object.create(null);
@@ -422,7 +425,9 @@
       if (isFinite(d) && d >= FULL_SECS) startBoot();   /* full length: straight back to the boot */
       else armHold(g, startBoot);                        /* short: hold to the shared boundary */
     });
-    b.addEventListener('loadeddata', function () { if (b.parentElement === wrap) wrap.classList.add('has-vid'); });
+    /* (19 Nov) shown once the start-up clip's first frame is painted, as the single-clip path does
+       (shownWhenPainted); until then the tile keeps its photograph behind the soft blur */
+    shownWhenPainted(b, wrap);
     g.addEventListener('loadeddata', function () {
       if (!g._nvHit) { g._nvHit = 1; _hits++; }
       if (g.parentElement === wrap && !g.classList.contains('nes-vid-off')) wrap.classList.add('has-vid');
@@ -447,6 +452,7 @@
     b.src = bootSrc;
     wrap.appendChild(g);
     wrap.appendChild(b);
+    coverTile(wrap);
     play(b);
   }
 

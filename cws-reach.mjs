@@ -32,7 +32,7 @@
    functions as the protocol says. Servers and the introducer see public keys,
    signatures and per-server PIN proofs only.
    ======================================================================== */
-import * as P from './cws-proto.mjs?v=2.2.1';
+import * as P from './cws-proto.mjs?v=2.2.2';
 
 const SUPPORTED = !!(globalThis.crypto && crypto.subtle && window.isSecureContext && window.RTCPeerConnection && window.WebSocket && window.indexedDB);
 
@@ -154,10 +154,12 @@ const VF = {
   setPin: (c, salt, it, x) => ['set_vault_pin', { p_vault: c, p_salt: salt, p_iterations: it, p_x: x }],
   pinKeys: (c, x) => ['get_pin_keys', { p_vault: c, p_x: x }],
   changePin: (c, ox, salt, it, nx) => ['change_vault_pin', { p_vault: c, p_old_x: ox, p_salt: salt, p_iterations: it, p_new_x: nx }],
-  changeEmail: (c, email, x) => ['change_vault_email', { p_vault: c, p_email: email, p_x: x }],
-  recoverParams: (email) => ['get_recovery_pin_params', { p_email: email }],
 };
-const EF = { recover: 'recover-vault' };   // mails a vault code to its recovery email, once the vault has checked the PIN
+/* recover-vault (20 Nov 2026): the vault keeps only a fingerprint of the recovery email (a keyed hash made
+   by this function, whose key the database never has) and a hint (p•••@gmail.com). It mails a vault code to the address
+   typed, once the vault has checked the PIN; it also gives the PIN salt for an address ({action: 'params'}) and saves,
+   changes or removes the recovery email ({action: 'save'}). The site never receives a full address back. */
+const EF = { recover: 'recover-vault' };
 async function vcall(spec) {
   const base = vaultBase(); if (!base) throw Object.assign(new Error('The vault service cannot be reached right now.'), { code: 'vault_down' });
   const [name, params] = spec, key = anonKey(), headers = { 'Content-Type': 'application/json' };
@@ -879,12 +881,12 @@ function changePinDialog() {
 }
 
 
-/* ---- Lost your code?: the recovery email and the vault's PIN. The vault finds the vault by its email and checks
-   the PIN, with the same lockout as every PIN check, before anything is mailed. An email it does not know gets the
-   same answers, so nothing here says whether an email is registered. The PIN is stretched here, as for every PIN
-   check, with the salt the vault gives for that email. ---- */
+/* ---- Forgot your vault code?: the recovery email and the vault's PIN. recover-vault finds the vault by the email's
+   fingerprint and the vault checks the PIN, with the same lockout as every PIN check, before anything is mailed to the
+   address typed. An email it does not know gets the same answers, so nothing here says whether an email is registered.
+   The PIN is stretched here, as for every PIN check, with the salt recover-vault gives for that email. ---- */
 async function recoverCode(email, pin) {
-  const pp = await vcall(VF.recoverParams(email));
+  const pp = await efcall(EF.recover, { action: 'params', email });
   const x = await P.pinStretch(pin, u8(pp.salt, 16), pp.iterations);
   return efcall(EF.recover, { email, salt: pp.salt, x: P.b64u(x) });
 }
@@ -914,7 +916,7 @@ function recoverError(e) {
   if (e.code === 'vault_down') return NET_MESSAGE;
   return 'Your code could not be sent (' + (e.code || e.message) + '). Try again in a moment.';
 }
-/* Settings, Data and Recovery, Lost your code?: the same check (index.html's own recoverByEmail only says why it
+/* Settings, Data and Recovery, Forgot your vault code?: the same check (index.html's own recoverByEmail only says why it
    cannot run). It needs the browser's crypto, which only the secure site has. */
 function wrapRecover() {
   const cur = window.recoverByEmail;
@@ -961,7 +963,7 @@ function aliasProblem(a) {
 /* ---- 12: the welcome screen ---- */
 /* A forgotten PIN is never recovered: every place a PIN is set says so, in these words. */
 const NO_RECOVERY = 'There is no way to recover a forgotten PIN.';
-const whyText = () => '<b style="color:var(--text)">Why we don\'t ask for an email or a password.</b> Your vault code is your account. It is made for you on this device, so we never need your name, an email address or a password to start. Keep it private, like a key to your home. Your PIN stays with you: we keep only a scrambled check of it, so nobody can read it back, not even with your vault code. If you like, you can add a recovery email in Settings. It is used only to send you your vault code if you lose it, and only once you also enter your PIN. ' + NO_RECOVERY;
+const whyText = () => '<b style="color:var(--text)">Why we don\'t ask for an email or a password.</b> Your vault code is your account. It is made for you on this device, so we never need your name, an email address or a password to start. Keep it private, like a key to your home. Your PIN stays with you: we keep only a scrambled check of it, so nobody can read it back, not even with your vault code. If you like, you can add a recovery email in Settings. It is used only to send you your vault code if you lose it, and only once you also enter your PIN. We keep a scrambled fingerprint of it and a short reminder like p•••@gmail.com, never the address itself. ' + NO_RECOVERY;
 let _fresh = null;   // the key pair made for the welcome screen, stored only on Save
 const NET_MESSAGE = 'CrystalWorlds can\'t be reached right now. Check your connection and try again.';
 /* A vault code as typed or pasted: any case, with or without dashes or spaces. A connection key
@@ -990,21 +992,24 @@ function hasPlayData() {
 function existingPaneHtml(u, mono) {
   return '<div class="cwr-pane-old" role="tabpanel" hidden>' +
     '<label style="' + u.LBL + '">Your vault code</label>' +
-    '<p style="' + u.P + ' font-size:11.5px;">Enter the vault code you already use. It is the long code shown under Settings, Your vault on your other device.</p>' +
+    '<p style="' + u.P + ' font-size:11.5px;">Enter your vault code. You were given it when you signed up; you can also find it under Settings, Your vault, on any device where you are logged in.</p>' +
     '<div style="display:flex; gap:8px; align-items:center; margin:0 0 4px;"><input class="cwr-old-code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="64" aria-label="Your vault code" placeholder="Your vault code" style="flex:1; min-width:0; ' + u.INPUT + ' ' + mono + '">' +
       (canPaste() ? u.button({ label: 'Paste', action: 'cwr-old-paste' }).outerHTML : '') + '</div>' +
     '<div class="cwr-old-pinrow" hidden><label style="' + u.LBL + ' margin-top:10px;">Your PIN</label>' +
-      '<p style="' + u.P + ' font-size:11.5px;">This vault has a PIN. Enter it to open the vault on this browser. A forgotten PIN cannot be recovered: choose New member to start a new vault.</p>' +
+      '<p style="' + u.P + ' font-size:11.5px;">This vault has a PIN. Enter it to log in on this browser. A forgotten PIN cannot be recovered: choose Sign up to start a new vault.</p>' +
       '<input class="cwr-old-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="Your PIN" placeholder="6 to 12 digits" style="width:100%; box-sizing:border-box; ' + u.INPUT + ' font-family:ui-monospace,Consolas,monospace; letter-spacing:.2em;">' +
       '</div>' +
     '<div class="cwr-old-msg" role="status" style="' + ERR + '"></div>' +
     '<p class="cwr-old-safe" hidden style="' + u.P + ' font-size:11.5px;">This browser\'s current vault stays safe in CrystalWorlds; you can return to it from Settings, Your vault.</p>' +
-    '<div style="border-top:1px solid var(--line); padding-top:10px; margin-top:8px;"><label style="' + u.LBL + '">Lost your code?</label>' +
-      '<p style="' + u.P + ' font-size:11.5px;">If you saved a recovery email against your vault, enter that address and your vault\'s PIN. When both match, we\'ll mail the code to that address. Then enter the code above.</p>' +
+    /* FORGOT YOUR VAULT CODE? (20 Nov 2026): a link-styled button that opens the recovery in place, under it. */
+    '<div style="border-top:1px solid var(--line); padding-top:10px; margin-top:8px;">' +
+      '<button type="button" class="cwr-old-forgot" aria-expanded="false" style="padding:4px 0; background:none; border:0; color:var(--accent); font:inherit; font-size:13px; font-weight:700; cursor:pointer; text-decoration:underline; text-underline-offset:3px;">Forgot your vault code?</button>' +
+      '<div class="cwr-old-rec" hidden style="margin-top:6px;">' +
+      '<p style="' + u.P + ' font-size:11.5px;">If you saved a recovery email against your vault, enter that address and your vault\'s PIN. When both match, we\'ll mail the code to that address. Then enter the code above. Without a recovery email the code cannot be found again.</p>' +
       '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><input class="cwr-old-mail" type="email" autocomplete="email" aria-label="Recovery email" placeholder="you@example.com" style="flex:1; min-width:160px; ' + u.INPUT + '">' +
         '<input class="cwr-old-mailpin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="Your vault\'s PIN" placeholder="PIN" style="width:110px; box-sizing:border-box; ' + u.INPUT + ' font-family:ui-monospace,Consolas,monospace; letter-spacing:.15em;">' +
         u.button({ label: 'Send my code', action: 'cwr-old-send' }).outerHTML + '</div>' +
-      '<div class="cwr-old-mailmsg" role="status" style="font-size:12px; min-height:18px; margin:6px 0 0; color:var(--muted);"></div></div>' +
+      '<div class="cwr-old-mailmsg" role="status" style="font-size:12px; min-height:18px; margin:6px 0 0; color:var(--muted);"></div></div></div>' +
     '</div>';
 }
 let _welcomeOpen = false;
@@ -1037,8 +1042,9 @@ async function welcomeScreen(opts) {
     html:
       (must ? leadHtml(opts.reason) : '') +
       (must ? '<div class="cwr-tabs" role="tablist" style="display:flex; border-bottom:1px solid var(--line); margin:0 0 14px;">' +
-        '<button type="button" role="tab" class="cwr-tab" data-cws-action="cwr-tab-new" aria-selected="true" style="' + TAB + '">New member</button>' +
-        '<button type="button" role="tab" class="cwr-tab" data-cws-action="cwr-tab-old" aria-selected="false" style="' + TAB + '">Existing member</button></div>' : '') +
+        /* LOG IN FIRST AND SELECTED (20 Nov 2026): people coming back look for Log in, new ones for Sign up. */
+        '<button type="button" role="tab" class="cwr-tab" data-cws-action="cwr-tab-old" aria-selected="true" style="' + TAB + '">Log in</button>' +
+        '<button type="button" role="tab" class="cwr-tab" data-cws-action="cwr-tab-new" aria-selected="false" style="' + TAB + '">Sign up</button></div>' : '') +
       '<div class="cwr-pane-new" role="tabpanel">' +
       '<div style="display:flex; gap:14px; align-items:center; margin:0 0 12px;">' +
         '<button type="button" class="cwr-av" aria-label="Choose an avatar" title="Choose an avatar" style="width:64px; height:64px; flex:none; border-radius:50%; border:1px dashed var(--line); background:var(--line) center/cover no-repeat; color:var(--text); font-size:26px; font-weight:700; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;"></button>' +
@@ -1047,7 +1053,7 @@ async function welcomeScreen(opts) {
         '<input class="cwr-alias" type="text" maxlength="64" autocomplete="nickname" spellcheck="false" placeholder="The alias others see" value="' + esc(S.profile ? S.profile.alias : _aliasDraft) + '" style="width:100%; box-sizing:border-box; ' + u.INPUT + '"></div></div>' +
       '<p style="' + u.P + ' font-size:11.5px;">Your alias and avatar are public, so choose ones you are happy for anyone to see. Game server owners see them when you join. The avatar is optional.</p>' +
       (havePin ? '' : '<label style="' + u.LBL + '">Your PIN</label>' + pinPairHtml('cwr-wpin') +
-        '<p style="' + u.P + ' font-size:11.5px;">You type it when you open your vault on another browser, so your vault code alone cannot open it. ' + NO_RECOVERY + ' Choose one you will remember.</p>') +
+        '<p style="' + u.P + ' font-size:11.5px;">You type it when you log in on another browser, so your vault code alone cannot open your vault. ' + NO_RECOVERY + ' Choose one you will remember.</p>') +
       '<label style="' + u.LBL + '">Your vault code (private)</label>' + box('cwr-vc', S.code, 'Keep this private, like a key to your home. Never give it to anyone, including server owners.', 'cwr-copy-vc') +
       '<p style="' + u.P + ' font-size:11.5px; border-top:1px solid var(--line); padding-top:10px;">' + whyText() + '</p>' +
       '<div class="cwr-msg" role="status" style="' + ERR + '"></div></div>' +
@@ -1059,7 +1065,7 @@ async function welcomeScreen(opts) {
   _welcomeDlg = d;
   function newActions() {
     return [
-      { label: 'Save', kind: 'accent', action: 'cwr-welcome-go', onClick: () => go() },
+      { label: must ? 'Sign up' : 'Save', kind: 'accent', action: 'cwr-welcome-go', onClick: () => go() },
       must ? null : { label: 'Cancel', action: 'cwr-welcome-cancel', onClick: (dd) => dd.close() },
       tuck ? { label: 'Keep browsing', action: 'cwr-welcome-tuck', onClick: (dd) => tuckAway(dd) } : null,
       /* Shown only after a Save the vault could not take: a failed call never locks the site. */
@@ -1067,7 +1073,7 @@ async function welcomeScreen(opts) {
     ].filter(Boolean);
   }
   function oldActions() {
-    return [{ label: 'Open my vault', kind: 'accent', action: 'cwr-old-go', onClick: () => oldGo() },
+    return [{ label: 'Log in', kind: 'accent', action: 'cwr-old-go', onClick: () => oldGo() },
       tuck ? { label: 'Keep browsing', action: 'cwr-welcome-tuck', onClick: (dd) => tuckAway(dd) } : null].filter(Boolean);
   }
   function showTab(which) {
@@ -1101,14 +1107,14 @@ async function welcomeScreen(opts) {
     const say = (t, ok) => { msg.textContent = t; msg.style.color = ok ? 'var(--muted)' : '#f08a5d'; };
     const r = parseVaultCode(inp.value);
     if (r.err) { pinRow(false); say(r.err); return; }
-    if (r.code === S.code) { say('That is the new vault code this browser made for you. Choose New member to set it up.'); return; }
+    if (r.code === S.code) { say('That is the new vault code this browser made for you. Choose Sign up to set it up.'); return; }
     if (pinFor !== r.code) {
       pinRow(false);
       say('Checking…', true);
       let found;
       try { found = await vcall(['vault_exists', { p_vault: r.code }]); }
       catch (e) { say(e.code === 'vault_down' ? NET_MESSAGE : 'That code could not be checked (' + (e.code || e.message) + '). Try again in a moment.'); return; }
-      if (found !== true) { say('No vault has that code. Check it, or use Lost your code? below.'); return; }
+      if (found !== true) { say('No vault has that code. Check it, or choose Forgot your vault code? below.'); return; }
       let pp;
       try { pp = await vcall(VF.pinParams(r.code)); }
       catch (e) { say(e.code === 'vault_down' ? NET_MESSAGE : 'That vault could not be checked (' + (e.code || e.message) + '). Try again in a moment.'); return; }
@@ -1129,7 +1135,7 @@ async function welcomeScreen(opts) {
         await vcall(VF.pinKeys(r.code, P.b64u(x)));
       } catch (e) { el.querySelector('.cwr-old-pin').value = ''; say(pinError(e)); return; }
     }
-    say('Opening your vault…', true);
+    say('Logging in…', true);
     const box = document.getElementById('vault-code-input');
     if (!box || typeof window.importVaultCode !== 'function') { say('This page cannot change vaults right now. Reload it and try again.'); return; }
     box.value = r.code;   // the page's own switch (index.html importVaultCode, wrapped by cws.js), called directly
@@ -1181,7 +1187,7 @@ async function welcomeScreen(opts) {
     el.querySelector('[data-cws-action="cwr-copy-vc"]').addEventListener('click', () => copyText(S.code, 'Vault code copied. Keep it private.'));
     const later = el.querySelector('[data-cws-action="cwr-welcome-later"]'); if (later) later.hidden = true;
     el.querySelectorAll('.cwr-tab').forEach((t) => t.addEventListener('click', () => showTab(t.getAttribute('data-cws-action') === 'cwr-tab-old' ? 'old' : 'new')));
-    if (must) showTab('new');
+    if (must) showTab('old');
     const oc = el.querySelector('.cwr-old-code');
     if (oc) {
       oc.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); oldGo(); } });
@@ -1206,6 +1212,13 @@ async function welcomeScreen(opts) {
       oc.addEventListener('input', () => { if (pinFor && parseVaultCode(oc.value).code !== pinFor) { pinRow(false); el.querySelector('.cwr-old-msg').textContent = ''; } });
       el.querySelector('.cwr-old-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); oldGo(); } });
       el.querySelector('[data-cws-action="cwr-old-send"]').addEventListener('click', () => sendCode());
+      /* Forgot your vault code? opens (and closes) the recovery right under it, the focus in its email box. */
+      const fg = el.querySelector('.cwr-old-forgot'), rec = el.querySelector('.cwr-old-rec');
+      fg.addEventListener('click', () => {
+        const open = rec.hidden;
+        rec.hidden = !open; fg.setAttribute('aria-expanded', String(open));
+        if (open) { const m = el.querySelector('.cwr-old-mail'); try { m.focus({ preventScroll: true }); m.scrollIntoView({ block: 'nearest' }); } catch (x) {} }
+      });
       el.querySelector('.cwr-old-mail').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendCode(); } });
       el.querySelector('.cwr-old-mailpin').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendCode(); } });
     }
@@ -1233,6 +1246,7 @@ async function welcomeScreen(opts) {
     });
   };
   wire();
+  if (_welcomeFirst && tuck) welcomeNotes(d);
   let busy = false;
   async function go() {
     if (!d.el || busy) return;
@@ -1289,8 +1303,8 @@ const OPENED_KEY = 'cw.welcome.opened.v1';
 let _welcomeFirst = false;   // the welcome on screen is the first one this browser has seen
 function leadText(reason) {
   if (_welcomeFirst) return '';
-  if (reason === 'settings') return 'A vault code opens Settings.';
-  if (reason === 'play' || reason === 'tab' || reason === 'auto') return 'A vault code lets you play, create one or use your old one.';
+  if (reason === 'settings') return 'Log in or sign up to open Settings.';
+  if (reason === 'play' || reason === 'tab' || reason === 'auto') return 'Log in or sign up to play.';
   return '';
 }
 function leadHtml(reason) { const t = leadText(reason); return t ? '<div class="cwr-lead" role="status" style="' + LEAD + '">' + esc(t) + '</div>' : ''; }
@@ -1329,8 +1343,8 @@ function gateUpdate() {
    asks cwVaultHoldsPages), the wall and the Systems menu are hidden, and every way to the wall does nothing
    or slides the welcome out. Once the vault is saved everything opens up as before. */
 function pagesHeld() { return _gate === 'needed' && !window.__cwOffsite; }
-/* EVERY TAB AT ONCE: a vault saved in one tab of this browser (made new, or opened with Existing
-   member) lifts the holds in its other tabs too, with no reload. The saving tab leaves a mark (DONE_KEY);
+/* EVERY TAB AT ONCE: a vault saved in one tab of this browser (made with Sign up, or opened with
+   Log in) lifts the holds in its other tabs too, with no reload. The saving tab leaves a mark (DONE_KEY);
    the others hear it through the storage event and ask the vault again. A tab coming back into view asks
    too. Another tab that opened a different vault code: this tab follows it with one reload, as a code
    change always has. */
@@ -1407,6 +1421,144 @@ window.addEventListener('click', (e) => {
   if (_gate === 'needed') { welcomeScreen({ reason: 'settings' }); return; }
   if (_gate === 'checking') { gateSettled().then(() => { if (_gate === 'needed') welcomeScreen({ reason: 'settings' }); else openMe(); }); return; }
   openMe();
+}, true);
+/* TWO HAND-DRAWN NOTES, THE FIRST TIME ONLY (16 Nov 2026): on a screen with room beside the welcome (a
+   PC), "Write an alias" and "Set a PIN" fade in on the dimmed page to the left of the panel, each with a
+   drawn arrow that ends at the panel's edge, level with its field, so nothing in the panel is covered.
+   Never on a phone or a narrow window (less than NOTE_ROOM px beside the panel), never on a later opening.
+   A note goes once its field has something typed in it, or while Log in is chosen; both go with
+   the welcome. Reduced motion: shown at once, no fade. The arrows are drawn here as uneven pen strokes. */
+const NOTE_ROOM = 420;
+function noteStyles() {
+  if (document.getElementById('cwr-notes-style')) return;
+  const st = document.createElement('style');
+  st.id = 'cwr-notes-style';
+  st.textContent = `
+    .cwr-notes { position:absolute; inset:0; pointer-events:none; z-index:2; }
+    .cwr-note { position:absolute; opacity:0; transition:opacity .7s ease-out; color:var(--text);
+      font-family:"Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Neue", "Comic Sans MS", cursive; font-size:24px; line-height:1.15; font-weight:700; white-space:nowrap; }
+    .cwr-note.on { opacity:1; }
+    /* A slip of the panel's own paper, so the words read over any page behind, light or dark. */
+    .cwr-note .cwr-note-t { position:absolute; display:block; transform:rotate(-4deg); transform-origin:right center; padding:3px 15px 7px;
+      border:1.5px solid rgba(var(--accent-rgb), .6); border-radius:14px 10px 15px 9px; background:var(--bg-1, var(--bg)); box-shadow:0 10px 26px -12px rgba(0,0,0,.7); }
+    .cwr-note svg { position:absolute; left:0; top:0; overflow:visible; }
+    .cwr-note .cwr-pen-u { stroke:var(--bg); stroke-width:7.5; fill:none; stroke-linecap:round; stroke-linejoin:round; opacity:.85; }
+    .cwr-note .cwr-pen { stroke:var(--accent); fill:none; stroke-linecap:round; stroke-linejoin:round; }
+    .cwr-out .cwr-note { opacity:0 !important; transition:opacity .25s linear; }
+    @media (prefers-reduced-motion: reduce) { .cwr-note, .cwr-out .cwr-note { transition:none; } }
+  `;
+  document.head.appendChild(st);
+}
+/* A pen line from a to b through a bend: two strokes that do not quite meet, a little uneven. */
+function penArrow(ax, ay, bx, by, bend) {
+  const mx = (ax + bx) / 2, my = (ay + by) / 2, dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len, cx = mx + nx * bend, cy = my + ny * bend;
+  const f = (v) => Math.round(v * 10) / 10;
+  const q = (o1, o2, o3) => 'M' + f(ax + nx * o1) + ' ' + f(ay + ny * o1) + ' Q' + f(cx + nx * o2) + ' ' + f(cy + ny * o2) + ' ' + f(bx + nx * o3) + ' ' + f(by + ny * o3);
+  /* The head: two short strokes back from the tip, along the curve's last direction, one longer. */
+  const tx = bx - cx, ty = by - cy, tl = Math.hypot(tx, ty) || 1, ux = tx / tl, uy = ty / tl;
+  const head = (ang, l) => { const c = Math.cos(ang), s = Math.sin(ang); const hx = -(ux * c - uy * s) * l, hy = -(ux * s + uy * c) * l; return 'M' + f(bx + hx) + ' ' + f(by + hy) + ' L' + f(bx + 0.6) + ' ' + f(by - 0.4); };
+  return { main: q(0, 0, 0), echo: q(1.4, -2.2, 0.6), head1: head(0.52, 17), head2: head(-0.46, 13) };
+}
+function welcomeNotes(d) {
+  const el = d && d.el;
+  if (!el || barMode()) return;
+  noteStyles();
+  const box = document.createElement('div');
+  box.className = 'cwr-notes';
+  box.setAttribute('aria-hidden', 'true');
+  el.appendChild(box);
+  const defs = [
+    { sel: '.cwr-alias', text: 'Write an alias', up: true },
+    { sel: '.cwr-wpin-a', text: 'Set a PIN', up: false },
+  ];
+  const notes = defs.map((n) => {
+    const w = document.createElement('div');
+    w.className = 'cwr-note';
+    w.innerHTML = '<svg width="1" height="1" aria-hidden="true"><path class="cwr-pen-u"/><path class="cwr-pen-u"/><path class="cwr-pen-u"/>' +
+      '<path class="cwr-pen" style="stroke-width:2.8"/><path class="cwr-pen" style="stroke-width:1.3; opacity:.7"/><path class="cwr-pen" style="stroke-width:2.6"/><path class="cwr-pen" style="stroke-width:2.2"/></svg>' +
+      '<span class="cwr-note-t"></span>';
+    w.querySelector('.cwr-note-t').textContent = n.text;
+    box.appendChild(w);
+    return Object.assign({ w, gone: false, shown: false }, n);
+  });
+  const modal = el.querySelector('.modal');
+  let started = false;
+  function lay() {
+    if (!el.isConnected) return false;
+    const m = modal && modal.getBoundingClientRect();
+    const room = !!m && m.left >= NOTE_ROOM && !barMode() && !document.documentElement.classList.contains('cw-small');
+    for (const n of notes) {
+      const f = el.querySelector(n.sel);
+      const fr = f && f.getClientRects().length ? f.getBoundingClientRect() : null;
+      const ok = room && !n.gone && !!fr && fr.bottom > m.top + 8 && fr.top < Math.min(m.bottom, innerHeight) - 8;
+      if (!ok) { n.w.classList.remove('on'); if (!room || n.gone) n.w.style.visibility = 'hidden'; continue; }
+      /* The arrow ends 10 px short of the panel, level with the field; the words sit up and to the left
+         (alias) or down and to the left (PIN), so the two arrows come in from different sides. */
+      const tipX = m.left - 10, tipY = fr.top + fr.height / 2;
+      const startX = tipX - 150, startY = tipY + (n.up ? -46 : 54);
+      const a = penArrow(startX, startY, tipX, tipY, n.up ? 22 : -22);
+      const ps = n.w.querySelectorAll('path');
+      [a.main, a.head1, a.head2].forEach((v, i) => ps[i].setAttribute('d', v));
+      ps[3].setAttribute('d', a.main); ps[4].setAttribute('d', a.echo); ps[5].setAttribute('d', a.head1); ps[6].setAttribute('d', a.head2);
+      const t = n.w.querySelector('.cwr-note-t');
+      t.style.right = (innerWidth - startX + 4) + 'px'; t.style.left = 'auto';
+      t.style.top = Math.round(startY - t.offsetHeight / 2) + 'px';
+      n.w.style.left = '0'; n.w.style.top = '0'; n.w.style.right = '0'; n.w.style.bottom = '0';
+      /* The words must fit beside the arrow, on screen. */
+      const tr = t.getBoundingClientRect();
+      if (tr.left < 12) { n.w.style.visibility = 'hidden'; n.w.classList.remove('on'); continue; }
+      n.w.style.visibility = '';
+      if (started) n.w.classList.add('on');
+    }
+    return true;
+  }
+  let raf = 0;
+  const again = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; if (!lay()) stop(); }); };
+  const watch = () => { if (!el.isConnected) { stop(); return; } again(); };
+  const poll = setInterval(watch, 500);   // the panel's own layout settling (fonts, the avatar row)
+  window.addEventListener('resize', again);
+  if (modal) modal.addEventListener('scroll', again, { passive: true });
+  function stop() { clearInterval(poll); window.removeEventListener('resize', again); }
+  const field = (sel) => el.querySelector(sel);
+  const typed = (n, sel) => { const f = field(sel); if (f) f.addEventListener('input', () => { if (String(f.value || '').trim()) { n.gone = true; n.w.classList.remove('on'); } }); };
+  typed(notes[0], '.cwr-alias'); typed(notes[1], '.cwr-wpin-a');
+  lay();
+  /* After the panel has slid out (at once with reduced motion). */
+  setTimeout(() => { started = true; lay(); }, reduceMotion() ? 0 : slideMs() + 80);
+}
+/* KEYS AND THE REMOTE REACH THE TUCKED WELCOME (16 Nov 2026). While it waits in its tab (no vault, our
+   own address): Down from the round person button and Right from Home's film slide it out (nav.js asks
+   here before it moves, so the pad's arrows count too), and Back on a page, after the page has done what
+   it does (a held page stays; Keyboard shortcuts steps back to Home), slides it out as well. */
+function welcomeWaits() { return _gate === 'needed' && !window.__cwOffsite && !_welcomeOpen && SUPPORTED && !!S.code; }
+window.cwNavHook = (a, dir) => {
+  if (!a || !a.closest || !welcomeWaits()) return false;
+  if ((dir === 'down' && a.closest('#cw-me .cw-me-btn')) || (dir === 'right' && a.id === 'home-film')) { welcomeScreen({ reason: 'tab' }); return true; }
+  return false;
+};
+const BACK_KEYS = new Set(['Escape', 'Esc', 'GoBack', 'BrowserBack', 'XF86Back', 'Backspace']);
+let _backAt = 0;
+window.addEventListener('keydown', (e) => {
+  if (!(BACK_KEYS.has(e.key) || e.keyCode === 4 || e.keyCode === 10009 || e.keyCode === 461) || e.repeat) return;
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const t = e.target;
+  if (e.key === 'Backspace' && t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  if (t && t.closest && t.closest('#cw-notify-host, .toast-host')) return;   // Back on a message closes only the message
+  if (!welcomeWaits()) return;
+  /* Only over a page: not over a film, a game or another window (the Keyboard shortcuts window is a page). */
+  let top = null; try { top = window.GnwKeys && window.GnwKeys.topLayer ? window.GnwKeys.topLayer() : null; } catch (x) {}
+  if (top && top.id !== 'gk-help') return;
+  if (document.querySelector('.overlay.open:not(#gk-help), #video-player-overlay.open')) return;
+  const now = Date.now();
+  if (now - _backAt < 400) return;   // a remote's Back arrives twice (its own code, then GoBack from keys.js)
+  _backAt = now;
+  setTimeout(() => {
+    if (!welcomeWaits()) return;
+    let t2 = null; try { t2 = window.GnwKeys && window.GnwKeys.topLayer ? window.GnwKeys.topLayer() : null; } catch (x) {}
+    if (t2 || document.querySelector('.overlay.open, #video-player-overlay.open')) return;
+    welcomeScreen({ reason: 'tab' });
+  }, 60);
 }, true);
 /* The first load on this browser opens it; after that it waits in the tab (and slides out once a visit). */
 function welcomeOnStart() {
@@ -1826,15 +1978,16 @@ function replaceKeyDialog() {
   return d;
 }
 
-/* Settings, Recovery email: its own words (Lost your code? needs the email and the PIN together). */
+/* Settings, Recovery email: its own words (Forgot your vault code? needs the email and the PIN together). */
 function emailWords() {
   const inp = document.getElementById('vault-email-input');
   const sec = inp && inp.closest('.vault-section'), p = sec && sec.querySelector('p');
-  if (p && !p.__reach) { p.__reach = true; p.innerHTML = 'Stored against this vault so <em>Lost your code?</em> below can mail the code to you, once you also enter this vault\'s PIN. Not used for login. You can leave this blank.'; }
+  if (p && !p.__reach) { p.__reach = true; p.innerHTML = 'Used only so <em>Forgot your vault code?</em> below can mail your code to you, once you also enter this vault\'s PIN. We keep a scrambled fingerprint of it and a short reminder like p•••@gmail.com, never the address itself. Not used to log in. You can leave this blank.'; }
 }
 
 /* ---- Settings, Recovery email: once a vault has a PIN and an email, changing or clearing the email needs the PIN
-   (otherwise someone with only the vault code could take the code recovery away from the vault's owner) ---- */
+   (otherwise someone with only the vault code could take the code recovery away from the vault's owner). The save goes
+   through index.html's vaultSetEmail (recover-vault, action save); the page shows only the hint it answers. ---- */
 let _origEmail = null;
 function wrapEmail() {
   const cur = window.saveVaultEmail;
@@ -1865,11 +2018,13 @@ function wrapEmail() {
       busy = true; msg.style.color = 'var(--muted)'; msg.textContent = 'Checking…';
       try {
         const x = await P.pinStretch(v, u8(pp.salt, 16), pp.iterations);
-        await vcall(VF.changeEmail(S.code, email || null, P.b64u(x)));
+        const r = typeof window.vaultSetEmail === 'function' ? await window.vaultSetEmail(email, P.b64u(x)) : { ok: false, error: 'The page is still starting. Try again in a moment.' };
+        if (!r.ok) throw Object.assign(new Error(r.error || 'refused'), { code: r.code || 'refused', info: r.info || {} });
         inp.value = ''; d.close();
-        if (out) { out.textContent = email ? 'Saved: you can recover via ' + email + ' if you ever lose your code.' : 'Recovery email cleared.'; out.style.color = 'var(--accent)'; }
+        if (typeof window.vaultShowRecovery === 'function') window.vaultShowRecovery(r.hint || null);
+        if (out) { out.textContent = email ? 'Saved. Forgot your vault code? can now mail your code to that address.' : 'Recovery email removed.'; out.style.color = 'var(--accent)'; }
         S.pinParams = null; loadPinParams();
-      } catch (e) { msg.style.color = '#f08a5d'; msg.textContent = e.code === 'bad_email' ? 'That email address does not look right.' : pinError(e); inp.value = ''; }
+      } catch (e) { msg.style.color = '#f08a5d'; msg.textContent = e.code === 'bad_email' ? 'That email address does not look right.' : (e.code === 'pin_incorrect' || e.code === 'pin_locked' || e.code === 'vault_down') ? pinError(e) : (e.message || pinError(e)); inp.value = ''; }
       busy = false;
     }
     const wire = () => { if (!d.el) { setTimeout(wire, 200); return; } d.el.querySelector('.cwr-pin-form').addEventListener('submit', (e) => { e.preventDefault(); go(); }); };

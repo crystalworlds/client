@@ -2467,6 +2467,115 @@
         #video-body .vmf-sf .vmf-done { background:var(--accent); border-color:var(--accent); color:var(--on-accent,#0a0e14); }
         #video-body .vmf-sf .vmf-done:focus-visible { background:var(--accent); }
       }
+      /* ONE FILTER ON THE SEARCH BAR (20 Nov 2026; mfMenuHTML). The button, the chips row under the
+         search line, the panel: a drop-down of four columns on a computer (two from 761 to 1099 px),
+         the sheet with four tabs on a phone. No hover anywhere: hover only tints. */
+      #video-body .vtb .filter-bar { flex-wrap:wrap; row-gap:6px; }
+      #video-body .vtb .filter-bar .search { flex:1 1 0; }
+      #video-body .vtb .filter-bar .vmf-dd { order:2; }
+      /* The funnel only, at every width (20 Nov 2026); the tooltip and spoken name stay "Filter". */
+      #video-body .fp-btn { gap:3px; padding:0 6px 0 9px; }
+      #video-body .fp-btn .vmf-n { min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:9px; background:var(--accent); color:var(--on-accent,#0a0e14); font-size:11px; font-weight:800; line-height:18px; text-align:center; }
+      #video-body .fp-btn.vmf-on { border-color:var(--accent); background:rgba(var(--accent-rgb),.14); }
+      @media (max-width: 760px) { #video-body .fp-btn { padding:0 6px 0 8px; } }
+      #video-body .fp-chips { order:3; flex:1 0 100%; display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden; white-space:nowrap; padding:2px 1px; box-sizing:border-box; }
+      #video-body .fp-chips[hidden], #video-body .vtb .filter-bar.vs-open .fp-chips { display:none; }
+      #video-body .fp-chip { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; height:28px; margin:0; padding:0 4px 0 11px; box-sizing:border-box;
+        border:1px solid var(--accent); border-radius:14px; background:rgba(var(--accent-rgb),.14); color:var(--text);
+        font:inherit; font-size:12.5px; font-weight:600; line-height:1; cursor:pointer; }
+      #video-body .fp-chip[hidden] { display:none; }
+      #video-body .fp-chip .fp-x { width:18px; height:18px; border-radius:9px; display:grid; place-items:center; color:var(--muted); background:rgba(127,127,127,.14); }
+      #video-body .fp-chip .fp-x svg { width:10px; height:10px; stroke-width:2.6; }
+      #video-body .fp-chip.fp-plain { padding:0 11px; border-color:var(--line); background:transparent; color:var(--accent); font-weight:700; }
+      #video-body .fp-chip:hover { background:rgba(var(--accent-rgb),.22); }
+      #video-body .fp-chip:focus-visible { outline:var(--focus-width,3px) solid var(--focus-ring,#5dc8f0); outline-offset:2px; }
+      @media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px) {
+        #video-body .fp-chips { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; padding:3px 2px; }
+        #video-body .fp-chips::-webkit-scrollbar { display:none; }
+        #video-body .fp-chip { height:34px; font-size:13px; }
+        #video-body .fp-chip .fp-x { width:22px; height:22px; border-radius:11px; }
+      }
+      body.gnw-tv #video-body .fp-chip { height:36px; font-size:14px; }
+      #video-body .fp-dim { position:fixed; inset:0; z-index:19; background:rgba(0,0,0,.5); }
+      #video-body .fp-dim[hidden] { display:none; }
+      /* The panel. Not the films menu's grid: a head, the groups, a foot (the foot on the sheet only). */
+      #video-body .vmf-menu.fp { display:flex; flex-direction:column; gap:0; padding:0; width:auto; min-width:0; max-width:none; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scroll-padding:58px 0 12px; }
+      #video-body .vmf-menu.fp[hidden] { display:none; }
+      #video-body .fp-top { position:sticky; top:0; z-index:2; background:var(--panel,#16161a); border-bottom:1px solid var(--line); }
+      #video-body .fp-head { display:flex; align-items:center; gap:10px; padding:8px 8px 8px 16px; }
+      #video-body .fp-title { font-size:15px; font-weight:800; }
+      #video-body .fp-n { flex:1 1 auto; min-width:0; font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      #video-body .fp-head .fp-clear { width:auto; flex:0 0 auto; min-height:32px; padding:0 12px; border:1px solid var(--line); border-radius:8px; font-weight:700; }
+      #video-body .fp-close { flex:0 0 auto; width:36px; height:36px; display:grid; place-items:center; margin:0; padding:0; background:transparent; border:1px solid transparent; border-radius:9px; color:var(--text); cursor:pointer; }
+      #video-body .fp-close svg { width:18px; height:18px; }
+      #video-body .fp-close:focus-visible { outline:var(--focus-width,3px) solid var(--focus-ring,#5dc8f0); outline-offset:2px; }
+      #video-body .fp-tabs { display:none; }
+      #video-body .fp-cols { display:grid; grid-template-columns:1fr 1fr 1.45fr 1.05fr; }
+      #video-body .vmf-menu.fp-nofilms .fp-cols { grid-template-columns:1fr 1fr 1fr; }
+      #video-body .fp-col { display:flex; flex-direction:column; gap:2px; min-width:0; padding:10px 12px 14px; border-right:1px solid var(--line); }
+      #video-body .fp-col:last-child { border-right:0; }
+      #video-body .fp-h { padding:2px 6px 4px; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+      #video-body .fp-sub { padding:8px 6px 4px; font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+      #video-body .fp-tip, #video-body .fp-off { margin:6px 6px 0; font-size:11.5px; line-height:1.45; color:var(--muted); white-space:normal; }
+      #video-body .fp-off { color:var(--text); font-size:13px; margin:4px 6px 8px; }
+      #video-body .fp .vtb-item { min-height:34px; }
+      #video-body .fp .vtb-item .vtb-hint { margin-left:auto; }
+      #video-body .fp-kind svg { color:var(--accent); }
+      #video-body .fp-kind[hidden] { display:none; }
+      #video-body .fp-tags { display:flex; flex-wrap:wrap; gap:5px; padding:0 4px; }
+      #video-body .fp-tags .vtb-item { width:auto; min-height:28px; padding:0 10px; gap:6px; border:1px solid var(--line); border-radius:14px; background:var(--bg-1); font-size:12.5px; }
+      #video-body .fp-tags .vtb-item.active { border-color:var(--accent); background:rgba(var(--accent-rgb),.16); font-weight:700; }
+      #video-body .fp-tags .vmf-box { display:none; }
+      #video-body .fp .vmf-az { grid-template-columns:repeat(7, 1fr); gap:3px; padding:0 4px; max-width:340px; }
+      #video-body .fp .vmf-az .vtb-item { min-height:28px; min-width:0; border-radius:6px; background:var(--bg-1); }
+      #video-body .fp-swi { margin-top:6px; }
+      #video-body .fp-swi .fp-sw { position:relative; flex:0 0 auto; width:32px; height:18px; margin-left:auto; border-radius:9px; background:var(--bg-3,rgba(127,127,127,.25)); border:1px solid var(--line); box-sizing:border-box; }
+      #video-body .fp-swi .fp-sw::after { content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:var(--muted); transition:left .15s; }
+      #video-body .fp-swi.active .fp-sw { background:var(--accent); border-color:var(--accent); }
+      #video-body .fp-swi.active .fp-sw::after { left:16px; background:var(--on-accent,#0a0e14); }
+      #video-body .fp-col[data-fp-g="films"] .fp-swi { border:1px solid var(--line); border-radius:10px; min-height:44px; padding:0 12px; }
+      #video-body .fp .vmf-note { max-width:none; padding:2px 6px 4px; }
+      #video-body .vmf-menu.fp .vmf-sf { display:none; }
+      body.gnw-tv #video-body .fp .vtb-item { min-height:44px; font-size:15px; }
+      /* From 761 to 1099 px: two columns (Order and Games above, Films and series and Display below). */
+      @media (max-width: 1099px) {
+        #video-body .fp-cols, #video-body .vmf-menu.fp-nofilms .fp-cols { grid-template-columns:1fr 1fr; }
+        #video-body .fp-col:nth-child(2n) { border-right:0; }
+        #video-body .fp-col:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+        #video-body .vmf-menu.fp-nofilms .fp-col:nth-child(3) { grid-column:1 / -1; border-right:0; }
+      }
+      /* The sheet: one group at a time under four tabs, the foot in thumb reach. */
+      @media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px) {
+        #video-body .vmf-dd .vmf-menu.fp { scroll-padding:112px 0 84px; }
+        #video-body .fp-head { padding:8px 8px 4px 16px; }
+        #video-body .fp-title { font-size:17px; }
+        #video-body .fp-n { font-size:13px; }
+        #video-body .fp-head .fp-clear { display:none; }
+        #video-body .fp-close { width:44px; height:44px; }
+        #video-body .fp-close svg { width:22px; height:22px; }
+        #video-body .fp-tabs { display:flex; gap:4px; padding:0 8px; }
+        #video-body .fp-tab { flex:1 1 0; justify-content:center; gap:5px; min-height:44px; padding:0 4px; border:0; border-bottom:3px solid transparent; border-radius:0; color:var(--muted); font-size:14px; font-weight:700; }
+        #video-body .fp .fp-tab .vtb-lbl { flex:0 0 auto; }
+        #video-body .fp .fp-tab .fp-tc:empty { display:none; }
+        #video-body .fp-tab .fp-tc { font-style:normal; color:var(--accent); font-weight:800; }
+        #video-body .fp-tab.active { color:var(--text); border-bottom-color:var(--accent); background:transparent; }
+        #video-body .fp-tab:focus-visible { outline:var(--focus-width,3px) solid var(--focus-ring,#5dc8f0); outline-offset:-3px; }
+        #video-body .fp-cols { display:block; }
+        #video-body .fp-col { display:none; border:0 !important; padding:12px 12px 16px; }
+        #video-body .fp-col.fp-on { display:flex; }
+        #video-body .fp-col > .fp-h { display:none; }
+        #video-body .fp .vtb-item { min-height:44px; font-size:15px; }
+        #video-body .fp .vtb-item:focus-visible { outline:var(--focus-width,3px) solid var(--focus-ring,#5dc8f0); outline-offset:2px; }
+        #video-body .fp .vmf-box { width:18px; height:18px; border-radius:5px; }
+        #video-body .fp-tags { gap:8px; }
+        #video-body .fp-tags .vtb-item { min-height:40px; padding:0 14px; border-radius:20px; font-size:14px; }
+        #video-body .fp .vmf-az { gap:8px; max-width:520px; }
+        #video-body .fp .vmf-az .vtb-item { min-height:44px; border:1px solid var(--line); border-radius:10px; font-size:16px; }
+        #video-body .fp-tip { font-size:13px; }
+        #video-body .vmf-menu.fp .vmf-sf { display:flex; }
+      }
+      /* THE SYSTEMS MENU'S TOP ROW SINCE 20 NOV 2026: the collections and Close only. */
+      #video-body .vgames-menu .vgames-head.vgh-lean, #video-body .vgames-menu.vg-full .vgames-head.vgh-lean { grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"coll close"; }
       /* SORTING IS TWO ROWS OF CHIPS (19 Oct): "Movies / Shows >" then
          Date added, Release date, Name, Rating, Shuffle; "Games >" then Release
          date, Name, Rating, Shuffle. One chip per row is lit; choosing the lit
@@ -2594,7 +2703,11 @@
       #video-body .vtb .filter-bar.vs-open { flex-direction:column; align-items:stretch; gap:6px; padding:6px 8px 0;
         border:1px solid var(--accent); border-radius:10px; background:var(--bg-1); }
       #video-body .vtb .filter-bar.vs-open .search { border-color:transparent; background:transparent; padding-left:4px; padding-right:4px; }
-      #video-body .vs-recent { display:flex; align-items:center; gap:8px; min-width:0; }
+      /* RECENT STAYS INSIDE THE BAR (20 Nov 2026): the search line wraps (for the Filter chips row), and a
+         wrapping column sizes its line to its widest item, so the Recent cards' full width pushed the list past the
+         bar's right edge. Open, the line does not wrap: Recent takes the bar's width and its cards scroll inside it. */
+      #video-body .vtb .filter-bar.vs-open { flex-wrap:nowrap; }
+      #video-body .vs-recent { display:flex; align-items:center; gap:8px; min-width:0; max-width:100%; }
       #video-body .vs-recent[hidden] { display:none; }
       #video-body .vs-recent-head { flex:0 0 auto; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
       #video-body .vs-recent-row { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:6px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding:3px; min-height:50px; box-sizing:border-box; }
@@ -2903,7 +3016,38 @@
       #video-body .vtb .view-mode-row > .vgames-wrap { display:contents; }   /* nothing of it stays in the bar's row */
       /* OFF OUR OWN ADDRESS (28 Oct): no page buttons on the bar (index.html sets html.cw-offsite). */
       html.cw-offsite #video-home-btn, html.cw-offsite #video-compat-btn,
-      html.cw-offsite #video-timeline-btn, html.cw-offsite #video-about-btn, html.cw-offsite #video-features-btn, html.cw-offsite #video-stories-btn { display:none !important; }
+      html.cw-offsite #video-timeline-btn, html.cw-offsite #video-about-btn, html.cw-offsite #video-features-btn, html.cw-offsite #video-stories-btn,
+      html.cw-offsite #video-body .vinfo-dd { display:none !important; }
+      /* THE INFO MENU (20 Nov 2026): under its button, kept to the right; Emulator Research opens a list in place. */
+      #video-body .vinfo-dd .vtb-menu { left:auto; right:0; min-width:240px; max-height:calc(100vh - 16px); }
+      #video-body .vinfo-btn.vinfo-on { border-color:rgba(var(--accent-rgb),.6); }
+      #video-body .vinfo-menu .vtb-item { min-height:40px; }
+      #video-body .vinfo-menu .vinfo-win[aria-pressed="true"] { background:rgba(var(--accent-rgb),.14); font-weight:700; }
+      #video-body .vinfo-menu .vinfo-win[aria-pressed="true"] svg { color:var(--accent); }
+      #video-body .vinfo-menu .vinfo-chev { width:14px; height:14px; margin-left:auto; transition:transform .15s; }
+      #video-body .vinfo-menu .vinfo-research[aria-expanded="true"] .vinfo-chev { transform:rotate(90deg); color:var(--accent); }
+      #video-body .vinfo-sys { display:flex; flex-direction:column; gap:2px; margin:0 0 4px 22px; padding-left:8px; border-left:2px solid var(--line); }
+      #video-body .vinfo-sys[hidden] { display:none; }
+      #video-body .vinfo-sys .vtb-item { min-height:36px; font-size:13px; }
+      html.cw-nodocs #video-body .vinfo-research, html.cw-nodocs #video-body .vinfo-sys { display:none !important; }
+      body.gnw-tv #video-body .vinfo-menu .vtb-item { min-height:48px; font-size:15px; }
+      @media (pointer: coarse) { #video-body .vinfo-menu .vtb-item { min-height:44px; } }
+      /* THE FLY-OUT (20 Nov 2026): on a PC layout (not mfSheet) Emulator Research opens its systems as a sub-menu
+         beside the Info menu, to its right, or to its left where the right has no room. The menu itself has only
+         four rows then, so it does not clip its child. */
+      /* The (i) and the down arrow at every width (20 Nov 2026): no word; the arrow says there is more. */
+      #video-body .vtb-btn.vinfo-btn { gap:2px; padding:0 6px 0 9px; }
+      /* The same down arrow on Filter (20 Nov 2026): after the funnel and its number. */
+      #video-body .vtb-btn .vinfo-caret { display:inline-block; width:12px; height:12px; stroke-width:2.4; color:var(--muted); }
+      body.gnw-tv #video-body .vtb-btn .vinfo-caret { width:14px; height:14px; }
+      #video-body .vinfo-menu.vinfo-fly { overflow:visible; max-height:none; }
+      #video-body .vinfo-menu.vinfo-fly .vinfo-sys { position:absolute; left:calc(100% + 4px); right:auto; top:var(--vinfo-fly-top, 40px); margin:0; z-index:2;
+        min-width:220px; max-height:calc(100vh - 16px); overflow:auto; box-sizing:border-box; padding:6px; border:1px solid var(--line); border-radius:12px;
+        background:var(--panel,#16161a); box-shadow:0 14px 40px rgba(0,0,0,.45); }
+      #video-body .vinfo-menu.vinfo-fly.vinfo-fly-left .vinfo-sys { left:auto; right:calc(100% + 4px); }
+      #video-body .vinfo-menu.vinfo-fly .vinfo-research .vinfo-chev, #video-body .vinfo-menu.vinfo-fly .vinfo-research[aria-expanded="true"] .vinfo-chev { transform:none; }
+      #video-body .vinfo-menu.vinfo-fly.vinfo-fly-left .vinfo-research .vinfo-chev { transform:rotate(180deg); }
+      #video-body .vinfo-menu.vinfo-fly .vinfo-research[aria-expanded="true"] { background:rgba(var(--accent-rgb),.10); }
       /* STORIES (7 Nov): only for a reader signed in with something to read (stories.js sets the class). */
       html:not(.cw-stories-on) #video-stories-btn { display:none !important; }
       /* Home, Compatibility, Timeline and About fill the window on a narrow screen (28 Oct:
@@ -3861,77 +4005,85 @@
   };
   const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
 
-  function toolbarHTML() {
-    /* THE THREE PEERS. One button each for Media, Widgets and Games -- the
-       same control, three times, because they are the same kind of decision.
-       Media is disabled (and reads as off) with no server signed in: the
-       button stays so the page still says it can show films, and greying it
-       says why it is not. */
-    const showBtn = (key, ic, title) => {
-      const off = key === 'media' && !mediaAvailable();
-      const on  = key === 'media' ? mediaShown() : videoState.show[key];
-      /* A CHECKBOX IN THE DISPLAY MENU (2026-10-19): the same button,
-         data-vshow and .active as before, so every handler that clicks or reads
-         it (emby.js, shortcuts.js) is unchanged; aria-checked follows .active. */
-      return `<button type="button" role="menuitemcheckbox" class="vtb-item${on ? ' active' : ''}${off ? ' is-disabled' : ''}"`
-        + ` data-vshow="${key}"${off ? ' disabled aria-disabled="true"' : ''}`
-        + ` title="${off ? 'Movies and shows: sign in to a media server first' : title}"`
-        + ` aria-checked="${!!on}"><span class="vtb-tick" aria-hidden="true"></span>${svg(ic)}<span class="vtb-lbl">${title}</span></button>`;
+  /* THE INFO MENU (20 Nov 2026). Emulator Research opens and closes its list of systems in place (a press,
+     Enter, the pad's A, or Right; Left closes it again); no hover anywhere. Each system opens its Emulation
+     page at its own address (/gb/emulation ...), the same way a pasted link does. Only where the site shows
+     those pages (index.html __cwNoDocs); off our own address the whole menu is hidden, like the old buttons. */
+  const INFO_KINDS = new Set(['compat', 'timeline', 'about']);
+  const INFO_SYS = [['game-and-watch', 'Game &amp; Watch'], ['game-and-watch-colour', 'Game &amp; Watch colour'], ['gb', 'Game Boy'], ['gbc', 'Game Boy Color'],
+    ['nes', 'NES'], ['famicom', 'Famicom'], ['fds', 'Famicom Disk System'], ['pokemon-mini', 'Pokémon mini'],
+    ['atari2600', 'Atari 2600'], ['atari5200', 'Atari 5200'], ['atari7800', 'Atari 7800'], ['atarilynx', 'Atari Lynx']];
+  IC.research = '<path d="M9 3.5h6"/><path d="M10 3.5v6L4.8 18.3A1.5 1.5 0 0 0 6.1 20.5h11.8a1.5 1.5 0 0 0 1.3-2.2L14 9.5v-6"/><line x1="7.5" y1="14.5" x2="16.5" y2="14.5"/>';
+  function infoMenuHTML() {
+    const it = (id, kind, label, icon) => `<button type="button" role="menuitem" class="vtb-item vinfo-win" id="${id}" aria-pressed="${aboutOpen && aboutKind === kind}" aria-controls="video-about">${svg(icon)}<span class="vtb-lbl">${label}</span></button>`;
+    return it('video-compat-btn', 'compat', 'Compatibility', '<line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/><polyline points="3.5 6 5 7.5 7.5 4.5"/><polyline points="3.5 12 5 13.5 7.5 10.5"/><polyline points="3.5 18 5 19.5 7.5 16.5"/>')
+      + `<button type="button" role="menuitem" class="vtb-item vinfo-research" aria-expanded="false" aria-controls="vinfo-sys">${svg(IC.research)}<span class="vtb-lbl">Emulator Research</span>${svg('<polyline points="9 6 15 12 9 18"/>').replace('<svg ', '<svg class="vinfo-chev" aria-hidden="true" ')}</button>`
+      + `<div class="vinfo-sys" id="vinfo-sys" role="group" aria-label="Emulator Research" hidden>`
+      + INFO_SYS.map(([k, l]) => `<button type="button" role="menuitem" class="vtb-item vinfo-doc" data-vinfo-doc="${k}"><span class="vtb-lbl">${l}</span></button>`).join('')
+      + `</div>`
+      + it('video-timeline-btn', 'timeline', 'Timeline', IC.timeline)
+      + it('video-about-btn', 'about', 'About', IC.info);
+  }
+  function infoResearch(m, open, focusFirst) {
+    const t = m && m.querySelector('.vinfo-research'), g = m && m.querySelector('.vinfo-sys');
+    if (!t || !g) return;
+    g.hidden = !open; t.setAttribute('aria-expanded', String(!!open));
+    if (m.classList.contains('vinfo-fly')) {
+      /* Level with Emulator Research, on the side with room, kept inside the window. */
+      m.classList.remove('vinfo-fly-left');
+      if (!open) return;
+      g.style.setProperty('--vinfo-fly-top', '0px');
+      m.style.setProperty('--vinfo-fly-top', (t.offsetTop - 7) + 'px');
+      g.style.removeProperty('--vinfo-fly-top');
+      const mr = m.getBoundingClientRect(), gw = g.offsetWidth, vw = document.documentElement.clientWidth;
+      if (mr.right + 4 + gw > vw - 8 && mr.left - 4 - gw >= 8) m.classList.add('vinfo-fly-left');
+      const gr = g.getBoundingClientRect(), vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      if (gr.bottom > vh - 8) m.style.setProperty('--vinfo-fly-top', Math.max(8 - mr.top, (t.offsetTop - 7) - (gr.bottom - (vh - 8))) + 'px');
+      if (focusFirst) { const f = g.querySelector('.vinfo-doc'); if (f) { try { f.focus({ preventScroll: true }); } catch {} } }
+      return;
+    }
+    /* As tall as the room under the bar allows (the list makes it longer), scrolling inside itself beyond that. */
+    if (!m.hidden) {
+      const top = m.getBoundingClientRect().top, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      m.style.setProperty('max-height', Math.max(160, Math.floor(vh - 8 - top)) + 'px', m.hasAttribute('data-cw-top') ? 'important' : '');
+      if (open) { try { t.scrollIntoView({ block: 'nearest' }); } catch {} }
+    }
+    if (open && focusFirst) { const f = g.querySelector('.vinfo-doc'); if (f) { try { f.focus({ preventScroll: true }); f.scrollIntoView({ block: 'nearest' }); } catch {} } }
+  }
+  /* A system's Emulation page: its address goes in the bar and deeplinks.js opens it, exactly as when the
+     address is pasted, so the page's x, Escape and Back all close it onto what was under it. A page window
+     open now (Compatibility, Home ...) closes first; one held open for want of a vault stays, and the page
+     opens over it without an address of its own. */
+  function infoOpenDoc(key) {
+    if (window.__cwNoDocs || !window.CwDeepLink) return;
+    const r = '/' + key + '/emulation';
+    const go = () => {
+      try { history.replaceState(history.state, '', window.cwRouteHref ? window.cwRouteHref(r) : '#' + r); } catch {}
+      try { window.CwDeepLink.route(r); } catch (e) { console.warn('[info]', e); }
     };
-    /* Artwork mode: Hardware Photos / Box Art / 3D Box Art, sitting second in
-       the row exactly as they do on the Game & Watch toolbar. Plain titles,
-       like every other button here -- what they do not cover (films, and any
-       catalogue with no art for that mode) is visible the moment you press
-       one, and does not need saying in a tooltip. */
-    const aBtn = (mode, ic, title) =>
-      `<button type="button" role="menuitemradio" class="vtb-item${videoState.artMode === mode ? ' active' : ''}" data-vart="${mode}"`
-      + ` aria-checked="${videoState.artMode === mode}"><span class="vtb-tick" aria-hidden="true"></span>${svg(ic)}<span class="vtb-lbl">${title}</span></button>`;
-    /* THE MINIMAL TOOLBAR (2026-10-19: "minimal and smaller, for
-       more screen room"). Thirteen buttons became three dropdowns -- Views,
-       Sorting, Display -- then the search box, a divider and Settings, on ONE
-       line at desktop and phone width. Every former button is still here, with
-       its data-* attribute, inside its menu, so the delegated handler below,
-       continuerow.js and shortcuts.js's quick-jump actions work unchanged. The
-       menus are role="menu" (nav.js leaves their arrows to them) and closed
-       ones are [hidden], so the trigger stepping (gamepad.js tbItems) sees the
-       three buttons, the search box and Settings. Wiring: vtb* below. */
-    const sBtn = (mode, ic, title) =>
-      `<button type="button" role="menuitemradio" class="vtb-item${videoState.sort === mode ? ' active' : ''}" data-vsort="${mode}" aria-checked="${videoState.sort === mode}"><span class="vtb-tick" aria-hidden="true"></span>${svg(ic)}<span class="vtb-lbl">${title}</span><span class="vtb-hint"></span></button>`;
-    const gBtn = (mode, ic, title) =>
-      `<button type="button" role="menuitemradio" class="vtb-item${videoState.gameSort === mode ? ' active' : ''}" data-vgsort="${mode}" aria-checked="${videoState.gameSort === mode}"><span class="vtb-tick" aria-hidden="true"></span>${svg(ic)}<span class="vtb-lbl">${title}</span><span class="vtb-hint"></span></button>`;
-    /* The tooltips are fixed words (19 Oct); aria-label also names the current choice (syncToolbar). */
-    const ddBtn = (key, label) =>
-      `<button type="button" class="vtb-btn" data-vdd-btn="${key}" aria-haspopup="menu" aria-expanded="false" aria-controls="vtb-menu-${key}" title="${VTB_TIPS[key]}" aria-label="${label}"><span class="vtb-ics" aria-hidden="true"></span>${svg('<polyline points="6 9 12 15 18 9"/>').replace('<svg ', '<svg class="vtb-caret" aria-hidden="true" ')}</button>`;
-    /* Display (Views) and Sort, for the Systems strip's top row (28 Oct). */
-    const vtbDD = `<span class="vtb-dd" data-vdd="views">
-            ${ddBtn('views', 'Views')}
-            <div class="vtb-menu" id="vtb-menu-views" role="menu" aria-label="Views" hidden>
-              ${aBtn('hardware', IC.hardware, 'Live devices')}
-              ${aBtn('boxart',   IC.boxart,   'Box art')}
-              ${window.CW_BOX_ART_3D === true ? aBtn('boxart3d', IC.boxart3d, '3D box art') : ''}
-            </div>
-          </span>
-          <span class="vtb-dd" data-vdd="sort">
-            ${ddBtn('sort', 'Sorting')}
-            <div class="vtb-menu vtb-menu-sort" id="vtb-menu-sort" role="menu" aria-label="Sorting" hidden>
-              ${mediaAvailable() ? `<div class="vtb-col" role="group" aria-label="Films and series">
-                <div class="vtb-head" aria-hidden="true">Films and series</div>
-                ${sBtn('added',  IC.clock, 'Date added')}
-                ${sBtn('year',   IC.cal,   'Release date')}
-                ${sBtn('name',   IC.az,    'Name')}
-                ${sBtn('rating', IC.star,  'Rating')}
-                ${sBtn('random', IC.rand,  'Shuffle')}
-              </div>` : ''}
-              <div class="vtb-col" role="group" aria-label="Games">
-                <div class="vtb-head" aria-hidden="true">Games</div>${mediaAvailable() ? '<div class="vtb-gap" aria-hidden="true"></div>' : ''}
-                ${gBtn('year',   IC.cal,    'Release date')}
-                ${gBtn('name',   IC.az,     'Name')}
-                ${gBtn('rating', IC.star,   'Rating')}
-                ${gBtn('random', IC.rand,   'Shuffle')}
-                ${gBtn('most',   IC_MOST,   'Most played')}
-              </div>
-            </div>
-          </span>`;
+    if (!aboutOpen) { go(); return; }
+    if (typeof window.cwVaultHoldsPages === 'function' && window.cwVaultHoldsPages()) {
+      const html = window.cwSysDocHTML ? window.cwSysDocHTML(key, 'emulation') : '';
+      const lbl = (INFO_SYS.find(x => x[0] === key) || [key, key])[1].replace('&amp;', '&');
+      if (html && window.CwEmuCards && window.CwEmuCards.openDoc) window.CwEmuCards.openDoc({ fn: 'cwSysDocHTML', args: [key, 'emulation'], anchor: '', title: lbl, sub: 'Emulation' });
+      return;
+    }
+    /* The window gives its history entry back (a step Back, which lands a moment later): then the address. */
+    let done = false;
+    const after = () => { if (done) return; done = true; window.removeEventListener('popstate', after); setTimeout(go, 0); };
+    window.addEventListener('popstate', after);
+    setTimeout(after, 400);
+    aboutSet(false);
+  }
+  /* Focus going back to a window's own button: a button inside the shut Info menu cannot take it, so Info does. */
+  function winFocus(b) {
+    if (b && !b.getClientRects().length && b.closest && b.closest('.vinfo-menu')) b = document.getElementById('video-info-btn');
+    if (b) { try { b.focus({ preventScroll: true }); } catch {} }
+  }
+  function toolbarHTML() {
+    /* VIEWS, SORTING, THE CONTINUE ROW AND THE KINDS OF GAME LEFT THE SYSTEMS MENU (20 Nov 2026):
+       they are in the one Filter panel beside the search box now (mfMenuHTML), with the same
+       data-vart, data-vsort, data-vgsort, data-vcontinue and data-vg-type names. */
     return `${vgBrandHTML()}
       <div class="collection-toolbar vtb">
         <div class="view-mode-row vtb-row">
@@ -3946,16 +4098,15 @@
           <!-- STORIES (7 Nov): right of Features, the same window (stories.js draws it). Hidden unless signed in. -->
           <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-stories-btn" title="Stories" aria-label="Stories" aria-pressed="${aboutOpen && aboutKind === 'stories'}" aria-controls="video-about">${svg(IC.stories)}</button>
           </span>
-          <!-- DISPLAY AND SORT LIVE IN THE SYSTEMS STRIP NOW (28 Oct): vtbDD below,
-               drawn in the strip's top row by gamesMenuHTML. They stay inside this row's DOM (the strip is in
-               .vgames-wrap), so the row's own click handler still answers their items. -->
+          <!-- DISPLAY AND SORT LIVED IN THE SYSTEMS STRIP FROM 28 OCT; IN THE FILTER PANEL SINCE 20 NOV 2026
+               (beside the search box). The toolbar's click handler answers them there. -->
           <!-- NO DISPLAY MENU HERE ANY MORE (22 Oct): its buttons (Movies and shows,
                Widgets, Continue row) are icon buttons in the Systems menu's top row (vgDisplayHTML). -->
           <!-- SYSTEMS IS THE FOURTH BUTTON (19 Oct; it was an item in Display). -->
           <span class="vtb-dd vgames-wrap" data-vdd="systems">
             <!-- THE SYSTEMS TAB (28 Oct): drawn here, fixed to the right edge of the screen. -->
             <button type="button" class="vg-tab" data-vgames-menu="1" aria-haspopup="true" aria-expanded="false" title="${VTB_TIPS.systems}" aria-label="Systems and series">${svg('<polyline points="15 6 9 12 15 18"/>').replace('<svg ', '<svg class="vg-tab-chev" aria-hidden="true" ')}<span class="vg-tab-ic" aria-hidden="true">${vgTabIconHTML()}</span></button>
-            <div class="vgames-menu" hidden>${gamesMenuHTML(vtbDD)}</div>
+            <div class="vgames-menu" hidden>${gamesMenuHTML()}</div>
           </span>
           <!-- SETTINGS LIVES HERE ON THE MEDIA PAGE (2026-10-19): the top bar's
                #nav-vault-btn is hidden while this toolbar is on screen (CSS below) and
@@ -3966,10 +4117,13 @@
                ::before are equal flexible halves, so the four menu buttons are centred on the row.
                NO DIVIDERS ON THE BAR (23 Oct): the line before Compatibility is gone. -->
           <span class="vtb-end">
-          <!-- COMPATIBILITY LIST (21 Oct): left of Timeline, the same window (compat.js). -->
-          <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-compat-btn" title="Compatibility" aria-label="Compatibility list" aria-pressed="${aboutOpen && aboutKind === 'compat'}" aria-controls="video-about">${svg('<line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/><polyline points="3.5 6 5 7.5 7.5 4.5"/><polyline points="3.5 12 5 13.5 7.5 10.5"/><polyline points="3.5 18 5 19.5 7.5 16.5"/>')}</button>
-          <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-timeline-btn" title="Timeline" aria-label="Timeline" aria-pressed="${aboutOpen && aboutKind === 'timeline'}" aria-controls="video-about">${svg(IC.timeline)}</button>
-          <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-about-btn" title="About" aria-label="About" aria-pressed="${aboutOpen && aboutKind === 'about'}" aria-controls="video-about">${svg(IC.info)}</button>
+          <!-- THE INFO MENU (20 Nov 2026): Compatibility, Emulator Research (each system's Emulation page),
+               Timeline and About in one menu where About sat. The items keep the old buttons' ids, so the
+               windows, their addresses, Back, deeplinks.js and features.js open them as before. -->
+          <span class="vtb-dd vinfo-dd" data-vdd="info">
+            <button type="button" class="vtb-btn vtb-settings vinfo-btn${aboutOpen && INFO_KINDS.has(aboutKind) ? ' vinfo-on' : ''}" id="video-info-btn" data-vdd-btn="info" aria-haspopup="menu" aria-expanded="false" aria-controls="vtb-menu-info" title="Info" aria-label="Info">${svg(IC.info)}${svg('<polyline points="6 9 12 15 18 9"/>').replace('<svg ', '<svg class="vinfo-caret" aria-hidden="true" ')}</button>
+            <div class="vtb-menu vinfo-menu" id="vtb-menu-info" role="menu" aria-label="Info" hidden>${infoMenuHTML()}</div>
+          </span>
           <button type="button" class="vtb-btn vtb-settings" id="video-keys-btn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">${svg(IC.keyboard)}</button>
           <button type="button" class="vtb-btn vtb-settings" id="video-settings-btn" title="Settings" aria-label="Settings">${svg(IC.gear)}</button>
           </span>
@@ -3986,13 +4140,17 @@
             <button id="video-search-clear" class="video-refresh" type="button" title="Clear search" aria-label="Clear search" hidden>${svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>')}</button>
             <div id="video-progress"></div>
           </div>
-          <!-- FILTERS (5 Oct: "at the far right of the Media search bar"; built 24 Oct):
-               films and series only, shown while a media server is signed in and Movies and shows
-               are on (25 Oct; updateStrips keeps it in step). See mfMenuHTML(). -->
-          <span class="vtb-dd vmf-dd" data-vdd="mfilter"${mediaShown() ? '' : ' hidden'}>
-            <button type="button" class="vtb-btn${mfActive() ? ' vmf-on' : ''}" data-vdd-btn="mfilter" aria-haspopup="menu" aria-expanded="false" aria-controls="vtb-menu-mfilter" title="${VTB_TIPS.mfilter}" aria-label="${mfActive() ? 'Filters: ' + mfCount() + ' on' : 'Filters'}"><span class="vtb-ics" aria-hidden="true">${svg(IC.funnel)}${mfActive() ? '<span class="vmf-n">' + mfCount() + '</span>' : ''}</span>${svg('<polyline points="6 9 12 15 18 9"/>').replace('<svg ', '<svg class="vtb-caret" aria-hidden="true" ')}</button>
-            <div class="vtb-menu vmf-menu" id="vtb-menu-mfilter" role="menu" aria-label="Filter films and series" hidden>${mfMenuHTML()}</div>
+          <!-- FILTERS (5 Oct: "at the far right of the Media search bar"; built 24 Oct for films and series).
+               THE ONE FILTER SINCE 20 NOV 2026: games and films, always there (games are always on the wall);
+               the funnel and, on a wider screen, the word Filter; lit with a number while anything differs
+               from the start. See mfMenuHTML(). -->
+          <span class="vtb-dd vmf-dd" data-vdd="mfilter">
+            <button type="button" class="vtb-btn fp-btn${fpCount() ? ' vmf-on' : ''}" data-vdd-btn="mfilter" aria-haspopup="menu" aria-expanded="false" aria-controls="vtb-menu-mfilter" title="${VTB_TIPS.mfilter}" aria-label="${fpCount() ? 'Filter: ' + fpCount() + ' on' : 'Filter'}"><span class="vtb-ics" aria-hidden="true">${svg(IC.funnel)}</span>${fpCount() ? '<span class="vmf-n" aria-hidden="true">' + fpCount() + '</span>' : ''}${svg('<polyline points="6 9 12 15 18 9"/>').replace('<svg ', '<svg class="vinfo-caret" aria-hidden="true" ')}</button>
+            <div class="vtb-menu vmf-menu fp${fpFilmsGroup() ? '' : ' fp-nofilms'}" id="vtb-menu-mfilter" role="menu" aria-label="Filter" hidden>${mfMenuHTML()}</div>
           </span>
+          <!-- WHAT IS ON, AT A GLANCE (20 Nov 2026): a chip for each choice that differs from the start,
+               each with its cross, then Clear all (fpChipsPaint). No row while nothing is on. -->
+          <div class="fp-chips" role="group" aria-label="Filters that are on" hidden></div>
         </div>
       </div>
       <!-- THE LIBRARY IS A STRIP, NOT PART OF THE SEARCH BAR.
@@ -4006,6 +4164,7 @@
            wrapping, and the arrows either side are its only affordance (the
            native scrollbar is hidden). Both arrows hide themselves when
            everything already fits -- see updateCatArrows(). -->
+      <div class="fp-dim" aria-hidden="true" hidden></div>
       <div id="video-library" class="video-strip video-library" hidden>
         <div class="vp-head">Media Library</div>
         <div class="video-cat-scroller" id="video-cat-scroller">
@@ -4057,7 +4216,7 @@
    *  redrawn toolbar needs no re-wiring. Nothing depends on hover.
    * ===================================================================== */
   /* 24 Oct: the three centre buttons read Display, Sort, Filter. */
-  const VTB_TIPS = { views: 'Display', sort: 'Sort', display: 'Display', systems: 'Filter' };
+  const VTB_TIPS = { views: 'Display', sort: 'Sort', display: 'Display', systems: 'Systems' };   // Systems since 20 Nov 2026 (the Filter button has the word Filter)
   /* THE ABOUT AND TIMELINE WINDOWS (19 Oct). The page's own content,
      copied from #view-about or #view-series when opened, inside the same Game &
      Watch frame (index.html .about-pop rules keep the frame drawn on the Media
@@ -4150,6 +4309,7 @@
     for (const [id, k] of [['video-about-btn', 'about'], ['video-timeline-btn', 'timeline'], ['video-compat-btn', 'compat'], ['video-home-btn', 'home'], ['video-features-btn', 'features'], ['video-stories-btn', 'stories']]) {
       const b = document.getElementById(id); if (b) b.setAttribute('aria-pressed', String(aboutOpen && aboutKind === k));
     }
+    { const ib = document.getElementById('video-info-btn'); if (ib) ib.classList.toggle('vinfo-on', aboutOpen && INFO_KINDS.has(aboutKind)); }
     if (!p) return;
     if (aboutOpen && (!p.firstChild || p.dataset.kind !== aboutKind)) {
       homeRescue(p);
@@ -4293,7 +4453,7 @@
       ev.preventDefault(); ev.stopPropagation();
       const k = aboutKind;
       aboutSet(false);
-      const b = document.getElementById(k === 'timeline' ? 'video-timeline-btn' : k === 'compat' ? 'video-compat-btn' : k === 'home' ? 'video-home-btn' : k === 'features' ? 'video-features-btn' : k === 'stories' ? 'video-stories-btn' : k === 'keys' ? 'video-keys-btn' : 'video-about-btn'); if (b) { try { b.focus({ preventScroll: true }); } catch {} }
+      const b = document.getElementById(k === 'timeline' ? 'video-timeline-btn' : k === 'compat' ? 'video-compat-btn' : k === 'home' ? 'video-home-btn' : k === 'features' ? 'video-features-btn' : k === 'stories' ? 'video-stories-btn' : k === 'keys' ? 'video-keys-btn' : 'video-about-btn'); winFocus(b);
       return;
     }
     if (t.closest('#video-about .about-xbar')) return;
@@ -4349,7 +4509,7 @@
     if (ev.target && ev.target.closest && ev.target.closest('#cw-notify-host, .toast-host')) return;
     ev.preventDefault(); ev.stopPropagation();
     aboutSet(false);
-    const b = document.getElementById(aboutKind === 'timeline' ? 'video-timeline-btn' : aboutKind === 'compat' ? 'video-compat-btn' : aboutKind === 'home' ? 'video-home-btn' : aboutKind === 'features' ? 'video-features-btn' : aboutKind === 'stories' ? 'video-stories-btn' : aboutKind === 'keys' ? 'video-keys-btn' : 'video-about-btn'); if (b) { try { b.focus({ preventScroll: true }); } catch {} }
+    const b = document.getElementById(aboutKind === 'timeline' ? 'video-timeline-btn' : aboutKind === 'compat' ? 'video-compat-btn' : aboutKind === 'home' ? 'video-home-btn' : aboutKind === 'features' ? 'video-features-btn' : aboutKind === 'stories' ? 'video-stories-btn' : aboutKind === 'keys' ? 'video-keys-btn' : 'video-about-btn'); winFocus(b);
   }, true);
   /* THE SEARCH BOX CLOSES THE WINDOW (2 Nov: "Clicking, tapping or focusing the wall's
      search bar must close whatever window is open on top of the content page, so the search results
@@ -4383,6 +4543,7 @@
   function vtbClose(focusBtn) {
     const m = vtbOpenMenu(); if (!m) return false;
     m.hidden = true;
+    if (m.classList.contains('fp')) { try { fpDim(false); } catch {} }
     m.style.transform = '';
     const b = vtbBtnOf(m);
     if (b) { b.setAttribute('aria-expanded', 'false'); if (focusBtn) { try { b.focus({ preventScroll: true }); } catch {} } }
@@ -4395,6 +4556,7 @@
     /* The films and shows Filters on a phone (4 Nov 2026): a sheet from just under the search line to
        the screen's foot (CSS). A page window open over the wall (Home, About...) steps aside first,
        as it does when the search box is reached, so the sheet is never behind it. */
+    if (m.classList.contains('fp')) ['position', 'left', 'top', 'right', 'width'].forEach(p => m.style.removeProperty(p));
     if (m.classList.contains('vmf-menu') && mfSheet()) {
       if (aboutOpen) { try { aboutSet(false); } catch {} }
       const bar = m.closest('.filter-bar') || m.parentElement;
@@ -4405,6 +4567,21 @@
       return;
     }
     m.style.removeProperty('--vmf-top');
+    /* THE FILTER PANEL ON A COMPUTER (20 Nov 2026): under the whole bar, centred on it and kept 16 px
+       inside the window; four columns (about 900 px) from 1100 px wide, two below that; taller than
+       the room under the bar, it scrolls inside itself. */
+    if (m.classList.contains('fp')) {
+      const bar = m.closest('.collection-toolbar') || m.parentElement, br = bar.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const want = vw >= 1100 ? (m.classList.contains('fp-nofilms') ? 720 : 940) : 760;
+      const w = Math.max(280, Math.min(want, vw - 32));
+      const left = Math.max(16, Math.min(Math.round(br.left + br.width / 2 - w / 2), vw - 16 - w));
+      const top = Math.round(br.bottom + 6);
+      m.style.position = 'fixed'; m.style.left = left + 'px'; m.style.right = 'auto'; m.style.top = top + 'px'; m.style.width = w + 'px';
+      m.style.maxHeight = Math.max(160, Math.floor(vh - top - 16)) + 'px';
+      if (!m._vmfKeep) m.scrollTop = 0;
+      return;
+    }
     const r = m.getBoundingClientRect(), g = 8;
     let dx = 0;
     if (r.right > window.innerWidth - g) dx = (window.innerWidth - g) - r.right;
@@ -4421,9 +4598,12 @@
     vtbClose(false);
     if (!btn.closest('.vgames-menu')) { try { vgCloseMenu(); } catch {} }   // Display and Sort open inside the Systems strip (28 Oct)
     syncToolbar();
+    if (m.classList.contains('fp') && aboutOpen) { try { aboutSet(false); } catch {} }   // a page window steps aside, as for the search box
+    if (m.classList.contains('vinfo-menu')) { m.classList.toggle('vinfo-fly', !mfSheet()); infoResearch(m, false); }   // the Info menu opens with Emulator Research shut; a fly-out on a PC layout, in place on a phone
     m.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
     vtbPlace(m);
+    if (m.classList.contains('fp')) { try { fpDim(!mfSheet()); fpCountsPaint(m); } catch {} }
     const items = vtbItems(m);
     const it = items.find(x => x.getAttribute('aria-checked') === 'true') || items[0];
     if (it) { try { it.focus({ preventScroll: true }); } catch {} }
@@ -4441,13 +4621,14 @@
     if (typeof HTMLElement === 'undefined' || !HTMLElement.prototype.showPopover) return;
     const SEL = '#video-body .vtb-menu, #video-body .vgames-menu';
     const covered = () => { const w = document.getElementById('video-about'); return !!(w && !w.hidden) || !!document.querySelector('.overlay.open'); };
+    const noticeUp = () => { const h = document.getElementById('cw-notify-host'); return !!(h && h.isConnected && h.children.length); };
     /* DISPLAY AND SORT IN THE SYSTEMS STRIP ARE ALWAYS LIFTED (29 Oct: "the Sort menu renders
        inside the Systems menu frame, so on a PC it's cut to a thin strip"). The strip scrolls its
        own contents (overflow:auto), so a menu hanging below its last row was clipped to the strip's
        edge. Lifted, it sits over everything at its button, and is moved up (above its button if
        there is room, else to the screen's foot) when it would run off the bottom of the screen. */
     const inStrip = m => m.classList.contains('vtb-menu') && !!m.closest('.vgames-menu');
-    const PROPS = ['position', 'inset', 'margin', 'width', 'translate', 'max-height', 'overflow'];
+    const PROPS = ['position', 'inset', 'margin', 'width', 'height', 'translate', 'max-height', 'overflow'];
     /* The menus lifted now, so a scroll with none lifted costs nothing (2026-10-24: the
        document-wide look-up below ran on every scroll event, about 1 ms a frame on a long wall). */
     const liftedNow = new Set();
@@ -4459,16 +4640,19 @@
       PROPS.forEach(p => m.style.removeProperty(p));
     };
     const up = m => {
-      if (m.hidden || !m.isConnected || m.hasAttribute('data-cw-top') || !(covered() || inStrip(m))) return;
+      if (m.hidden || !m.isConnected || m.hasAttribute('data-cw-top') || !(covered() || inStrip(m) || (m.classList.contains('vtb-menu') && noticeUp()))) return;
       const a = m.getBoundingClientRect(); if (!a.width) return;
       const set = (p, v) => m.style.setProperty(p, v, 'important');
       m.setAttribute('data-cw-top', ''); m.setAttribute('popover', 'manual'); liftedNow.add(m);
       set('position', 'fixed'); set('inset', '0 auto auto 0'); set('margin', '0'); set('width', a.width + 'px'); set('translate', 'none');
+      /* The Filter sheet on a phone runs from under the search line to the screen's foot by its own top and
+         bottom; lifted, its top-left corner is all that is kept, so its height is kept too (20 Nov 2026). */
+      if (m.classList.contains('vmf-menu') && mfSheet()) set('height', a.height + 'px');
       try { m.showPopover(); } catch { down(m); return; }
       const b = m.getBoundingClientRect();
       let dy = 0;
       const vh = window.innerHeight, g = 8, h = b.height;
-      if (a.top + h > vh - g) {   // kept on screen: above its button when it fits there, else at the foot
+      if (a.top + h > vh - g && !(m.classList.contains('vmf-menu') && mfSheet())) {   // kept on screen: above its button when it fits there, else at the foot (the phone's Filter sheet already reaches the foot by design)
         const btn = vtbBtnOf(m), br = btn ? btn.getBoundingClientRect() : null;
         dy = (br && br.top - 4 - h >= g ? br.top - 4 - h : Math.max(g, vh - g - h)) - a.top;
         if (h > vh - 2 * g) { set('max-height', (vh - 2 * g) + 'px'); set('overflow', 'auto'); }
@@ -4478,6 +4662,22 @@
     new MutationObserver(list => {
       for (const r of list) { const m = r.target; if (!m.matches || !m.matches(SEL)) continue; if (m.hidden) down(m); else up(m); }
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['hidden'], subtree: true });
+    /* ABOVE THE NOTICES TOO (20 Nov 2026): a notice (notify.js, #cw-notify-host, z-index 9998) sits just
+       under the search bar, so on a phone the "Welcome back" notice lay over the top of Info and Filter
+       for a few seconds and took the taps meant for them. A bar menu open while a notice is up is lifted
+       into the top layer like the rest, so it is in front of the notice; the notice stays where it is,
+       behind. One that arrives while a menu is open lifts that menu at once. */
+    let noticeObs = null;
+    const watchNotices = () => {
+      const h = document.getElementById('cw-notify-host');
+      if (!h || h.__cwLift) return;
+      h.__cwLift = true;
+      if (!noticeObs) noticeObs = new MutationObserver(() => { if (!noticeUp()) return; document.querySelectorAll('#video-body .vtb-menu:not([hidden])').forEach(up); });
+      noticeObs.observe(h, { childList: true });
+      if (noticeUp()) document.querySelectorAll('#video-body .vtb-menu:not([hidden])').forEach(up);
+    };
+    new MutationObserver(watchNotices).observe(document.body, { childList: true });
+    watchNotices();
     let raf = 0;
     const again = () => {
       if (!liftedNow.size) return;
@@ -4496,7 +4696,7 @@
     const t = ev.target; if (!t || !t.closest) return;
     const winBtn = t.closest('#video-about-btn, #video-timeline-btn, #video-compat-btn, #video-home-btn, #video-features-btn, #video-stories-btn');
     if (winBtn) {
-      vtbClose(false);
+      vtbClose(!!winBtn.closest('.vinfo-menu'));   // from the Info menu the focus goes back to Info
       try { vgCloseMenu(); } catch {}
       const k = winBtn.id === 'video-timeline-btn' ? 'timeline' : winBtn.id === 'video-compat-btn' ? 'compat' : winBtn.id === 'video-home-btn' ? 'home' : winBtn.id === 'video-features-btn' ? 'features' : winBtn.id === 'video-stories-btn' ? 'stories' : 'about';
       aboutSet(!(aboutOpen && aboutKind === k), k);
@@ -4504,6 +4704,11 @@
     }
     // A Timeline row has opened its system (its own onclick ran first): the window steps aside.
     if (aboutOpen && t.closest('#video-about .tl-item')) { setTimeout(() => aboutSet(false), 0); return; }
+    /* The Info menu (20 Nov 2026): Emulator Research opens its list; a system opens its Emulation page. */
+    const infoT = t.closest('.vinfo-menu .vinfo-research');
+    if (infoT) { const m = infoT.closest('.vinfo-menu'); infoResearch(m, m.classList.contains('vinfo-fly') || infoT.getAttribute('aria-expanded') !== 'true', false); return; }   // a fly-out opens on a press (a resting mouse may have opened it already); in place, a press opens and shuts
+    const infoD = t.closest('.vinfo-menu [data-vinfo-doc]');
+    if (infoD) { vtbClose(false); infoOpenDoc(infoD.getAttribute('data-vinfo-doc')); return; }
     /* Keyboard shortcuts: moved from Settings to the search bar (24 Oct). */
     if (t.closest('#video-keys-btn')) {
       vtbClose(false);
@@ -4534,7 +4739,52 @@
       const b = vtbBtnOf(menu); if (b) b.setAttribute('aria-expanded', 'false');
       return;
     }
-    if (it.getAttribute('role') === 'menuitemradio') vtbClose(true);
+    if (it.getAttribute('role') === 'menuitemradio' && !menu.classList.contains('fp')) vtbClose(true);   // the Filter panel stays open: every change shows on the wall at once (20 Nov 2026)
+  });
+  /* The Info menu's list (20 Nov 2026): Right on Emulator Research opens it and goes to its first system;
+     Left from a system, or on Emulator Research while open, closes it. Heard before the menus' own keys. */
+  document.addEventListener('keydown', (ev) => {
+    const t0 = ev.target, m0 = t0 && t0.closest ? t0.closest('.vinfo-menu.vinfo-fly') : null;
+    if (m0 && !m0.hidden && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+      /* THE FLY-OUT ON A PC LAYOUT: Right (Left when it opens to the left) opens it and goes in; the other
+         arrow and Escape, Back or the pad's B come back to Emulator Research; Up and Down keep to their own list. */
+      const tog = m0.querySelector('.vinfo-research'), sys = m0.querySelector('.vinfo-sys');
+      const left = m0.classList.contains('vinfo-fly-left'), inSys = !!t0.closest('.vinfo-sys');
+      const stop = () => { ev.preventDefault(); ev.stopImmediatePropagation(); };
+      const back = VTB_BACK.has(ev.key) || ev.keyCode === 4;
+      if (inSys && (back || ev.key === (left ? 'ArrowRight' : 'ArrowLeft'))) { stop(); infoResearch(m0, false); try { tog.focus({ preventScroll: true }); } catch {} return; }
+      if (t0 === tog && ev.key === (left ? 'ArrowLeft' : 'ArrowRight')) { stop(); infoResearch(m0, true, true); return; }
+      if (t0 === tog && ev.key === 'ArrowRight' && sys.hidden) {   // Right always opens it; it may then fly left
+        stop(); infoResearch(m0, true, true); return;
+      }
+      if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Home' || ev.key === 'End') {
+        stop();
+        const list = inSys ? Array.from(sys.querySelectorAll('[role="menuitem"]')) : Array.from(m0.querySelectorAll('[role="menuitem"]')).filter((x) => !x.closest('.vinfo-sys') && x.getClientRects().length);
+        const i = list.indexOf(t0.closest('[role="menuitem"]')), n = list.length;
+        const to = ev.key === 'Home' ? list[0] : ev.key === 'End' ? list[n - 1] : list[(i + (ev.key === 'ArrowDown' ? 1 : n - 1)) % n];
+        if (!inSys && to !== tog) infoResearch(m0, false);   // moving on from Emulator Research shuts its fly-out
+        if (to) { try { to.focus({ preventScroll: true }); to.scrollIntoView({ block: 'nearest' }); } catch {} }
+        return;
+      }
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { stop(); return; }   // nothing else to the side
+      return;
+    }
+    if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+    const t = ev.target, m = t && t.closest ? t.closest('.vinfo-menu') : null;
+    if (!m || m.hidden || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    const tog = m.querySelector('.vinfo-research'), open = tog && tog.getAttribute('aria-expanded') === 'true';
+    if (ev.key === 'ArrowRight' && t === tog) { ev.preventDefault(); ev.stopImmediatePropagation(); infoResearch(m, true, true); return; }
+    if (ev.key === 'ArrowLeft' && (t.closest('.vinfo-sys') || (t === tog && open))) { ev.preventDefault(); ev.stopImmediatePropagation(); infoResearch(m, false); try { tog.focus({ preventScroll: true }); } catch {} return; }
+    ev.preventDefault(); ev.stopImmediatePropagation();   // nothing to the side in this menu
+  }, true);
+  document.addEventListener('pointerover', (ev) => {
+    if (ev.pointerType !== 'mouse') return;
+    const t = ev.target, m = t && t.closest ? t.closest('.vinfo-menu.vinfo-fly') : null;
+    if (!m || m.hidden || t.closest('.vinfo-sys')) return;
+    const it = t.closest('[role="menuitem"]'); if (!it) return;
+    const isT = it.classList.contains('vinfo-research'), open = it.getAttribute('aria-expanded') === 'true';
+    if (isT && !open) infoResearch(m, true, false);
+    else if (!isT && !m.querySelector('.vinfo-sys').hidden) infoResearch(m, false);
   });
   // Focus leaving a menu another way (a click elsewhere, the pad's triggers) closes it.
   document.addEventListener('focusout', (ev) => {
@@ -4634,7 +4884,7 @@
    *  Sound: none.
    * ===================================================================== */
   const MF_KEY = 'gnw.emby.mfilter.v1', MF_UHD_KEY = 'gnw.emby.uhd.v1';
-  VTB_TIPS.mfilter = 'Filter films and series';
+  VTB_TIPS.mfilter = 'Filter';
   IC.funnel = '<path d="M3.5 5h17l-6.5 7.6V19l-4 1.8v-8.2z"/>';
   function mfLoad() {
     const z = { unwatched: false, fav: false, uhd: false, genres: [], decades: [] };
@@ -4738,82 +4988,349 @@
   }
   const mfItem = (attr, val, on, label, extra = '') =>
     `<button type="button" role="menuitemcheckbox" class="vtb-item${on ? ' active' : ''}" ${attr}="${esc(String(val))}" aria-checked="${on}"${extra}><span class="vmf-box" aria-hidden="true"></span><span class="vtb-lbl">${esc(label)}</span></button>`;
+
+  /* =====================================================================
+   *  ONE FILTER ON THE SEARCH BAR (20 Nov 2026: Option A of the design, built with the answers
+   *  of 20 Nov). The films Filter grew into the one Filter for the whole wall:
+   *    - the button always sits right of the search box (funnel, and the word Filter on a
+   *      wider screen); lit with a number while anything differs from the start;
+   *    - one panel, four groups: Order (games, and films and series), Games (the kinds of
+   *      game, with words), Films and series (Show, Genre, Decade; with Movies off it offers
+   *      "Show films and series", the Systems menu's own Movies switch), and Jump to and
+   *      Display (A to Z, the artwork, the Continue row). They left the Systems menu, which
+   *      keeps the collections, All Consoles, Movies, Widgets and the systems;
+   *    - the chips row under the search line names each choice that differs from the start,
+   *      each with its own cross, then Clear all; on a PC what does not fit becomes "+N more"
+   *      (it opens the panel), on a phone the row scrolls sideways;
+   *    - Clear all (the head, the chips row, the sheet's foot) puts the kinds of game back to
+   *      Commercial and Unknown and turns every film choice off; the order, the artwork, the
+   *      Continue row and the systems stay as they are. The number counts those filters only.
+   *  Sizes: a phone (760 px, or a touch screen up to 1100 px) gets the sheet from under the
+   *  search line, with four tabs (Order, Games, Films, Display) and Clear all / Show N at the
+   *  foot; 761 to 1099 px a drop-down in two columns; 1100 px and up four columns, about 900 px,
+   *  the wall dimmed behind it. Mouse, touch, keys and the pad, nothing on hover: arrows and the
+   *  D-pad move by place, Enter or A ticks, Escape or B closes onto the button; F and the pad's
+   *  LT open it (shortcuts.js, gamepad.js); on the sheet LB and RB change tab.
+   *  One panel at a time: opening Filter closes the Systems menu and the reverse (and a page
+   *  window steps aside). The planned history curtain will drop from the search box into the
+   *  same place: it closes this panel as the Systems menu does.
+   *  Everything is stored where it always was (gnw.emby.mfilter.v1, gnw.widgets games.types,
+   *  gnw.emby.videoPrefs, gnw.continueRow.on), so nothing anybody chose resets with the change.
+   *  The same data-vsort, data-vgsort, data-vart, data-vcontinue and data-vg-type buttons as
+   *  before, so the quick jump (shortcuts.js) and the recording director press them by name.
+   *  Sound: none.
+   * ===================================================================== */
+  let fpTab = null;   // the sheet's tab this visit: order | games | films | display
+  const FP_TABS = [['order', 'Order'], ['games', 'Games'], ['films', 'Films'], ['display', 'Display']];
+  const FP_X = svg('<path d="M6 6l12 12M18 6L6 18"/>');
+  const fpFilmsGroup = () => mediaAvailable();
+  /* The kinds of game that differ from the start (Commercial and Unknown on). Unknown counts only
+     while such a game is on the wall, as only then is its box there. */
+  function fpKindChips() {
+    const on = gameTypesOn(), out = [];
+    let unk = null;
+    for (const t of GAME_TYPES) {
+      const lit = on.includes(t.key);
+      if (lit === !!t.def) continue;
+      if (t.key === 'unknown') { if (unk === null) unk = vgUnknownOnWall(); if (!unk) continue; }
+      out.push({ id: 'kind:' + t.key, label: lit ? t.label : t.label + ' off' });
+    }
+    return out;
+  }
+  /* The film choices, only while films are on the wall (they wait, kept, while Movies is off). */
+  function fpFilmChips() {
+    if (!mediaShown()) return [];
+    const out = [];
+    if (mf.unwatched) out.push({ id: 'mf:unwatched', label: 'Unwatched' });
+    if (mf.fav) out.push({ id: 'mf:fav', label: 'Favourites' });
+    if (mf.uhd) out.push({ id: 'mf:uhd', label: '4K / HDR' });
+    for (const g of mf.genres) out.push({ id: 'genre:' + g, label: g });
+    for (const d of mf.decades) out.push({ id: 'decade:' + d, label: d + 's' });
+    return out;
+  }
+  const fpChipList = () => fpKindChips().concat(fpFilmChips());
+  const fpCount = () => fpChipList().length;
+  /* How many titles the wall holds now: the films when they are on it (as the films Filter always
+     said), else the games. null while the film list is still arriving. */
+  function fpTitlesText(verb) {
+    const filmsIn = mediaShown() && !videoState.person && !videoState.collection;
+    let n = 0, word;
+    if (filmsIn && (filmsHere() || mfActive())) {
+      if (!videoState.cacheReady) return verb ? 'Show titles' : '';
+      n = (videoState.filtered || []).length; word = n === 1 ? 'title' : 'titles';
+    } else if (gamesShown() && getWidgetCfg().games.on) {
+      try { n = gamesOnlyActive() && videoState._gamesOnly && videoState._gamesOnly.length ? videoState._gamesOnly.length : gamePool('ambient').length; } catch { n = 0; }
+      word = n === 1 ? 'game' : 'games';
+    } else return verb ? 'Show titles' : '';
+    return (verb ? 'Show ' : '') + n.toLocaleString('en-AU') + ' ' + word;
+  }
+  function fpHeadText() {
+    const n = fpCount(), t = fpTitlesText(false);
+    return (n ? n + ' on' : 'Nothing on') + (t ? ' · ' + t : '');
+  }
+  /* One choice on or off, from the panel, a chip or the clear. The kinds of game are stored as the
+     Systems menu stored them (games.types; null is the start; '!unknown' keeps Unknown off). */
+  function fpSetKinds(cur) {
+    const same = cur.length === GAME_TYPE_DEFAULT.length && GAME_TYPE_DEFAULT.every(x => cur.includes(x));
+    reseedAmbientTiles();
+    saveWidgetCfg({ games: { types: same ? null : GAME_TYPES.map(t => t.key).filter(x => cur.includes(x)).concat(cur.includes('unknown') ? [] : ['!unknown']) } });
+    vgSyncMenu();
+  }
+  function fpToggleKind(k) {
+    const cur = gameTypesOn().slice(), i = cur.indexOf(k);
+    if (i >= 0) cur.splice(i, 1); else cur.push(k);
+    fpSetKinds(cur);
+  }
+  /* CLEAR ALL (20 Nov 2026, question 4: filters only). */
+  function fpClearAll() {
+    const kinds = !!getWidgetCfg().games.types, films = mfActive();
+    mf.unwatched = mf.fav = mf.uhd = false; mf.genres = []; mf.decades = [];
+    mfSave();
+    if (kinds) { reseedAmbientTiles(); saveWidgetCfg({ games: { types: null } }); }   // repaints the wall, the film choices already off
+    else if (films) {
+      if (videoState.person || videoState.collection) refreshGrid();
+      else if (videoState.cacheReady) applyFilterSort(false);
+      else refreshGrid();
+    }
+    vgSyncMenu();
+    mfPaint();
+    mfShowPaint();
+  }
+  function fpRemoveChip(id) {
+    const i = id.indexOf(':'), kind = id.slice(0, i), v = id.slice(i + 1);
+    if (kind === 'kind') { fpToggleKind(v); return; }
+    if (kind === 'mf' && (v === 'unwatched' || v === 'fav' || v === 'uhd')) mf[v] = false;
+    else if (kind === 'genre') mf.genres = mf.genres.filter(x => x !== v);
+    else if (kind === 'decade') mf.decades = mf.decades.filter(x => x !== Number(v));
+    else return;
+    mfApply();
+  }
+  /* The panel's own buttons for order and artwork (the same data-* names as the old menus). */
+  const fpSort = (attr, cur, mode, ic, title) =>
+    `<button type="button" role="menuitemradio" class="vtb-item${cur === mode ? ' active' : ''}" ${attr}="${mode}" aria-checked="${cur === mode}"><span class="vtb-tick" aria-hidden="true"></span>${svg(ic)}<span class="vtb-lbl">${title}</span><span class="vtb-hint"></span></button>`;
+  const fpArt = (mode, ic, title) =>
+    `<button type="button" role="menuitemradio" class="vtb-item${videoState.artMode === mode ? ' active' : ''}" data-vart="${mode}" aria-checked="${videoState.artMode === mode}"><span class="vtb-tick" aria-hidden="true"></span>${svg(ic)}<span class="vtb-lbl">${title}</span></button>`;
+  const fpSwitch = (attrs, on, label) =>
+    `<button type="button" role="menuitemcheckbox" class="vtb-item fp-swi${on ? ' active' : ''}" ${attrs} aria-checked="${on}"><span class="vtb-lbl">${label}</span><span class="fp-sw" aria-hidden="true"></span></button>`;
   function mfMenuHTML() {
-    const f = mfFacets();
-    const uhdNote = uhd.state === 'busy' ? 'Asking your server…'
-      : uhd.state === 'unsupported' ? 'Your server can’t list 4K titles.'
-      : uhd.state === 'error' ? 'Couldn’t ask your server. Pick it again to retry.'
-      : (uhd.state === 'done' && uhd.ids) ? uhd.ids.size + ' titles' : '';
+    const films = fpFilmsGroup(), filmsOn = films && mediaShown();
+    const kN = fpKindChips().length, fN = fpFilmChips().length, n = kN + fN;
+    if (!fpTab || (fpTab === 'films' && !films)) fpTab = kN ? 'games' : fN ? 'films' : 'order';
+    const col = (k, label, html) => `<div class="fp-col${fpTab === k ? ' fp-on' : ''}" data-fp-g="${k}" role="group" aria-label="${label}">${html}</div>`;
+    const tabs = FP_TABS.filter(([k]) => k !== 'films' || films).map(([k, l]) => {
+      const c = k === 'games' ? kN : k === 'films' ? fN : 0;
+      return `<button type="button" role="menuitemradio" class="vtb-item fp-tab${fpTab === k ? ' active' : ''}" data-fp-tab="${k}" aria-checked="${fpTab === k}"><span class="vtb-lbl">${l}</span><i class="fp-tc">${c || ''}</i></button>`;
+    }).join('');
+    const head = `<div class="fp-top"><div class="fp-head"><span class="fp-title">Filter</span><span class="fp-n" aria-live="polite">${esc(fpHeadText())}</span>
+        <button type="button" role="menuitem" class="vtb-item fp-clear vmf-clear" data-mf="clear"${n ? '' : ' disabled'}><span class="vtb-lbl">Clear filters</span></button>
+        <button type="button" class="vmf-x fp-close" data-mf="close" aria-label="Close Filter" title="Close">${FP_X}</button></div>
+        <div class="fp-tabs" role="group" aria-label="Groups">${tabs}</div></div>`;
+    /* 1. Order: the games' order, then the films' (with a media server). */
+    const order = col('order', 'Order', '<div class="fp-h">Order</div><div class="fp-sub">Games</div>'
+      + fpSort('data-vgsort', videoState.gameSort, 'year', IC.cal, 'Release date')
+      + fpSort('data-vgsort', videoState.gameSort, 'name', IC.az, 'Name')
+      + fpSort('data-vgsort', videoState.gameSort, 'rating', IC.star, 'Rating')
+      + fpSort('data-vgsort', videoState.gameSort, 'random', IC.rand, 'Shuffle')
+      + fpSort('data-vgsort', videoState.gameSort, 'most', IC_MOST, 'Most played')
+      + (films ? '<div class="fp-sub">Films and series</div>'
+        + fpSort('data-vsort', videoState.sort, 'added', IC.clock, 'Date added')
+        + fpSort('data-vsort', videoState.sort, 'year', IC.cal, 'Release date')
+        + fpSort('data-vsort', videoState.sort, 'name', IC.az, 'Name')
+        + fpSort('data-vsort', videoState.sort, 'rating', IC.star, 'Rating')
+        + fpSort('data-vsort', videoState.sort, 'random', IC.rand, 'Shuffle') : '')
+      + '<p class="fp-tip">Choose the ticked one again to reverse it.</p>');
+    /* 2. Games: the kinds of game, with their words. */
+    const on = gameTypesOn(), unk = vgUnknownOnWall();
+    const games = col('games', 'Games', '<div class="fp-h">Games</div><div class="fp-sub">Kinds of game</div>'
+      + GAME_TYPES.map(t => {
+        const lit = on.includes(t.key);
+        return `<button type="button" role="menuitemcheckbox" class="vtb-item fp-kind${lit ? ' active' : ''}" data-vg-type="${t.key}" aria-checked="${lit}" title="${esc(t.label + ': ' + t.tip)}"${t.key === 'unknown' && !unk ? ' hidden' : ''}><span class="vmf-box" aria-hidden="true"></span>${svg(GAME_TYPE_ICON[t.key] || '')}<span class="vtb-lbl">${t.label}</span></button>`;
+      }).join('')
+      + '<p class="fp-tip">Commercial includes hacks and translations; they stay inside their game’s drawer. Unknown shows only when such a game is on the wall.</p>'
+      + '<p class="fp-tip">The game counts on the Systems menu follow these boxes.</p>');
+    /* 3. Films and series (with a media server). */
+    let filmsCol = '';
+    if (films) {
+      let inner = '<div class="fp-h">Films and series</div>';
+      if (filmsOn) {
+        const f = mfFacets();
+        const uhdNote = uhd.state === 'busy' ? 'Asking your server…'
+          : uhd.state === 'unsupported' ? 'Your server can’t list 4K titles.'
+          : uhd.state === 'error' ? 'Couldn’t ask your server. Pick it again to retry.'
+          : (uhd.state === 'done' && uhd.ids) ? uhd.ids.size + ' titles in 4K' : '';
+        inner += '<div class="fp-sub">Show</div><div class="fp-tags">'
+          + mfItem('data-mf', 'unwatched', mf.unwatched, 'Unwatched')
+          + mfItem('data-mf', 'fav', mf.fav, 'Favourites')
+          + mfItem('data-mf', 'uhd', mf.uhd, '4K / HDR', uhd.state === 'unsupported' ? ' disabled' : '') + '</div>'
+          + (uhdNote ? `<div class="vmf-note" aria-live="polite">${esc(uhdNote)}</div>` : '')
+          + '<div class="fp-sub">Genre</div>'
+          + (f.genres.length ? '<div class="fp-tags">' + f.genres.map(g => mfItem('data-mf-genre', g, mf.genres.includes(g), g)).join('') + '</div>'
+            : `<div class="vmf-note">${f.haveGenres || !videoState.cacheReady ? 'Loading your library…' : 'Genres appear after the next library refresh.'}</div>`)
+          + '<div class="fp-sub">Decade</div>'
+          + (f.decades.length ? '<div class="fp-tags">' + f.decades.map(d => mfItem('data-mf-decade', d, mf.decades.includes(d), d + 's')).join('') + '</div>'
+            : '<div class="vmf-note">Loading your library…</div>')
+          + '<p class="fp-tip">Across groups every choice must match; inside a group any one may.</p>';
+      } else {
+        /* MOVIES OFF (20 Nov 2026, question 7): the Systems menu's Movies switch, here, so nobody has
+           to go to another menu (12 Nov: a flow does its steps in place). The choices are kept. */
+        inner += '<p class="fp-off">Films and series are off, so the wall shows games only.</p>'
+          + fpSwitch('data-mf="films-on"', false, 'Show films and series')
+          + '<p class="fp-tip">The same switch as Movies on the Systems menu. Your film choices are kept and come back with the films.</p>';
+      }
+      filmsCol = col('films', 'Films and series', inner);
+    }
+    /* 4. Jump to and Display. Jump to works on the films while they are on the wall, else on the
+       games (20 Nov 2026, question 8: A to Z for games on a games-only wall). */
     const letters = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
-    // The phone sheet's head (4 Nov 2026); not drawn on the PC (CSS). The X is a plain button, not a
-    // menu item, so the keys and the pad start on the first filter; B or Back closes as before.
-    return `<div class="vmf-sh"><span class="vmf-sh-t">Filters</span><span class="vmf-sh-n">${mfActive() ? mfCount() + ' on' : ''}</span>
-        <button type="button" class="vmf-x" data-mf="close" aria-label="Close filters">${svg('<path d="M6 6l12 12M18 6L6 18"/>')}</button></div>
-      <div class="vtb-col" role="group" aria-label="Show">
-        <div class="vtb-head" aria-hidden="true">Show</div>
-        ${mfItem('data-mf', 'unwatched', mf.unwatched, 'Unwatched')}
-        ${mfItem('data-mf', 'fav', mf.fav, 'Favourites')}
-        ${mfItem('data-mf', 'uhd', mf.uhd, '4K / HDR', uhd.state === 'unsupported' ? ' disabled' : '')}
-        ${uhdNote ? `<div class="vmf-note" aria-live="polite">${esc(uhdNote)}</div>` : ''}
-        <button type="button" role="menuitem" class="vtb-item vmf-clear" data-mf="clear"${mfActive() ? '' : ' disabled'}><span class="vtb-lbl">Clear filters</span></button>
-      </div>
-      <div class="vtb-col" role="group" aria-label="Genre">
-        <div class="vtb-head" aria-hidden="true">Genre</div>
-        ${f.genres.length ? f.genres.map(g => mfItem('data-mf-genre', g, mf.genres.includes(g), g)).join('')
-          : `<div class="vmf-note">${f.haveGenres || !videoState.cacheReady ? 'Loading your library…' : 'Genres appear after the next library refresh.'}</div>`}
-      </div>
-      <div class="vtb-col" role="group" aria-label="Decade">
-        <div class="vtb-head" aria-hidden="true">Decade</div>
-        ${f.decades.length ? f.decades.map(d => mfItem('data-mf-decade', d, mf.decades.includes(d), d + 's')).join('') : '<div class="vmf-note">Loading your library…</div>'}
-      </div>
-      <div class="vtb-col" role="group" aria-label="Jump to">
-        <div class="vtb-head" aria-hidden="true">Jump to</div>
-        <div class="vtb-grid vmf-az" data-cols="6">${letters.map(l => `<button type="button" role="menuitem" class="vtb-item vmf-letter" data-mf-jump="${l}" aria-label="Jump to ${l === '#' ? 'numbers' : l}">${l}</button>`).join('')}</div>
-      </div>
-      <div class="vmf-sf">
-        <button type="button" role="menuitem" class="vtb-item vmf-clear" data-mf="clear"${mfActive() ? '' : ' disabled'}><span class="vtb-lbl">Clear all</span></button>
-        <button type="button" role="menuitem" class="vtb-item vmf-done" data-mf="done"><span class="vtb-lbl">${esc(mfShowLabel())}</span></button>
+    const what = filmsOn ? 'titles' : 'games';
+    const CR = window.ContinueRow, contOn = !!(CR && CR.enabled && CR.enabled());
+    const disp = col('display', 'Jump to and Display', '<div class="fp-h">Jump to</div>'
+      + `<div class="vtb-grid vmf-az" data-cols="7">${letters.map(l => `<button type="button" role="menuitem" class="vtb-item vmf-letter" data-mf-jump="${l}" aria-label="Jump to ${what} starting with ${l === '#' ? 'a number' : l}">${l}</button>`).join('')}</div>`
+      + '<div class="fp-sub">Display</div>'
+      + fpArt('hardware', IC.hardware, 'Live devices') + fpArt('boxart', IC.boxart, 'Box art')
+      + (window.CW_BOX_ART_3D === true ? fpArt('boxart3d', IC.boxart3d, '3D box art') : '')
+      + (CR ? fpSwitch('data-vcontinue="1" data-tip="Continue row"', contOn, 'Continue row') : ''));
+    return head + '<div class="fp-cols">' + order + games + filmsCol + disp + '</div>'
+      + `<div class="vmf-sf">
+        <button type="button" role="menuitem" class="vtb-item vmf-clear" data-mf="clear"${n ? '' : ' disabled'}><span class="vtb-lbl">Clear all</span></button>
+        <button type="button" role="menuitem" class="vtb-item vmf-done" data-mf="done"><span class="vtb-lbl">${esc(fpTitlesText(true))}</span></button>
       </div>`;
   }
   /* The sheet (4 Nov 2026): the same test as its CSS rule, and the foot's "Show N titles". */
   function mfSheet() { try { return window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px)').matches; } catch { return false; } }
-  function mfShowLabel() {
-    if (!videoState.cacheReady || videoState.person || videoState.collection) return 'Show titles';
-    const n = (videoState.filtered || []).length;
-    return n === 1 ? 'Show 1 title' : 'Show ' + n.toLocaleString() + ' titles';
-  }
+  function mfShowLabel() { return fpTitlesText(true); }
   function mfShowPaint() {
-    const b = document.querySelector('#video-body .vmf-menu .vmf-done .vtb-lbl');
-    if (b) b.textContent = mfShowLabel();
+    const m = document.querySelector('#video-body .vmf-menu');
+    if (m && !m.hidden) fpCountsPaint(m);
   }
-  /* Repaint the menu's insides (keeping the focused item) and the button's count. */
-  function mfPaint() {
+  /* The Continue row switch: continuerow.js owns the setting; a panel drawn again gets its press here. */
+  function fpWireContinue(m) {
+    const CR = window.ContinueRow;
+    m.querySelectorAll('[data-vcontinue]').forEach(b => {
+      if (b.__crWired || !CR) return;
+      b.__crWired = true;
+      b.addEventListener('click', ev => { ev.preventDefault(); CR.setEnabled(!CR.enabled()); });
+    });
+  }
+  /* The button: its number, its name and its light. Only the count changes: the icon under a finger
+     must stay the same node, or the browser drops the tap's click (found on the phone test, 24 Oct). */
+  function fpButtonPaint() {
     const dd = document.querySelector('#video-body .vtb-dd[data-vdd="mfilter"]');
-    if (!dd) return;
-    dd.hidden = !mediaAvailable();
-    const btn = dd.querySelector('[data-vdd-btn="mfilter"]'), menu = dd.querySelector('.vtb-menu');
-    const n = mfCount();
+    if (!dd) return null;
+    if (dd.hidden) dd.hidden = false;   // always there: games are always on the wall (Option A)
+    const btn = dd.querySelector('[data-vdd-btn="mfilter"]');
+    const n = fpCount();
     if (btn) {
-      // Only the count changes: the icon under a finger must stay the same node, or the
-      // browser drops the tap's click (found on the phone test, 24 Oct).
       const ics = btn.querySelector('.vtb-ics');
-      let badge = ics && ics.querySelector('.vmf-n');
-      if (ics && n && !badge) { badge = document.createElement('span'); badge.className = 'vmf-n'; ics.appendChild(badge); }
+      let badge = btn.querySelector('.vmf-n');
+      if (ics && n && !badge) { badge = document.createElement('span'); badge.className = 'vmf-n'; badge.setAttribute('aria-hidden', 'true'); btn.insertBefore(badge, btn.querySelector('.vinfo-caret')); }   // the number before the down arrow
       if (badge && !n) badge.remove();
       else if (badge && badge.textContent !== String(n)) badge.textContent = String(n);
-      btn.setAttribute('aria-label', n ? `Filters: ${n} on` : 'Filters');
+      const lab = n ? `Filter: ${n} on` : 'Filter';
+      if (btn.getAttribute('aria-label') !== lab) btn.setAttribute('aria-label', lab);
       btn.classList.toggle('vmf-on', n > 0);
     }
+    return dd;
+  }
+  /* THE CHIPS ROW (20 Nov 2026, question 5). */
+  function fpChipsPaint() {
+    const row = document.querySelector('#video-body .fp-chips'); if (!row) return;
+    const list = fpChipList(), sig = list.map(c => c.id).join('|');
+    if (row.dataset.sig === sig && row.childElementCount === (list.length ? list.length + 2 : 0)) { fpChipsFit(row); return; }
+    const a = document.activeElement, had = !!(a && row.contains(a));
+    const idx = had ? Array.from(row.querySelectorAll('[data-fp-chip]:not([hidden])')).indexOf(a) : -1;
+    row.dataset.sig = sig;
+    row.hidden = !list.length;
+    row.innerHTML = list.map(c => `<button type="button" class="fp-chip" data-fp-chip="${esc(c.id)}" aria-label="Remove ${esc(c.label)}" title="Remove ${esc(c.label)}"><span class="fp-chip-t">${esc(c.label)}</span><span class="fp-x" aria-hidden="true">${FP_X}</span></button>`).join('')
+      + (list.length ? '<button type="button" class="fp-chip fp-plain fp-more" data-fp-chip="more" hidden></button><button type="button" class="fp-chip fp-plain fp-all" data-fp-chip="clear">Clear all</button>' : '');
+    fpChipsFit(row);
+    if (had) {   // keys and the pad stay in the row: the chip now in that place, else the Filter button
+      const bs = Array.from(row.querySelectorAll('[data-fp-chip]:not([hidden])'));
+      const t = (list.length && bs[Math.max(0, Math.min(idx, bs.length - 1))]) || document.querySelector('#video-body [data-vdd-btn="mfilter"]');
+      if (t) { try { t.focus({ preventScroll: true }); } catch {} }
+    }
+  }
+  /* A PC shows what fits, then "+N more"; a phone scrolls the row sideways. */
+  function fpChipsFit(row) {
+    row = row || document.querySelector('#video-body .fp-chips');
+    if (!row || row.hidden) return;
+    const chips = Array.from(row.querySelectorAll('.fp-chip:not(.fp-plain)')), more = row.querySelector('.fp-more');
+    chips.forEach(c => { if (c.hidden) c.hidden = false; });
+    if (more) more.hidden = true;
+    if (mfSheet() || !row.getClientRects().length) return;
+    if (row.scrollWidth <= row.clientWidth + 1) return;
+    if (more) more.hidden = false;
+    let hid = 0;
+    for (let i = chips.length - 1; i >= 0 && row.scrollWidth > row.clientWidth + 1; i--) {
+      if (chips[i] === document.activeElement && more) { try { more.focus({ preventScroll: true }); } catch {} }
+      chips[i].hidden = true; hid++;
+      if (more) more.textContent = '+' + hid + ' more';
+    }
+    if (more) { more.textContent = '+' + hid + ' more'; more.setAttribute('aria-label', hid + ' more: open Filter'); }
+  }
+  /* The counts in the panel (head, tabs, Clear, the foot's Show N), changed in place. */
+  function fpCountsPaint(m) {
+    const k = fpKindChips().length, f = fpFilmChips().length, n = k + f;
+    const h = m.querySelector('.fp-n'); if (h) { const t = fpHeadText(); if (h.textContent !== t) h.textContent = t; }
+    const a = document.activeElement;
+    m.querySelectorAll('[data-mf="clear"]').forEach(b => { b.disabled = !n; });
+    if (a && m.contains(a) && a.disabled) { const t = (mfSheet() && m.querySelector('.vmf-done')) || vtbItems(m)[0]; if (t) { try { t.focus({ preventScroll: true }); } catch {} } }
+    m.querySelectorAll('[data-fp-tab]').forEach(b => { const i = b.querySelector('.fp-tc'), c = b.dataset.fpTab === 'games' ? k : b.dataset.fpTab === 'films' ? f : 0; if (i) i.textContent = c ? String(c) : ''; });
+    const d = m.querySelector('.vmf-done .vtb-lbl'); if (d) d.textContent = fpTitlesText(true);
+  }
+  /* After the kinds of game, the systems or the films' on and off change (vgSyncMenu, updateStrips):
+     the button, the chips and an open panel follow, in place where they can. */
+  function fpSync() {
+    fpButtonPaint();
+    fpChipsPaint();
+    const m = document.querySelector('#video-body .vmf-menu');
+    if (!m || m.hidden) return;   // drawn fresh when it opens
+    const hasFilms = !!m.querySelector('[data-fp-g="films"]'), offNote = !!m.querySelector('[data-mf="films-on"]');
+    if (hasFilms !== fpFilmsGroup() || (hasFilms && offNote === mediaShown())) { mfPaint(); return; }
+    const on = gameTypesOn(), unk = vgUnknownOnWall();
+    m.querySelectorAll('[data-vg-type]').forEach(b => {
+      const lit = on.includes(b.dataset.vgType);
+      b.classList.toggle('active', lit); b.setAttribute('aria-checked', String(lit));
+      if (b.dataset.vgType === 'unknown' && b.hidden === unk) b.hidden = !unk;
+    });
+    fpCountsPaint(m);
+  }
+  /* The sheet's tabs (a press, or LB and RB). */
+  function fpShowTab(k, focus) {
+    const m = document.querySelector('#video-body .vmf-menu'); if (!m) return;
+    if (!m.querySelector('[data-fp-tab="' + k + '"]')) return;
+    fpTab = k;
+    m.querySelectorAll('[data-fp-tab]').forEach(b => { const on = b.dataset.fpTab === k; b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on)); });
+    m.querySelectorAll('.fp-col').forEach(c => c.classList.toggle('fp-on', c.dataset.fpG === k));
+    m.scrollTop = 0;
+    if (focus) { const b = m.querySelector('[data-fp-tab="' + k + '"]'); if (b) { try { b.focus({ preventScroll: true }); } catch {} } }
+  }
+  function fpStepTab(dir) {
+    const m = document.querySelector('#video-body .vmf-menu');
+    if (!m || m.hidden || !mfSheet()) return;
+    const tabs = Array.from(m.querySelectorAll('[data-fp-tab]')).map(b => b.dataset.fpTab);
+    const i = tabs.indexOf(fpTab);
+    fpShowTab(tabs[(Math.max(0, i) + dir + tabs.length) % tabs.length], true);
+  }
+  /* Which control the focus is on, found again after the panel is drawn afresh. */
+  const FP_KEYS = ['data-mf', 'data-mf-genre', 'data-mf-decade', 'data-mf-jump', 'data-vg-type', 'data-vsort', 'data-vgsort', 'data-vart', 'data-vcontinue', 'data-fp-tab'];
+  function fpKeyOf(a) { for (const k of FP_KEYS) if (a.hasAttribute(k)) return '[' + k + '="' + CSS.escape(a.getAttribute(k)) + '"]'; return null; }
+  /* Repaint the panel's insides (keeping the focused item), the button and the chips. */
+  function mfPaint() {
+    const dd = fpButtonPaint();
+    fpChipsPaint();
+    if (!dd) return;
+    const menu = dd.querySelector('.vtb-menu');
     if (menu) {
-      const a = document.activeElement, keep = a && menu.contains(a) ? (a.getAttribute('data-mf') ? '[data-mf="' + a.getAttribute('data-mf') + '"]'
-        : a.getAttribute('data-mf-genre') ? '[data-mf-genre="' + CSS.escape(a.getAttribute('data-mf-genre')) + '"]'
-        : a.getAttribute('data-mf-decade') ? '[data-mf-decade="' + a.getAttribute('data-mf-decade') + '"]'
-        : a.getAttribute('data-mf-jump') ? '[data-mf-jump="' + CSS.escape(a.getAttribute('data-mf-jump')) + '"]' : null) : null;
+      const a = document.activeElement, keep = a && menu.contains(a) ? fpKeyOf(a) : null;
+      menu.classList.toggle('fp-nofilms', !fpFilmsGroup());
       menu.innerHTML = mfMenuHTML();
+      fpWireContinue(menu);
+      try { updateSortButtons(menu); } catch {}
       if (keep) {
         // Back to the same item; if it is now greyed (Clear filters, with nothing left to
         // clear) to the first one, so keys and a remote are never left on nothing.
-        let t = Array.from(menu.querySelectorAll(keep)).find(x => x.getClientRects().length) || null;   // Clear is drawn twice (PC list, phone foot): the one on screen
+        let t = Array.from(menu.querySelectorAll(keep)).find(x => x.getClientRects().length) || null;   // Clear is drawn twice (head, sheet foot): the one on screen
         if (!t || t.disabled) t = (mfSheet() && menu.querySelector('.vmf-done')) || vtbItems(menu)[0];   // the sheet's Clear all: on to Show titles beside it
         if (t) { try { t.focus({ preventScroll: true }); } catch {} }
       }
@@ -4829,6 +5346,7 @@
   }
   /* A-Z: name order, then the first title (in the filtered list) that starts with the letter. */
   function mfJump(letter) {
+    if (!mediaShown()) { fpGameJump(letter); return; }
     const first = s => { const c = String(s || '').trim().charAt(0).toUpperCase(); return c >= 'A' && c <= 'Z' ? c : '#'; };
     if (videoState.sort !== 'name' || videoState.sortDir !== 'asc') {
       videoState.sort = 'name'; videoState.sortDir = 'asc';
@@ -4842,17 +5360,40 @@
     if (k < 0) { videoToast('No titles start with ' + (letter === '#' ? 'a number' : letter) + '.', false); return; }
     const id = list[k] && list[k].Id;
     vtbClose(false);
-    /* The grid may redraw its new order a moment later (and a tile far down the page is drawn
-       only once it is near the screen), so the card is found, brought into view and focused
-       again on each try until focus has stayed on it. */
+    fpLand('.video-card:not(.trailer)[data-id="' + CSS.escape(id) + '"]', k, list.length);
+  }
+  /* A TO Z FOR GAMES (20 Nov 2026, question 8): on a wall of games only, a letter puts the games in
+     name order (A to Z) and lands on the first one with that letter, as it does for films. */
+  function fpGameJump(letter) {
+    const first = s => { const c = String(s || '').trim().charAt(0).toUpperCase(); return c >= 'A' && c <= 'Z' ? c : '#'; };
+    if (videoState.gameSort !== 'name' || videoState.gameSortDir !== 'asc') {
+      videoState.gameSort = 'name'; videoState.gameSortDir = 'asc'; videoState.gamesByCell = null;
+      try { updateSortButtons(document.getElementById('video-body') || document); } catch {}
+      try { saveVideoPrefs(); } catch {}
+      if (videoState.person || videoState.collection) refreshGrid();
+      else if (videoState.cacheReady) applyFilterSort(false);
+      else refreshGrid();
+    }
+    const list = gamesOnlyActive() ? (videoState._gamesOnly || []) : [];
+    if (!list.length) { videoToast(videoState._wallHeld ? 'Your games are still loading. Try the letter again in a moment.' : 'No games on the wall.', false); return; }
+    let k = list.findIndex(g => first(g.dev && g.dev.name) === letter);
+    if (k < 0) k = list.findIndex(g => first(g.dev && g.dev.name) > letter && first(g.dev && g.dev.name) !== '#');
+    if (k < 0) { videoToast('No games start with ' + (letter === '#' ? 'a number' : letter) + '.', false); return; }
+    vtbClose(false);
+    fpLand('.device-card[data-id="' + CSS.escape(list[k].dev.id) + '"]', k, list.length);
+  }
+  /* The grid may redraw its new order a moment later (and a tile far down the page is drawn
+     only once it is near the screen), so the card is found, brought into view and focused
+     again on each try until focus has stayed on it. */
+  function fpLand(sel, k, total) {
     let tries = 0, held = 0;
     const land = () => {
       if (tries++ > 40) return;
       let guard = 0;
-      while (videoState.shown <= k && videoState.shown < list.length && guard++ < 400) renderGrid(false);
+      while (videoState.shown <= k && videoState.shown < total && guard++ < 400) renderGrid(false);
       /* a tile taken off the page while far comes back first (index.html) */
-      if (id && window._cwWallBring) window._cwWallBring('.video-card:not(.trailer)[data-id="' + CSS.escape(id) + '"]', true);
-      const card = id && document.querySelector('#video-grid .video-card:not(.trailer)[data-id="' + CSS.escape(id) + '"]');
+      if (window._cwWallBring) window._cwWallBring(sel, true);
+      const card = document.querySelector('#video-grid ' + sel);
       if (card) {
         const r = card.getBoundingClientRect();
         if (r.top < 0 || r.bottom > window.innerHeight) { try { card.scrollIntoView({ block: 'center' }); } catch {} }
@@ -4863,14 +5404,44 @@
     };
     land();
   }
+  /* The wall says what is on when nothing is left (renderStatusCore), with its own Clear filters. */
+  function fpNothingHTML() {
+    const list = fpChipList();
+    const names = list.map(c => c.label).join(', ');
+    return '<div style="max-width:620px;margin:0 auto;line-height:1.65"><b style="color:var(--text)">Nothing matches your filter.</b>'
+      + (list.length ? '<br>' + (list.length === 1 ? '1 choice is on: ' : list.length + ' choices are on: ') + esc(names) + '.' : '')
+      + '<br><button type="button" class="btn-tiny" data-mf="clear">Clear filters</button></div>';
+  }
+  /* Games in the systems asked for, whatever the kinds of game say: are there any to filter? */
+  function fpGamesBeforeKinds() {
+    const want = getWidgetCfg().games.systems;
+    if (want && !want.length) return 0;
+    let n = 0;
+    for (const s of GAME_SYSTEMS) {
+      if (want && !want.includes(s.id) && !(s.id === 'twin' && want.includes('gnw'))) continue;
+      try { n += (s.pool() || []).length; } catch {}
+      if (n) return n;
+    }
+    return n;
+  }
   document.addEventListener('click', (ev) => {
     const t = ev.target; if (!t || !t.closest) return;
-    const b = t.closest('#video-body .vtb-menu [data-mf], #video-body .vtb-menu [data-mf-genre], #video-body .vtb-menu [data-mf-decade], #video-body .vtb-menu [data-mf-jump], #video-status [data-mf="clear"]');
+    const b = t.closest('#video-body .vtb-menu [data-mf], #video-body .vtb-menu [data-mf-genre], #video-body .vtb-menu [data-mf-decade], #video-body .vtb-menu [data-mf-jump], #video-body .vmf-menu [data-fp-tab], #video-body .vmf-menu [data-vg-type], #video-body .fp-chips [data-fp-chip], #video-status [data-mf="clear"]');
     if (!b || b.disabled) return;
+    if (b.hasAttribute('data-fp-tab')) { fpShowTab(b.getAttribute('data-fp-tab'), true); return; }
+    if (b.hasAttribute('data-vg-type')) { fpToggleKind(b.getAttribute('data-vg-type')); return; }
+    if (b.hasAttribute('data-fp-chip')) {
+      const c = b.getAttribute('data-fp-chip');
+      if (c === 'clear') fpClearAll();
+      else if (c === 'more') fpOpen();
+      else fpRemoveChip(c);
+      return;
+    }
     if (b.hasAttribute('data-mf-jump')) { mfJump(b.getAttribute('data-mf-jump')); return; }
     const k = b.getAttribute('data-mf');
-    if (k === 'close' || k === 'done') { vtbClose(true); return; }   // the phone sheet's X and Show titles (4 Nov 2026)
-    if (k === 'clear') { mf.unwatched = mf.fav = mf.uhd = false; mf.genres = []; mf.decades = []; mfApply(); return; }
+    if (k === 'close' || k === 'done') { vtbClose(true); return; }   // the X and the sheet's Show titles (4 Nov 2026)
+    if (k === 'clear') { fpClearAll(); return; }
+    if (k === 'films-on') { vgSetShow({ media: true }); mfPaint(); return; }
     if (k === 'unwatched' || k === 'fav') { mf[k] = !mf[k]; mfApply(); return; }
     if (k === 'uhd') {
       mf.uhd = !mf.uhd;
@@ -4882,46 +5453,82 @@
     const d = Number(b.getAttribute('data-mf-decade'));
     if (Number.isFinite(d)) { mf.decades = mf.decades.includes(d) ? mf.decades.filter(x => x !== d) : [...mf.decades, d]; mfApply(); }
   });
+  /* Open (or close) the panel from anywhere: F, the pad's LT, "+N more". The bar comes into view
+     first (focus mode hides it; a scrolled page has it at its sticky place). */
+  function fpOpen() {
+    const btn = document.querySelector('#video-body [data-vdd-btn="mfilter"]');
+    if (!btn || !btn.getClientRects().length) return false;
+    const m = btn.parentElement && btn.parentElement.querySelector(':scope > .vtb-menu');
+    if (m && !m.hidden) return true;
+    mfPaint();
+    vtbOpen(btn);
+    return true;
+  }
+  function fpToggle() {
+    const m = document.querySelector('#video-body .vmf-menu');
+    if (m && !m.hidden) { vtbClose(true); return true; }
+    try { if (window.GnwShortcuts && window.GnwShortcuts.revealAbove) window.GnwShortcuts.revealAbove(); } catch {}
+    return fpOpen();
+  }
   /* The lists are drawn fresh as the button is reached (pointer down, or focus from keys or a
      remote), so they always show the library on screen; the vtb code then opens the menu. */
-  const mfFresh = (ev) => { const t = ev.target; if (t && t.closest && t.closest('[data-vdd-btn="mfilter"]')) mfPaint(); };
+  const mfFresh = (ev) => { const t = ev.target; if (t && t.closest && t.closest('[data-vdd-btn="mfilter"]')) { const m = document.querySelector('#video-body .vmf-menu'); if (!m || m.hidden) mfPaint(); } };
   document.addEventListener('pointerdown', mfFresh, true);
   document.addEventListener('focusin', mfFresh, true);
-  /* THE PHONE SHEET BY PLACE (4 Nov 2026). Its chips wrap and its letters are seven to a row, so
-     moving through the list in order (the vtb code) or six at a time (the A-Z rule below) lands on
-     the wrong control. In the sheet, Up and Down go to the nearest control in the row above or below,
-     Left and Right to the one before or after; the focused control is brought into view inside the
-     sheet. Registered before the A-Z rule, so it alone moves the focus in the sheet. */
+  /* THE PANEL BY PLACE (4 Nov 2026 for the sheet; 20 Nov for the whole panel). Its tags wrap, its
+     letters are seven to a row and its groups stand side by side, so moving through the list in
+     order lands on the wrong control. Up and Down go to the nearest control in the row above or
+     below in the same group (else in the next one: the head, the tabs, the sheet's foot); Left and
+     Right to the nearest control that side (on the sheet, else the one before or after). The
+     focused control is brought into view inside the panel. Registered before the A-Z rule, so it
+     alone moves the focus in the panel. */
   window.addEventListener('keydown', (ev) => {
     if (!/^Arrow(Up|Down|Left|Right)$/.test(ev.key) || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     const t = ev.target; const m = t && t.closest && t.closest('#video-body .vmf-menu');
-    if (!m || m.hidden || !mfSheet()) return;
+    if (!m || m.hidden) return;
     const items = vtbItems(m), cur = t.closest('[role^="menuitem"]'), k = items.indexOf(cur);
     if (k < 0) return;
     ev.preventDefault(); ev.stopImmediatePropagation();
+    /* Places inside the panel's scrolled content; the head and tabs (they stay in view) count as
+       above everything, the sheet's foot as below everything. */
+    const top0 = m.getBoundingClientRect().top - m.scrollTop;
+    const at = x => { const r = x.getBoundingClientRect();
+      return { x, l: r.left, r: r.right, cx: r.left + r.width / 2,
+        cy: x.closest('.vmf-sf') ? 1e7 + r.left / 1e4 : x.closest('.fp-top') ? -1e7 + r.top : r.top - top0 + r.height / 2,
+        g: x.closest('.fp-col, .fp-head, .fp-tabs, .vmf-sf') }; };
+    const me = at(cur);
     let to = null;
-    if (ev.key === 'ArrowLeft') to = items[k - 1] || null;
-    else if (ev.key === 'ArrowRight') to = items[k + 1] || null;
-    else {
-      /* Places inside the sheet's scrolled content; the foot (it stays on screen over the content)
-         counts as below everything. */
-      const top0 = m.getBoundingClientRect().top - m.scrollTop;
-      const at = x => { const r = x.getBoundingClientRect(); return { x, cx: r.left + r.width / 2, cy: x.closest('.vmf-sf') ? 1e7 : r.top - top0 + r.height / 2 }; };
-      const down = ev.key === 'ArrowDown', me = at(cur), cx = me.cx, cy = me.cy;
-      const rs = items.map(at).filter(o => o.x !== cur && (down ? o.cy > cy + 4 : o.cy < cy - 4));
+    if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+      const down = ev.key === 'ArrowDown';
+      const all = items.filter(x => x !== cur).map(at).filter(o => (down ? o.cy > me.cy + 4 : o.cy < me.cy - 4));
+      const same = all.filter(o => o.g === me.g);
+      const rs = same.length ? same : all;
       if (rs.length) {
         const rowY = down ? Math.min(...rs.map(o => o.cy)) : Math.max(...rs.map(o => o.cy));
         const row = rs.filter(o => Math.abs(o.cy - rowY) < 8);
-        to = row.reduce((a, o) => (Math.abs(o.cx - cx) < Math.abs(a.cx - cx) ? o : a), row[0]).x;
+        to = row.reduce((a, o) => (Math.abs(o.cx - me.cx) < Math.abs(a.cx - me.cx) ? o : a), row[0]).x;
       }
+    } else {
+      const right = ev.key === 'ArrowRight';
+      const rs = items.filter(x => x !== cur).map(at).filter(o => (right ? o.l >= me.r - 2 : o.r <= me.l + 2) && Math.abs(o.cy - me.cy) < 2e6);
+      const score = o => Math.abs(o.cx - me.cx) + 3 * Math.abs(o.cy - me.cy);
+      if (rs.length) to = rs.reduce((a, o) => (score(o) < score(a) ? o : a), rs[0]).x;
+      if (!to && mfSheet()) to = items[k + (right ? 1 : -1)] || null;
     }
     if (!to) return;
     try { to.focus({ preventScroll: true }); } catch {}
     try { to.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch {}
   }, true);
-  window.addEventListener('resize', () => {   // turned on its side, or a fold opened: the sheet follows the bar (or becomes the PC menu again)
-    const m = document.querySelector('#video-body .vmf-menu'); if (m && !m.hidden && (mfSheet() || m.style.getPropertyValue('--vmf-top'))) { m._vmfKeep = true; vtbPlace(m); m._vmfKeep = false; }
+  window.addEventListener('resize', () => {   // turned on its side, or a fold opened: the panel follows the bar (sheet, two columns or four)
+    const m = document.querySelector('#video-body .vmf-menu'); if (m && !m.hidden) { m._vmfKeep = true; vtbPlace(m); m._vmfKeep = false; fpDim(!mfSheet()); }
+    clearTimeout(fpFitT); fpFitT = setTimeout(() => fpChipsFit(), 120);
   });
+  let fpFitT = 0;
+  /* The wall dimmed behind the drop-down on a computer (the sheet covers it on a phone). */
+  function fpDim(on) {
+    const d = document.querySelector('#video-body .fp-dim'); if (!d) return;
+    if (d.hidden === !!on) d.hidden = !on;
+  }
   /* The A-Z letters sit in rows of six: Up and Down move a whole row (the vtb code moves one
      item at a time, which is right for a list and slow for a grid). Left and Right stay with it.
      On the window, so it runs before the vtb code's own listener on the document. */
@@ -6466,7 +7073,7 @@
   let _gameTypeOf = null;   // first 10 hex of the SHA-256 -> category; null until the table lands
   (function loadGameTypes() {
     if (typeof fetch !== 'function' || typeof DecompressionStream !== 'function') return;
-    fetch('firmware/compat/types.json.gz?v=2.2.1').then(r => {
+    fetch('firmware/compat/types.json.gz?v=2.2.2').then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();
     }).then(doc => {
@@ -6630,11 +7237,8 @@
       const on = key === 'media' ? mediaShown() : key === 'widgets' ? widgetsShown() : !!videoState.show[key];
       return '<button type="button" data-vshow="' + key + '"' + (on ? ' class="active"' : '') + ' aria-pressed="' + on + '" hidden tabindex="-1" aria-hidden="true"></button>';
     };
-    return '<span class="vgdisp" role="group" aria-label="Display">' +
-      /* Continue row: drawn hidden, continuerow.js reveals it and owns its state (data-tip keeps the tooltip). */
-      '<button type="button" class="vgdisp-btn" data-vcontinue="1" data-tip="Continue row" hidden aria-pressed="false" aria-label="Continue row" title="Continue row">' + svg(IC.played) + '</button>' +
-      hid('media') + hid('widgets') + hid('games') +
-      '</span>';
+    /* The Continue row's button is in the Filter panel since 20 Nov 2026. */
+    return '<span class="vgdisp" hidden>' + hid('media') + hid('widgets') + hid('games') + '</span>';
   }
   /* Movies and Widgets as tiles (28 Oct), right of All Consoles. SWITCHES SINCE 28 OCT
      EVENING: an on/off switch drawn in the tile's top corner; the whole tile is the switch
@@ -6713,7 +7317,7 @@
   }
   const vgCellHide = (key, ids) => vgHideEmptyOn() && vgStats(ids, key).n === 0;
 
-  function gamesMenuHTML(dd) {   // dd: the Display and Sort buttons with their menus (toolbarHTML vtbDD)
+  function gamesMenuHTML() {
     const cfg = getWidgetCfg();
     const sys = cfg.games.systems, ser = vgGnwSeries(cfg.games.series);
     const gOn = gamesShown();   // games hidden (Movies or Widgets picked on their own): no console is lit (28 Oct)
@@ -6742,10 +7346,12 @@
     /* THE TOP ROW (28 Oct): collections at the left, Display and Sort in the centre,
        Continue, the double divider and the type boxes at the right, then the close button. The
        head is put together after the tiles below, which find the Game & Watch row it needs. */
-    const head = (collRow) => '<div class="vgames-head">' +
+    /* THE TOP ROW SINCE 20 NOV 2026: the collections and Close. Display, Sort, the Continue row and
+       the kinds of game moved to the Filter panel beside the search box; the hidden data-vshow
+       buttons stay (vgDisplayHTML), so the "Show or hide" quick-jump items still find them. */
+    const head = (collRow) => '<div class="vgames-head vgh-lean">' +
               '<div class="vghz vghz-coll" role="group" aria-label="Collections">' + collRow + '</div>' +
-              '<div class="vghz vghz-mid">' + (dd || '') + '</div>' +
-              '<div class="vghz vghz-end"><span class="vghead-grp">' + vgDisplayHTML() + '<span class="vgdiv2" aria-hidden="true"></span>' + vgTypesHTML() + '</span></div>' +
+              vgDisplayHTML() +
               '<button type="button" class="vgclose" data-vg-close aria-label="Close" title="Close">' + svg('<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>') + '</button></div>';
     let out = '<div class="vgames-hint">Tip: press a system to select or unselect it. Long press to pick more than one.</div>' +
               '<div class="vggrid' + (sys || !gOn ? '' : ' is-all') + '">';
@@ -11064,6 +11670,8 @@
     const c = caret || _vgCaretEl();
     const a = document.activeElement;
     _vgReturn = a && a !== document.body && a !== document.documentElement && !m.contains(a) ? a : c;
+    /* One panel at a time (20 Nov 2026): the Filter panel closes as the Systems menu opens. */
+    try { const o = vtbOpenMenu(); if (o && !o.closest('.vgames-menu')) { vtbClose(false); if (_vgReturn && _vgReturn.closest && _vgReturn.closest('.vtb-menu')) _vgReturn = c; } } catch {}
     m.classList.remove('vg-leaving');
     m.hidden = false;
     if (c) c.setAttribute('aria-expanded', 'true');
@@ -11194,11 +11802,8 @@
       const on = b.dataset.vgShow === 'media' ? mediaShown() : widgetsShown();
       b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on));   // a switch (28 Oct evening)
     });
-    /* The type boxes beside "Systems" (21 Oct). */
-    { const on = gameTypesOn();
-      menu.querySelectorAll('[data-vg-type]').forEach(b => { const lit = on.includes(b.dataset.vgType); b.classList.toggle('active', lit); b.setAttribute('aria-checked', String(lit)); });
-      /* Unknown (10 Nov): shown only while a game we have not tested is on the wall. */
-      const ub = menu.querySelector('[data-vg-type="unknown"]'); if (ub) { const show = vgUnknownOnWall(); if (ub.hidden === show) ub.hidden = !show; } }
+    /* The kinds of game are in the Filter panel since 20 Nov 2026: it, its button and the chips follow. */
+    try { fpSync(); } catch (e) { console.warn('[Emby] filter:', e); }
     /* The series boxes follow the units that are here now (2026-10-14). */
     {
       const listed = vgSeriesListed();
@@ -12198,10 +12803,9 @@
     const want = mediaShown() && !answering && videoState.libs.length > 0;
     lib.hidden = !want;
     if (want) updateCatArrows();   // its arrows depend on a width it only has when shown
-    /* The film Filters button goes with the films (25 Oct): hidden
-       while Movies and shows are off or there is no media server, back when films are on. */
-    const mf = document.querySelector('#video-body .vmf-dd[data-vdd="mfilter"]');
-    if (mf) { const hide = !mediaShown(); if (mf.hidden !== hide) { mf.hidden = hide; if (hide) { const m = mf.querySelector('.vtb-menu'); if (m) m.hidden = true; } } }
+    /* The Filter button stays (20 Nov 2026: games are always on the wall); its films group, its
+       count and the chips follow Movies on and off (25 Oct: the films Filter was hidden with them). */
+    try { fpSync(); } catch (e) { console.warn('[Emby] filter:', e); }
   }
 
   /* THE SERIES STRIP (24 Oct): with one Game & Watch series picked (from the Systems
@@ -12612,6 +13216,9 @@
        switched off. */
     if (gamesOnlyActive()) {
       const n = (videoState._gamesOnly || []).length;
+      /* NOTHING MATCHES YOUR FILTER, FOR GAMES TOO (20 Nov 2026): the kinds of game left nothing of
+         the games that are here. */
+      if (!n && fpKindChips().length && fpGamesBeforeKinds()) { status.innerHTML = fpNothingHTML(); return; }
       status.innerHTML = n
         ? `<div>Showing <b style="color:var(--text)">${videoState.shown}</b> of <b style="color:var(--text)">${n}</b> games</div>`
         /* Measured, not styled globally: the status line is a one-line counter
@@ -12659,7 +13266,7 @@
       try { pend = (getWidgetCfg().games.systems || vgAllIds()).some(gamePending); } catch (_) {}
       if (pend) { status.innerHTML = '<div>Checking what you have loaded&hellip;</div>'; return; }
     }
-    if (!shown && !total && mfActive() && mediaShown()) { status.innerHTML = '<div>No films or series match the filters. <button type="button" class="btn-tiny" data-mf="clear">Clear filters</button></div>'; return; }
+    if (!shown && !total && mfActive() && mediaShown()) { status.innerHTML = fpNothingHTML(); return; }   // the one wording for films and games (20 Nov 2026)
     if (!shown && !total) { status.innerHTML = `<div>Nothing here${videoState.search ? ' for “' + esc(videoState.search) + '”' : ''}.</div>`; return; }
     // No "Load more" button — pages stream in on scroll (see setupInfiniteScroll).
     // "of <total>" is dropped when the server's count is a floor rather than a total
@@ -15338,7 +15945,7 @@
     v.addEventListener('error', () => teardown('The stream started but the video couldn’t be decoded here. It’ll play in a media server app.'));
 
     try {
-      const mod = await import('./remux.js?v=2.2.1');
+      const mod = await import('./remux.js?v=2.2.2');
       if (!ov.classList.contains('open')) return;   // user bailed while it loaded
 
       // MPEG-4/AVI: no browser decoder, so libav decodes + we re-encode to H.264.
@@ -16126,8 +16733,9 @@
       try { await runCacheBuild(true); }
       finally { rb.classList.remove('spin'); }
     });
-    // display + sort + the three show-toggles (event-delegated on the toolbar row)
-    const rowEl = $q('.view-mode-row');
+    // display + sort + the three show-toggles (event-delegated on the whole bar since 20 Nov 2026:
+    // the order and artwork buttons are in the Filter panel beside the search box)
+    const rowEl = $q('.collection-toolbar');
     if (rowEl) rowEl.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       /* THE THREE PEERS, ONE BRANCH. Media, Widgets and Games were three
@@ -16540,6 +17148,11 @@
        or closes with the focus back where it was. */
     toggleSystemsMenu() { if (vgMenuOpen()) { vgCloseMenu(); vgMenuReturn(); return true; } return vgOpenMenu(); },
     systemsMenuOpen: () => vgMenuOpen(),
+    /* The Filter panel (20 Nov 2026): F (shortcuts.js) and the pad's LT (gamepad.js) open or close it;
+       on the phone sheet the pad's LB and RB change its tab. */
+    toggleFilter: () => fpToggle(),
+    filterOpen: () => { const m = document.querySelector('#video-body .vmf-menu'); return !!(m && !m.hidden); },
+    filterTab: (dir) => { const m = document.querySelector('#video-body .vmf-menu'); if (!m || m.hidden) return false; fpStepTab(dir < 0 ? -1 : 1); return true; },
     /* The wall's X and Y and their keys (shortcuts.js, 5 Nov): the Systems menu's Movies or Widgets
        switch by another route, the same vgSetShow, so the menu, the wall and what is stored stay in
        step. key: 'media' or 'widgets'. Returns { ok, on }; ok false: no media server signed in. */

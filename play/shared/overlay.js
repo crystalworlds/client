@@ -115,7 +115,7 @@
   'use strict';
   if (window.CwOverlay) return;
 
-  const BUILD = '2.2.1';
+  const BUILD = '2.2.2';
   const STORE = 'cw.overlay.v1';
   const DEFAULTS = { display: 'auto', showInputs: false, opacity: 0.7, scale: 1, spacing: 0, rotate: true };
   const DIRS = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };

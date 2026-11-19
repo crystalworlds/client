@@ -834,7 +834,7 @@
       { ids: ['wall.widgets'], label: 'On the wall, with nothing on top: Widgets on or off', short: 'on the wall: Widgets on or off' },
       { ids: ['pad.info'], label: 'Details for the highlighted Continue card or drawer item', short: 'details of a Continue card or drawer item' },
       { ids: ['continue.remove', 'pad.context'], label: 'Remove the highlighted card from the Continue row', short: 'remove a Continue card' },
-      { ids: ['pad.home'], label: 'Go to the Home button on the search bar (it does not open it)', short: 'on the wall: the Home button' },
+      { ids: ['media.filter', 'pad.filter'], label: 'Open or close Filter, beside the search box', short: 'on the wall: Filter' },
       { ids: ['section.prev'], label: 'Previous film or series library' },
       { ids: ['section.next'], label: 'Next film or series library' },
       { ids: ['focus.toggle'], label: 'Focus mode: hide the search bar and the library strip' },
@@ -844,6 +844,13 @@
       { ids: ['pad.systems'], label: 'Open or close the Systems menu', short: 'on the wall: the Systems menu' },
       { kb: ['Enter'], pad: ['Pad:A'], label: 'Show only the highlighted console' },
       { kb: ['Enter'], pad: ['Pad:A'], hold: true, label: 'Add or remove a console and keep the others (or Ctrl and click)' },
+    ] },
+    { id: 'filter', title: 'Filter', line: 'The Filter button right of the search box opens one panel: the order of the games and films, the kinds of game, the film choices (with a media server), Jump to A to Z, and the display. Under the search line a chip names each choice that is on; press a chip to take it off, or Clear all.', rows: [
+      { ids: ['media.filter', 'pad.filter'], label: 'Open or close Filter', short: 'Filter' },
+      { kb: ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'], pad: ['Pad:D-pad'], label: 'Move to the choice above, below or beside' },
+      { kb: ['Enter'], pad: ['Pad:A'], label: 'Tick or untick the highlighted choice' },
+      { pad: ['Pad:LB', 'Pad:RB'], label: 'On a phone: the next or previous tab (Order, Games, Films, Display)' },
+      { ids: ['back'], label: 'Close it, back on the Filter button' },
     ] },
     { id: 'switcher', title: 'System Switcher', line: 'Change which console fills the wall without opening the Systems menu.',
       text: ['Press one of the keys below and a panel opens in the middle of the screen with the consoles in a row, the chosen one large in the middle. Each press moves one console along; hold the key or button to keep moving. The consoles come in the Systems menu’s order, with All consoles at the start.',
@@ -1369,6 +1376,15 @@
        (gamepad.js actionFor); on a Continue card and everywhere else they keep their own meaning. */
     F.register('wall.movies', { label: 'On the wall: Movies (films and shows) on or off', group: M, keys: ['O', 'Pad:X'], palette: false, run: () => wallToggle('media') });
     F.register('wall.widgets', { label: 'On the wall: Widgets on or off', group: M, keys: ['W', 'Pad:Y'], palette: false, run: () => wallToggle('widgets') });
+    /* F: the Filter panel beside the search box (20 Nov 2026: "F on the keyboard opens Filter";
+       F was free on the content page; the film player keeps F for full screen). Not while typing,
+       nor under a layer or the System Switcher. Again, it closes. */
+    F.register('media.filter', { label: 'Filter: open or close it (order, kinds of game, film choices, display)', group: M, keys: ['F'], keywords: 'filter sort order kinds homebrew demos unwatched genre decade', run: () => {
+      if (!onMedia() || topEl() || isField(document.activeElement)) return false;
+      try { if (window.GnwSwitcher && window.GnwSwitcher.isOpen()) return false; } catch (_) {}
+      if (fmOn()) setFocusMode(false, { quiet: true });
+      return !!(window.Emby && window.Emby.toggleFilter && window.Emby.toggleFilter() !== false);
+    }, when: onMedia });
     // Media page actions without a key (quick jump finds them).
     const tb = (sel, label, kw) => ({ label, group: M, keywords: kw, run: async () => { if (!onMedia()) go('/media'); if (fmOn()) setFocusMode(false, { quiet: true }); const b = await waitFor(() => document.querySelector('#view-media ' + sel), 6000); if (b && !b.disabled) b.click(); } });
     F.register('media.showGames', tb('[data-vshow="games"]', 'Show or hide games'));

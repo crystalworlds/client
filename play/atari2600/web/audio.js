@@ -19,7 +19,7 @@
  * otherwise presents as "sound works sometimes".
  */
 import { AUDIO_HZ } from './core.js';
-import { AudioQueue } from '../../shared/audio-queue.js?v=2.2.1';
+import { AudioQueue } from '../../shared/audio-queue.js?v=2.2.2';
 
 export class Audio {
   constructor() {

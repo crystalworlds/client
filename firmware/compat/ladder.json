@@ -227,7 +227,7 @@
      0
     ],
     "homebrew": [
-     365,
+     364,
      0,
      0,
      7,
@@ -251,7 +251,7 @@
      0
     ],
     "demo": [
-     15,
+     16,
      0,
      0,
      2,
@@ -311,10 +311,10 @@
   },
   "alynx": {
    "rungs": {
-    "plays": 812,
+    "plays": 809,
     "ingame": 0,
     "menus": 0,
-    "boots": 17,
+    "boots": 20,
     "nothing": 0
    },
    "untested": 0,
@@ -336,10 +336,10 @@
      0
     ],
     "homebrew": [
-     562,
+     560,
      0,
      0,
-     13,
+     15,
      0,
      0
     ],
@@ -352,10 +352,10 @@
      0
     ],
     "demo": [
-     87,
+     86,
      0,
      0,
-     2,
+     3,
      0,
      0
     ]
@@ -432,7 +432,7 @@
  },
  "chips": {
   "nes": {
-   "mappers": 315,
+   "mappers": 316,
    "accessories": "Zapper, Arkanoid paddle, Power Pad, Family Trainer, Four Score, Famicom 4-player adapter, R.O.B. (Gyromite and Stack-Up), Bandai Hyper Shot (light gun), Konami Hyper Shot (run and jump buttons), Party Tap (six quiz buzzers), Pachinko controller (dial), Exciting Boxing punching bag, Jissen Mahjong controller, Oeka Kids drawing tablet, Barcode World reader, Pokkun Moguraa mat (whack-a-mole), Top Rider bike, Subor keyboard, Subor keyboard and mouse, Miracle Piano keyboard, Turbo File (save box), Battle Box (save box), Family BASIC keyboard, Famicom Data Recorder (tapes in and out), Famicom microphone (your own microphone), Datach barcode reader, Study Box tape deck"
   },
   "a7800": {
@@ -449,7 +449,7 @@
   },
   "a2600": {
    "types": 50,
-   "accessories": "Joystick, Paddles, Driving controller, Keypad (keyboard controller), SaveKey (high scores), Light gun, Sega Genesis pad, CBS Booster Grip, Joy 2B+, Trak-Ball, Atari mouse, Amiga mouse, QuadTari (two joysticks on one port), Kid Vid voice module (narration from your own tapes), Supercharger (tape loading), the Atari 5200’s VCS Cartridge Adapter (a Console choice)"
+   "accessories": "Joystick, Paddles, Driving controller, Keypad (keyboard controller), SaveKey (high scores), Light gun, Sega Genesis pad, CBS Booster Grip, Joy 2B+, Trak-Ball, Atari mouse, Amiga mouse, QuadTari (two joysticks on one port), MindLink (headband), Kid Vid voice module (narration from your own tapes), Supercharger (tape loading), the Atari 5200’s VCS Cartridge Adapter (a Console choice)"
   },
   "a5200": {
    "boards": 8,

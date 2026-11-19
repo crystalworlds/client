@@ -275,7 +275,7 @@
      runs cheats (the others join when their cheat build is installed), so the drawer never offers
      what the player cannot run. A 404 shows nothing. */
   const CHEAT_SYSTEMS = new Set(['gnw', 'nes', 'gb', 'atari', 'pm']);   // NES, Game Boy and Atari cheat builds installed 28 Oct 2026; Pokemon mini (our own cheats, served core unchanged) 28 Oct
-  const CHEATS_MJS = './play/host/cheats.mjs?v=2.2.1';
+  const CHEATS_MJS = './play/host/cheats.mjs?v=2.2.2';
   async function cheatPlaces(d, p) {
     if (p === PROFILES.gb) {
       const sha = await gbSha1(d); if (!sha) return [];
@@ -672,9 +672,10 @@
     try { _setOpenId(d.id); } catch (_) {}
 
     // Desktop: the left stage, as each old builder chose it. Narrow: details only (by design).
+    // Over a play window (18 Nov 2026, the marquee opens it): never a device or box on the left.
     const thin = narrow();
     let stage = false;
-    if (!thin) {
+    if (!thin && !(opts && opts.noStage) && !overPlay()) {
       if (p.kind === 'unit') {
         const E = g('GNW_EMULATED_GAMES') || {}, SP = g('STATIC_PREVIEW_IDS'), T = g('TFT_TWIN_UNITS') || {};
         const live = (!!E[d.id] && !(SP && SP.has(d.id))) || !!T[d.id] || d.id === g('TJ_ID');
@@ -828,7 +829,7 @@
     if (!on()) return;
     if (e.target && e.target.closest && e.target.closest('#device-modal .ud-thumb')) { stripClick(e); return; }
     const b = e.target && e.target.closest && e.target.closest('#device-modal .play-now, #device-modal .resume-play, #device-modal .vr-item[data-vr-play]');
-    if (b) wakeSound();
+    if (b) { wakeSound(); if (_fromPlay) _fromPlay.leaving = true; }   // a new game takes the play window: nothing resumes under it
   }, true);
 
   /* ------------------------------------------------------------ styles */
@@ -898,6 +899,12 @@
       .overlay .modal-head .ud-pm-logo { display: block; width: auto; height: 100%; max-width: min(60vw, 360px); object-fit: contain;
         filter: drop-shadow(0 1px 3px rgba(0,0,0,.55)) drop-shadow(0 0 1px rgba(0,0,0,.45)); }
       .overlay .modal-head .ud-pm-year { font-size: 15px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+      /* The head's marquee (or its two lines) opens the game's drawer (18 Nov 2026). */
+      .overlay .modal-head .ud-pm-go { cursor: pointer; border-radius: 8px; outline: none; min-width: 0; transition: opacity .15s; }
+      .overlay .modal-head .ud-pm-go:hover { opacity: .85; }
+      .overlay .modal-head .ud-pm-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      /* The drawer over a play window: the window steps one place down while the drawer is up. */
+      .overlay.ud-under-drawer { z-index: 99 !important; }
       /* A game we have not tested (9 Nov 2026): the notice, and the contact address as the footer shows it. */
       #device-modal .ud-unknown { border: 1px solid rgba(var(--accent-rgb),.35); border-radius: 12px; padding: 12px 14px; background: rgba(var(--accent-rgb),.06); }
       #device-modal .ud-unknown p { margin: 0; color: var(--text); line-height: 1.55; }
@@ -927,6 +934,98 @@
     const head = ov && ov.querySelector('.modal-head'); if (!head) return;
     head.classList.remove('ud-pm-on');
     head.querySelectorAll('.ud-pm-row').forEach(n => n.remove());
+    const box = head.firstElementChild;
+    if (box && box.classList.contains('ud-pm-go')) {
+      box.classList.remove('ud-pm-go');
+      ['role', 'tabindex', 'aria-label', 'title'].forEach(a => box.removeAttribute(a));
+    }
+  }
+
+  /* ------------------------------------------------------------ the marquee opens the drawer (18 Nov 2026)
+     "During game play when the user clicks on the marquee it will pause the game and show the
+     slide-out drawer, however it will not show the device or box that slides out from the left."
+     Closing the drawer resumes the game. The head's first box (the marquee once it has loaded, the
+     two lines before that or when there is none) is a button: a click, or Enter / Space with the
+     focus on it. The game is paused through the window's own pause, the one the Back pause menu
+     uses (play-keys.js gnwPlayKeys.pause, true only when this call changed it), so a game the player
+     had paused is never resumed by us. The drawer is the one a tile opens, built the same way, with
+     no stage on the left; the play window steps one place down under it while it is up. When the
+     drawer closes the game resumes, unless something from the drawer has taken the play window
+     (Play, Resume play or another version: they launch a new game, and nothing resumes under it),
+     the window has closed, or the frame now holds another page. */
+  let _fromPlay = null, _underT = 0;   // { ov, f, doc, id, paused, leaving }
+  function overPlay() { return !!(_fromPlay && _fromPlay.ov.classList.contains('open')); }
+  const playFrameOf = ov => (ov ? ov.querySelector('iframe') : null);
+  function playKeysOf(f) { try { return (f && f.contentWindow && f.contentWindow.gnwPlayKeys) || null; } catch (_) { return null; } }
+  function frameDoc(f) { try { return f ? f.contentDocument : null; } catch (_) { return null; } }
+  function drawerFromPlay(ov) {
+    if (!ov || !ov.classList.contains('open') || _fromPlay) return false;
+    const dov = document.getElementById('device-overlay');
+    if (!dov || dov.classList.contains('open')) return false;
+    const id = playOpenId();
+    const d = id && (g('ALL_DEVICES') || []).find(x => x.id === id);
+    if (!d || !profileOf(d)) return false;
+    const f = playFrameOf(ov), k = playKeysOf(f);
+    let paused = false;
+    try { paused = !!(k && k.pause(true)); } catch (_) { paused = false; }
+    _fromPlay = { ov, f, doc: frameDoc(f), id, paused, leaving: false };
+    clearTimeout(_underT);
+    ov.classList.add('ud-under-drawer');
+    let ok = false;
+    try { ok = open(d, { noStage: true }); } catch (e) { console.warn('[drawer] could not open over the play window', e); }
+    if (!ok) endFromPlay(true);
+    return ok;
+  }
+  function endFromPlay(now) {
+    const s = _fromPlay; if (!s) return;
+    _fromPlay = null;
+    const ov = s.ov, dov = document.getElementById('device-overlay');
+    /* The window comes back up once the drawer has slid away (its own --drawer-out). */
+    const out = now ? 0 : (parseFloat(getComputedStyle(dov || document.documentElement).getPropertyValue('--drawer-out')) || 0.7) * 1000 + 60;
+    clearTimeout(_underT);
+    _underT = setTimeout(() => { if (!_fromPlay) ov.classList.remove('ud-under-drawer'); }, out);
+    setTimeout(() => {
+      if (s.leaving || !ov.classList.contains('open') || playOpenId() !== s.id || !s.f || !s.f.isConnected || frameDoc(s.f) !== s.doc) return;
+      if (s.paused) { const k = playKeysOf(s.f); try { if (k) k.pause(false); } catch (_) {} }
+      try { if (window._playFocusGame) window._playFocusGame(ov); } catch (_) {}
+    }, 0);
+  }
+  function watchDrawerForPlay() {
+    const dov = document.getElementById('device-overlay');
+    if (!dov || dov.__udFromPlay) return;
+    dov.__udFromPlay = true;
+    new MutationObserver(() => {
+      if (!_fromPlay || dov.classList.contains('open')) return;
+      /* Closed by its x, Escape or a click beside it: the drawer's own Back entry is given back
+         here. Over a play window (a layer that already holds an entry of its own) index.html's
+         _ovSync would only rewrite it to the page's address, leaving a Back press that does
+         nothing (measured: closed once by its x, the drawer opened again from the marquee did not
+         close on the next Back). Closed by Back, the entry is already gone and nothing is done. */
+      try {
+        /* global _ovRoutedDrop, _ovSelfPop */
+        if (history.state && history.state.cwLayer && typeof _ovRoutedDrop !== 'undefined' && _ovRoutedDrop) {
+          _ovRoutedDrop = null; _ovSelfPop++; history.back();   // eslint-disable-line no-global-assign
+        }
+      } catch (_) {}
+      endFromPlay(false);
+    }).observe(dov, { attributes: true, attributeFilter: ['class'] });
+  }
+  function playGoable(ov, box, d) {
+    if (!box || box.classList.contains('ud-pm-go')) return;
+    box.classList.add('ud-pm-go');
+    box.setAttribute('role', 'button');
+    box.setAttribute('tabindex', '0');
+    box.setAttribute('aria-label', 'About ' + (d.name || 'this game') + ': pauses the game');
+    box.title = 'About this game';
+    if (box.__udGo) return;
+    box.__udGo = true;
+    box.addEventListener('click', e => { if (!box.classList.contains('ud-pm-go')) return; e.preventDefault(); e.stopPropagation(); drawerFromPlay(ov); });
+    box.addEventListener('keydown', e => {
+      if (!box.classList.contains('ud-pm-go') || e.target !== box) return;
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      e.preventDefault(); e.stopPropagation();
+      if (!e.repeat) drawerFromPlay(ov);
+    });
   }
   async function playYear(d) {
     const y = String(d.released || '').slice(0, 4);
@@ -943,6 +1042,7 @@
     if (!p || (p !== PROFILES.gb && p !== PROFILES.nes && p !== PROFILES.atari)) return;
     const head = ov.querySelector('.modal-head'), box = head && head.firstElementChild;
     if (!box || box.classList.contains('modal-close')) return;
+    playGoable(ov, box, d);   // the two lines open the drawer too, until (and unless) the marquee replaces them
     const live = () => seq === _playMarqSeq && ov.classList.contains('open') && playOpenId() === id;
     const yearP = playYear(d);   // may wait for the metadata on first use: never holds the logo back
     /* No 8 s give-up here (probe's): while a game boots on a busy machine the logo can take longer,
@@ -979,13 +1079,13 @@
       new MutationObserver(() => {
         const now = ov.classList.contains('open');
         if (now && !was) setTimeout(() => playMarquee(ov), 0);   // after the opener has written its title
-        if (!now && was) { _playMarqSeq++; playMarqueeReset(ov); }
+        if (!now && was) { _playMarqSeq++; playMarqueeReset(ov); if (!_fromPlay || _fromPlay.ov !== ov) ov.classList.remove('ud-under-drawer'); }
         was = now;
       }).observe(ov, { attributes: true, attributeFilter: ['class'] });
     }
   }
 
-  function wire() { styles(); wrap(); watchPlayOverlays(); }
+  function wire() { styles(); wrap(); watchPlayOverlays(); watchDrawerForPlay(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire, { once: true }); else wire();
   // index.html's own script runs before DOMContentLoaded; wrap as soon as the names exist too.
   wrap();

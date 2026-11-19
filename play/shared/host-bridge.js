@@ -175,7 +175,7 @@
     const arm = () => { try { window.CwPlayAudio.armGestures(() => hostAny()); } catch (_) {} };
     if (window.CwPlayAudio) { arm(); return; }
     const sc = document.createElement('script');
-    sc.src = 'play/host/cw-audio.js?v=2.2.1';
+    sc.src = 'play/host/cw-audio.js?v=2.2.2-audioservo';
     sc.onload = arm;
     (document.head || document.documentElement).appendChild(sc);
   }

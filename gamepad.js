@@ -35,8 +35,10 @@
  *                        (system-switcher.js, 30 Oct 2026: A applies, B keeps the system);
  *                        in the player: previous / next episode
  *   LT / RT              one screen up / down; in the player: back / forward 10 s (held: repeats)
- *                        On the Media page (2026-10-29): LT selects the Home button on the search
- *                        bar (it does not open), RT opens the Systems menu with the focus inside it.
+ *                        On the Media page: LT opens or closes Filter beside the search box (20 Nov
+ *                        2026; it selected the Home button from 29 Oct), RT opens the Systems menu
+ *                        with the focus inside it. With the Filter sheet open on a phone, LB and RB
+ *                        change its tab.
  *                        In a play window a trigger the console does not use goes to the Control
  *                        Bar (play/host/host.mjs).
  *   Right on the wall's right-most tile selects the Systems tab (nav.js; it does not open).
@@ -168,8 +170,11 @@
        goes back to the tile it came from. The old LT / RT steps along the toolbar are gone (the
        D-pad walks the bar). Elsewhere (drawers, Settings, other pages) LT / RT stay one screen up /
        down, and back / forward 10 s in the film player. */
-    F.register('pad.home', { label: 'Content page: go to the Home button on the search bar (it does not open; B goes back to the tile)', group: 'Content page', scope: 'pad',
-      keys: ['Pad:LT'], palette: false, when: () => homeCan(), run: () => homeEnter() });
+    /* LT OPENS FILTER (20 Nov 2026: "LT on the controller ... open Filter", the partner of RT for
+       the Systems menu). Again, or B, it closes, back on the Filter button. The Home button is one
+       Up and Left from the wall, as every bar button is (homeCan and homeEnter below no longer have a key). */
+    F.register('pad.filter', { label: 'Content page: open or close Filter beside the search box (B closes it)', group: 'Content page', scope: 'pad',
+      keys: ['Pad:LT'], palette: false, when: () => filterCan(), run: () => filterToggle() });
     F.register('pad.systems', { label: 'Content page: open the Systems menu, with the focus in it (again or B closes it)', group: 'Content page', scope: 'pad',
       keys: ['Pad:RT'], palette: false, when: () => systemsCan(), run: () => systemsToggle() });
     /* LB / RB FROM ANYWHERE ON THE CONTENT PAGE (29 Oct: "the shoulder-button system switch doesn't
@@ -177,8 +182,11 @@
        box (the search box, even at rest) keeps its keys, so nothing happened there. On the content
        page the pad now steps the library or system itself, wherever the focus is. */
     const secOk = () => !topEl() && onMediaPage() && !!(window.GnwShortcuts && window.GnwShortcuts.stepSection);
-    F.register('pad.section.prev', { label: 'System Switcher: one system back (held: repeats; applied a second after the last press; A applies now, B keeps the system)', group: 'Content page', scope: 'pad', keys: ['Pad:LB'], palette: false, when: secOk, run: () => { window.GnwShortcuts.stepSection(-1, curRepeat); } });
-    F.register('pad.section.next', { label: 'System Switcher: one system on (held: repeats; applied a second after the last press; A applies now, B keeps the system)', group: 'Content page', scope: 'pad', keys: ['Pad:RB'], palette: false, when: secOk, run: () => { window.GnwShortcuts.stepSection(1, curRepeat); } });
+    /* With the Filter panel open, LB and RB change its tab (the phone sheet) and never switch the
+       system under it (20 Nov 2026). */
+    const filterTab = d => !!(window.Emby && window.Emby.filterOpen && window.Emby.filterOpen() && (curRepeat || window.Emby.filterTab(d)));
+    F.register('pad.section.prev', { label: 'System Switcher: one system back (held: repeats; applied a second after the last press; A applies now, B keeps the system)', group: 'Content page', scope: 'pad', keys: ['Pad:LB'], palette: false, when: secOk, run: () => { if (filterTab(-1)) return; window.GnwShortcuts.stepSection(-1, curRepeat); } });
+    F.register('pad.section.next', { label: 'System Switcher: one system on (held: repeats; applied a second after the last press; A applies now, B keeps the system)', group: 'Content page', scope: 'pad', keys: ['Pad:RB'], palette: false, when: secOk, run: () => { if (filterTab(1)) return; window.GnwShortcuts.stepSection(1, curRepeat); } });
     // Listed for ? (stickScroll below, 29 Oct): either stick's up / down scrolls the page or the drawer.
     F.register('pad.sticks', { label: 'Content page and drawers: either stick up or down scrolls, faster the further it is pushed (the D-pad still moves from tile to tile; the left stick’s left and right still step). Pages, Settings, menus and manuals: the right stick scrolls', group: 'Content page', scope: 'info', keys: ['Pad:LS', 'Pad:RS'], help: true, reserved: true });   // shown as "Pad LS", "Pad RS" (the left and right sticks)
     // Listed for ? (nav.js does it, 29 Oct): Right past the wall's right-most tile.
@@ -378,6 +386,15 @@
     try { h.focus({ preventScroll: true }); } catch (_) {}
     try { h.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
     return document.activeElement === h;
+  }
+  /* LT: the Filter panel (20 Nov 2026). Not while a layer is open, nor while typing in the search box. */
+  function filterCan() {
+    if (topEl() || !onMediaPage() || tbEditing()) return false;
+    return !!(window.Emby && window.Emby.toggleFilter && document.querySelector('#view-media [data-vdd-btn="mfilter"]'));
+  }
+  function filterToggle() {
+    if (curRepeat) return true;                                         // a held LT: one press
+    return window.Emby.toggleFilter() !== false;
   }
   /* RT: the Systems menu (29 Oct). emby.js opens it with the focus inside, and closes it with
      the focus back where it was. */

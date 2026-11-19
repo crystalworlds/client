@@ -623,7 +623,7 @@ function gbAcceptanceEmulationTabHTML(d) {
       'The structures that a measured tree carries on top of a committed one can also be stated on the page so that the tree can be rebuilt: for this board they are the scan ' +
       'latch and grip lag in section 5, the removed window increment in section 11 and the counter model in section 17.</div>' +
     '<p class="hw-readable"><b>This is the core this site runs, and the board figure is measured on it.</b> ' +
-    'The served core&rsquo;s sha256 begins <code>4e43ce760b3e</code>: the footer prints it, ' +
+    'The served core&rsquo;s sha256 begins <code>559f488ff5b5</code>: the footer prints it, ' +
     '<code>play/gameboy/CORE-VERSION.json</code> names it, and the browser can recompute it from ' +
     '<code>build/gb.wasm</code>. <b>The whole 264-row board was last re-run on this core, with the Color at revision E, the default: 261 PASS, 0 FAIL, 3 INFO.</b> ' +
     'The served core includes the unlicensed boards of appendix H.11, the interrupt-hold rule of section 14 and the extra hardware of appendix A.1 (the Super Game Boy, the link cable and infrared between two machines, rumble, the HuC3 tone, the Barcode Boy and the Pocket Sonar), all of that hardware off unless used.</p>' +

@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   if (window.CwEmuCards) return;
-  const IMG = k => 'images/consoles/' + k + '.webp?v=2.2.1';
+  const IMG = k => 'images/consoles/' + k + '.webp?v=2.2.2';
   const P = (img, name) => ({ img, name });
   const N = name => ({ name });
 
@@ -91,7 +91,7 @@
   const SITE_VERSION = (() => {
     const el = document.querySelector('#vault-overlay .modal-title');
     const m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.2.1';
+    return m ? m[1] : '2.2.2';
   })();
   const COMPARE = {
     /* GB versions (2026-10-18): the board (gbdev.io/GBEmulatorShootout, run 'Updated On Thu, 04 Jun 2026')
@@ -99,7 +99,7 @@
        date: LIJI32/SameBoy v1.0.3 (2026-03-04; v1.0.4 2026-10-09), Docheinstein/docboy 1.2 (2026-03-22;
        1.3 2026-06-20). Emulicious downloads from emulicious.net with no version history: not stated.
        2026-11-07: SameBoy 1.0.5 and DocBoy 1.3 run by us with the board's own tool, rows and judge: the same answers as the
-       4 June run on all 261 shared rows. Ours 256 / 259 on the 261 from core 37c1741215a4 (8 Nov 2026), and the same on core ca5a2a32f97e (9 Nov 2026, every row byte-identical). 14 Nov 2026: core a6d8af554488 (every model, the Color at revision E by default), 261 PASS / 0 FAIL / 3 INFO on all 264, so 258 / 261 on the shared 261 (the two rows that moved since 9 Nov are among the shared rows; the 3 Super Game Boy rows still pass). 15 Nov 2026: core 1e21c1319008 (channel 1 timing by Colour revision, the dispatch clear, the printer, timed buttons), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 82c160bc54dc (the trigger duty step at Colour D and E, the first-model DMG 0), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core d3df03e99c03 (a Colour alone sees its own infrared LED), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 29116ae70271 (the original and the Pocket with no start-up program begin where their own start-up program hands over), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 4e43ce760b3e (the same emulator with less work per cycle, so it runs faster), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO.
+       4 June run on all 261 shared rows. Ours 256 / 259 on the 261 from core 37c1741215a4 (8 Nov 2026), and the same on core ca5a2a32f97e (9 Nov 2026, every row byte-identical). 14 Nov 2026: core a6d8af554488 (every model, the Color at revision E by default), 261 PASS / 0 FAIL / 3 INFO on all 264, so 258 / 261 on the shared 261 (the two rows that moved since 9 Nov are among the shared rows; the 3 Super Game Boy rows still pass). 15 Nov 2026: core 1e21c1319008 (channel 1 timing by Colour revision, the dispatch clear, the printer, timed buttons), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 82c160bc54dc (the trigger duty step at Colour D and E, the first-model DMG 0), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core d3df03e99c03 (a Colour alone sees its own infrared LED), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 29116ae70271 (the original and the Pocket with no start-up program begin where their own start-up program hands over), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 15 Nov 2026: core 4e43ce760b3e (the same emulator with less work per cycle, so it runs faster), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 19 Nov 2026: core ec9f27293887 (the Sachen boards start on the original Game Boy as on the console), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO. 20 Nov 2026: core 559f488ff5b5 (the MBC30 chip of the Japanese Pokemon Crystal, all eight save banks), every row byte-identical, the same 261 PASS / 0 FAIL / 3 INFO.
        mGBA added 2026-10-30: the board's own cells for the mGBA column, counted from the page
        read 30 Oct 2026, same run: 145 PASS + 3 INFO on the shared 261 (147 / 150 on all 264, the page's
        "mGBA (150/264)"); mgba-emu/mgba newest release on that date 0.10.5 (2025-03-09), still the newest. */
@@ -259,7 +259,7 @@
         ['Accessories', '{chips.gb.accessories}'],
         ['Files', 'GBS music files play in the Game Boy player; game saves go in and out as .sav files, with the clock; save states go in and out as BESS, the format other Game Boy emulators read'],
       ],
-      score: { big: '261 of 264', text: 'on the public Game Boy accuracy board, with mealybug 24 of 24, Mooneye 97 of 97 and Blargg 51 of 51 on its rows; Game Boy Color mealybug 20 of 20 on revision E, the default, and 27 of 27 set to revision C. Two newer Game Boy Color suites, cgb-acid-hell and the AGE tests, built from their published source: 49 of 50 on revision E and 49 of 50 set to revision C, against SameBoy 1.0.5’s 39 on the same 50 at revision C (every result is on the Game Boy Color tab). {games} games tested ({files} files). {play}.', date: '14 Nov 2026 (tests and Color suites; games 9 Nov 2026)' },
+      score: { big: '261 of 264', text: 'on the public Game Boy accuracy board, with mealybug 24 of 24, Mooneye 97 of 97 and Blargg 51 of 51 on its rows; Game Boy Color mealybug 20 of 20 on revision E, the default, and 27 of 27 set to revision C. Two newer Game Boy Color suites, cgb-acid-hell and the AGE tests, built from their published source: 49 of 50 on revision E and 49 of 50 set to revision C, against SameBoy 1.0.5’s 39 on the same 50 at revision C (every result is on the Game Boy Color tab). {games} games tested ({files} files). {play}.', date: '14 Nov 2026 (tests and Color suites; games 16 Nov 2026)' },
       proof: { fn: 'gbEmulationTabHTML', args: [{ system: 'gb' }], anchor: 'gbe-score', title: 'Game Boy: the score' } },
 
     { name: 'NES', count: 1, rank: ['#1'], lib: 'nes', sub: 'NES, Famicom and the Disk System',
@@ -309,11 +309,11 @@
         ['Processor', '6502C (SALLY)'],
         ['Picture', 'ANTIC and GTIA'],
         ['Sound and keypad', 'POKEY'],
-        ['Firmware', 'The original BIOS when your game server has it, else our own replacement (you can choose ours in the play window’s Settings). The 32 games that use Atari’s own code need the original. The three games made for the later two-port console start on its own firmware, from your game server'],
+        ['Firmware', 'The original BIOS when your game server has it, else our own replacement (you can choose ours in the play window’s Settings). Five programs still need the original, because they use parts of Atari’s own code that our replacement does not have. The three games made for the later two-port console start on its own firmware, from your game server'],
         ['Cartridges', '{chips.a5200.boards} boards: 4 KB to 32 KB, Bounty Bob (40 KB) and Super Cart (64 to 512 KB)'],
         ['Accessories', '{chips.a5200.accessories}'],
       ],
-      score: { big: '47 of 47', text: 'on Acid5200, the public 5200 test suite. With the original BIOS: {games} games tested ({files} files). {play}. Without it, on our own replacement firmware: 454 of 522 files play.', date: '28 Oct 2026 (tests and games)' },
+      score: { big: '47 of 47', text: 'on Acid5200, the public 5200 test suite. With the original BIOS: {games} games tested ({files} files). {play}. Without it, on our own replacement firmware: 481 of 522 files play.', date: '28 Oct 2026 (tests and games), 18 Nov 2026 (own firmware)' },
       proof: { fn: 'atariEmulationTabHTML', args: [{ catalogue: 'atari5200' }], anchor: 'atari5200emu-10-verification', title: 'Atari 5200: verification' } },
 
     { name: 'Atari 7800', count: 1, rank: ['#1'], lib: 'a7800', sub: '',

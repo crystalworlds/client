@@ -11,7 +11,7 @@
  *
  *   page -> worker  {t:'create', url, audioRate}            -> {t:'created', info, has}
  *                   {t:'load', req}                         -> {t:'loaded', result, details} | {t:'fail', ...}
- *                   {t:'run', now, inputs, wantState}       -> {t:'frame', video, audio, state?, mirror}
+ *                   {t:'run', now, audioRate, inputs, wantState} -> {t:'frame', video, audio, state?, mirror}
  *                   {t:'serialize', id}                     -> {t:'state', id, state}
  *                   {t:'unserialize', id, state, now}       -> {t:'done', id, video, mirror} | {t:'fail', id, ...}
  *                   {t:'reset', id} {t:'setOption', id, k, v} {t:'clock', ms}
@@ -87,6 +87,7 @@ self.onmessage = async ev => {
       post({ t: 'loaded', result: plain(result), details, mirror: mirror(), options: core.options ? plain(core.options()) : null, ports: core.ports ? plain(core.ports()) : null });
     } else if (m.t === 'run') {
       nowMs = m.now;
+      if (m.audioRate) audioRate = m.audioRate;      // the host's rate with its servo, every frame (20 Nov 2026)
       const t0 = performance.now();
       for (const [port, st] of m.inputs || []) core.setInput(port, st);
       core.runFrame();

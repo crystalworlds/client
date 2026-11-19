@@ -24,7 +24,7 @@
 import { CoreError } from './core-api.mjs';
 
 export async function createWorkerCore(url, env, { channels = 1 } = {}) {
-  const w = new Worker(new URL('./core-worker.js?v=2.2.1', import.meta.url), { type: 'module' });
+  const w = new Worker(new URL('./core-worker.js?v=2.2.2-audioservo', import.meta.url), { type: 'module' });
   let seq = 0, inFlight = 0, video = null, wantState = false, wantVideo = true, latest = null, inputs = [], mirror = { frames: 0, model: null, ready: true, bdirty: null };
   let audioQ = [], audioFrames = 0, options = null, details = null, dead = null, ports = [];
   const waits = new Map();
@@ -91,7 +91,10 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
       inFlight++;
       // The picture is composed in the worker only for a frame the page will paint: the main
       // thread's core composes on paint too, not every frame (a catch-up tick runs several).
-      const m = { t: 'run', now: env.now(), inputs, wantState, wantVideo, channels };
+      // The host's sound rate on every frame (20 Nov 2026): a core that reports rate 0 makes its
+      // sound at env.audioRate(), and the servo is in that rate. Sent only at create, a worker core
+      // kept the first reading (+0.5 %, an empty queue) and its queue was cleared twice a minute.
+      const m = { t: 'run', now: env.now(), audioRate: env.audioRate ? env.audioRate() : 0, inputs, wantState, wantVideo, channels };
       inputs = []; wantState = false; wantVideo = false;
       w.postMessage(m);
       return true;

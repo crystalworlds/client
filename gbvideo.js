@@ -850,8 +850,27 @@
     try { _scaleRO.observe(v); } catch (e) {}
   }
 
+  /* THE DRAWER'S CLIP (21 Nov 2026). The drawer's first picture plays the title's tile clip on the
+     console's screen (drawer-unified.js), so it asks the addresses the tile would, in the tile's order:
+     what played on the tile this page load, the title's own clip in its shelf's bucket, its group's
+     representative, then the other bucket. sha: the cartridge's SHA-1 when the drawer already holds it. */
+  function clipUrls(id, sha) {
+    if (sha && !hashOf(id)) { LEARNED[id] = String(sha).toUpperCase(); }
+    var h = hashOf(id);
+    if (!h || MISSING[id]) return Promise.resolve([]);
+    var kind = shelfBucket(id) || bucketFor(id) || 'dmg', out = [];
+    if (FOUND[id]) out.push(FOUND[id]);
+    if (BASE[kind]) out.push(BASE[kind] + h + '.webm');
+    return repTarget(id).then(function (t) {
+      if (t && BASE[t.bucket]) out.push(BASE[t.bucket] + t.sha1 + '.webm');
+      var alt = OTHER[kind];
+      if (alt && BASE[alt]) out.push(BASE[alt] + h + '.webm');
+      return out.filter(function (u, i) { return out.indexOf(u) === i; });
+    }, function () { return out; });
+  }
+
   window.GBVIDEO = { arm: arm, claims: claims, stats: stats, setEnabled: setEnabled,
-                     release: release, urlFor: urlFor, hashOf: hashOf, fitScale: fitScale,
+                     release: release, urlFor: urlFor, hashOf: hashOf, fitScale: fitScale, clipUrls: clipUrls,
                      learn: function () { _learned = false; learnHashes(); },
                      get NEAR_PX() { return NEAR_PX; },
                      /* Live-tunable, like GNW_MAX_LIVE / PM_MAX_LIVE.

@@ -7,7 +7,8 @@
  *   - ONE FILE PER GAME FILE, asked for by name, never a list: <bucket>/<key>.json. The key is the
  *     one the clips and covers use, worked out from this file's bytes (NES family 'nes-x' + 12 hex
  *     of the SHA-256; Game Boy family the SHA-1, upper case; Atari 'a2600-x' ... + 12 hex of the
- *     SHA-256 of the game file, the one file inside a .zip; Game & Watch the unit's id). A 404 is
+ *     SHA-256 of the game file, the one file inside a .zip; the Sega 8-bit family likewise 'sg1000-x',
+ *     'sms-x', 'gg-x'; Game & Watch the unit's id). A 404 is
  *     "no cheats", remembered for this page only.
  *   - Read straight from the bucket: every -cheats bucket that holds files allows reading from any
  *     site (a GET rule; checked 28 Oct 2026). The site relay is not used for cheats.
@@ -23,8 +24,14 @@ const BUCKET = {
   fds: 'pub-be26d1a0779e4826b8de1a28ce831ca7.r2.dev', gb: 'pub-d649065aacbe4c738c9b4adc09793e9e.r2.dev',
   gbc: 'pub-9f4021d3534c417c8421307423e30ad6.r2.dev', sgb: 'pub-da7058f9bb754570a261cae1f02e8861.r2.dev',
   pm: 'pub-d505b71fa03b4756a2b40a56adc38d3c.r2.dev', gnw: 'pub-6595d58ba1f848c499afabb81ea14517.r2.dev',
+  // The Sega 8-bit family (20 Nov 2026): sg1000-cheats, sms-cheats, gg-cheats
+  sg1000: 'pub-fd532135b22d4200935bc9ed35d68063.r2.dev', sms: 'pub-ff8a5011be0b4be8a98c0add8182af15.r2.dev',
+  gg: 'pub-c90c2ee899204c70bcdaeffa982701d1.r2.dev',
+  n64: 'pub-23c58ff5a24a43e4836caabcca01f421.r2.dev',   // n64-cheats (22 Nov 2026; empty until N64 cheats are made)
+  snes: 'pub-07a483f73a26407ab3ac305a9973548f.r2.dev',  // snes-cheats (23 Nov 2026; empty until SNES cheats are made)
 };
 const ATARI = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx' };
+const SEGA8 = { sg1000: 1, sms: 1, gg: 1, n64: 1, snes: 1 };   // n64: the same naming (22 Nov 2026)   // 20 Nov 2026: the bucket is named like the system, the key like its covers
 const MISS = 'cw.cheats.miss.v1';
 const PAGE = 50;
 
@@ -73,6 +80,7 @@ export async function placesFor(sys, bytes, info) {
     return order.map(bucket => ({ bucket, key }));
   }
   if (ATARI[sys]) return [{ bucket: ATARI[sys], key: sys + '-x' + (await sha('SHA-256', b)).slice(0, 12) }];
+  if (SEGA8[sys]) return [{ bucket: sys, key: sys + '-x' + (await sha('SHA-256', b)).slice(0, 12) }];
   if (sys === 'pm') return [{ bucket: 'pm', key: 'pm-x' + (await sha('SHA-256', b)).slice(0, 12) }];   // 28 Oct 2026: our own cheats
   return [];
 }

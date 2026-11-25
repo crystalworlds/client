@@ -52,6 +52,7 @@
       { id: 'autoskip', name: 'Skip intros automatically', media: true, find: () => cardOf('w-autoskip-on') },
       { id: 'upnext', name: 'Autoplay next episode', media: true, find: () => cardOf('gun-autoplay') },
       { id: 'conv', name: 'Server conversion', media: true, find: () => cardOf('w-srvconv') },
+      { id: 'mediabadge', name: 'Media Enhanced Covers', media: true, find: () => (window.Emby && window.Emby.setMediaBadges ? [mediaBadgeCard()] : []) },   // 22 Nov 2026
     ] },
     { id: 'subs', label: 'Subtitles', items: [
       { id: 'autofetch', name: 'Find subtitles automatically', media: true, find: () => cardOf('gsub-autofetch') },
@@ -95,6 +96,25 @@
       'come after them, for every system, in the same order as before. Off: every game keeps its place.</p>';
     c.querySelector('input').addEventListener('change', e => { try { if (window.Emby && window.Emby.setPreferAnimated) window.Emby.setPreferAnimated(e.target.checked); } catch (_) {} });
     animEl = c;
+    return c;
+  }
+
+  /* MEDIA ENHANCED COVERS (22 Nov 2026), built and kept like hideEmptyCard, with the film and series
+     switches. Off by default; emby.js setMediaBadges stores it (localStorage gnw.mediaBadges) and puts
+     the marks on the tiles already drawn, or takes them off. */
+  let mbEl = null;
+  function mediaBadgeCard() {
+    const on = !!(window.Emby && window.Emby.mediaBadges && window.Emby.mediaBadges());
+    if (mbEl) { const i = mbEl.querySelector('input'); if (i && i.checked !== on && document.activeElement !== i) i.checked = on; return mbEl; }
+    const c = document.createElement('div');
+    c.className = 'aw-card cfg-own';
+    c.innerHTML = '<div class="aw-head"><span class="aw-name">Media Enhanced Covers</span>' +
+      '<label class="aw-switch"><input type="checkbox" id="cfg-media-badges"' + (on ? ' checked' : '') + ' aria-label="Media Enhanced Covers"><span class="aw-slider"></span></label></div>' +
+      '<p class="cfg-note">Each film and series poster shows a small mark in its top-left corner: 4K, Blu-ray or DVD, by the ' +
+      'picture size of the copy Play would play (a series by its first episode). A title whose size is not known yet shows ' +
+      'no mark. The 3D case beside an open film shows none, as its colour already tells you. Saved only in this browser.</p>';
+    c.querySelector('input').addEventListener('change', e => { try { if (window.Emby && window.Emby.setMediaBadges) window.Emby.setMediaBadges(e.target.checked); } catch (_) {} });
+    mbEl = c;
     return c;
   }
 
@@ -380,7 +400,7 @@
       root.id = 'wg-root'; root.className = 'cfg-root';
       root.innerHTML = '<p class="cfg-intro">Live tiles woven through the tiles on the content page: a clock, the weather, trailers, film facts and more. Open one to switch it on or off and set how often it appears. Saved only in this browser.</p>' +
         /* Widgets belong to their content (9 Nov 2026, emby.js WIDGET_CONTENT): said here in plain words. */
-        '<p class="cfg-intro" id="wg-groups">Each widget goes with what it shows. Trailer playback, Film facts, Collection stats and Cast come from your films and shows, so they show only while Movies is on. Play Time shows only while games are shown. Clock, Weather, Movie quotes and Image show whenever widgets are on.</p>' +
+        '<p class="cfg-intro" id="wg-groups">Each widget goes with what it shows. Trailer playback, Film facts, Collection stats and Cast come from your films and shows, so they show only while Movies is on. Play Time and Achievements show only while games are shown, and Achievements only while RetroAchievements is connected. Clock, Weather, Movie quotes and Image show whenever widgets are on.</p>' +
         '<div class="cfg-group" id="wg-list"></div>';
       wire(root);
     }

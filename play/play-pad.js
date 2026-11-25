@@ -82,6 +82,21 @@
              { Up: 'KeyW', Down: 'KeyS', Left: 'KeyA', Right: 'KeyD', A: 'KeyG', B: 'KeyH', X: 'KeyG', Y: 'KeyH' }] },
     alynx: { label: 'Atari Lynx', players: [
              Object.assign({}, DIRS, { A: 'KeyX', B: 'KeyZ', X: 'KeyX', Y: 'KeyZ', Start: 'Enter', Select: 'Digit1', LB: 'Digit1', RB: 'Digit2' })] },  // printed A = Lynx A; Start = Pause, Option 1 / 2
+    /* The Sega devices (20 Nov 2026; play/cores/sega8/core.mjs ports): buttons 1 and 2 (the pad's left and
+       right), Start = Pause (Start on the Game Gear), Select = Reset where the model has one. */
+    sg1000: { label: 'SG-1000', players: [
+             Object.assign({}, DIRS, { A: 'KeyZ', B: 'KeyX', X: 'KeyZ', Y: 'KeyX', Start: 'Enter' }),
+             { Up: 'KeyI', Down: 'KeyK', Left: 'KeyJ', Right: 'KeyL', A: 'KeyF', B: 'KeyG', X: 'KeyF', Y: 'KeyG', Start: 'Enter' }] },
+    sms:   { label: 'Master System', players: [
+             Object.assign({}, DIRS, { A: 'KeyZ', B: 'KeyX', X: 'KeyZ', Y: 'KeyX', Start: 'Enter', Select: 'ShiftRight' }),
+             { Up: 'KeyI', Down: 'KeyK', Left: 'KeyJ', Right: 'KeyL', A: 'KeyF', B: 'KeyG', X: 'KeyF', Y: 'KeyG', Start: 'Enter' }] },
+    gg:    { label: 'Game Gear', players: [
+             Object.assign({}, DIRS, { A: 'KeyZ', B: 'KeyX', X: 'KeyZ', Y: 'KeyX', Start: 'Enter' })] },
+    /* The Super Nintendo (23 Nov 2026; play/cores/snes/core.mjs ports): every button by the letter printed on it,
+       LB and RB are L and R; player 2 on its own keys. */
+    snes:  { label: 'Super Nintendo', players: [
+             Object.assign({}, DIRS, { A: 'KeyX', B: 'KeyZ', X: 'KeyS', Y: 'KeyA', LB: 'KeyQ', RB: 'KeyW', Start: 'Enter', Select: 'ShiftRight' }),
+             { Up: 'KeyI', Down: 'KeyK', Left: 'KeyJ', Right: 'KeyL', A: 'KeyG', B: 'KeyF', X: 'KeyT', Y: 'KeyR', LB: 'KeyY', RB: 'KeyU', Start: 'KeyH', Select: 'KeyN' }] },
     twin:  { label: 'Super Mario Bros. / Zelda colour units', players: [
              Object.assign({}, NIN, { LB: 'Digit1', RB: 'Digit3', LT: 'Digit2' })] },                                            // Game, Time, Pause
     tj:    { label: 'Tetris Jr.', players: [
@@ -109,6 +124,10 @@
              ['Digit6', 'Keypad 6'], ['Digit7', 'Keypad 7'], ['Digit8', 'Keypad 8'], ['Digit9', 'Keypad 9'], ['Digit0', 'Keypad 0'],
              ['Minus', 'Keypad *'], ['Equal', 'Keypad #']]),
     alynx: ARROWS.concat([['KeyX', 'A'], ['KeyZ', 'B'], ['Enter', 'Pause'], ['Digit1', 'Option 1'], ['Digit2', 'Option 2']]),
+    sg1000: ARROWS.concat([['KeyZ', '1'], ['KeyX', '2'], ['Enter', 'Pause']]),
+    sms:   ARROWS.concat([['KeyZ', '1'], ['KeyX', '2'], ['Enter', 'Pause'], ['ShiftRight', 'Reset']]),
+    gg:    ARROWS.concat([['KeyZ', '1'], ['KeyX', '2'], ['Enter', 'Start']]),
+    snes:  ARROWS.concat([['KeyX', 'A'], ['KeyZ', 'B'], ['KeyS', 'X'], ['KeyA', 'Y'], ['KeyQ', 'L'], ['KeyW', 'R'], ['Enter', 'Start'], ['ShiftRight', 'Select'], ['F1', 'Reset']]),
     twin:  ARROWS.concat([['KeyX', 'A'], ['KeyZ', 'B'], ['Enter', 'Start'], ['ShiftRight', 'Select'], ['Digit1', 'Game'], ['Digit2', 'Pause'], ['Digit3', 'Time']]),
     tj:    [['ArrowLeft', 'Left'], ['ArrowRight', 'Right'], ['ArrowUp', 'Up (rotate)'], ['ArrowDown', 'Drop'], ['Space', 'Rotate'], ['Digit1', 'Game A'], ['Digit2', 'Game B'], ['Digit3', 'Time']],
     gnw:   ARROWS.concat([['Space', 'Action'], ['Digit1', 'Game A'], ['Digit2', 'Game B'], ['Digit3', 'Time'], ['Digit4', 'Alarm']]),

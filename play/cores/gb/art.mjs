@@ -22,7 +22,9 @@ import { GB_MODE } from './mode.mjs';
 
 export const BEZEL = {
   dmg: { key: 'GameBoyConsole.png', ar: 496 / 843, l: 0.2621, t: 0.1459, w: 0.4819, h: 0.2598 },
-  cgb: { key: 'GameBoyColorConsole.png', ar: 505 / 852, l: 0.2535, t: 0.1056, w: 0.4931, h: 0.2688 },
+  /* 25 Nov 2026: the COLORFUL kit picture, 1030x1689, screen = its mask box 496x457 at 268,156
+     (index.html [data-system="gbc"]); was 505 / 852, 0.2535 / 0.1056 / 0.4931 / 0.2688. */
+  cgb: { key: 'GameBoyColorConsole.png', ar: 1030 / 1689, l: 0.2602, t: 0.0924, w: 0.4816, h: 0.2706 },
   cgbPokemon: { key: 'GameBoyColorPokemonConsole.svg', ar: 722 / 1250, l: 0.2188, t: 0.1024, w: 0.5568, h: 0.2896, opaque: true },
   /* Atomic Purple (2026-11-04): a see-through shell, so its OWN photograph rather than a
      recolour of the Dandelion one; framed to the same 505x852 by WASM_Source/gbc-shells/
@@ -34,8 +36,12 @@ export const BEZEL = {
      centred 160 x 144 inside it, 241.33x219.60 from 370.33,122.20 (WASM_Source/gba-shells/clean.py, which
      also bakes the unlit border around it into the glass). `portrait`: the screen and its black surround,
      255..725 x 60..450, shown instead of the whole device when the stage is taller than it is wide. */
-  agb: { key: 'GameBoyAdvanceConsole.webp', ar: 993 / 582, l: 0.3729, t: 0.2100, w: 0.2430, h: 0.3773, whole: true,
-    portrait: { l: 255 / 993, t: 60 / 582, w: 470 / 993, h: 390 / 582 } },
+  /* 25 Nov 2026: the COLORFUL kit's Glacier Advance, 1147x721 (WASM_Source/gba-shells/gba-from-psd.py);
+     its LCD is the kit's mask box 437x297 from 356,115, the 160 x 144 window 291.33x267.30 from 428.83,129.85
+     (clean.py --lcd); the portrait cut keeps the old margins around the LCD, scaled by 437 / 362. Was 993 / 582,
+     0.3729 / 0.2100 / 0.2430 / 0.3773, portrait 255,60 470x390. */
+  agb: { key: 'GameBoyAdvanceConsole.webp', ar: 1147 / 721, l: 0.3739, t: 0.1801, w: 0.2540, h: 0.3707, whole: true,
+    portrait: { l: 290 / 1147, t: 55 / 721, w: 567 / 1147, h: 473 / 721 } },
 };
 /* The Machines that wear the Advance (core.mjs MACHINES keys). */
 const ADVANCE = new Set(['agb', 'ags']);

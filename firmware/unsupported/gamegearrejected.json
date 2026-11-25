@@ -1,0 +1,22 @@
+{
+ "format": 1,
+ "list": "gamegearrejected",
+ "label": "Game Gear: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "gamegear"
+ ],
+ "internal": true,
+ "count": 2,
+ "entries": {
+  "4dad239d6772827d3cf6ba68e709975d997a888509bf3e9f57aefd03f90ad6a2": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (X-Terminator) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "bb23c2abeeacb8ba1c97b4cfca67ae066611b78716c5c2b8b9cac1e313288085": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a cheat add-on (X-Terminator) that needs a game cartridge behind it: a tool, not a game, and it can’t start on its own."
+  }
+ }
+}

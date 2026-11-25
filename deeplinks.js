@@ -10,7 +10,8 @@
  *   #/media/about, #/media/timeline    the Media page with the About or Timeline window open
  *                                      (#/about and #/timeline stay the full pages, as before)
  *   #/<system>/hardware                that system's Hardware page; <system>: gb, gbc, nes, famicom, fds,
- *   #/<system>/emulation               pokemon-mini, atari2600, atari5200, atari7800, atarilynx, or a
+ *   #/<system>/emulation               pokemon-mini, atari2600, atari5200, atari7800, atarilynx, sg1000,
+ *                                      mastersystem, gamegear (also sms, gg, sg-1000), or a
  *                                      Game & Watch unit's id (silver-ball, multiscreen-donkey-kong ...)
  *   #/device/<id>/hardware             a game's drawer opened on that tab (also /emulation, /source)
  *
@@ -37,14 +38,17 @@
   /* MEDIA IS THE ONLY PAGE (22 Oct): Home, About and Timeline are
      windows over it, like Compatibility. Their old addresses (#/about, #/series, #/media/about ...)
      open the same windows and are rewritten to the one address each. */
-  /* FEATURES (31 Oct): a window like the others, opened by the button right of Home. */
-  const WIN = { '/compatibility': 'compat', '/about': 'about', '/timeline': 'timeline', '/series': 'timeline', '/home': 'home', '/features': 'features', '/stories': 'stories',
+  /* The Features window: a window like the others, opened by the button right of Home. */
+  /* THE CHANGE LOG (21 Nov 2026): /changelog, with a release or a change after it (/changelog#2.2.2-fix-3;
+     #/changelog#2.2.2-fix-3 without real paths). changelog.js reads that part and writes it. */
+  const WIN = { '/compatibility': 'compat', '/changelog': 'changelog', '/about': 'about', '/timeline': 'timeline', '/series': 'timeline', '/home': 'home', '/features': 'features', '/stories': 'stories',
     '/media/about': 'about', '/media/timeline': 'timeline', '/media/home': 'home', '/media/features': 'features' };
-  const WIN_PATH = { compat: '/compatibility', about: '/about', timeline: '/timeline', home: '/home', features: '/features', stories: '/stories' };
-  const WIN_BTN = { compat: 'video-compat-btn', about: 'video-about-btn', timeline: 'video-timeline-btn', home: 'video-home-btn', features: 'video-features-btn', stories: 'video-stories-btn' };
+  const WIN_PATH = { compat: '/compatibility', changelog: '/changelog', about: '/about', timeline: '/timeline', home: '/home', features: '/features', stories: '/stories' };
+  const WIN_BTN = { compat: 'video-compat-btn', changelog: 'video-changelog-btn', about: 'video-about-btn', timeline: 'video-timeline-btn', home: 'video-home-btn', features: 'video-features-btn', stories: 'video-stories-btn' };
   const ALIAS = { gameboy: 'gb', 'game-boy': 'gb', 'gameboy-color': 'gbc', 'game-boy-color': 'gbc', pm: 'pokemon-mini', pokemini: 'pokemon-mini',
     lynx: 'atarilynx', 'atari-lynx': 'atarilynx', a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', 2600: 'atari2600', 5200: 'atari5200', 7800: 'atari7800',
-    'disk-system': 'fds', 'famicom-disk-system': 'fds', gnw: 'silver-ball', 'game-and-watch': 'silver-ball', 'game-and-watch-colour': 'reissue-super-mario-bros' };
+    sms: 'mastersystem', 'master-system': 'mastersystem', gg: 'gamegear', 'game-gear': 'gamegear', 'sg-1000': 'sg1000',
+    'nintendo-64': 'n64', 'super-nintendo': 'snes', 'super-famicom': 'snes', sfc: 'snes', 'disk-system': 'fds', 'famicom-disk-system': 'fds', gnw: 'silver-ball', 'game-and-watch': 'silver-ball', 'game-and-watch-colour': 'reissue-super-mario-bros' };
   /* ------------------------------------------------------------ the address bar */
   const PATHS = !!window.__cwPaths;
   const PUB = { '/media': '/', '/series': '/timeline' };  // route -> address (Media is the site's root)
@@ -99,6 +103,14 @@
     atari5200: ['Atari 5200', () => ({ catalogue: 'atari5200' }), d => call('atariEmulationTabHTML', d)],
     atari7800: ['Atari 7800', () => ({ catalogue: 'atari7800' }), d => call('atariEmulationTabHTML', d)],
     atarilynx: ['Atari Lynx', () => ({ catalogue: 'atarilynx' }), d => call('atariEmulationTabHTML', d)],
+    /* The Sega 8-bit family (20 Nov 2026): one guide, each device's own chapter first. */
+    sg1000: ['SG-1000', () => ({ catalogue: 'sg1000' }), d => call('sega8EmulationTabHTML', d)],
+    mastersystem: ['Master System', () => ({ catalogue: 'mastersystem' }), d => call('sega8EmulationTabHTML', d)],
+    gamegear: ['Game Gear', () => ({ catalogue: 'gamegear' }), d => call('sega8EmulationTabHTML', d)],
+    /* The Nintendo 64 (22 Nov 2026). */
+    n64: ['Nintendo 64', () => ({ catalogue: 'n64' }), d => call('n64EmulationTabHTML', d)],
+    /* The Super Nintendo (23 Nov 2026). */
+    snes: ['Super Nintendo', () => ({ catalogue: 'snes' }), d => call('snesEmulationTabHTML', d)],
   };
   /* A Game & Watch unit (or a colour unit, Tetris Jr.) by its id. */
   function unit(id) { const all = g('ALL_DEVICES') || g('DEVICES') || []; return all.find ? all.find(d => d.id === id) : null; }
@@ -130,7 +142,8 @@
   /* ------------------------------------------------------------ what a hash means */
   let pending = null, timer = 0, openedDoc = null, closedDoc = null;
   const curRoute = () => { try { const st = g('state'); const r = st && st.route; return r && !/^\/(device|play)\//.test(r) && !WIN[r] && !/\/(hardware|emulation)$/.test(r) ? r : '/'; } catch (_) { return '/'; } };
-  const split = h => { const i = h.indexOf('?'); return [(i < 0 ? h : h.slice(0, i)).replace(/\/+$/, '') || '/', i < 0 ? '' : h.slice(i + 1)]; };
+  /* A second "#" is a place in the page (#/changelog#2.2.2), not part of the route. */
+  const split = h => { const j = h.indexOf('#', 1); if (j > 0) h = h.slice(0, j); const i = h.indexOf('?'); return [(i < 0 ? h : h.slice(0, i)).replace(/\/+$/, '') || '/', i < 0 ? '' : h.slice(i + 1)]; };
 
   /* BACK CLOSES WHAT A LINK OPENED (23 Oct: the phone's Back closed the installed
      app). Arriving on a window's or a drawer's address opened it with nothing under it in this tab's
@@ -161,15 +174,25 @@
     const first = !routed; routed = true;
     const W = window.CwAboutWindow;
     if (WIN[p] && OFF) { try { history.replaceState(history.state, '', href('/media')); } catch (_) {} return '/media'; }   // off our address: the wall (28 Oct)
+    /* A RELOAD OF HOME IS THE LANDING PAGE (21 Nov 2026: "reloading a page while the vault is signed in goes
+       straight to the tile wall"). Home was a window over the wall; a reload of its address asks the vault
+       first, as the landing page does (autoHome): signed in, the wall; otherwise Home, as the address says. */
+    if (first && WIN[p] === 'home' && reloaded()) { try { history.replaceState(history.state, '', href('/media')); } catch (_) {} autoHome(true); return '/media'; }
     if (WIN[p]) { pending = { win: WIN[p], q }; later(); return '/media'; }
     if (W && W.isOpen()) W.close(true);   // Back (or a new link) past an open window closes it
     if (p === '/' || p === '/media') { if (first) autoHome(); return '/media'; }   // the landing page
     let m = /^\/device\/([^/]+)\/(hardware|emulation|source)$/.exec(p);
     if (m) { pending = { tab: m[2], id: decodeURIComponent(m[1]) }; later(); return '/device/' + m[1]; }
     m = /^\/([a-z0-9-]+)\/(hardware|emulation)$/.exec(p);
+    /* A system whose Emulation tab is switched off for now (index.html ATARI_SYSTEMS emulationTab: false, the
+       Nintendo 64 from 23 Nov 2026): its emulation page opens its Hardware page instead. */
+    if (m && m[2] === 'emulation' && window.cwEmulationTabShown && !window.cwEmulationTabShown(ALIAS[m[1]] || m[1])) {
+      try { history.replaceState(history.state, '', href('/' + m[1] + '/hardware')); } catch (_) {}
+      m = [m[0], m[1], 'hardware'];
+    }
     if (m && m[1] !== 'device' && m[1] !== 'play' && (SYS[ALIAS[m[1]] || m[1]] || ALIAS[m[1]] || /-/.test(m[1]))) {
       /* Closing the window steps history back onto the same link (index.html _ovSync): not a new visit. */
-      if (closedDoc === p) { closedDoc = null; history.replaceState(history.state, '', href(curRoute())); return curRoute(); }
+      if (closedDoc === p || closedDoc === '/' + m[1] + '/' + m[2]) { closedDoc = null; history.replaceState(history.state, '', href(curRoute())); return curRoute(); }
       pending = { doc: m[1], tab: m[2] }; later(); return curRoute();
     }
     if (openedDoc && document.getElementById('emu-proof-overlay') && document.getElementById('emu-proof-overlay').classList.contains('open')) { openedDoc = null; try { window.closeOverlay('emu-proof-overlay'); } catch (_) {} }
@@ -190,13 +213,32 @@
      getOrCreateVaultCode sets vaultCodeFreshlyMinted). */
   const VAULT0 = (() => { try { return !localStorage.getItem('pp-vault-code-v1'); } catch (_) { return false; } })();
   const newVault = () => VAULT0 || g('vaultCodeFreshlyMinted') === true;
-  function autoHome() {
+  /* SIGNED IN GOES TO THE WALL (21 Nov 2026: "reloading a page while the vault is signed in goes straight to
+     the tile wall (no welcome screen)"). A vault code kept from before may be signed in (a name and a PIN), so
+     Home waits for the vault's answer (cws-reach.mjs, window.cwVaultGate; the wall stays hidden meanwhile, index.html
+     html.cw-vaultwait): 'ready' is signed in and Home stays shut; any other answer keeps the rules above. A new
+     vault code is never signed in, so Home opens at once. `asked`: the address named Home (a reload of /home). */
+  function reloaded() {
+    try { const n = performance.getEntriesByType('navigation')[0]; return !!(n && n.type === 'reload'); } catch (_) { return false; }
+  }
+  function autoHome(asked) {
     if (autoDone) return;
     autoDone = true;
     if (OFF) return;   // off our address there is no Home (28 Oct)
     if (window.__cwStoriesBack) return;   // just back from the Stories sign-in: its result shows instead (7 Nov)
-    if (!newVault() && (!/crystalworlds\.media/i.test(location.hostname) || joinedServer())) return;
-    pending = { win: 'home', q: '', auto: true }; later();
+    const open = () => { pending = { win: 'home', q: '', auto: true }; later(); };
+    if (newVault()) { open(); return; }
+    if (!asked && (!/crystalworlds\.media/i.test(location.hostname) || joinedServer())) return;
+    let n = 0;
+    const wait = () => {
+      const gate = typeof window.cwVaultGate === 'function' ? window.cwVaultGate() : 'checking';
+      if (gate === 'checking' && ++n < 75) { setTimeout(wait, 200); return; }   // up to 15 s, the head script's limit
+      if (gate === 'ready') return;
+      const W = window.CwAboutWindow, [p] = split(now());
+      if ((W && W.isOpen()) || (p !== '/' && p !== '/media')) return;   // the visitor went somewhere meanwhile
+      open();
+    };
+    wait();
   }
   function later() { clearTimeout(timer); let n = 0; const tick = () => { if (!pending) return; if (run()) { pending = null; return; } if (++n < 300) timer = setTimeout(tick, 200); else pending = null; }; timer = setTimeout(tick, 0); }
   function run() {
@@ -232,6 +274,9 @@
     }
     if (P.tab) {
       const b = document.querySelector('#device-modal .drawer-tab[data-tab="' + P.tab + '"]');
+      /* The drawer is built (its Hardware tab is there) but has no such tab, as a Nintendo 64 drawer has no
+         Emulation tab for now (23 Nov 2026): it stays on its first tab instead of waiting for one. */
+      if (!b && P.tab === 'emulation' && document.querySelector('#device-modal .drawer-tab[data-tab="hardware"]')) return true;
       if (!b) return false;
       try { window.switchDrawerTab(b, P.tab); } catch (_) { return false; }
       return true;
@@ -366,7 +411,7 @@
   const metaSoon = () => { if (!metaT) metaT = setTimeout(meta, 0); };
   (function loadMeta() {
     if (typeof fetch !== 'function' || !/^https?:$/.test(location.protocol)) return;
-    fetch('site-routes.json?v=2.2.2', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
+    fetch('site-routes.json?v=2.3.0', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j) { META = j; meta(); } }).catch(() => {});
     for (const k of ['pushState', 'replaceState']) {
       const orig = history[k];
       if (typeof orig !== 'function') continue;

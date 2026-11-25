@@ -9,7 +9,7 @@
  *   cfg   the three palettes for an original cartridge the console does not recognise (the site's palette
  *         setting, as if its button combination were held); ignored when the console recognises the title.
  */
-import { gbStartup } from "./gb-boot.js?v=2.2.2";
+import { gbStartup } from "./gb-boot.js?v=2.3.0";
 
 const cache = new Map();
 function startup(cfg, cart, kind) {

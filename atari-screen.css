@@ -85,13 +85,14 @@
      over 65,030 px; glass tone sampled from the photograph's own screen.
      Corner 22px, which uncovers nothing (the largest that still uncovers
      nothing is 32px, so there is headroom and spending it buys nothing). */
-  /* 2026-10-22: atari2600-tile.png, 520x624 (5:6), the set with its controller below it; measured by atari-artwork/aperture.py. */
-  --a2600-scr-l: 11.15%;   /* 58 / 520 */
-  --a2600-scr-t: 10.42%;   /* 65 / 624 */
-  --a2600-scr-w: 59.42%;   /* 309 / 520 */
-  --a2600-scr-h: 36.54%;   /* 228 / 624 */
-  --a2600-scr-bg: #4c4f51;
-  --a2600-scr-radius: 7.1% / 9.6%;        /* 22px of a 309x228 box */
+  /* 2026-11-25: atari2600-tile-colorful.png 790x948, the COLORFUL kit's 1975 television (a2600-from-psd.py) with the previous tile's joystick; glass = the kit's Screen Mask box. The 2600, 5200, 7800 and Lynx numbers below are the kit pictures' (atari5200-tile-colorful.png 780x936, atari7800-tile-colorful.png 825x990, atarilynx-colorful.png 1273x686); the paragraphs describing the earlier photographs are history. */
+  /* (2026-10-22 to 2026-11-25: atari2600-tile.png, 520x624, measured by atari-artwork/aperture.py.) */
+  --a2600-scr-l: 11.77%;   /*  93 / 790 */
+  --a2600-scr-t: 10.55%;   /* 100 / 948 */
+  --a2600-scr-w: 58.61%;   /* 463 / 790 */
+  --a2600-scr-h: 35.97%;   /* 341 / 948 */
+  --a2600-scr-bg: #000000;
+  --a2600-scr-radius: 7.3% / 10.0%;   /* 34 px, the largest leaving no glass uncovered is 45 */
   /* The television body, for the play view's crop: 477x336 at (105,19). A
      SEPARATE measurement from the aperture -- the centre-line walk out to
      background from the middle of the glass -- so this is not a second copy of
@@ -99,15 +100,15 @@
      NES's silhouette rule returns 647x346 here, because the stack of cartridge
      boxes leans against the set and widens the silhouette gradually instead of
      in one step. The boxes are not the television. */
-  --a2600-tv-l: 3.85%;   /* 20 / 520 */
-  --a2600-tv-t: 4.65%;   /* 29 / 624 */
-  --a2600-tv-w: 91.54%;   /* 476 / 520 */
-  --a2600-tv-h: 48.24%;   /* 301 / 624 (second build: the rebuilt tile's body is measured to the plinth's foot; the first build's was 281) */
-  --a2600-tv-scale: 1.09244;   /* 520 / 476 */
-  --a2600-art-aspect: 520 / 624;
-  --a2600-tv-aspect: 476 / 301;
+  --a2600-tv-l: 4.18%;   /*  33 / 790 */
+  --a2600-tv-t: 4.85%;   /*  46 / 948 */
+  --a2600-tv-w: 91.65%;   /* 724 / 790 */
+  --a2600-tv-h: 50.95%;   /* 483 / 948 */
+  --a2600-tv-scale: 1.09116;   /* 790 / 724 */
+  --a2600-art-aspect: 790 / 948;
+  --a2600-tv-aspect: 724 / 483;
   --a2600-art-aspect-num: 0.83333;
-  --a2600-tv-aspect-num: 1.58140;
+  --a2600-tv-aspect-num: 1.49896;
 
   /* ---- ATARI 5200 -------------------------------------------------------
      atari5200.png, 859x564 RGBA. A silver-trimmed CRT television with a
@@ -127,21 +128,21 @@
      and over-rounding costs a hairline. aperture.py scores this on every run;
      it is not a judgement call left to the next reader. */
   /* 2026-10-22: atari5200-tile.png, 520x624 (5:6), the set with its controller below it; measured by atari-artwork/aperture.py. */
-  --a5200-scr-l: 10.38%;   /* 54 / 520 */
-  --a5200-scr-t: 11.22%;   /* 70 / 624 */
-  --a5200-scr-w: 62.50%;   /* 325 / 520 */
-  --a5200-scr-h: 39.26%;   /* 245 / 624 */
-  --a5200-scr-bg: #5c5f5e;
-  --a5200-scr-radius: 0.9% / 1.2%;        /* 3px, scored -- see above */
-  --a5200-tv-l: 4.23%;   /* 22 / 520 */
-  --a5200-tv-t: 3.37%;   /* 21 / 624 */
-  --a5200-tv-w: 91.73%;   /* 477 / 520 */
-  --a5200-tv-h: 51.60%;   /* 322 / 624 */
-  --a5200-tv-scale: 1.09015;   /* 520 / 477 */
-  --a5200-art-aspect: 520 / 624;
-  --a5200-tv-aspect: 477 / 322;
+  --a5200-scr-l: 10.26%;   /*  80 / 780 */
+  --a5200-scr-t: 11.22%;   /* 105 / 936 */
+  --a5200-scr-w: 62.44%;   /* 487 / 780 */
+  --a5200-scr-h: 39.32%;   /* 368 / 936 */
+  --a5200-scr-bg: #1a1b1b;
+  --a5200-scr-radius: 8.2% / 10.9%;   /* 40 px, the largest leaving no glass uncovered is 54 */
+  --a5200-tv-l: 4.23%;   /*  33 / 780 */
+  --a5200-tv-t: 3.42%;   /*  32 / 936 */
+  --a5200-tv-w: 91.41%;   /* 713 / 780 */
+  --a5200-tv-h: 55.02%;   /* 515 / 936 */
+  --a5200-tv-scale: 1.09397;   /* 780 / 713 */
+  --a5200-art-aspect: 780 / 936;
+  --a5200-tv-aspect: 713 / 515;
   --a5200-art-aspect-num: 0.83333;
-  --a5200-tv-aspect-num: 1.48137;
+  --a5200-tv-aspect-num: 1.38447;
 
   /* ---- ATARI 7800 -------------------------------------------------------
      atari7800.png, 761x584 RGBA. A dark CRT television with a 7800 ProSystem,
@@ -150,21 +151,21 @@
      a nominal 4:3, 0.2% off. Glare plateau alpha 95/255 over 79,931 px.
      Corner 20px, uncovering nothing (largest safe is 30px). */
   /* 2026-10-22: atari7800-tile.png, 550x660 (5:6), the set with its controller below it; measured by atari-artwork/aperture.py. */
-  --a7800-scr-l: 10.73%;   /* 59 / 550 */
-  --a7800-scr-t: 8.64%;   /* 57 / 660 */
-  --a7800-scr-w: 61.45%;   /* 338 / 550 */
-  --a7800-scr-h: 38.33%;   /* 253 / 660 */
-  --a7800-scr-bg: #4d4e4e;
-  --a7800-scr-radius: 5.9% / 7.9%;        /* 20px of a 338x253 box */
-  --a7800-tv-l: 4.18%;   /* 23 / 550 */
-  --a7800-tv-t: 2.73%;   /* 18 / 660 */
-  --a7800-tv-w: 91.82%;   /* 505 / 550 */
-  --a7800-tv-h: 49.85%;   /* 329 / 660 */
-  --a7800-tv-scale: 1.08911;   /* 550 / 505 */
-  --a7800-art-aspect: 550 / 660;
-  --a7800-tv-aspect: 505 / 329;
+  --a7800-scr-l: 10.67%;   /*  88 / 825 */
+  --a7800-scr-t: 8.59%;   /*  85 / 990 */
+  --a7800-scr-w: 61.33%;   /* 506 / 825 */
+  --a7800-scr-h: 38.48%;   /* 381 / 990 */
+  --a7800-scr-bg: #000000;
+  --a7800-scr-radius: 6.5% / 8.7%;   /* 33 px, the largest leaving no glass uncovered is 44 */
+  --a7800-tv-l: 4.12%;   /*  34 / 825 */
+  --a7800-tv-t: 2.73%;   /*  27 / 990 */
+  --a7800-tv-w: 91.76%;   /* 757 / 825 */
+  --a7800-tv-h: 51.21%;   /* 507 / 990 */
+  --a7800-tv-scale: 1.08983;   /* 825 / 757 */
+  --a7800-art-aspect: 825 / 990;
+  --a7800-tv-aspect: 757 / 507;
   --a7800-art-aspect-num: 0.83333;
-  --a7800-tv-aspect-num: 1.53495;
+  --a7800-tv-aspect-num: 1.49310;
 
   /* ---- ATARI LYNX -------------------------------------------------------
      atarilynx.png, 1009x540 RGBA. AND IT IS NOT A TELEVISION. The other three
@@ -184,26 +185,26 @@
      Corner 0px: the aperture is a 100.0%-filled rectangle, i.e. the window has
      no measurable rounding at this size. Declared rather than omitted so the
      fact that it was measured is on the record. */
-  --lynx-scr-l: 35.98%;    /* 363 / 1009 */
-  --lynx-scr-t: 27.59%;    /* 149 / 540 */
-  --lynx-scr-w: 28.94%;    /* 292 / 1009 */
-  --lynx-scr-h: 33.89%;    /* 183 / 540 */
-  --lynx-scr-bg: #7d8182;
-  --lynx-scr-radius: 0% / 0%;             /* measured, not omitted */
-  --lynx-tv-l: 2.08%;      /*  21 / 1009 */
+  --lynx-scr-l: 36.84%;   /* 469 / 1273 */
+  --lynx-scr-t: 22.74%;   /* 156 / 686 */
+  --lynx-scr-w: 27.49%;   /* 350 / 1273 */
+  --lynx-scr-h: 31.92%;   /* 219 / 686 */
+  --lynx-scr-bg: #040505;
+  --lynx-scr-radius: 1.1% / 1.8%;   /* 4 px, the largest leaving no glass uncovered is 6 */
+  --lynx-tv-l: 5.89%;   /*  75 / 1273 */
   /* TOP CORRECTED 2026-10-07 (site regress): aperture.py's centre-line walk stops at the
      dip in the middle of the handheld's top edge (y=30), but the grips either side rise
      to y=21 (alpha > 200), so the play page cut 9 px off them -- a flat edge across the
      top of the photograph. The crop now starts at y=12: the opaque top less 9 px, the
      same order of soft margin the measured box keeps at the sides (13 px) and bottom. */
-  --lynx-tv-t: 2.22%;      /*  12 / 540 */
-  --lynx-tv-w: 95.94%;     /* 968 / 1009 */
-  --lynx-tv-h: 95.74%;     /* 517 / 540 */
-  --lynx-tv-scale: 1.04236;         /* 1009 / 968 */
-  --lynx-art-aspect: 1009 / 540;
-  --lynx-tv-aspect: 968 / 517;
-  --lynx-art-aspect-num: 1.86852;
-  --lynx-tv-aspect-num: 1.87234;
+  --lynx-tv-t: 0.44%;   /*   3 / 686 */
+  --lynx-tv-w: 89.00%;   /* 1133 / 1273 */
+  --lynx-tv-h: 77.84%;   /* 534 / 686 */
+  --lynx-tv-scale: 1.12357;   /* 1273 / 1133 */
+  --lynx-art-aspect: 1273 / 686;
+  --lynx-tv-aspect: 1133 / 534;
+  --lynx-art-aspect-num: 1.85569;
+  --lynx-tv-aspect-num: 2.12172;
 
   /* ---- ATARI LYNX, TURNED ON ITS SIDE (2026-10-07) -----------------------
      AtariLynxConsoleTurned.webp, 540x1009 RGBA: atarilynx.png above turned 90
@@ -223,16 +224,17 @@
      No --lynxr-tv-* / --lynxl-tv-*: the device-body crop is a play-page rule
      and the play page turns the LANDSCAPE file instead (see its TURNED TITLES
      block), so nothing would read them. */
-  --lynxr-scr-l: 38.52%;   /* 208 / 540 */
-  --lynxr-scr-t: 35.98%;   /* 363 / 1009 */
-  --lynxr-scr-w: 33.89%;   /* 183 / 540 */
-  --lynxr-scr-h: 28.94%;   /* 292 / 1009 */
-  --lynxl-scr-l: 27.59%;   /* 149 / 540 */
-  --lynxl-scr-t: 35.08%;   /* 354 / 1009 */
-  --lynxl-scr-w: 33.89%;   /* 183 / 540 */
-  --lynxl-scr-h: 28.94%;   /* 292 / 1009 */
-  --lynxt-art-aspect: 540 / 1009;
-  --lynxt-art-aspect-num: 0.53518;
+  /* 2026-11-25: AtariLynxConsoleTurned.webp is atarilynx-colorful.png turned, 686x1273: turned right 311 469 219 350, turned left 156 454 219 350. */
+  --lynxr-scr-l: 45.34%;   /* 311 / 686 */
+  --lynxr-scr-t: 36.84%;   /* 469 / 1273 */
+  --lynxr-scr-w: 31.92%;   /* 219 / 686 */
+  --lynxr-scr-h: 27.49%;   /* 350 / 1273 */
+  --lynxl-scr-l: 22.74%;   /* 156 / 686 */
+  --lynxl-scr-t: 35.66%;   /* 454 / 1273 */
+  --lynxl-scr-w: 31.92%;   /* 219 / 686 */
+  --lynxl-scr-h: 27.49%;   /* 350 / 1273 */
+  --lynxt-art-aspect: 686 / 1273;
+  --lynxt-art-aspect-num: 0.53888;
 }
 
 /* ---- THE MAPPING ----------------------------------------------------------
@@ -410,54 +412,57 @@
    "The new picture on the TILE only": the drawer stage shows the old full photographs again
    (television, console and accessories), archived beside the tile pictures as
    Atari2600ConsoleFull.png / Atari5200ConsoleFull.png / Atari7800ConsoleFull.png
-   (images_atari_b64.json), picked by index.html showAtariDeviceStage. The tile and the play window
+   (images_atari_b64.json), picked by drawer-unified.js for the drawer's first picture (21 Nov 2026; until then index.html showAtariDeviceStage). The tile and the play window
    keep the tile pictures and the numbers in :root above. These are the full photographs' measured
    numbers, unchanged from before the tile pictures (aperture.py: atari2600.png 309x228 at (144,55) of 734x539,
    atari5200.png 325x245 at (240,70) of 859x564, atari7800.png 338x253 at (148,61) of 761x584);
    atari-artwork/verify.sh re-measures them. The [data-system] mapping above reads these on the same
    element, so only the drawer stage changes. */
-#device-stage .stage-card[data-system="atari2600"] {
-  --a2600-scr-l: 19.62%;   /* 144 / 734 */
-  --a2600-scr-t: 10.20%;   /*  55 / 539 */
-  --a2600-scr-w: 42.10%;   /* 309 / 734 */
-  --a2600-scr-h: 42.30%;   /* 228 / 539 */
-  --a2600-tv-l: 14.31%;    /* 105 / 734 */
-  --a2600-tv-t: 3.53%;     /*  19 / 539 */
-  --a2600-tv-w: 64.99%;    /* 477 / 734 */
-  --a2600-tv-h: 55.84%;    /* 301 / 539 */
-  --a2600-tv-scale: 1.53878;
-  --a2600-art-aspect: 734 / 539;
-  --a2600-tv-aspect: 477 / 301;
-  --a2600-art-aspect-num: 1.36178;
-  --a2600-tv-aspect-num: 1.58472;
+#device-stage .stage-card[data-system="atari2600"], .device-card[data-photo="full"][data-system="atari2600"] {
+  /* 2026-11-25: the COLORFUL kit's whole scene (a2600-from-psd.py), 1152x829. */
+  --a2600-scr-l: 20.49%;   /* 236 / 1152 */
+  --a2600-scr-t: 6.76%;   /*  56 / 829 */
+  --a2600-scr-w: 40.19%;   /* 463 / 1152 */
+  --a2600-scr-h: 41.13%;   /* 341 / 829 */
+  --a2600-tv-l: 15.10%;   /* 174 / 1152 */
+  --a2600-tv-t: 0.36%;   /*   3 / 829 */
+  --a2600-tv-w: 63.11%;   /* 727 / 1152 */
+  --a2600-tv-h: 58.14%;   /* 482 / 829 */
+  --a2600-tv-scale: 1.58459;   /* 1152 / 727 */
+  --a2600-art-aspect: 1152 / 829;
+  --a2600-tv-aspect: 727 / 482;
+  --a2600-art-aspect-num: 1.38963;
+  --a2600-tv-aspect-num: 1.50830;
 }
-#device-stage .stage-card[data-system="atari5200"] {
-  --a5200-scr-l: 27.94%;   /* 240 / 859 */
-  --a5200-scr-t: 12.41%;   /*  70 / 564 */
-  --a5200-scr-w: 37.83%;   /* 325 / 859 */
-  --a5200-scr-h: 43.44%;   /* 245 / 564 */
-  --a5200-tv-l: 24.21%;    /* 208 / 859 */
-  --a5200-tv-t: 3.72%;     /*  21 / 564 */
-  --a5200-tv-w: 55.53%;    /* 477 / 859 */
-  --a5200-tv-h: 57.09%;    /* 322 / 564 */
-  --a5200-tv-scale: 1.80084;
-  --a5200-art-aspect: 859 / 564;
-  --a5200-tv-aspect: 477 / 322;
-  --a5200-art-aspect-num: 1.52305;
-  --a5200-tv-aspect-num: 1.48137;
+#device-stage .stage-card[data-system="atari5200"], .device-card[data-photo="full"][data-system="atari5200"] {
+  /* 2026-11-25: the COLORFUL kit's whole scene (a5200-from-psd.py), 1303x797. */
+  --a5200-scr-l: 27.63%;   /* 360 / 1303 */
+  --a5200-scr-t: 9.54%;   /*  76 / 797 */
+  --a5200-scr-w: 37.45%;   /* 488 / 1303 */
+  --a5200-scr-h: 46.17%;   /* 368 / 797 */
+  --a5200-tv-l: 24.02%;   /* 313 / 1303 */
+  --a5200-tv-t: 0.38%;   /*   3 / 797 */
+  --a5200-tv-w: 54.72%;   /* 713 / 1303 */
+  --a5200-tv-h: 64.62%;   /* 515 / 797 */
+  --a5200-tv-scale: 1.82749;   /* 1303 / 713 */
+  --a5200-art-aspect: 1303 / 797;
+  --a5200-tv-aspect: 713 / 515;
+  --a5200-art-aspect-num: 1.63488;
+  --a5200-tv-aspect-num: 1.38447;
 }
-#device-stage .stage-card[data-system="atari7800"] {
-  --a7800-scr-l: 19.45%;   /* 148 / 761 */
-  --a7800-scr-t: 10.45%;   /*  61 / 584 */
-  --a7800-scr-w: 44.42%;   /* 338 / 761 */
-  --a7800-scr-h: 43.32%;   /* 253 / 584 */
-  --a7800-tv-l: 14.72%;    /* 112 / 761 */
-  --a7800-tv-t: 3.60%;     /*  21 / 584 */
-  --a7800-tv-w: 66.36%;    /* 505 / 761 */
-  --a7800-tv-h: 56.51%;    /* 330 / 584 */
-  --a7800-tv-scale: 1.50693;
-  --a7800-art-aspect: 761 / 584;
-  --a7800-tv-aspect: 505 / 330;
-  --a7800-art-aspect-num: 1.30308;
-  --a7800-tv-aspect-num: 1.53030;
+#device-stage .stage-card[data-system="atari7800"], .device-card[data-photo="full"][data-system="atari7800"] {
+  /* 2026-11-25: the COLORFUL kit's whole scene (a7800-from-psd.py), 1173x821. */
+  --a7800-scr-l: 19.35%;   /* 227 / 1173 */
+  --a7800-scr-t: 7.19%;   /*  59 / 821 */
+  --a7800-scr-w: 43.14%;   /* 506 / 1173 */
+  --a7800-scr-h: 46.41%;   /* 381 / 821 */
+  --a7800-tv-l: 14.75%;   /* 173 / 1173 */
+  --a7800-tv-t: 0.12%;   /*   1 / 821 */
+  --a7800-tv-w: 64.45%;   /* 756 / 1173 */
+  --a7800-tv-h: 61.88%;   /* 508 / 821 */
+  --a7800-tv-scale: 1.55159;   /* 1173 / 756 */
+  --a7800-art-aspect: 1173 / 821;
+  --a7800-tv-aspect: 756 / 508;
+  --a7800-art-aspect-num: 1.42875;
+  --a7800-tv-aspect-num: 1.48819;
 }

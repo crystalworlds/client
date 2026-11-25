@@ -18,16 +18,16 @@
  *   - the VS. System: its own RGB palette, coins, service, DIP switches (picture-unit bits
  *     locked, as the old page did).
  */
-import { NesCore, NES_W, NES_H, REGION, FDS_SIDE_BYTES, sha256, hex } from '../../nes/web/core.js?v=2.2.2-neskaraoke';
+import { NesCore, NES_W, NES_H, REGION, FDS_SIDE_BYTES, sha256, hex } from '../../nes/web/core.js?v=2.3.0';
 import { LUT } from '../../nes/web/render.js';
 import { CoreError } from '../../host/core-api.mjs';
 /* The Study Box tape deck's feeder (mapper 186), the old NES page's own module: page-free (a tape
    source is any { name, size, read(offset, length) }), so the core runs it (2026-10-15). */
-import { TapeFeeder } from '../../nes/studybox-deck.js?v=2.2.2';
+import { TapeFeeder } from '../../nes/studybox-deck.js?v=2.3.0';
 /* Games on more than one disk, linked by hash, and the automatic
    disk change (the core's web/fds_sets.js and web/fds_autoswap.js, copied with the core). */
 import { fdsSetOf } from '../../nes/web/fds_sets.js';
-import { FdsAutoSwap } from '../../nes/web/fds_autoswap.js?v=2.2.2';
+import { FdsAutoSwap } from '../../nes/web/fds_autoswap.js?v=2.3.0';
 /* The Famicom Data Recorder's file side (WAV in, WAV out), the core's
    web/data-recorder.js, copied with the core. The deck itself is the core's (nes_dr_*). */
 import { decodeTape, encodeWav } from '../../nes/web/data-recorder.js';
@@ -36,9 +36,9 @@ import { decodeTape, encodeWav } from '../../nes/web/data-recorder.js';
 /* The Famicom expansion accessories: Hyper Shots, Party Tap, pachinko
    dial, punching bag, mahjong keypad, drawing tablet, Barcode World, mole mat, Top Rider, Subor keyboard,
    a second Arkanoid knob, two pads for one player, and the Turbo File / Battle Box save boxes. */
-import { ACCESSORIES, Accessory, isAccessory, deviceFor, help as accHelp } from './accessories.mjs?v=2.2.2';
-import { Rob, robKindOf } from './rob.mjs?v=2.2.2';
-import { cheatEngine } from '../cheats-core.mjs?v=2.2.2';
+import { ACCESSORIES, Accessory, isAccessory, deviceFor, help as accHelp } from './accessories.mjs?v=2.3.0';
+import { Rob, robKindOf } from './rob.mjs?v=2.3.0';
+import { cheatEngine } from '../cheats-core.mjs?v=2.3.0';
 
 const FDS_BIOS_BYTES = 8192, FDS_SWAP_GAP_FRAMES = 60, FDS_FIRST_INSERT_FRAMES = 8;
 /* FAST DISK LOADING (the machine setting 'fdsFastLoad', on unless switched off): the host runs FDS_FAST_X

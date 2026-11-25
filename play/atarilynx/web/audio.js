@@ -9,7 +9,7 @@
  * AUTOPLAY: resume() is attempted on every gesture, not only the first — the
  * note play/atari2600/web/audio.js carries.
  */
-import { AudioQueue } from '../../shared/audio-queue.js?v=2.2.2';
+import { AudioQueue } from '../../shared/audio-queue.js?v=2.3.0';
 
 export class Audio {
   constructor() {

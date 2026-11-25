@@ -1,0 +1,94 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "sms",
+ "label": "Master System",
+ "device": "float",
+ "theme": {
+  "press": "rgba(40,110,220,.72)",
+  "pressInk": "#04102a"
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "b1",
+      "label": "1",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.23,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     },
+     {
+      "id": "b2",
+      "label": "2",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.77,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "pause",
+   "label": "Pause",
+   "input": "Enter"
+  },
+  {
+   "id": "reset",
+   "label": "Reset",
+   "input": "ShiftRight"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "buttons and keys",
+   "source": "play/cores/sega8/core.mjs ports(): buttons 1 and 2 on Z and X, Pause (Start on the Game Gear) on Enter, Reset on the right Shift where the model has the button",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format",
+   "source": "play/shared/overlays/a7800.json, the site's own layout",
+   "licence": "site-owned"
+  }
+ ]
+}

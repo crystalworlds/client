@@ -1,0 +1,147 @@
+/* n64-screen.css -- the Nintendo 64's screen boxes (the television in the tile, the drawer and the play
+   window), each declared ONCE for the whole site (22 Nov 2026).
+
+   READ atari-screen.css AND sega8-screen.css FIRST. This file is their sibling: it uses their classes and
+   consuming rules unchanged (.atari-art-frame, .atari-art, .atari-screen, .atari-tv-crop, all reading the
+   --at-* properties) and adds only the numbers, under the prefix --n64-*, and the one mapping block that
+   points --at-* at them. The selector is [data-system="n64"], the attribute a .device-card and the play
+   window carry. A Pokemon game wears the Pikachu console (index.html ATARI_SYSTEMS n64 artPokemon); its
+   card also carries data-art="n64-pikachu", which picks that picture's own numbers below.
+
+   HOW THE FIGURES WERE MEASURED
+       python3 WASM_Source/sega8-artwork/aperture.py <picture.png> --css
+   on the pictures WASM_Source/n64-artwork/maketiles.py makes from the photographs (its manifest.txt lists
+   every box). The same Matsui television is in both photographs, and it is the NES picture's television.
+   The screen is not cut out: the glass is a translucent glare layer (alpha 88) and the game goes UNDER the
+   picture. THE TUBE'S DARK RING IS KEPT (22 Nov 2026, the owner: the screen must curve with the television
+   as the NES's does): the glass is the photograph's own, not widened, so the opaque ring and bezel hide the
+   running picture's square corners and it follows the tube's curved edges, exactly as on the NES tile.
+   (The first build widened the glass 6 px, 441x335 at (99,60): that reached the bezel's straight edges
+   and squared the screen.) If a picture is ever replaced, re-measure; never by eye.
+   ------------------------------------------------------------------------- */
+:root {
+  /* 2026-11-25: n64-tile-colorful.png 730x876, the COLORFUL kit's 1996 television (n64-from-psd.py, scale 0.57) with the previous tile's controller drawing at the same size and place relative to the television; glass = the kit's Screen Mask box. The numbers in the paragraph below were the 640x768 picture's. */
+  /* ---- THE TILE AND THE PLAY WINDOW -------------------------------------------
+     N64Console (n64-tile.png), 640x768 (5:6): the television with the controller drawn below it. Glass
+     429x323 at (105,66), tone #555555, corner 9 px (the NES picture's glass, 429x323). The television body
+     for the play window's crop is 586x452 at (27,22). */
+  --n64-scr-l: 16.30%;   /* 119 / 730 */
+  --n64-scr-t: 8.56%;   /*  75 / 876 */
+  --n64-scr-w: 67.26%;   /* 491 / 730 */
+  --n64-scr-h: 42.24%;   /* 370 / 876 */
+  --n64-scr-bg: #000000;
+  --n64-scr-radius: 4.3% / 5.7%;   /* 21 px, the largest leaving no glass uncovered is 28 */
+  --n64-tv-l: 4.25%;   /*  31 / 730 */
+  --n64-tv-t: 2.97%;   /*  26 / 876 */
+  --n64-tv-w: 91.37%;   /* 667 / 730 */
+  --n64-tv-h: 57.42%;   /* 503 / 876 */
+  --n64-tv-scale: 1.09445;   /* 730 / 667 */
+  --n64-art-aspect: 730 / 876;
+  --n64-tv-aspect: 667 / 503;
+  --n64-art-aspect-num: 0.83333;
+  --n64-tv-aspect-num: 1.32604;
+}
+/* N64PikachuConsole (n64-jp-tile.png), 640x768: the same television, the yellow Pokemon controller below.
+   Glass 430x323 at (105,66), corner 11 px; the body as the standard tile's. */
+[data-system="n64"][data-art="n64-pikachu"] {
+  /* 2026-11-25: n64-jp-tile-colorful.png is the same kit television as the standard tile (only the pad
+     differs), so its glass is the standard one; were 67.19% (430 / 640) and 2.6% / 3.4%. */
+  --n64-scr-w: 67.26%;      /* 491 / 730 */
+  --n64-scr-radius: 4.3% / 5.7%;
+}
+
+/* ---- THE MAPPING: every line a var() reference. ---- */
+[data-system="n64"] {
+  --at-scr-l: var(--n64-scr-l); --at-scr-t: var(--n64-scr-t);
+  --at-scr-w: var(--n64-scr-w); --at-scr-h: var(--n64-scr-h);
+  --at-scr-bg: var(--n64-scr-bg); --at-scr-radius: var(--n64-scr-radius);
+  --at-tv-l: var(--n64-tv-l); --at-tv-t: var(--n64-tv-t);
+  --at-tv-w: var(--n64-tv-w); --at-tv-h: var(--n64-tv-h);
+  --at-tv-scale: var(--n64-tv-scale);
+  --at-art-aspect: var(--n64-art-aspect); --at-tv-aspect: var(--n64-tv-aspect);
+  --at-art-aspect-num: var(--n64-art-aspect-num);
+  --at-tv-aspect-num: var(--n64-tv-aspect-num);
+}
+
+/* ---- THE CLIP SURFACES (video.gb-vid, video.gb-rec) read --gb-scr-*: the same source properties, so a
+   recorded tile lands on the glass when the N64 clips are published. ---- */
+.device-card[data-system="n64"] {
+  --gb-scr-l: var(--n64-scr-l);  --gb-scr-t: var(--n64-scr-t);
+  --gb-scr-w: var(--n64-scr-w);  --gb-scr-h: var(--n64-scr-h);
+  --gb-scr-bg: var(--n64-scr-bg);
+}
+
+/* ---- THE DRAWER STAGE takes the artwork's own shape (sega8-screen.css's rule; the id does not start
+   with "atari"). ---- */
+#device-stage .device-card.device-card[data-system="n64"] .img.stage-img {
+  aspect-ratio: var(--at-art-aspect);
+  height: auto;
+}
+
+/* ---- BOX ART: the cover sits inside the tile with the shared inset, as the other cartridge consoles'. ---- */
+.device-card:is([data-artmode="boxart"], [data-artmode="boxart3d"]):is([data-series="n64"], [data-series="n64dd"]) .img::after {   /* n64dd: the 64DD's disks (26 Nov 2026) */
+  inset: var(--cover-inset); background-size: contain;
+}
+
+/* ---- THE DRAWER SHOWS THE WHOLE PHOTOGRAPH: the television with the console, its controllers and the
+   Rumble Pak (N64ConsoleFull, N64PikachuConsoleFull), and the game's tile clip plays on its screen in the
+   drawer's first picture (drawer-unified.js). Only the numbers change, on the stage card. ---- */
+#device-stage .stage-card[data-system="n64"], .device-card[data-photo="full"][data-system="n64"] {
+  /* 2026-11-25: n64-colorful.png 1251x866, the kit's whole scene (television, console with Rumble Pak, four controllers). The line below was the 995x790 picture's. */
+  /* n64-drawer.png, 995x790: glass 429x323 at (295,57), corner 9 px; the television 586x415 at (217,13) */
+  --n64-scr-l: 37.41%;   /* 468 / 1251 */
+  --n64-scr-t: 5.89%;   /*  51 / 866 */
+  --n64-scr-w: 39.33%;   /* 492 / 1251 */
+  --n64-scr-h: 42.73%;   /* 370 / 866 */
+  --n64-tv-l: 30.46%;   /* 381 / 1251 */
+  --n64-tv-t: 0.23%;   /*   2 / 866 */
+  --n64-tv-w: 53.32%;   /* 667 / 1251 */
+  --n64-tv-h: 58.08%;   /* 503 / 866 */
+  --n64-tv-scale: 1.87556;   /* 1251 / 667 */
+  --n64-art-aspect: 1251 / 866;
+  --n64-tv-aspect: 667 / 503;
+  --n64-art-aspect-num: 1.44457;
+  --n64-tv-aspect-num: 1.32604;
+}
+#device-stage .stage-card[data-system="n64"][data-art="n64-pikachu"], .device-card[data-photo="full"][data-system="n64"][data-art="n64-pikachu"] {
+  /* n64-jp-drawer.png, 1011x763: glass 430x323 at (268,62), corner 11 px; the television 586x418 at (190,18) */
+  /* 2026-11-25: this picture is unchanged (no COLORFUL kit has the Pikachu console), so it keeps its
+     own glass tone and corner now that the tile's are the kit television's. */
+  --n64-scr-bg: #555555;
+  --n64-scr-radius: 2.6% / 3.4%;      /* 11 px of a 430x323 box, scored */
+  --n64-scr-l: 26.51%;      /* 268 / 1011 */
+  --n64-scr-t: 8.13%;       /*  62 / 763 */
+  --n64-scr-w: 42.53%;      /* 430 / 1011 */
+  --n64-scr-h: 42.33%;      /* 323 / 763 */
+  --n64-tv-l: 18.79%;       /* 190 / 1011 */
+  --n64-tv-t: 2.36%;        /*  18 / 763 */
+  --n64-tv-w: 57.96%;       /* 586 / 1011 */
+  --n64-tv-h: 54.78%;       /* 418 / 763 */
+  --n64-tv-scale: 1.72526;
+  --n64-art-aspect: 1011 / 763;
+  --n64-tv-aspect: 586 / 418;
+  --n64-art-aspect-num: 1.32503;
+  --n64-tv-aspect-num: 1.40191;
+}
+
+/* ---- THE 64DD DISKS (26 Nov 2026): a 64DD disk's card carries data-art="n64-dd" (index.html N64_DD_DISKS).
+   Its tiles (N64DDConsole.png and N64DDConsole-<game>.png, 730x876: the "Nintendo 64 DD" kit's television, the pad,
+   and that game's disk beside it) put the glass exactly where the standard tile does, 491x370 at (119,75), corner
+   21 px, unlit #000000, body 667x503 at (31,26), so the tile takes the :root numbers above unchanged.
+   The drawer is the kit's whole scene (N64DDConsoleFull.png, n64dd-colorful.png 1142x786, n64dd-from-psd.py scale
+   0.57): glass 491x370 at (280,51), corner 21 px; the television 667x503 at (192,2). ---- */
+#device-stage .stage-card[data-system="n64"][data-art="n64-dd"], .device-card[data-photo="full"][data-system="n64"][data-art="n64-dd"] {
+  --n64-scr-l: 24.52%;   /* 280 / 1142 */
+  --n64-scr-t: 6.49%;    /*  51 / 786 */
+  --n64-scr-w: 42.99%;   /* 491 / 1142 */
+  --n64-scr-h: 47.07%;   /* 370 / 786 */
+  --n64-tv-l: 16.81%;    /* 192 / 1142 */
+  --n64-tv-t: 0.25%;     /*   2 / 786 */
+  --n64-tv-w: 58.41%;    /* 667 / 1142 */
+  --n64-tv-h: 63.99%;    /* 503 / 786 */
+  --n64-tv-scale: 1.71214;   /* 1142 / 667 */
+  --n64-art-aspect: 1142 / 786;
+  --n64-tv-aspect: 667 / 503;
+  --n64-art-aspect-num: 1.45293;
+  --n64-tv-aspect-num: 1.32604;
+}

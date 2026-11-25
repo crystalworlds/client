@@ -1,0 +1,162 @@
+/* snes-screen.css -- the Super Nintendo's screen boxes (the television in the tile, the drawer and the play
+   window), each declared ONCE for the whole site (23 Nov 2026).
+
+   READ atari-screen.css, sega8-screen.css AND n64-screen.css FIRST. This file is their sibling: it uses their
+   classes and consuming rules unchanged (.atari-art-frame, .atari-art, .atari-screen, .atari-tv-crop, all
+   reading the --at-* properties) and adds only the numbers, under the prefix --snes-*, and the one mapping
+   block that points --at-* at them. The selector is [data-system="snes"], the attribute a .device-card and
+   the play window carry.
+
+   HOW THE FIGURES WERE MEASURED
+       python3 WASM_Source/sega8-artwork/aperture.py <picture.png> --css
+   on the pictures WASM_Source/snes-artwork/maketiles.py makes from the photograph (its manifest.txt lists
+   every box). The television is a 4:3 Sony Trinitron, so the screen is TV-shaped like the NES, Sega and N64
+   sets. The glass is a translucent glare layer (alpha 95) and the game goes UNDER the picture. The tube's dark
+   ring is kept: the glass is the photograph's own, so the opaque ring and bezel hide the running picture's
+   square corners and it follows the tube's curved edges. If a picture is ever replaced, re-measure; never by eye.
+   ------------------------------------------------------------------------- */
+:root {
+  /* ---- THE TILE AND THE PLAY WINDOW -------------------------------------------
+     SnesConsole (snes-tile.png), 640x768 (5:6): the television (the photograph's, scaled 1.175) with the
+     controller drawn below it, in the NES tile's proportions (24 Nov 2026: the set 62% of the tile's height, the
+     pad 47% of its width, sitting right under the set). Glass 395x294 at (123,67), tone #434444, corner 9 px.
+     The television body for the play window's crop is 483x481 at (79,18). */
+  --snes-scr-l: 19.22%;     /* 123 / 640 */
+  --snes-scr-t: 8.72%;      /*  67 / 768 */
+  --snes-scr-w: 61.72%;     /* 395 / 640 */
+  --snes-scr-h: 38.28%;     /* 294 / 768 */
+  --snes-scr-bg: #434444;
+  --snes-scr-radius: 2.3% / 3.1%;   /* 9 px of a 395x294 box, scored */
+  --snes-tv-l: 12.34%;      /*  79 / 640 */
+  --snes-tv-t: 2.34%;       /*  18 / 768 */
+  --snes-tv-w: 75.47%;      /* 483 / 640 */
+  --snes-tv-h: 62.63%;      /* 481 / 768 */
+  --snes-tv-scale: 1.32505; /* 640 / 483 */
+  --snes-art-aspect: 640 / 768;
+  --snes-tv-aspect: 483 / 481;
+  --snes-art-aspect-num: 0.83333;
+  --snes-tv-aspect-num: 1.00416;
+}
+
+/* ---- THE MAPPING: every line a var() reference. ---- */
+[data-system="snes"] {
+  --at-scr-l: var(--snes-scr-l); --at-scr-t: var(--snes-scr-t);
+  --at-scr-w: var(--snes-scr-w); --at-scr-h: var(--snes-scr-h);
+  --at-scr-bg: var(--snes-scr-bg); --at-scr-radius: var(--snes-scr-radius);
+  --at-tv-l: var(--snes-tv-l); --at-tv-t: var(--snes-tv-t);
+  --at-tv-w: var(--snes-tv-w); --at-tv-h: var(--snes-tv-h);
+  --at-tv-scale: var(--snes-tv-scale);
+  --at-art-aspect: var(--snes-art-aspect); --at-tv-aspect: var(--snes-tv-aspect);
+  --at-art-aspect-num: var(--snes-art-aspect-num);
+  --at-tv-aspect-num: var(--snes-tv-aspect-num);
+}
+
+/* ---- THE CLIP SURFACES (video.gb-vid, video.gb-rec) read --gb-scr-*: the same source properties, so a
+   recorded tile lands on the glass when the SNES clips are published. ---- */
+.device-card[data-system="snes"] {
+  --gb-scr-l: var(--snes-scr-l);  --gb-scr-t: var(--snes-scr-t);
+  --gb-scr-w: var(--snes-scr-w);  --gb-scr-h: var(--snes-scr-h);
+  --gb-scr-bg: var(--snes-scr-bg);
+}
+
+/* ---- THE DRAWER STAGE takes the artwork's own shape (sega8-screen.css's rule; the id does not start
+   with "atari"). ---- */
+#device-stage .device-card.device-card[data-system="snes"] .img.stage-img {
+  aspect-ratio: var(--at-art-aspect);
+  height: auto;
+}
+
+/* ---- BOX ART: the cover sits inside the tile with the shared inset, as the other cartridge consoles'. ---- */
+.device-card:is([data-artmode="boxart"], [data-artmode="boxart3d"])[data-series="snes"] .img::after {
+  inset: var(--cover-inset); background-size: contain;
+}
+
+/* ---- THE DRAWER SHOWS THE WHOLE PHOTOGRAPH: the television with the console, its two pads and the Super
+   Scope (SnesConsoleFull), and the game's tile clip plays on its screen in the drawer's first picture
+   (drawer-unified.js). Only the numbers change, on the stage card. ---- */
+#device-stage .stage-card[data-system="snes"], .device-card[data-photo="full"][data-system="snes"] {
+  /* snes-drawer.png, 996x619: glass 335x250 at (343,61), corner 7 px; the television 412x333 at (304,20) */
+  --snes-scr-l: 34.44%;     /* 343 / 996 */
+  --snes-scr-t: 9.85%;      /*  61 / 619 */
+  --snes-scr-w: 33.63%;     /* 335 / 996 */
+  --snes-scr-h: 40.39%;     /* 250 / 619 */
+  --snes-scr-radius: 2.1% / 2.8%;   /* 7 px of a 335x250 box, scored */
+  --snes-tv-l: 30.52%;      /* 304 / 996 */
+  --snes-tv-t: 3.23%;       /*  20 / 619 */
+  --snes-tv-w: 41.37%;      /* 412 / 996 */
+  --snes-tv-h: 53.80%;      /* 333 / 619 */
+  --snes-tv-scale: 2.41748; /* 996 / 412 */
+  --snes-art-aspect: 996 / 619;
+  --snes-tv-aspect: 412 / 333;
+  --snes-art-aspect-num: 1.60905;
+  --snes-tv-aspect-num: 1.23724;
+}
+
+/* ===========================================================================================================
+   THE SUFAMI TURBO (24 Nov 2026): its own wall device beside the Super Nintendo ([data-system="sufami"]), on the
+   same television. Measured the same way (WASM_Source/snes-artwork/manifest.txt).
+     The tile, SufamiConsole (sufami-tile.png), 640x768: the SNES tile's Trinitron cut and placed to the pixel, with
+   the Super Famicom pad under it, so its glass, tone, corner and television body are the SNES tile's numbers.
+     The drawer, SufamiConsoleFull (sufami-drawer.png), 892x612: the whole photograph (the Trinitron, the Super
+   Famicom with the adaptor, two pads, a mini-cartridge and two boxed games). Glass 335x250 at (261,61), corner
+   7 px; this photograph's glass is darker (alpha 77), tone #050607; the television 412x290 at (222,20) (the
+   console hides the set's foot). Re-measure if a picture is replaced; never by eye.
+   ----------------------------------------------------------------------------------------------------------- */
+:root {
+  --sufami-scr-l: 19.22%;     /* 123 / 640 */
+  --sufami-scr-t: 8.72%;      /*  67 / 768 */
+  --sufami-scr-w: 61.72%;     /* 395 / 640 */
+  --sufami-scr-h: 38.28%;     /* 294 / 768 */
+  --sufami-scr-bg: #434444;
+  --sufami-scr-radius: 2.3% / 3.1%;   /* 9 px of a 395x294 box, scored */
+  --sufami-tv-l: 12.34%;      /*  79 / 640 */
+  --sufami-tv-t: 2.34%;       /*  18 / 768 */
+  --sufami-tv-w: 75.47%;      /* 483 / 640 */
+  --sufami-tv-h: 62.63%;      /* 481 / 768 */
+  --sufami-tv-scale: 1.32505; /* 640 / 483 */
+  --sufami-art-aspect: 640 / 768;
+  --sufami-tv-aspect: 483 / 481;
+  --sufami-art-aspect-num: 0.83333;
+  --sufami-tv-aspect-num: 1.00416;
+}
+[data-system="sufami"] {
+  --at-scr-l: var(--sufami-scr-l); --at-scr-t: var(--sufami-scr-t);
+  --at-scr-w: var(--sufami-scr-w); --at-scr-h: var(--sufami-scr-h);
+  --at-scr-bg: var(--sufami-scr-bg); --at-scr-radius: var(--sufami-scr-radius);
+  --at-tv-l: var(--sufami-tv-l); --at-tv-t: var(--sufami-tv-t);
+  --at-tv-w: var(--sufami-tv-w); --at-tv-h: var(--sufami-tv-h);
+  --at-tv-scale: var(--sufami-tv-scale);
+  --at-art-aspect: var(--sufami-art-aspect); --at-tv-aspect: var(--sufami-tv-aspect);
+  --at-art-aspect-num: var(--sufami-art-aspect-num);
+  --at-tv-aspect-num: var(--sufami-tv-aspect-num);
+}
+.device-card[data-system="sufami"] {
+  --gb-scr-l: var(--sufami-scr-l);  --gb-scr-t: var(--sufami-scr-t);
+  --gb-scr-w: var(--sufami-scr-w);  --gb-scr-h: var(--sufami-scr-h);
+  --gb-scr-bg: var(--sufami-scr-bg);
+}
+#device-stage .device-card.device-card[data-system="sufami"] .img.stage-img {
+  aspect-ratio: var(--at-art-aspect);
+  height: auto;
+}
+.device-card:is([data-artmode="boxart"], [data-artmode="boxart3d"])[data-series="sufami"] .img::after {
+  inset: var(--cover-inset); background-size: contain;
+}
+#device-stage .stage-card[data-system="sufami"], .device-card[data-photo="full"][data-system="sufami"] {
+  /* sufami-drawer.png, 892x612: glass 335x250 at (261,61), corner 7 px; the television 412x290 at (222,20) */
+  --sufami-scr-l: 29.26%;     /* 261 / 892 */
+  --sufami-scr-t: 9.97%;      /*  61 / 612 */
+  --sufami-scr-w: 37.56%;     /* 335 / 892 */
+  --sufami-scr-h: 40.85%;     /* 250 / 612 */
+  --sufami-scr-bg: #050607;
+  --sufami-scr-radius: 2.1% / 2.8%;   /* 7 px of a 335x250 box, scored */
+  --sufami-tv-l: 24.89%;      /* 222 / 892 */
+  --sufami-tv-t: 3.27%;       /*  20 / 612 */
+  --sufami-tv-w: 46.19%;      /* 412 / 892 */
+  --sufami-tv-h: 47.39%;      /* 290 / 612 */
+  --sufami-tv-scale: 2.16505; /* 892 / 412 */
+  --sufami-art-aspect: 892 / 612;
+  --sufami-tv-aspect: 412 / 290;
+  --sufami-art-aspect-num: 1.45752;
+  --sufami-tv-aspect-num: 1.42069;
+}

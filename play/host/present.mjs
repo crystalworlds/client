@@ -13,7 +13,7 @@
  * or in front of opaque art (a render). Without art: the largest integer scale.
  * Full screen (A13): the screen alone, as large as fits, art off.
  */
-import { SegmentLayer } from './segments.mjs?v=2.2.2';
+import { SegmentLayer } from './segments.mjs?v=2.3.0';
 
 /* The whole device on a tall screen only if its game screen stays at least this large against the
    cropped band (1 = never smaller). 0.85: a portrait phone and a Fold cover screen are width-bound
@@ -91,6 +91,18 @@ export class Presenter {
   segLayer() { return this.seg || (this.seg = new SegmentLayer(this)); }
 
   present(f) {
+    /* A bitmap frame (26 Nov 2026, HOST-MODEB-CARD-PATCH): an ImageBitmap the module drew on the graphics card, drawn
+       here card to card; the page owns it and frees it at once. A frame already drawn is not drawn again (its bitmap
+       is closed): the canvas still shows it. Screenshots read the canvas (shot), as before. */
+    if (f && f.format === 'bitmap') {
+      if (!f.bitmap || f.shown) return;
+      if (f.width !== this.w || f.height !== this.h) this.configure(f);
+      try { this.ctx.drawImage(f.bitmap, 0, 0); } catch (_) {}
+      try { f.bitmap.close(); } catch (_) {}
+      f.shown = true;
+      this.presented++;
+      return;
+    }
     if (!f || !f.data) return;
     if (f.format === 'segments') { if (this.seg) this.seg.paint(f.levels || f.data); this.presented++; return; }
     if (f.width !== this.w || f.height !== this.h) this.configure(f);
@@ -330,11 +342,24 @@ export class Presenter {
       h.className = 'host-xhair'; h.setAttribute('aria-hidden', 'true');
       this.wrap.appendChild(h);
     }
-    if (!p || !(p.x >= 0 && p.x < 1 && p.y >= 0 && p.y < 1)) { h.hidden = true; return; }
-    h.hidden = false;
     const cv = this.canvas;
-    h.style.left = (cv.offsetLeft + p.x * cv.offsetWidth) + 'px';
-    h.style.top = (cv.offsetTop + p.y * cv.offsetHeight) + 'px';
+    const place = (el, q) => {
+      if (!q || !(q.x >= 0 && q.x < 1 && q.y >= 0 && q.y < 1)) { el.hidden = true; return; }
+      el.hidden = false;
+      el.style.left = (cv.offsetLeft + q.x * cv.offsetWidth) + 'px';
+      el.style.top = (cv.offsetTop + q.y * cv.offsetHeight) + 'px';
+    };
+    place(h, p);
+    /* A second gun's crosshair (SNESPAD, 25 Nov 2026: two Justifiers in Lethal Enforcers): `p.more` holds its point,
+       drawn in its own colour so the two players can tell them apart; hidden when absent or off the picture. */
+    const q = p && Array.isArray(p.more) ? p.more[0] : null;
+    let h2 = this._xh2;
+    if (!h2 && q) {
+      h2 = this._xh2 = document.createElement('div');
+      h2.className = 'host-xhair host-xhair-2'; h2.setAttribute('aria-hidden', 'true');
+      this.wrap.appendChild(h2);
+    }
+    if (h2) place(h2, q);
   }
 
   /** The screen alone at native size (screenshots, slot pictures, Continue cards). */

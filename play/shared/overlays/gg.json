@@ -1,0 +1,142 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "gg",
+ "label": "Game Gear",
+ "device": "art",
+ "theme": {
+  "press": "rgba(40,110,220,.72)",
+  "pressInk": "#04102a"
+ },
+ "art": {
+  "size": [
+   1295,
+   750
+  ],
+  "controls": [
+   {
+    "id": "dpad",
+    "label": "D-pad",
+    "input": null,
+    "shape": "dpad",
+    "x": 0.1416,
+    "y": 0.2812,
+    "w": 0.1149,
+    "h": 0.1982
+   },
+   {
+    "id": "start",
+    "label": "Start",
+    "input": "Enter",
+    "shape": "circle",
+    "x": 0.8245,
+    "y": 0.1388,
+    "w": 0.0481,
+    "h": 0.0832
+   },
+   {
+    "id": "b1",
+    "label": "1",
+    "input": "KeyZ",
+    "shape": "circle",
+    "x": 0.8217,
+    "y": 0.3371,
+    "w": 0.063,
+    "h": 0.1087
+   },
+   {
+    "id": "b2",
+    "label": "2",
+    "input": "KeyX",
+    "shape": "circle",
+    "x": 0.8913,
+    "y": 0.254,
+    "w": 0.063,
+    "h": 0.1087
+   }
+  ]
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1,
+    "h": 0.62,
+    "controls": [
+     {
+      "id": "b1",
+      "label": "1",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.23,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     },
+     {
+      "id": "b2",
+      "label": "2",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.77,
+      "y": 0.629,
+      "w": 0.46,
+      "sq": true
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "start",
+   "label": "Start",
+   "input": "Enter"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "art buttons",
+   "source": "Moved 2026-11-25 onto the COLORFUL kit picture (images/art/sega8/GameGearConsole.webp, 1295x750): it is the same photograph, so the old picture was registered onto the new one by edge correlation (scale 1.2000 x 1.1993, offset +7,-41 px, a sharp peak) and every box above was carried over by that map, sizes scaled with it; the boxes drawn over the new picture were checked by eye. The numbers below are the 1080x587 measurement they came from: measured 2026-11-20 on GameGearConsole.png (images/art/sega8, 1080x587) with the boxes drawn over a crop: d-pad centre (147,210), 124 px square; Start cap (884,121); button 1 (881,245), button 2 (956,193); hit circles 68 px (the cap plus a thumb), Start 52 px. Fractions of the WHOLE photograph: the host draws the body cut (play/cores/sega8/art.mjs GEOM gg: 49,36 978x533) and says so through setArtView (overlayView), as for the Lynx",
+   "licence": "site-owned measurement of the site's own artwork"
+  },
+  {
+   "what": "buttons and keys",
+   "source": "play/cores/sega8/core.mjs ports(): buttons 1 and 2 on Z and X, Pause (Start on the Game Gear) on Enter, Reset on the right Shift where the model has the button",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format",
+   "source": "play/shared/overlays/a7800.json, the site's own layout",
+   "licence": "site-owned"
+  }
+ ]
+}

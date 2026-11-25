@@ -1,0 +1,10 @@
+{
+ "format": 1,
+ "list": "n64",
+ "label": "Nintendo 64",
+ "guards": [
+  "n64"
+ ],
+ "count": 0,
+ "entries": {}
+}

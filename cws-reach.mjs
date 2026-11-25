@@ -32,7 +32,11 @@
    functions as the protocol says. Servers and the introducer see public keys,
    signatures and per-server PIN proofs only.
    ======================================================================== */
-import * as P from './cws-proto.mjs?v=2.2.2';
+import * as P from './cws-proto.mjs?v=2.3.0';
+/* THE 8-BIT AVATARS (21 Nov 2026): the set, its picker and the stored picture (cws-avatars.mjs), and the
+   alias maker the dice uses (cws-names.mjs). */
+import * as AV from './cws-avatars.mjs?v=2.3.0-avatar';
+import { pick as pickName } from './cws-names.mjs?v=2.3.0-avatar';
 
 const SUPPORTED = !!(globalThis.crypto && crypto.subtle && window.isSecureContext && window.RTCPeerConnection && window.WebSocket && window.indexedDB);
 
@@ -706,6 +710,7 @@ async function start(host) {
   if (!code || !vhp) return;
   if (S.running && S.code === code) return;
   stop();
+  _mePick = null; _mePickOpen = false; _avDraft = null;   // the avatar picker and draft belong to the vault before
   S.code = code; S.vhp = vhp; S.running = true; S.msg = ''; S.pinKeys = null; S.pinParams = null; S.profile = null; S.profileKnown = false; _fresh = null; S.key = null; S.noKey = false; S.trustedVault = null;
   setGate('checking');
   watchMe();
@@ -838,6 +843,8 @@ function forgetKey(key) {
 function ui() { return H.ui; }
 function esc(s) { return ui().esc(s); }
 const ERR = 'font-size:12px; color:#f08a5d; min-height:18px; margin:6px 0 0;';
+/* A link-styled button (the avatar line under the alias). */
+const LINK = 'padding:4px 0; background:none; border:0; color:var(--accent); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; text-decoration:underline; text-underline-offset:3px;';
 
 /* ---- the PIN boxes (new PIN twice) used by the welcome screen, change and reset ---- */
 function pinPairHtml(prefix) {
@@ -1032,6 +1039,12 @@ async function welcomeScreen(opts) {
   const haveProfile = !!S.profile, havePin = !!(S.pinParams && !S.pinParams.none);
   let avatar = null;
   if (S.profile && S.profile.avatar) avatar = { url: S.profile.avatar };
+  /* The 8-bit avatar shown (wire() below): the vault's own when it is one of ours, else what was shown
+     before the welcome was tucked away. chosenByPerson: picked, uploaded or already the vault's, so the
+     dice then rolls only the alias. */
+  let avKey = null, suggested = false, chosenByPerson = !!avatar;
+  if (avatar) avKey = AV.keyInPng(S.profile.avatarB64u || S.profile.avatar);
+  else if (_avDraft) { avKey = _avDraft.key || null; suggested = !!_avDraft.suggested; chosenByPerson = !!_avDraft.chosen; if (_avDraft.own) avatar = _avDraft.own; }
   const mono = 'font-family:ui-monospace,Consolas,monospace; font-size:13px;';
   const box = (cls, val, note, copy) => '<div style="display:flex; gap:8px; align-items:center; margin:0 0 4px;"><input class="' + cls + '" readonly value="' + esc(val) + '" style="flex:1; ' + u.INPUT + ' ' + mono + '">' +
     u.button({ label: 'Copy', action: copy }).outerHTML + '</div><p style="' + u.P + ' font-size:11.5px;">' + note + '</p>';
@@ -1050,7 +1063,15 @@ async function welcomeScreen(opts) {
         '<button type="button" class="cwr-av" aria-label="Choose an avatar" title="Choose an avatar" style="width:64px; height:64px; flex:none; border-radius:50%; border:1px dashed var(--line); background:var(--line) center/cover no-repeat; color:var(--text); font-size:26px; font-weight:700; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;"></button>' +
         '<input class="cwr-av-file" type="file" accept="image/*" style="display:none">' +
         '<div style="flex:1;"><label style="' + u.LBL + '">Your alias</label>' +
-        '<input class="cwr-alias" type="text" maxlength="64" autocomplete="nickname" spellcheck="false" placeholder="The alias others see" value="' + esc(S.profile ? S.profile.alias : _aliasDraft) + '" style="width:100%; box-sizing:border-box; ' + u.INPUT + '"></div></div>' +
+        '<input class="cwr-alias" type="text" maxlength="64" autocomplete="nickname" spellcheck="false" placeholder="The alias others see" value="' + esc(S.profile ? S.profile.alias : _aliasDraft) + '" style="width:100%; box-sizing:border-box; ' + u.INPUT + '"></div>' +
+        /* THE DICE (21 Nov 2026): a new avatar and a new alias together; once the person has chosen an avatar
+           or their own picture, only a new alias. */
+        '<button type="button" class="cwa-dice cwr-dice" aria-label="Roll a random avatar and alias" title="Roll a random avatar and alias">' + AV.DICE_SVG + '</button></div>' +
+      '<div class="cwr-av-line" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:-4px 0 10px; font-size:12px;">' +
+        '<span class="cwr-av-say" style="color:var(--muted);"></span>' +
+        '<button type="button" class="cwr-av-choose" aria-expanded="false" style="' + LINK + '">Choose an avatar</button>' +
+        '<button type="button" class="cwr-av-none" hidden style="' + LINK + '">No avatar</button></div>' +
+      '<div class="cwr-av-pick" hidden></div>' +
       '<p style="' + u.P + ' font-size:11.5px;">Your alias and avatar are public, so choose ones you are happy for anyone to see. Game server owners see them when you join. The avatar is optional.</p>' +
       (havePin ? '' : '<label style="' + u.LBL + '">Your PIN</label>' + pinPairHtml('cwr-wpin') +
         '<p style="' + u.P + ' font-size:11.5px;">You type it when you log in on another browser, so your vault code alone cannot open your vault. ' + NO_RECOVERY + ' Choose one you will remember.</p>') +
@@ -1169,19 +1190,69 @@ async function welcomeScreen(opts) {
     /* No picture chosen: the lettered circle others will see (the first letter of the name as typed),
        or a plain person outline before any name. */
     const alias = el.querySelector('.cwr-alias');
+    /* THE 8-BIT AVATARS (21 Nov 2026). avKey is the 8-bit avatar shown (chosen or suggested); avatar holds
+       an uploaded picture, or the vault's own picture. A new vault with neither is offered a random 8-bit
+       avatar and a matching alias as a suggestion: nothing is kept until Save. A vault that already has
+       an alias is never given one. The circle opens the picker; its last tile is "Your own picture". */
+    const avSay = el.querySelector('.cwr-av-say'), choose = el.querySelector('.cwr-av-choose'), none = el.querySelector('.cwr-av-none');
+    const pickHost = el.querySelector('.cwr-av-pick'), dice = el.querySelector('.cwr-dice');
+    let pk = null;
+    const keep = () => { _avDraft = { key: avKey, suggested, own: avKey ? null : avatar, none: !avKey && !avatar, chosen: chosenByPerson }; };
     const paint = () => {
-      if (avatar && avatar.url) { av.style.backgroundImage = 'url("' + avatar.url + '")'; av.textContent = ''; return; }
-      const ch = Array.from((alias.value || '').trim())[0];
-      if (ch) av.textContent = ch.toUpperCase();
-      else av.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--muted);"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
+      if (avKey && AV.ready()) { av.classList.add('cw-av8'); av.style.backgroundImage = 'url("' + AV.render(avKey) + '")'; av.textContent = ''; av.title = AV.aboutOf(avKey); }
+      else if (avatar && avatar.url) { av.classList.toggle('cw-av8', !!avatar.key); av.style.backgroundImage = 'url("' + avatar.url + '")'; av.textContent = ''; }
+      else {
+        av.classList.remove('cw-av8'); av.style.backgroundImage = '';
+        const ch = Array.from((alias.value || '').trim())[0];
+        if (ch) av.textContent = ch.toUpperCase();
+        else av.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--muted);"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
+      }
+      avSay.textContent = avKey && suggested ? 'A suggested avatar: Save keeps it.' : (avKey || (avatar && avatar.url)) ? '' : 'No avatar: others see the first letter of your alias.';
+      none.hidden = !(avKey || (avatar && avatar.url));
     };
+    const roll = (nameToo) => {
+      if (!chosenByPerson) { const k = AV.randomKey(); if (k) { avKey = k; suggested = true; avatar = null; } }
+      if (nameToo) { alias.value = pickName(avKey ? AV.idOf(avKey) : (AV.remembered(S.code) ? AV.idOf(AV.remembered(S.code)) : undefined)); _aliasDraft = alias.value; }
+      if (pk) pk.set(avKey);
+      keep(); paint();
+    };
+    AV.styles();
+    AV.load().then(() => {
+      if (!d.el) return;
+      if (!avKey && !avatar && !haveProfile && !(_avDraft && (_avDraft.none || _avDraft.own))) {
+        avKey = AV.randomKey(); suggested = true;
+        if (!alias.value.trim()) { alias.value = pickName(AV.idOf(avKey)); _aliasDraft = alias.value; }
+        keep();
+      }
+      paint();
+    }).catch(() => { dice.hidden = true; choose.hidden = true; });
     paint();
     alias.addEventListener('input', paint);
     alias.addEventListener('input', () => { _aliasDraft = alias.value; });   // kept while it is tucked away
-    av.addEventListener('click', () => file.click());
+    async function togglePicker() {
+      if (!pickHost.hidden) { pickHost.hidden = true; choose.setAttribute('aria-expanded', 'false'); return; }
+      try {
+        if (!pk) {
+          pk = await AV.picker({
+            current: avKey,
+            onPick: (k) => { avKey = k; suggested = false; chosenByPerson = true; avatar = null; keep(); paint(); },
+            onOwn: () => file.click(),
+            exitUp: () => av.focus(),
+            exitDown: () => { const n = el.querySelector('.cwr-wpin') || el.querySelector('[data-cws-action="cwr-copy-vc"]'); if (n) n.focus(); },
+          });
+          pickHost.appendChild(pk.el);
+        }
+        pickHost.hidden = false; choose.setAttribute('aria-expanded', 'true');
+        pk.focus();
+      } catch (e) { msg.textContent = 'The avatars could not be loaded. Try again in a moment.'; }
+    }
+    av.addEventListener('click', togglePicker);
+    choose.addEventListener('click', togglePicker);
+    none.addEventListener('click', () => { avKey = null; avatar = null; suggested = false; chosenByPerson = false; if (pk) pk.set(null); keep(); paint(); try { alias.focus(); } catch (x) {} });
+    dice.addEventListener('click', () => roll(true));
     file.addEventListener('change', async () => {
       const f = file.files && file.files[0]; if (!f) return;
-      try { const a = await avatarFrom(f); avatar = { type: a.type, bytes: a.bytes, url: 'data:' + a.type + ';base64,' + b64std(a.bytes) }; paint(); msg.textContent = ''; }
+      try { const a = await avatarFrom(f); avatar = { type: a.type, bytes: a.bytes, url: 'data:' + a.type + ';base64,' + b64std(a.bytes) }; avKey = null; suggested = false; chosenByPerson = true; if (pk) pk.set(null); keep(); paint(); msg.textContent = ''; }
       catch (e) { msg.textContent = e.message || 'That avatar could not be read.'; }
     });
     el.querySelector('[data-cws-action="cwr-copy-vc"]').addEventListener('click', () => copyText(S.code, 'Vault code copied. Keep it private.'));
@@ -1224,9 +1295,10 @@ async function welcomeScreen(opts) {
     }
     /* A remote or a pad has no Tab key: Up and Down move from box to box and button to button, and
        Left and Right do too from a button, a read-only box, or the end (start) of a box's text. */
-    const order = () => [...el.querySelectorAll('button, input')].filter((x) => !x.hidden && x.type !== 'file' && !x.disabled && x.getClientRects().length);
+    const order = () => [...el.querySelectorAll('button, input')].filter((x) => !x.hidden && x.type !== 'file' && !x.disabled && x.getClientRects().length && !(x.closest('.cwa-grid') && x.getAttribute('aria-pressed') !== 'true'));
     el.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.target.closest && e.target.closest('.cwa-grid')) return;   // the avatar picker moves on its own grid
       const t = e.target, key = e.key;
       let dir = key === 'ArrowDown' ? 1 : key === 'ArrowUp' ? -1 : 0;
       if (key === 'ArrowRight' || key === 'ArrowLeft') {
@@ -1258,10 +1330,16 @@ async function welcomeScreen(opts) {
     try {
       if (!S.key) { await storeNewKey(_fresh); _fresh = null; }
       let avB64 = null, avType = null;
+      /* The 8-bit avatar shown (suggested or chosen) is kept as its picture, like an uploaded one; the vault's
+         own picture, unchanged, is kept as it is. */
+      const sameAsVault = avatar && !avatar.bytes && S.profile && S.profile.avatarB64u && AV.keyInPng(S.profile.avatarB64u) === avKey;
+      if (avKey && !sameAsVault && !(avatar && avatar.bytes && avatar.key === avKey)) avatar = await AV.pngFor(avKey);
       if (avatar && avatar.bytes) { avB64 = P.b64u(avatar.bytes); avType = avatar.type; }
       else if (avatar && S.profile && S.profile.avatarB64u) { avB64 = S.profile.avatarB64u; avType = S.profile.avatarType; }
       await vcall(VF.setProfile(S.code, alias, avB64, avType));
       S.profile = { alias, avatar: avB64 ? avatar.url : null, avatarB64u: avB64, avatarType: avType };
+      AV.remember(S.code, avB64 ? avKey : null);
+      _avDraft = null;
       if (pin) await setPin(pin);
       try { if (typeof markVaultTouched === 'function') markVaultTouched(); } catch (e) {}   // eslint-disable-line no-undef
       setGate('ready'); markDone();
@@ -1292,6 +1370,7 @@ let _gate = 'checking';      // checking | needed | ready | open
 let _gateWaiters = [];
 let _welcomeDlg = null;      // the welcome on screen
 let _aliasDraft = '';        // the name typed so far, kept while the welcome is tucked away
+let _avDraft = null;         // the avatar shown so far, kept the same way: { key, suggested, own, none }
 const SEEN_KEY = 'cw.welcome.seen.v1';    // localStorage: this browser has seen the welcome once
 const SLID_KEY = 'cw.welcome.slid.v1';    // sessionStorage: it has been out this visit
 const LEAD = 'margin:0 0 14px; padding:10px 12px; border-radius:10px; border:1px solid rgba(var(--accent-rgb), .45); background:rgba(var(--accent-rgb), .10); color:var(--text); font-size:13px; line-height:1.5; font-weight:600;';
@@ -1326,6 +1405,8 @@ function gateSettled(ms) {
 function gateUpdate() {
   try { tabStyles(); } catch (e) {}   // the styles also hide Settings, on every address
   try { document.documentElement.classList.toggle('cw-novault', _gate === 'needed' || _gate === 'checking'); } catch (e) {}
+  /* The vault has answered (21 Nov 2026): lift the head script's wait; the classes above say the rest. */
+  if (_gate !== 'checking') { try { document.documentElement.classList.remove('cw-vaultwait'); } catch (e) {} }
   /* No vault: the search box goes and the top bar keeps only its row of buttons. Only once
      the vault has answered, so a visitor with a vault never sees the bar jump. The page window sits under
      the bar and fits itself on a resize. */
@@ -1372,6 +1453,8 @@ window.addEventListener('storage', (e) => {
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') recheck(); });
 window.cwVaultHoldsPages = pagesHeld;
+/* deeplinks.js (21 Nov 2026): the automatic Home waits for this to leave 'checking'; 'ready' (signed in) means the wall. */
+window.cwVaultGate = () => _gate;
 /* emby.js, when it keeps a page open: a press or key made inside the page (a link to the wall, such as
    Open the library) slides the welcome out; Escape, a press outside the page and Back do nothing. */
 window.cwVaultPageRefused = () => {
@@ -1561,8 +1644,21 @@ window.addEventListener('keydown', (e) => {
   }, 60);
 }, true);
 /* The first load on this browser opens it; after that it waits in the tab (and slides out once a visit). */
+/* ?nowelcome=1 (21 Nov 2026, approved for test agents): the welcome is not opened by itself, on load or by the
+   slide-back, for the rest of this tab's visit (sessionStorage, so every page and the play window keep it).
+   Nothing else changes: no vault is opened or made, Play and Settings still ask for one, the tab still opens
+   the welcome when pressed. docs/TEST-PARAMETERS.md. */
+function noWelcome() {
+  const NOWELCOME_KEY = 'cw.test.nowelcome';   /* inside: called from gateUpdate, which may run before this line */
+  try {
+    if (new URLSearchParams(location.search).get('nowelcome') === '1') sessionStorage.setItem(NOWELCOME_KEY, '1');
+    return sessionStorage.getItem(NOWELCOME_KEY) === '1';
+  } catch (e) { return false; }
+}
+noWelcome();
 function welcomeOnStart() {
   if (_gate !== 'needed') return;
+  if (noWelcome()) { gateUpdate(); return; }
   if (window.__cwOffsite) { welcomeScreen({ reason: 'offsite' }); return; }
   let seen = false;
   try { seen = localStorage.getItem(SEEN_KEY) === '1'; localStorage.setItem(SEEN_KEY, '1'); } catch (e) { seen = true; }
@@ -1702,7 +1798,7 @@ function busyNow() {
   return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable));
 }
 function startSlideBack() {
-  if (_sbTimer || slidThisVisit()) return;
+  if (_sbTimer || slidThisVisit() || noWelcome()) return;
   const need = slideDelay();
   _sbTimer = setInterval(() => {
     if (_gate !== 'needed' || window.__cwOffsite || slidThisVisit()) { clearInterval(_sbTimer); _sbTimer = null; return; }
@@ -1766,9 +1862,23 @@ function copyText(text, ok) {
    letter), else a person outline, and opens Settings on Your vault. There, the "Your name and
    picture" block changes the picture, the name and the PIN, through the same vault functions. */
 const PERSON_SVG = '<svg width="60%" height="60%" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--muted);"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
+/* THE 8-BIT AVATARS (21 Nov 2026): one of ours (its picture carries its key) is drawn pixel-sharp, and in a
+   circle of 40 px or less as its head and shoulders; any other picture is shown as it is. */
+function avatarKey(p) { if (p._avKey === undefined) p._avKey = AV.keyInPng(p.avatarB64u || p.avatar || ''); return p._avKey; }
 function paintAvatar(el) {
   const p = S.profile, ch = p && p.alias ? Array.from(p.alias.trim())[0] : '';
-  if (p && p.avatar) { el.style.backgroundImage = 'url("' + p.avatar + '")'; el.textContent = ''; return; }
+  if (p && p.avatar) {
+    const key = avatarKey(p);
+    el.classList.toggle('cw-av8', !!key);
+    let url = p.avatar;
+    if (key && AV.ready() && el.getBoundingClientRect().width <= 44) url = AV.render(key, 'head') || url;
+    else if (key && !AV.ready()) AV.load().then(() => paintAvatar(el)).catch(() => {});
+    const bg = 'url("' + url + '")';
+    if (el.style.backgroundImage !== bg) el.style.backgroundImage = bg;
+    if (el.firstChild) el.textContent = '';   // the lettered circle's letter or the person outline
+    return;
+  }
+  el.classList.remove('cw-av8');
   el.style.backgroundImage = '';
   if (ch) el.textContent = ch.toUpperCase(); else el.innerHTML = PERSON_SVG;
 }
@@ -1790,6 +1900,7 @@ function meStyles() {
       color:var(--text); font-size:26px; font-weight:700; line-height:1; display:inline-flex; align-items:center; justify-content:center; }
   `;
   document.head.appendChild(st);
+  AV.styles();
 }
 function openMe() {
   try { if (typeof openVaultModal === 'function') openVaultModal(); } catch (e) {}   // eslint-disable-line no-undef
@@ -1842,6 +1953,7 @@ function meSectionHtml() {
         u.button({ label: 'Change alias', action: 'cwr-me-name' }).outerHTML +
         u.button({ label: havePin ? 'Change PIN' : 'Set your PIN', action: 'cwr-me-pin' }).outerHTML +
       '</div></div></div>' +
+    '<div class="cw-me-pick" hidden></div>' +
     '<input class="cw-me-file" type="file" accept="image/*" style="display:none">' +
     '<p style="' + u.P + ' font-size:11.5px; margin:0;">Your alias and avatar are public: game server owners see them when you join. Without an avatar, others see the first letter of your alias.</p>' +
     '<div class="cw-me-msg" role="status" style="' + ERR + '"></div>';
@@ -1852,16 +1964,19 @@ function renderMe() {
   if (!sec || !H) return;
   if (!SUPPORTED || !S.code || !S.profileKnown) { sec.hidden = true; return; }
   const had = sec.contains(document.activeElement) && document.activeElement.getAttribute('data-cws-action');
+  const hadTile = _mePick && _mePick.el.contains(document.activeElement) ? document.activeElement : null;
   sec.innerHTML = meSectionHtml(); sec.hidden = false;
   paintAvatar(sec.querySelector('.cw-me-av'));
+  /* The picker stays open (and keeps its order and focus) when the section is drawn again after a save. */
+  if (_mePick && _mePickOpen) { const h = sec.querySelector('.cw-me-pick'); h.appendChild(_mePick.el); h.hidden = false; if (hadTile) try { hadTile.focus({ preventScroll: true }); } catch (e) {} }
   if (had) { const b = sec.querySelector('[data-cws-action="' + had + '"]'); if (b) try { b.focus({ preventScroll: true }); } catch (e) {} }
   if (sec.__wired) return;
   sec.__wired = true;
   sec.addEventListener('click', (e) => {
     const b = e.target.closest && e.target.closest('[data-cws-action]'); if (!b) return;
     const a = b.getAttribute('data-cws-action');
-    if (a === 'cwr-me-pic') { if (!(S.profile && S.profile.alias)) { welcomeScreen(); return; } sec.querySelector('.cw-me-file').click(); }
-    else if (a === 'cwr-me-nopic') saveMe(S.profile.alias, null, 'Avatar removed. Others see the first letter of your alias.');
+    if (a === 'cwr-me-pic') { if (!(S.profile && S.profile.alias)) { welcomeScreen(); return; } toggleMePicker(sec); }
+    else if (a === 'cwr-me-nopic') { AV.remember(S.code, null); if (_mePick) _mePick.set(null); saveMe(S.profile.alias, null, 'Avatar removed. Others see the first letter of your alias.'); }
     else if (a === 'cwr-me-name') changeNameDialog();
     else if (a === 'cwr-me-pin') { if (S.pinParams && !S.pinParams.none) changePinDialog(); else welcomeScreen(); }
   });
@@ -1869,9 +1984,36 @@ function renderMe() {
     if (!e.target.classList.contains('cw-me-file')) return;
     const f = e.target.files && e.target.files[0]; e.target.value = '';
     if (!f) return;
-    try { const a = await avatarFrom(f); await saveMe(S.profile.alias, a, 'Avatar saved.'); }
+    try { const a = await avatarFrom(f); if (await saveMe(S.profile.alias, a, 'Avatar saved.')) { AV.remember(S.code, null); if (_mePick) _mePick.set(null); } }
     catch (x) { meMsg(x.message || 'That avatar could not be read.', false); }
   });
+}
+/* Change avatar: the same picker as the welcome, under the buttons. Each choice is saved a moment after the
+   last press, so stepping through colours saves once. */
+let _mePick = null, _mePickOpen = false, _meSaveT = 0;
+async function toggleMePicker(sec) {
+  const host = sec.querySelector('.cw-me-pick');
+  if (_mePickOpen) { _mePickOpen = false; host.hidden = true; return; }
+  try {
+    if (!_mePick) {
+      _mePick = await AV.picker({
+        current: S.profile ? avatarKey(S.profile) : null,
+        onPick: (k) => {
+          clearTimeout(_meSaveT);
+          meMsg('Saving…', true);
+          _meSaveT = setTimeout(async () => {
+            try { const a = await AV.pngFor(k); if (await saveMe(S.profile.alias, a, 'Avatar saved.')) AV.remember(S.code, k); }
+            catch (e) { meMsg(e.message || 'That avatar could not be kept. Try another one.', false); }
+          }, 700);
+        },
+        onOwn: () => { const f = document.querySelector('#cw-me-section .cw-me-file'); if (f) f.click(); },
+        exitUp: () => { const b = document.querySelector('#cw-me-section [data-cws-action="cwr-me-pic"]'); if (b) b.focus(); },
+      });
+    }
+    const h = document.querySelector('#cw-me-section .cw-me-pick');
+    h.appendChild(_mePick.el); h.hidden = false; _mePickOpen = true;
+    _mePick.focus();
+  } catch (e) { meMsg('The avatars could not be loaded. Try again in a moment.', false); }
 }
 function meMsg(t, ok) { const m = document.querySelector('#cw-me-section .cw-me-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--accent)' : '#f08a5d'; } }
 /* pic: {type, bytes} for a new picture, null to remove it, undefined to keep the current one. */
@@ -2210,6 +2352,7 @@ function onCardClick(a, b) {
 export default {
   supported: SUPPORTED,
   start, stop, fetch: rtcFetch, listings, whenOpen, info, forget, untrust, closeDb,
+  offSite: offOwnAddress,   // 21 Nov: the introducer takes only crystalworlds.media, so here servers are reached by Direct connect only
   cardHtml, onCardClick, offlineTrusted, directIdentity, identityReady, welcomeScreen, replaceKeyDialog, changePinDialog, renderMe,
   gate: () => _gate,   // checking | needed | ready | open (for tests)
   /* For tests: no keys, codes or PIN keys. */

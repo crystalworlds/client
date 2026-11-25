@@ -31,8 +31,8 @@
  * and the turn (R). Paddles and wheels are turned by held keys (or a pad's d-pad).
  */
 import { CoreError } from '../../host/core-api.mjs';
-import { cheatEngine } from '../cheats-core.mjs?v=2.2.2';
-import { HEADERLESS_REGION_7800 } from '../../atari7800/web/region7800.js?v=2.2.2-atari9';
+import { cheatEngine } from '../cheats-core.mjs?v=2.3.0';
+import { HEADERLESS_REGION_7800 } from '../../atari7800/web/region7800.js?v=2.3.0';
 
 export const SYS = new URL(import.meta.url).searchParams.get('sys') || 'a2600';
 /* The wrapper's own version tag (its URL is built here, so the page's tags never reach it). */
@@ -678,8 +678,8 @@ export async function create(env) {
   const wasmUrl = new URL(WASM[SYS], base).href + '?v=' + (stamp && stamp.sha256 ? stamp.sha256.slice(0, 12) : 'dev');
   const ball = { on: false, dx: 0, dy: 0, b: 0, lb: 0 };   // the 5200 Trak-ball (ext.trackball)
   const P = { a2600: null, a7800: null, a5200: null };
-  if (SYS === 'a2600') P.a2600 = await import(new URL('web/palette.js?v=2.2.2-atarifw', base).href);
-  if (SYS === 'a7800') { P.a7800 = await import(new URL('web/palette7800.js?v=2.2.2-atarifw', base).href); P.a2600 = await import(new URL('../atari2600/web/palette.js?v=2.2.2-atarifw', base).href); }
+  if (SYS === 'a2600') P.a2600 = await import(new URL('web/palette.js?v=2.3.0', base).href);
+  if (SYS === 'a7800') { P.a7800 = await import(new URL('web/palette7800.js?v=2.3.0', base).href); P.a2600 = await import(new URL('../atari2600/web/palette.js?v=2.3.0', base).href); }
   if (SYS === 'a5200') P.a5200 = await import(new URL('web/palette5200.js', base).href);   // the 5200's own colours (18 Nov 2026)
 
   /* A fresh instance per cartridge, as the old pages: atari_create() grows wasm memory and

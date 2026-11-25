@@ -150,6 +150,9 @@
     { key: 'gnw', label: 'Game & Watch' }, { key: 'gb', label: 'Game Boy' }, { key: 'gbc', label: 'Game Boy Color' }, { key: 'pm', label: 'Pokémon Mini' },
     { key: 'nes', label: 'NES' }, { key: 'famicom', label: 'Famicom' }, { key: 'fds', label: 'Famicom Disk System' },
     { key: 'a2600', label: 'Atari 2600' }, { key: 'a5200', label: 'Atari 5200' }, { key: 'a7800', label: 'Atari 7800' }, { key: 'alynx', label: 'Atari Lynx' },
+    { key: 'sg1000', label: 'SG-1000' }, { key: 'sms', label: 'Master System' }, { key: 'gg', label: 'Game Gear' },
+    { key: 'n64', label: 'Nintendo 64' },
+    { key: 'snes', label: 'Super Nintendo' },
   ];
   /* [ and ]: the film and series libraries ONLY (31 Oct: one key, one meaning). With films and series
      hidden, or one library, there is nothing to step: a short note says so, and the system never changes. */

@@ -40,6 +40,15 @@
     window.__cwOffsite = !/(^|\.)crystalworlds\.media$/i.test(String(location.hostname || '').replace(/\.$/, ''));
     if (window.__cwOffsite) document.documentElement.className += ' cw-offsite';
   } catch (e) {}
+  /* NOTHING SIGNED-IN SHOWS BEFORE THE VAULT ANSWERS (21 Nov 2026: Settings and the two built-in tiles,
+     R.O.B. Play Time and Tetris Jr., showed on a first load and then went away once the page knew the
+     visitor was not signed in). Until cws-reach.mjs settles its gate, Settings and the Systems tab are hidden,
+     and on our own address the wall too (the cw-vaultwait rules in the first style block). The gate lifts the class
+     (cws-reach.mjs gateUpdate); cws.js lifts it if the vault part cannot load; this timer is the last word. */
+  try {
+    document.documentElement.className += ' cw-vaultwait';
+    setTimeout(function () { document.documentElement.classList.remove('cw-vaultwait'); }, 15000);
+  } catch (e) {}
   try {
     if (!/^https?:$/.test(location.protocol)) return;
     var on = /crystalworlds\.media/i.test(location.hostname);
@@ -68,7 +77,7 @@
     if (started) return;
     started = 1;
     var s = document.createElement('script');
-    s.src = 'stories.js?v=2.2.2';
+    s.src = 'stories.js?v=2.3.0';
     s.onload = function () { while (q.length) { try { q.shift()(window.CwStories); } catch (e) {} } };
     s.onerror = function () { started = 0; q = []; };
     document.head.appendChild(s);
@@ -121,6 +130,10 @@
   html.cw-nodocs .drawer-tab[data-tab="hardware"], html.cw-nodocs .drawer-tab[data-tab="emulation"],
   html.cw-nodocs .drawer-tab-content[data-tab-content="hardware"], html.cw-nodocs .drawer-tab-content[data-tab-content="emulation"],
   html.cw-nodocs [data-emu-proof] { display: none !important; }
+  /* The vault not answered yet (html.cw-vaultwait, the head script above): the same things the gate hides
+     while it is checking (cws-reach.mjs tabStyles), from the first paint instead of once that file loads. */
+  html.cw-vaultwait #video-settings-btn, html.cw-vaultwait .vgames-wrap > .vg-tab, html.cw-vaultwait .vgames-menu { display: none !important; }
+  html.cw-vaultwait:not(.cw-offsite) :is(#video-grid, #video-continue, #video-library, #video-people, #video-collections, #video-person-banner, #video-status) { visibility: hidden !important; }
 </style>
 <!-- ?diag=1 : ON-SCREEN DIAGNOSTICS FOR A REAL TV (2026-10-03).
      OFF unless the URL carries diag=1 (not persisted, nothing stored, nothing
@@ -205,23 +218,23 @@
      check (?diag=1, ?diag=storage, Settings). Loaded first so it sees the
      storage before anything writes to it. -->
 <!-- Every drop-down's opened list (select-list.js, 14 Nov 2026): the current choice in the accent. First of the key handlers, so an open list keeps its keys. -->
-<script src="play/shared/select-list.js?v=2.2.2"></script>
-<script src="keep.js?v=2.2.2"></script>
+<script src="play/shared/select-list.js?v=2.3.0"></script>
+<script src="keep.js?v=2.3.0"></script>
 <!-- Links anyone can paste (#/compatibility, #/media/about, #/<system>/hardware ...): deeplinks.js, 2026-10-21. In the head so the first applyHashRoute can ask it. -->
-<script src="deeplinks.js?v=2.2.2"></script>
+<script src="deeplinks.js?v=2.3.0-prepush1"></script>
 <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report anything at
      all. Without it the platform letterboxes the page into the safe area and
      the insets come back as 0, so the TV overscan rules (body.gnw-tv, in the
      stylesheet) would have nothing to honour. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CrystalWorlds</title>
-<meta name="description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
+<meta name="description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Super Nintendo, Nintendo 64, Pokémon mini, Atari and Sega games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
 <link rel="canonical" href="./">
 <link rel="icon" type="image/svg+xml" href="./FavIcon/favicon.svg">
 <link rel="icon" type="image/x-icon" href="./FavIcon/favicon.ico">
 <link rel="icon" type="image/png" sizes="96x96" href="./FavIcon/favicon-96x96.png">
 <link rel="apple-touch-icon" href="./FavIcon/apple-touch-icon.png">
-<link rel="manifest" href="./FavIcon/site.webmanifest?v=2.2.2">
+<link rel="manifest" href="./FavIcon/site.webmanifest?v=2.3.0">
 <!-- The name under the home-screen icon (2026-10-17: it said
      "Game & Watch", it should say Crystal Worlds). Android takes it from the
      manifest's short_name; iPhone and iPad from apple-mobile-web-app-title. -->
@@ -238,7 +251,7 @@
 <meta property="og:url" content="./">
 <meta property="og:site_name" content="CrystalWorlds.Media">
 <meta property="og:title" content="CrystalWorlds">
-<meta property="og:description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
+<meta property="og:description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Super Nintendo, Nintendo 64, Pokémon mini, Atari and Sega games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
 <meta property="og:image" content="./FavIcon/web-app-manifest-512x512.png">
 <meta property="og:image:width" content="512">
 <meta property="og:image:height" content="512">
@@ -246,7 +259,7 @@
 <!-- Twitter / X cards -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="CrystalWorlds">
-<meta name="twitter:description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Pokémon mini and Atari games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
+<meta name="twitter:description" content="A fan-built video and game preservation project. Every Nintendo Game &amp; Watch, and Game Boy, NES, Super Nintendo, Nintendo 64, Pokémon mini, Atari and Sega games played in the browser from your own files, with photos, manuals and each system&#39;s hardware and emulation pages.">
 <meta name="twitter:image" content="./FavIcon/web-app-manifest-512x512.png">
 <!-- The page's own address goes into the links above, so every copy of the site names
      itself and no copy names another one. Plain ES5. -->
@@ -368,15 +381,15 @@
      The measurement record and the reasoning are in the file. See the block
      headed "THE SCREEN APERTURE, DECLARED ONCE" below for the mechanism this
      plugs into, and WASM_Source/nes-artwork/verify.sh for what re-checks it. -->
-<link rel="stylesheet" href="nes-screen.css?v=2.2.2">
+<link rel="stylesheet" href="nes-screen.css?v=2.3.0-artall2">
 <!-- Which of the three NES-family consoles (NES / Famicom / Disk System) a title
      is shown on. Tiny and synchronous, because the NES catalogue reads it as it
      adopts titles and content_pack.js reads it while it still has the bytes. -->
-<script src="nes-console-hash.js?v=2.2.2"></script>
+<script src="nes-console-hash.js?v=2.3.0"></script>
 <!-- Bad copies repaired on load (13 Nov 2026): the alias table first, before any title is classified or grouped. -->
-<script src="firmware/repairs/alias.js?v=2.2.2-atari9"></script>
-<script src="firmware/site/repairs.js?v=2.2.2"></script>
-<script src="nes-console.js?v=2.2.2"></script>
+<script src="firmware/repairs/alias.js?v=2.3.0"></script>
+<script src="firmware/site/repairs.js?v=2.3.0"></script>
+<script src="nes-console.js?v=2.3.0"></script>
 <!-- The four Atari apertures, on exactly the same footing and for exactly the
      same reason: play/atari2600/index.html and its three siblings are separate
      documents putting a picture on the same glass. One file rather than four
@@ -386,16 +399,19 @@
      properties. A mapping is a reference, not a copy.
      Re-checked by WASM_Source/atari-artwork/verify.sh, which also runs the
      detector against nes.png as a control. -->
-<link rel="stylesheet" href="atari-screen.css?v=2.2.2">
-<link rel="stylesheet" href="page-audio.css?v=2.2.2">
+<link rel="stylesheet" href="atari-screen.css?v=2.3.0-artall1">
+<link rel="stylesheet" href="sega8-screen.css?v=2.3.0-artall1">
+<link rel="stylesheet" href="n64-screen.css?v=2.3.0-ddart2">
+<link rel="stylesheet" href="snes-screen.css?v=2.3.0-sufamisite1">
+<link rel="stylesheet" href="page-audio.css?v=2.3.0">
 <!-- The Features window (31 Oct): features.js draws it, emby.js opens it from the button right of Home. -->
-<link rel="stylesheet" href="features.css?v=2.2.2">
+<link rel="stylesheet" href="features.css?v=2.3.0-features2">
 <!-- On a small screen there is no red frame, so every window follows the light theme (7 Nov 2026). -->
-<link rel="stylesheet" href="small-light.css?v=2.2.2">
+<link rel="stylesheet" href="small-light.css?v=2.3.0">
 <!-- Which Lynx cartridges are held on their side (2026-10-07): one per-hash list,
      read here for the one-column turned tile and by play/atarilynx/app.js for
      the play window's turn. -->
-<script src="play/atarilynx/turned.js?v=2.2.2"></script>
+<script src="play/atarilynx/turned.js?v=2.3.0"></script>
 <style>
   :root {
     --cover-inset: 8%;   /* box-art border, the Game & Watch tiles' measured median; see "CARTRIDGE BOXES" */
@@ -1053,6 +1069,17 @@
   .emu-name { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
   .emu-n { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); vertical-align: 2px; margin-left: 6px; }
   .emu-n-alt { color: var(--gold, #f5c542); }
+  /* EVALUATION PREVIEW (23 Nov 2026): the one small tag a preview system wears wherever a player meets it
+     (window.CW_PREVIEW_TAG: the home card, the Systems menu tile, the drawer, the play window, the
+     Compatibility list). The .emu-n lettering in the accent, in a thin accent outline. */
+  .cw-preview-tag { display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    line-height: 1.3; padding: 1px 6px; border: 1px solid rgba(var(--accent-rgb), .6); border-radius: 999px;
+    color: var(--accent); white-space: nowrap; vertical-align: 2px; margin-left: 6px; }
+  .cw-preview-line { margin: 10px 0 8px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .cw-preview-line .cw-preview-tag { margin: 0 6px 0 0; vertical-align: 1px; }
+  /* The Systems menu tile (emby.js VG_MENU): laid over the tile's top edge, so the tile keeps its height. */
+  #video-body .vgtile .vg-preview { position: absolute; top: 4px; left: 0; right: 0; text-align: center; pointer-events: none; line-height: 1; }
+  #video-body .vgtile .vg-preview .cw-preview-tag { margin: 0; font-size: 8px; letter-spacing: .06em; padding: 1px 5px; background: var(--panel); }
   .emu-sub { margin: -4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
   .emu-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
   .emu-key li { font-size: 11.5px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); }
@@ -2197,7 +2224,8 @@
   .device-card .img .gb-emu.ready .gbdev canvas { opacity: 1; }
 
   /* THE SUPER GAME BOY SHELF (25 Oct; sgb-shelf.js). A photograph of a television,
-     a Super NES with the Super Game Boy and controllers (images/consoles/sgb-draw.webp, 1016x596),
+     a Super NES with the Super Game Boy and controllers (images/consoles/sgb-draw.webp, 1452x884 since 25 Nov 2026:
+     viking's COLORFUL scene rendered from its PSD by WASM_Source/sgb-artwork/sgb-from-psd.py; was 1016x596),
      with the title's clip behind the television's glass. The screen rectangle is measured from the
      file's own alpha (translucent glass, mean alpha 95/255): 333x248 at 309,42. The 256x224 Super
      Game Boy picture fills it, as it fills a television's 4:3 screen. */
@@ -2208,14 +2236,14 @@
   /* The drawer's picture (25 Oct: the Super Game Boy drawer shows the clip in draw.png): the whole
      photograph, contained in the hero box. */
   .device-modal-img.sgb-hero { display: flex; align-items: center; justify-content: center; background: transparent; }
-  .device-modal-img.sgb-hero .sgb-emu { position: relative; height: 82%; aspect-ratio: 1016 / 596; max-width: 96%; }
+  .device-modal-img.sgb-hero .sgb-emu { position: relative; height: 82%; aspect-ratio: 1452 / 884; max-width: 96%; }
   .device-modal-img.sgb-hero .sgb-emu-art { height: 100%; width: 100%; object-fit: contain; }
   .sgb-emu .sgb-emu-art { display: block; width: 100%; height: auto; position: relative; z-index: 2; -webkit-user-drag: none; }
   .sgb-emu .sgb-scr {   /* the television switched off: black behind the glass */
-    position: absolute; left: 30.41%; top: 7.05%; width: 32.78%; height: 41.61%; background: #000; z-index: 0;
+    position: absolute; left: 30.37%; top: 7.13%; width: 34.71%; height: 42.42%; background: #000; z-index: 0;   /* 25 Nov: the kit's mask box 504x375 at 441,63 (was 30.41 / 7.05 / 32.78 / 41.61) */
   }
   .sgb-emu video.sgb-vid {
-    position: absolute; left: 30.41%; top: 7.05%; width: 32.78%; height: 41.61%;
+    position: absolute; left: 30.37%; top: 7.13%; width: 34.71%; height: 42.42%;
     object-fit: fill; z-index: 1; background: #000; image-rendering: pixelated;
     opacity: 0; transition: opacity .3s ease;
   }
@@ -2234,10 +2262,14 @@
      green, and this unit's is a dark grey when it is not lit. It is only
      ever seen for the moment before the first frame lands, because from
      then on the canvas is the screen. */
+  /* 2026-11-25: GameBoyColorConsole.png is now the COLORFUL kit's picture of the same unit
+     (WASM_Source/gb-artwork/gbc-from-psd.py), 1030x1689; the screen is the kit's Screen Mask box,
+     496x457 at 268,156, which covers every see-through pixel; the tone is its unlit screen. The four
+     recoloured shells share it. Was 25.35% / 10.56% / 49.31% / 26.88%, #737878 (505x852). */
   .device-card[data-system="gbc"] {
-    --gb-scr-l: 25.35%;  --gb-scr-t: 10.56%;
-    --gb-scr-w: 49.31%;  --gb-scr-h: 26.88%;
-    --gb-scr-bg: #737878;
+    --gb-scr-l: 26.02%;  --gb-scr-t: 9.24%;
+    --gb-scr-w: 48.16%;  --gb-scr-h: 27.06%;
+    --gb-scr-bg: #0a0a0a;
   }
 
   /* Pokemon-edition Game Boy Color -- a third artwork with a third screen
@@ -5573,7 +5605,7 @@
      a 256 px tile over the same flat colour, which still shows if the picture fails to load. */
   .gw-frame-bezel,
   html body .about-pop .gw-frame-bezel {
-    background-image: url('./frame/linen.png?v=2.2.2');
+    background-image: url('./frame/linen.png?v=2.3.0');
     background-size: 256px 256px;
     background-repeat: repeat;
   }
@@ -6602,29 +6634,35 @@
         </button>
         <div class="hero-card">
           <div class="hero-card-inner">
-            <!-- Movies, Shows and the 14 consoles and handhelds the 11 emulators play (2026-10-18).
+            <!-- Movies, Shows and the 20 consoles and handhelds the emulators play (2026-10-18; the three Sega consoles 20 Nov 2026; the Nintendo 64 22 Nov 2026; the 64DD 26 Nov 2026; the Super Nintendo 23 Nov 2026).
                  Moved into the hero card on 2026-10-18, replacing its icon and the pills that
                  repeated this list; Movies and Shows join it, making four by four. Glyphs are the
                  Media page toolbar's film and tv.
                  Pictures are the Systems menu's own (images/consoles, VG_MENU in emby.js);
                  Tetris Jr. and the two colour units show their own unit, switched off. -->
-            <ul class="sys-logos" aria-label="Movies, shows and the 14 consoles and handhelds you can play here">
+            <ul class="sys-logos" aria-label="Movies, shows and the 20 consoles and handhelds you can play here">
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><line x1="2.5" y1="12" x2="21.5" y2="12"/><line x1="2.5" y1="8" x2="7" y2="8"/><line x1="2.5" y1="16" x2="7" y2="16"/><line x1="17" y1="8" x2="21.5" y2="8"/><line x1="17" y1="16" x2="21.5" y2="16"/></svg><span>Movies</span></li>
               <li class="sys-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-3)" aria-hidden="true"><rect x="2.5" y="7" width="19" height="13" rx="2"/><polyline points="7.5 3 12 7 16.5 3"/></svg><span>Shows</span></li>
-              <li><img src="images/consoles/gameandwatch.webp?v=2.2.2" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
-              <li><img src="images/consoles/tft_mario.webp?v=2.2.2" alt="" loading="lazy"><span>Mario Bros.</span></li>
-              <li><img src="images/consoles/tft_zelda.webp?v=2.2.2" alt="" loading="lazy"><span>Legend of Zelda</span></li>
-              <li><img src="images/consoles/tetrisjr.webp?v=2.2.2" alt="" loading="lazy"><span>Tetris Jr.</span></li>
-              <li><img src="images/consoles/gb.webp?v=2.2.2" alt="" loading="lazy"><span>Game Boy</span></li>
-              <li><img src="images/consoles/gbc.webp?v=2.2.2" alt="" loading="lazy"><span>Game Boy Color</span></li>
-              <li><img src="images/consoles/pokemini.webp?v=2.2.2" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
-              <li><img src="images/consoles/nes.webp?v=2.2.2" alt="" loading="lazy"><span>NES</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.2.2" alt="" loading="lazy"><span>Famicom</span></li>
-              <li><img src="images/consoles/fds_famicom.webp?v=2.2.2" alt="" loading="lazy"><span>Disk System</span></li>
-              <li><img src="images/consoles/atari2600.webp?v=2.2.2" alt="" loading="lazy"><span>Atari 2600</span></li>
-              <li><img src="images/consoles/atari5200.webp?v=2.2.2" alt="" loading="lazy"><span>Atari 5200</span></li>
-              <li><img src="images/consoles/atari7800.webp?v=2.2.2" alt="" loading="lazy"><span>Atari 7800</span></li>
-              <li><img src="images/consoles/atarilynx.webp?v=2.2.2" alt="" loading="lazy"><span>Atari Lynx</span></li>
+              <li><img src="images/consoles/gameandwatch.webp?v=2.3.0" alt="" loading="lazy"><span>Game &amp; Watch</span></li>
+              <li><img src="images/consoles/tft_mario.webp?v=2.3.0" alt="" loading="lazy"><span>Mario Bros.</span></li>
+              <li><img src="images/consoles/tft_zelda.webp?v=2.3.0" alt="" loading="lazy"><span>Legend of Zelda</span></li>
+              <li><img src="images/consoles/tetrisjr.webp?v=2.3.0" alt="" loading="lazy"><span>Tetris Jr.</span></li>
+              <li><img src="images/consoles/gb.webp?v=2.3.0" alt="" loading="lazy"><span>Game Boy</span></li>
+              <li><img src="images/consoles/gbc.webp?v=2.3.0" alt="" loading="lazy"><span>Game Boy Color</span></li>
+              <li><img src="images/consoles/pokemini.webp?v=2.3.0" alt="" loading="lazy"><span>Pok&eacute;mon mini</span></li>
+              <li><img src="images/consoles/nes.webp?v=2.3.0" alt="" loading="lazy"><span>NES</span></li>
+              <li><img src="images/consoles/fds_famicom.webp?v=2.3.0" alt="" loading="lazy"><span>Famicom</span></li>
+              <li><img src="images/consoles/fds.webp?v=2.3.0-fdsicon" alt="" loading="lazy"><span>Disk System</span></li>
+              <li><img src="images/consoles/atari2600.webp?v=2.3.0" alt="" loading="lazy"><span>Atari 2600</span></li>
+              <li><img src="images/consoles/atari5200.webp?v=2.3.0" alt="" loading="lazy"><span>Atari 5200</span></li>
+              <li><img src="images/consoles/atari7800.webp?v=2.3.0" alt="" loading="lazy"><span>Atari 7800</span></li>
+              <li><img src="images/consoles/atarilynx.webp?v=2.3.0" alt="" loading="lazy"><span>Atari Lynx</span></li>
+              <li><img src="images/consoles/sg-1000.webp?v=2.3.0" alt="" loading="lazy"><span>SG-1000</span></li>
+              <li><img src="images/consoles/mastersystem.webp?v=2.3.0" alt="" loading="lazy"><span>Master System</span></li>
+              <li><img src="images/consoles/gamegear.webp?v=2.3.0" alt="" loading="lazy"><span>Game Gear</span></li>
+              <li><img src="images/consoles/snes.webp?v=2.3.0-snessite" alt="" loading="lazy"><span>Super Nintendo</span></li>
+              <li><img src="images/consoles/n64.webp?v=2.3.0" alt="" loading="lazy"><span>Nintendo 64</span></li>
+              <li><img src="images/consoles/n64dd.webp?v=2.3.0" alt="" loading="lazy"><span>64DD</span></li>
             </ul>
           </div>
         </div>
@@ -6667,7 +6705,7 @@
             <div class="stat" title="Started Saturday, 23 May 2026"><div class="v" id="stat-days">&nbsp;</div><div class="l">Days since we started</div></div>
             <script>(function () { try { var n = new Date(), a = Date.UTC(2026, 4, 23), b = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); document.getElementById('stat-days').textContent = Math.max(0, Math.round((b - a) / 864e5)).toLocaleString('en-AU'); } catch (e) {} })();</script>
             <div class="stat"><div class="v">1st</div><div class="l">ARM Game &amp; Watch emulator</div></div>
-            <div class="stat"><div class="v">11</div><div class="l">Hand-rolled emulators, 14 consoles</div></div>
+            <div class="stat"><div class="v">15</div><div class="l">Hand-rolled emulators, 20 consoles</div></div>
           </div>
         </div>
       </div>
@@ -6680,7 +6718,7 @@
       <div class="section-head">
         <div>
           <div class="section-kicker">The proof</div>
-          <h2 class="section-title" data-narrate-host="home-server">11 emulators, one home server</h2>
+          <h2 class="section-title" data-narrate-host="home-server">15 emulators, one home server</h2>
         </div>
       </div>
       <p class="section-desc" data-narrate="home-server">Every emulator here is fed by one small server that is yours, running on your own computer. Point it at your game library and that is the whole setup: no emulator cores to install, no paths, no launch commands, no scraper accounts. It recognises every cartridge by its fingerprint and picks the right start-up firmware for it. Box art, logos and manuals arrive on their own, with no scraping and no daily limits. Plug in a controller and it just works, with A where your controller says A. At home it serves the whole collection to every screen in the house, and your games keep playing even locally with no internet. Away from home, your vault code brings the same collection to you anywhere online.</p>
@@ -6707,7 +6745,7 @@
       <p class="section-desc" data-narrate="home-research">The emulator itself serves as the ultimate test of accuracy, where any flaw in our hardware understanding or documentation is immediately exposed by the software.</p>
     </div>
 
-    <!-- MOVED TO FEATURES (31 Oct 2026: "Remove the 'Play and watch' section from the home page" and "The 'What lives here' section needs to all move to the features page"). Their content is in features.js (the Features window); the four narrated write-ups keep their keys there. Backup: site-backups/2026-10-31-feat/index.html. -->
+    <!-- The home page's "Play and watch" and "What lives here" sections live in features.js (the Features window); the four narrated write-ups keep their keys there. -->
 
     <!-- ===== Checked by rebuilding (1 Nov 2026, moved here from Features) =====
          checked-rebuilding.js draws the heading, intro, table and the two lines under it. -->
@@ -7155,6 +7193,7 @@
                 <div class="cr-row"><p class="cr-role">Descriptions and release dates</p><div class="cr-who"><p class="cr-name">OpenVGDB</p><p class="cr-for">for descriptions and release dates</p></div></div>
                 <div class="cr-row"><p class="cr-role">Players' ratings and descriptions</p><div class="cr-who"><p class="cr-name">LaunchBox Games Database</p><p class="cr-for">for players' ratings and game descriptions</p></div></div>
                 <div class="cr-row"><p class="cr-role">Critics' scores</p><div class="cr-who"><p class="cr-name">Wikidata</p><p class="cr-for">for critics' scores</p></div></div>
+                <div class="cr-row"><p class="cr-role">Play times</p><div class="cr-who"><p class="cr-name">IGDB.com</p><p class="cr-for">for play times</p></div></div>
                 <div class="cr-row"><p class="cr-role">NES cartridge databases</p><div class="cr-who"><p class="cr-name">NewRisingSun and BootGod</p><p class="cr-for">for the NES 2.0 header database and NesCartDB, with the other NES cartridge database compilers</p></div></div>
                 <div class="cr-row"><p class="cr-role">Boot colour tables</p><div class="cr-who"><p class="cr-name">Tauwasser</p><p class="cr-for">for the Game Boy Color boot colour tables</p></div></div>
                 <div class="cr-row"><p class="cr-role">Palette chip dumps</p><div class="cr-who"><p class="cr-name">The arcade preservation community</p><p class="cr-for">for the VS System palette chip dumps</p></div></div>
@@ -7166,6 +7205,7 @@
                 <div class="cr-row"><p class="cr-role">R.O.B. 3D model</p><div class="cr-who"><p class="cr-name">Wrld_Bld</p><p class="cr-for">for the R.O.B. 3D model, under CC BY 4.0</p></div></div>
                 <div class="cr-row"><p class="cr-role">R.O.B. part measurements</p><div class="cr-who"><p class="cr-name">archonik</p><p class="cr-for">for the R.O.B. part measurements</p></div></div>
                 <div class="cr-row"><p class="cr-role">Reference photographs</p><div class="cr-who"><p class="cr-name">Evan-Amos, Sintegrity, Chapuisat, Phil Bond and Solomon203</p><p class="cr-for">for reference photographs of R.O.B. and the Game Boy Color</p></div></div>
+                <div class="cr-row"><p class="cr-role">Console artwork</p><div class="cr-who"><p class="cr-name">viking</p><p class="cr-for">for the COLORFUL graphic set, whose console scenes and TVs our console pictures are built from</p></div></div>
                 <div class="cr-row"><p class="cr-role">Box-art scans</p><div class="cr-who"><p class="cr-name">The libretro-thumbnails contributors</p><p class="cr-for">for box-art scans</p></div></div>
               </div>
 
@@ -7199,7 +7239,7 @@
         <details class="about-licences">
           <summary>Click here to expand</summary>
           <p>This site's own code, writing and interface art are under a single licence, the <a href="licenses/LICENSE" download="CrystalWorlds-Licence-1.1.txt" target="_blank" rel="noopener">CrystalWorlds.Media Project Licence 1.1</a>. In short: <b>you may change it, you may not sever it</b>. Use it, modify it and share it freely for non-commercial purposes, as a whole and with credit; taking a piece out on its own (an emulator core, a device page, the interface) or using any of it commercially needs permission first. The research and documentation, including the Hardware and Emulation pages and the test write-ups, may be read, cited and quoted in reasonable excerpts with credit, in paid work too, and its facts may be used, with credit, to improve your own projects; it may not be copied in its entirety or in substantial parts, presented as anyone else's own work, or used as the source to build an emulator or a front end (§3A of the licence). The source code is provided so that anyone can check our results, and neither it nor the emulator cores may be used to develop other front-end software (§3B). No AI or other automated system may build software from our documentation or source, or be trained on them, and text and data mining is reserved; repeating our clean-room proof, an AI included, to check our results is allowed (§3C to §3E). The Emulation pages ask you to agree to these terms the first time you open one in a browser. <b>Everything is “please ask” unless the licence says otherwise, and the answer is often yes.</b></p>
-          <p>Parts of this site are <b>not ours and are exempt</b>: the FFmpeg video pipeline stays LGPL-2.1-or-later, mediabunny stays MPL-2.0, and the Game &amp; Watch artwork belongs to the people named above. Those licences permit things ours does not, including commercial use, and nothing in our licence restricts them; see §6 of the licence. None of it covers anything Nintendo, Atari, Sharp or any other rights holder owns; see the <a href="licenses/NOTICE" target="_blank" rel="noopener">NOTICE</a>. Every third-party component and its licence is listed in <a href="licenses/THIRD-PARTY-NOTICES" target="_blank" rel="noopener">THIRD-PARTY-NOTICES</a>.</p>
+          <p>Parts of this site are <b>not ours and are exempt</b>: the FFmpeg video pipeline stays LGPL-2.1-or-later, mediabunny stays MPL-2.0, and the Game &amp; Watch artwork belongs to the people named above. Those licences permit things ours does not, including commercial use, and nothing in our licence restricts them; see §6 of the licence. None of it covers anything Nintendo, Atari, Sega, Sharp or any other rights holder owns; see the <a href="licenses/NOTICE" target="_blank" rel="noopener">NOTICE</a>. Every third-party component and its licence is listed in <a href="licenses/THIRD-PARTY-NOTICES" target="_blank" rel="noopener">THIRD-PARTY-NOTICES</a>.</p>
           <p>The per-device <b>screen and button geometry</b> of the Game &amp; Watch units was read from the fifty-three community layout files that ship as external artwork, the work of <b>Lee Robson (hydef)</b>, credited on fifty-two of the fifty-three, with <b>DarthMarino</b> on three and <b>Henrik Algestam</b> and <b>ICEknight</b> alongside them on Pinball. One, Ball, carries no credit line at all. <b>None of the fifty-three carries a licence line of any kind</b>, and there is no licence document anywhere to find: this is free public material, put out openly in a public forum thread. What this site owes the people who made it is credit, and that is what is given: by name, above and here. This site asserts no licence over their work on their behalf.</p>
           <p>The Media page decodes and re-encodes with <b>FFmpeg</b>, compiled to WebAssembly by <a href="https://github.com/Yahweasel/libav.js" target="_blank" rel="noopener">libav.js</a> at version 6.9.9.0 and shipped here as two binaries. FFmpeg's libraries are under the <b>GNU Lesser General Public License, version 2.1 or later</b>, which asks that its text travel with the work, so it does: the <a href="vendor/COPYING.LGPLv2.1" target="_blank" rel="noopener">full licence text</a> ships in this distribution, next to the binaries it covers. The corresponding source is the FFmpeg 6.9.9.0 release plus the libav.js build scripts at the matching tag, at <a href="https://github.com/Yahweasel/libav.js" target="_blank" rel="noopener">github.com/Yahweasel/libav.js</a>. The container muxing alongside it is <b>mediabunny</b> (MPL-2.0), redistributed unmodified with its own header intact. See <a href="licenses/THIRD-PARTY-NOTICES" target="_blank" rel="noopener">THIRD-PARTY-NOTICES</a>, sections 3 and 4.</p>
         </details>
@@ -7475,7 +7515,7 @@
     <div class="modal-head">
       <div>
         <div class="modal-sub">Settings</div>
-        <div class="modal-title">Version 2.2.2</div>
+        <div class="modal-title">Version 2.3.0</div>
       </div>
       <button class="modal-close" onclick="closeOverlay('vault-overlay')" aria-label="Close">×</button>
     </div>
@@ -7486,7 +7526,7 @@
           <div>
             <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:.01em;">No email. No password. Just a vault code.</div>
             <p style="color:var(--muted); font-size:12.5px; line-height:1.55; margin:0;">
-              You sign up and log in with a vault code, not an email and a password. This browser holds that single random <strong style="color:var(--text); font-weight:700;">vault code</strong>. The vault itself keeps only that code and, if you add one, a recovery email. Your play time, saves and settings stay in this browser, not in the vault. Anyone who knows the code can change or delete the vault; nobody else can. Save it in a password manager. If you lose the code, a saved recovery email together with your PIN gets it back; without them it cannot be found again: there's no password reset, because there's no password. Sponsors can choose to sign in with GitHub to read the Stories; nothing else here needs it.
+              You sign up and log in with a vault code, not an email and a password. This browser holds that single random <strong style="color:var(--text); font-weight:700;">vault code</strong>. The vault itself keeps only that code and, if you add one, a recovery email. My games, your record of the games you play, is kept in the vault too unless you choose this browser only; your saves and settings stay in this browser, not in the vault. Anyone who knows the code can change or delete the vault; nobody else can. Save it in a password manager. If you lose the code, a saved recovery email together with your PIN gets it back; without them it cannot be found again: there's no password reset, because there's no password. Sponsors can choose to sign in with GitHub to read the Stories; nothing else here needs it.
             </p>
           </div>
         </div>
@@ -7598,6 +7638,9 @@
                 <div id="vault-msg" style="margin-top:8px; font-size:12px; color:var(--muted); min-height:18px;"></div>
               </div>
             </section>
+
+            <!-- My games (21 Nov 2026, mygames.js draws it as Settings opens): the vault's own record of its games. -->
+            <section class="vault-section" id="mygames-section" hidden></section>
 
             <section class="vault-section">
               <label style="display:block; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Rotate access code</label>
@@ -7767,6 +7810,15 @@
   }
   /* The head stays (it holds the close button) but gives the device its room. */
   body.play-lock .overlay.open.play-window .modal-head { flex: 0 0 auto; padding-top: 8px; padding-bottom: 8px; }
+  /* LAID OVER (26 Nov 2026: "An overlay is an overlay. It lays over it."): where the play window's on-screen
+     controls show (a touch screen; play/host/host.mjs sets cw-ov-over), the title bar keeps its size and contents and
+     lies OVER the game as glass, so the frame and the picture in it have the whole window. A desk never gets the class. */
+  body.play-lock .overlay.open.play-window.cw-ov-over > .modal { position: relative; }
+  body.play-lock .overlay.open.play-window.cw-ov-over .modal-head {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+    background: linear-gradient(180deg, rgba(26,33,46,.68), rgba(26,33,46,.5));
+  }
+  :root[data-theme="light"] body.play-lock .overlay.open.play-window.cw-ov-over .modal-head { background: linear-gradient(180deg, rgba(248,249,251,.74), rgba(248,249,251,.56)); }
   /* THE WHOLE DEVICE, NOT A CROPPED SCREEN: the body is the flexible track and
      whatever renders the device inside it is told to `contain`, never to crop. */
   body.play-lock .overlay.open.play-window .modal > :not(.modal-head) {
@@ -8393,7 +8445,7 @@
     <div class="footer-row">
       <div class="footer-disclaimer">
         This is an independent, unofficial fan tribute built by a collector, for collectors.
-        <strong>Not affiliated with, endorsed by, or sponsored by Nintendo Co., Ltd., Atari, or any other maker of the machines shown here.</strong>
+        <strong>Not affiliated with, endorsed by, or sponsored by Nintendo Co., Ltd., Atari, Sega, or any other maker of the machines shown here.</strong>
         The names of the systems and all related names and logos are trademarks of their respective owners.
         The site and its code are the CrystalWorlds.Media project's own work, shared under the project licence.
         Nothing here is sold. Just documentation and appreciation.
@@ -8414,63 +8466,76 @@
      its builder as a window global; the call sites below are unchanged.
      Placed BEFORE the main script purely so they are defined before
      anything can run; they are only ever CALLED from a drawer render. -->
-<script src="emulation-tab.js?v=2.2.2"></script>
-<script src="emulation-links.js?v=2.2.2"></script>
-<script src="tft-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-machine-emulation-tab.js?v=2.2.2"></script>
-<script src="emu-score-box.js?v=2.2.2"></script>
-<script src="gb-cpu-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-memory-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-ppu-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-apu-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-mappers-emulation-tab.js?v=2.2.2-gbmbc30"></script>
-<script src="gb-sgb-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-acceptance-emulation-tab.js?v=2.2.2-gbmbc30"></script>
-<script src="gbc-emulation-tab.js?v=2.2.2"></script>
-<script src="gbc-machine-emulation-tab.js?v=2.2.2-gbmbc30"></script>
-<script src="gbc-timing-emulation-tab.js?v=2.2.2"></script>
-<script src="gbc-ppu-emulation-tab.js?v=2.2.2"></script>
-<script src="gbc-apu-emulation-tab.js?v=2.2.2"></script>
-<script src="pm-emulation-tab.js?v=2.2.2"></script>
-<script src="nes-emulation-tab.js?v=2.2.2-neskaraoke"></script>
-<script src="nes-machine-emulation-tab.js?v=2.2.2"></script>
-<script src="nes-cpu-emulation-tab.js?v=2.2.2"></script>
-<script src="nes-ppu-emulation-tab.js?v=2.2.2"></script>
-<script src="nes-apu-emulation-tab.js?v=2.2.2-neskaraoke"></script>
-<script src="nes-mappers-emulation-tab.js?v=2.2.2-neskaraoke"></script>
-<script src="nes-fds-emulation-tab.js?v=2.2.2"></script>
-<script src="nes-peripherals-emulation-tab.js?v=2.2.2"></script>
-<script src="nes-acceptance-emulation-tab.js?v=2.2.2"></script>
-<script src="gb-hardware-tab.js?v=2.2.2"></script>
-<script src="hw-diagram.js?v=2.2.2"></script>
-<script src="nes-hardware-tab.js?v=2.2.2-neskaraoke"></script>
-<script src="nes-emulation-index-tab.js?v=2.2.2"></script>
+<script src="emulation-tab.js?v=2.3.0"></script>
+<script src="emulation-links.js?v=2.3.0"></script>
+<script src="tft-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-machine-emulation-tab.js?v=2.3.0"></script>
+<script src="emu-score-box.js?v=2.3.0"></script>
+<script src="gb-cpu-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-memory-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-ppu-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-apu-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-mappers-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-sgb-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-acceptance-emulation-tab.js?v=2.3.0"></script>
+<script src="gbc-emulation-tab.js?v=2.3.0"></script>
+<script src="gbc-machine-emulation-tab.js?v=2.3.0"></script>
+<script src="gbc-timing-emulation-tab.js?v=2.3.0"></script>
+<script src="gbc-ppu-emulation-tab.js?v=2.3.0"></script>
+<script src="gbc-apu-emulation-tab.js?v=2.3.0"></script>
+<script src="pm-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-machine-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-cpu-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-ppu-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-apu-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-mappers-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-fds-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-peripherals-emulation-tab.js?v=2.3.0"></script>
+<script src="nes-acceptance-emulation-tab.js?v=2.3.0"></script>
+<script src="gb-hardware-tab.js?v=2.3.0"></script>
+<script src="hw-diagram.js?v=2.3.0"></script>
+<script src="nes-hardware-tab.js?v=2.3.0"></script>
+<script src="nes-emulation-index-tab.js?v=2.3.0"></script>
 <!-- The four Atari build guides (2026-10-18): generated in the Atari emulator's source tree by
      tools/build_emulation_tabs.mjs from docs/emulation*, copied unchanged (--check green
      2026-10-18, tab_name_check green). The dispatcher composes each drawer from its own guide plus the
      chapters it borrows from another Atari guide, so all five files load together. -->
-<script src="atari2600-emulation-tab.js?v=2.2.2-atarifw"></script>
-<script src="atari5200-emulation-tab.js?v=2.2.2-atarifw"></script>
-<script src="atari7800-emulation-tab.js?v=2.2.2-atari9e"></script>
-<script src="atarilynx-emulation-tab.js?v=2.2.2-atari9e"></script>
-<script src="atari-emulation-index-tab.js?v=2.2.2"></script>
-<script src="gnw-emulation-shared-tab.js?v=2.2.2"></script>
-<script src="gnw-sm510-emulation-tab.js?v=2.2.2"></script>
-<script src="gnw-sm5a-emulation-tab.js?v=2.2.2"></script>
-<script src="gnw-sm511-emulation-tab.js?v=2.2.2"></script>
-<script src="atari-hardware-tab.js?v=2.2.2"></script>
-<script src="gamemeta.js?v=2.2.2"></script>
+<script src="atari2600-emulation-tab.js?v=2.3.0-smallfix"></script>
+<script src="atari5200-emulation-tab.js?v=2.3.0-smallfix"></script>
+<script src="atari7800-emulation-tab.js?v=2.3.0-smallfix"></script>
+<script src="atarilynx-emulation-tab.js?v=2.3.0-smallfix"></script>
+<script src="atari-emulation-index-tab.js?v=2.3.0"></script>
+<script src="gnw-emulation-shared-tab.js?v=2.3.0"></script>
+<script src="gnw-sm510-emulation-tab.js?v=2.3.0-smallfix2"></script>
+<script src="gnw-sm5a-emulation-tab.js?v=2.3.0-smallfix2"></script>
+<script src="gnw-sm511-emulation-tab.js?v=2.3.0-smallfix2"></script>
+<script src="atari-hardware-tab.js?v=2.3.0"></script>
+<!-- The Sega 8-bit family (20 Nov 2026): one build guide for the three devices, and their hardware reference. -->
+<script src="sega8-emulation-tab.js?v=2.3.0-s8merge"></script>
+<script src="n64-emulation-tab.js?v=2.3.0-prepolish1"></script>
+<!-- The Super Nintendo (23 Nov 2026): its build guide from the source chapters (WASM_Source/snes-tabs) and its hardware reference. -->
+<script src="snes-emulation-tab.js?v=2.3.0-crsnes5"></script>
+<script src="snes-hardware-tab.js?v=2.3.0-prepush1"></script>
+<script src="sega8-hardware-tab.js?v=2.3.0-s8merge"></script>
+<script src="gamemeta.js?v=2.3.0-ddmeta2"></script>
 <!-- Home-page narration (2026-10-12): recorded narration on R2 (site-audio bucket),
      per-word timings generated offline; see page-audio.js. -->
-<script src="page-audio-timings.js?v=2.2.2"></script>
-<script src="page-audio.js?v=2.2.2"></script>
+<script src="page-audio-timings.js?v=2.3.0"></script>
+<script src="page-audio.js?v=2.3.0"></script>
 
 <script>
 /* === Image data === Since 2026-10-24 device pictures are single files under
    images/art/, found through the picture index (images/art/art-index.js; see imgSrc). IMG
    holds only pictures made in the page at run time (Tetris Jr.'s powered-off photograph). */
 let IMG = {};
+
+/* THE SUFAMI TURBO SWITCH (25 Nov 2026: the Sufami Turbo is not in this push). false hides all of it: its
+   Timeline row (SERIES below), its wall device (ATARI_SYSTEMS below), its Systems menu row and its place in the
+   Nintendo Collection (emby.js), and its games (cws.js drops a server's sufami and .st listings). Its art, code
+   and text all stay. To switch it back on, set this to true (one line). */
+window.CW_SUFAMI_ON = false;
 
 /* === Series definitions === */
 const SERIES = [
@@ -8579,10 +8644,36 @@ const SERIES = [
   { id:'atari7800', name:'Atari 7800', years:'1986 \u2013 1992', color:'#ea5a28',
     blurb:'The 2600\'s successor with the 2600 still inside it, backwards compatible by keeping the old display chip on the board.',
     long:'The 7800 ProSystem was finished in 1984, shelved during the sale of Atari, and finally shipped in 1986. Its MARIA display processor reads a display list out of RAM instead of being driven register-by-register, so a 7800 game is written the way other machines\' games are, but the 2600\'s TIA chip is still on the board, which is how it plays the older library natively rather than by emulation. The 6502 runs at 1.79 MHz and shares the bus with MARIA, so cycles are lost to the picture in a way the program can feel.' },
+  { id:'sg1000', name:'SG-1000', years:'1983 \u2013 1985', color:'#c8442f',
+    blurb:'Sega\'s first home console, on sale in Japan the same day as the Famicom, with the TMS9918A picture chip of the MSX computers.',
+    long:'The SG-1000 arrived in Japan in July 1983 and the SG-1000 II with detachable pads followed in 1984. A 3.58 MHz Z80 runs the game from its cartridge or card beside 1 KB of work RAM; a Texas Instruments TMS9918A draws the picture from 16 KB of its own memory, and an SN76489 makes three tones and a noise. Its successor, the Mark III, kept the old picture modes so the same cartridges still play. Here the SG-1000 and the SG-1000 II are Machine choices, and the Mark III is offered for the cartridges it takes.' },
+  { id:'mastersystem', name:'Master System', years:'1985 \u2013 1996', color:'#d6342c',
+    blurb:'The Mark III renamed for the world: one Z80, a picture chip with its own colours and scrolling, and a start-up program with a game built in.',
+    long:'The Mark III came out in Japan in October 1985 and became the Master System for America in 1986 and Europe in 1987; the Japanese Master System of 1987 added the YM2413 FM sound chip, and the cheaper Master System II of 1990 dropped the card slot and built a game into its start-up program. A 3.58 MHz Z80 (3.55 MHz on PAL), 8 KB of work RAM, the Sega VDP with 32 colours from 64 and smooth scrolling, and an SN76489 for sound. Here the Master System II is the default, with the Mark III, the Japanese Master System and the first Master System as Machine choices.' },
+  { id:'gamegear', name:'Game Gear', years:'1990 \u2013 1997', color:'#2f5fb3',
+    blurb:'A Master System you hold, with a backlit colour screen, 4,096 colours, stereo headphones and a Master System inside it.',
+    long:'The Game Gear launched in Japan in October 1990 and in America and Europe in 1991. Inside is the Master System again: the same Z80 and a VDP with a 12-bit palette, drawing a 160 by 144 window of the full picture on its backlit colour LCD, and the sound chip in stereo through the headphone socket. A cartridge can switch it into Master System mode, when the console squeezes the whole Master System picture onto its screen. Here both Game Gear boards and the Japanese Game Gear are Machine choices.' },
   { id:'atarilynx', name:'Atari Lynx', years:'1989 \u2013 1995', color:'#fc9a1e',
     blurb:'The first colour handheld, with hardware sprite scaling and a screen you could turn upside down, and the only Atari here you hold.',
-    long:'The Lynx shipped in September 1989, a few weeks after the Game Boy reached America, and was the first handheld with a colour LCD. Epyx designed it; Atari bought and published it. A 65C02 running at up to 4 MHz (its crystal is 16 MHz) with two custom chips gave it hardware sprite scaling and distortion no contemporary could match, a 160\u00d7102 panel of 4,096 colours, and an ambidextrous layout: the picture could be flipped so a left-handed player held it the other way round. It cost a lot of batteries and sold around half a million.' }
+    long:'The Lynx shipped in September 1989, a few weeks after the Game Boy reached America, and was the first handheld with a colour LCD. Epyx designed it; Atari bought and published it. A 65C02 running at up to 4 MHz (its crystal is 16 MHz) with two custom chips gave it hardware sprite scaling and distortion no contemporary could match, a 160\u00d7102 panel of 4,096 colours, and an ambidextrous layout: the picture could be flipped so a left-handed player held it the other way round. It cost a lot of batteries and sold around half a million.' },
+  { id:'n64', name:'Nintendo 64', years:'1996 – 2002', color:'#3b8ed8',
+    blurb:'Nintendo’s three-dimensional console: a 64-bit processor, a co-processor that does the maths and the drawing, an analogue stick, and cartridges of up to 64 MB.',
+    long:'The Nintendo 64 came out in Japan in June 1996, in America that September and in Europe and Australia in March 1997. A 93.75 MHz NEC VR4300 runs the game beside 4 MB of memory it shares with everything else (8 MB with the Expansion Pak). The Reality Co-Processor, designed with Silicon Graphics, holds a programmable signal processor that does the three-dimensional maths and the sound, and a drawing unit that textures, filters and blends each pixel. Its controller brought the analogue stick, and a slot for a Controller Pak to keep saves or a Rumble Pak that shakes. Around 33 million were sold. Here the console’s region follows the cartridge, and the Expansion Pak is fitted unless you choose the Jumper Pak.' },
+  /* THE 64DD (26 Nov 2026): its own series for the Nintendo 64's disks, as the Disk System's for the Famicom's
+     (emby.js GAME_SYSTEMS n64dd). The accent is the drive's and the disks' grey, lifted for the dark ground. */
+  { id:'n64dd', name:'Nintendo 64DD', short:'64DD', years:'1999 – 2001', color:'#9aa7b8',
+    blurb:'A disk drive under the Nintendo 64: rewritable 64 MB magnetic disks, a clock, and a way online through Randnet.',
+    long:'The 64DD came out only in Japan, on the 1st of December 1999, sold with the Randnet online service. It sits under the Nintendo 64 and plugs into the expansion port beneath it, and reads magnetic disks that hold about 64 MB, part of which a game can write to, so a disk keeps what you make on it. The drive has its own start-up program and a clock. Few games came out for it, among them the Mario Artist series, SimCity 64 and Kyojin no Doshin, and Randnet closed in February 2001. Here the drive’s start-up program comes from your game server, and each disk keeps its own save.' },
+  { id:'snes', name:'Super Nintendo', short:'SNES', years:'1990 – 2003', color:'#7b5fc4',
+    blurb:'Nintendo’s 16-bit console: a 65C816 processor, a picture chip with four background layers, rotation and colour maths, eight-voice sampled sound, and cartridges that brought chips of their own.',
+    long:'The Super Famicom came out in Japan in November 1990, as the Super Nintendo in America in August 1991 and in Europe and Australia in 1992. A Ricoh 5A22 built around the 65C816 runs the game at up to 3.58 MHz beside 128 KB of work memory. Two picture chips draw up to four background layers and 128 sprites from 64 KB of video memory, with Mode 7’s rotated and scaled plane, windows and colour maths; a separate sound unit, an SPC700 with the S-DSP, mixes eight voices of sampled sound in stereo. Many cartridges carried a chip of their own: the Super FX drew Star Fox’s polygons, and the SA-1 was a faster second processor. Around 49 million were sold. Here the console’s region follows the cartridge: a PAL game runs on the PAL console at 50 frames a second.' },
+  /* THE SUFAMI TURBO (24 Nov 2026): its own wall device beside the Super Nintendo. The accent is the blue-grey
+     label of the mini-cartridge in the photograph (#738ab0), lifted for the dark ground. */
+  { id:'sufami', name:'Sufami Turbo', years:'1996', color:'#8aa3cf',
+    blurb:'Bandai’s adaptor for the Super Famicom: two slots for small, cheap cartridges, and games that read each other when both are in.',
+    long:'Bandai released the Sufami Turbo in Japan in June 1996. It sits on top of a Super Famicom like a cartridge and holds two slots for its own mini-cartridges, which were smaller and cheaper to make than full cartridges. The adaptor carries the start-up program; slot A holds the game being played and slot B a second mini-cartridge. Some games link: the two SD Ultra Battle games share their heroes, the six SD Gundam Generation parts read each other, and Poi Poi Ninja World plays with a second copy of itself. Each mini-cartridge with a save keeps it on the cartridge itself, so the same save comes along in either slot. Thirteen games were released, all in Japan.' }
 ];
+if (!window.CW_SUFAMI_ON) { const i = SERIES.findIndex(x => x.id === 'sufami'); if (i >= 0) SERIES.splice(i, 1); }   // the Sufami Turbo switch (above)
 
 /* === Hardware tab =========================================================
  * Two-layer data model, kept deliberately separate from how it renders:
@@ -14143,6 +14234,11 @@ const MEDIA_SYSTEMS_FOR_SERIES = {
   'pokemon-mini': ['pm'], 'game-boy': ['gb'], 'game-boy-color': ['gbc'], 'super-game-boy': ['sgb'], 'nes': ['nes'],
   'famicom': ['famicom'], 'famicom-disk-system': ['fds'],
   'atari2600': ['a2600'], 'atari5200': ['a5200'], 'atari7800': ['a7800'], 'atarilynx': ['alynx'],
+  'sg1000': ['sg1000'], 'mastersystem': ['sms'], 'gamegear': ['gg'],
+  'n64': ['n64'],
+  'n64dd': ['n64dd'],   // the 64DD (26 Nov 2026)
+  'snes': ['snes'],
+  'sufami': ['sufami'],
 };
 function mediaSystemsForSeries(seriesId) {
   return MEDIA_SYSTEMS_FOR_SERIES[seriesId] || ['gnw'];
@@ -15325,7 +15421,7 @@ function deviceCardHTML(d) {
   const _lynxTurned = d.catalogue === 'atarilynx' && !!d.lynxTurn;
   /* Decided 2026-10-22: the 2600, 5200 and 7800 are one column wide like the
      NES now (their pictures are the set with the controller below it, 5:6); the Lynx keeps its box. */
-  const _atariBigTile = d.catalogue === 'atarilynx' && !_lynxTurned;
+  const _atariBigTile = (d.catalogue === 'atarilynx' && !_lynxTurned) || d.catalogue === 'gamegear';   // the Game Gear: two columns, like the Lynx (20 Nov)
   /* The SMB Special is tall for its gold flip-lid unit photo only. Its prize box is SQUARE (24
      Oct: "they are squares and not stretched on the tile"), so in both box art views it is a
      normal tile and the box is sized like every other Game & Watch box, keeping its shape. */
@@ -15337,7 +15433,7 @@ function deviceCardHTML(d) {
      height"). Still two columns wide; 6/5 of a column tall, the trailer's own height (emby.js
      data-wide-ratio), instead of the NES box's 8/5. data-tile-ratio is read by layoutMasonry and
      sizeWideTiles; it is not data-wide-ratio, which emby.js strips as its own marker. */
-  const _trailerHeight = !_lynxTurned && d.catalogue === 'atarilynx';   // 2026-10-22: the 5200 and the Famicom are single tiles now
+  const _trailerHeight = (!_lynxTurned && d.catalogue === 'atarilynx') || d.catalogue === 'gamegear';   // 2026-10-22: the 5200 and the Famicom are single tiles now
   /* Game Boy cards are tall REGARDLESS OF WHERE THEY CAME FROM.
    * The twelve catalogue ids are listed individually in TALL_MULTISCREEN_IDS,
    * which was fine while twelve was all there could ever be. It stopped being
@@ -15348,7 +15444,7 @@ function deviceCardHTML(d) {
    * supplied. The set's own comment already says tile shape is a property of
    * the DEVICE; for these it is a property of the catalogue, so read it from
    * there and it cannot drift again. */
-  if (!tallClass && (TALL_MULTISCREEN_IDS.has(_artId(d)) || d.catalogue === 'pokemon-mini' || d.catalogue === 'game-boy' || d.catalogue === 'nes' || d.catalogue === 'atari2600' || d.catalogue === 'atari5200' || d.catalogue === 'atari7800')) tallClass = ' tile-tall';   // the home consoles: 2026-10-22   // a PM variant is as tall as its game (_artId)
+  if (!tallClass && (TALL_MULTISCREEN_IDS.has(_artId(d)) || d.catalogue === 'pokemon-mini' || d.catalogue === 'game-boy' || d.catalogue === 'nes' || d.catalogue === 'atari2600' || d.catalogue === 'atari5200' || d.catalogue === 'atari7800' || d.catalogue === 'sg1000' || d.catalogue === 'mastersystem' || d.catalogue === 'n64' || d.catalogue === 'snes' || d.catalogue === 'sufami')) tallClass = ' tile-tall';   // the home consoles: 2026-10-22   // a PM variant is as tall as its game (_artId)
   /* A TILE IS A BUTTON, AND NOW SAYS SO.
      This markup is shared by four catalogues (Game & Watch, Pokémon Mini,
      Game Boy) AND by the Media grid's game tiles, so until it carried
@@ -15732,15 +15828,6 @@ function refreshDrawerPlayTime(deviceId) {
 // openDevice()'s drawer. No emulation/source/play tabs, no ownership/market
 // machinery. Reuses the same modal shell, drawer-tabs, collect star and facts box.
 function openPMDevice(d) {   // retired 2026-10-15: the unified drawer (drawer-unified.js wraps this name) builds every game's drawer; old body backed up off the site (drawer-builders.js
-}
-function _pmStageNote(text) {
-  try {
-    const card = document.querySelector('#device-stage .stage-card');
-    if (!card) return;
-    let el = card.querySelector(':scope > .pm-stage-note');
-    if (!el) { el = document.createElement('div'); el.className = 'pm-stage-note'; card.appendChild(el); }
-    el.textContent = text;
-  } catch (e) {}
 }
 
 /* Generalised so the video grid can reuse it rather than growing a second
@@ -16433,7 +16520,135 @@ const ATARI_SYSTEMS = {
     chip: '65C02 core in Mikey + Suzy', era: '1989',
     players: 'One (ComLynx is not emulated here)',
   },
+  /* THE SEGA 8-BIT FAMILY (20 Nov 2026): three wall devices on ONE core (play/cores/sega8/,
+     one core with model records), riding this table's machinery: the same adoption from the game
+     servers (their system ids sg1000, sms and gg are the prefixes), the same drawer, the same play
+     window (the one play host, sys = the prefix) and the same live tiles. `family` marks them where
+     a word or a rule is Atari's own. The other models are Machine choices in the play window. No
+     baked shelf (shelf null): the game servers and the player's own files only. */
+  sg1000: {
+    prefix: 'sg1000', label: 'SG-1000', short: 'SG-1000', series: 'sg1000', family: 'sega8',
+    art: 'Sg1000Console.png', shelf: null,
+    play: 'play/sega8/sg1000/', exts: '.sg, .bin or .mv',
+    raster: '256 × 192 (8:7 pixels)', cpu: 'Z80 at 3.58 MHz',
+    chip: 'Z80 + TMS9918A + SN76489', era: '1983',
+    players: 'Up to 2: both joystick ports are wired',
+  },
+  mastersystem: {
+    prefix: 'sms', label: 'Master System', short: 'Master System', series: 'mastersystem', family: 'sega8',
+    art: 'MasterSystemConsole.png', shelf: null,
+    play: 'play/sega8/sms/', exts: '.sms or .bin',
+    raster: '256 × 192, 224 or 240 (8:7 pixels on NTSC)', cpu: 'Z80 at 3.58 MHz (3.55 MHz on PAL)',
+    chip: 'Z80 + Sega VDP + SN76489 (YM2413 FM on the Japanese models)', era: '1985',
+    players: 'Up to 2: both controller ports are wired',
+  },
+  gamegear: {
+    prefix: 'gg', label: 'Game Gear', short: 'Game Gear', series: 'gamegear', family: 'sega8',
+    art: 'GameGearConsole.png', shelf: null,
+    play: 'play/sega8/gg/', exts: '.gg or .bin',
+    raster: '160 × 144 of a 256 × 192 frame (6:5 pixels)', cpu: 'Z80 at 3.58 MHz',
+    chip: 'Z80 + Sega VDP with 4,096 colours + stereo SN76489', era: '1990',
+    players: 'One (the Gear-to-Gear cable is not emulated here)',
+  },
+  /* THE NINTENDO 64 (22 Nov 2026): one wall device on its own core (play/cores/n64/), riding this table's
+     machinery the way the Sega devices do: adopted from the game servers (their system id n64 is the prefix),
+     the same drawer, the one play host (sys n64) and the tile picture. `family` marks it where a word or a
+     rule differs. Its games are 4 to 64 MB, so a tile never runs a machine (_atariTileSrc) and the play window
+     fetches the game in pieces (play/host/site-relay.js n64Game). A Pokemon game wears the Pikachu console
+     (img below), as Pokemon titles on the Game Boy Color wear the Pokemon edition. No baked shelf. */
+  n64: {
+    prefix: 'n64', label: 'Nintendo 64', short: 'N64', series: 'n64', family: 'n64',
+    art: 'N64Console.png', artPokemon: 'N64PikachuConsole.png', artDisk: 'N64DDConsole-Blank.png', shelf: null,   // artDisk: a 64DD disk with no disk picture: a plain disk beside the pad (26 Nov 2026, N64_DD_DISKS)
+    play: 'play/n64/', exts: '.z64, .n64 or .v64; 64DD disks .ndd',
+    raster: 'up to 640 × 480 (the core sends each field with its lines doubled)', cpu: 'NEC VR4300 (MIPS R4300i) at 93.75 MHz',
+    chip: 'VR4300 + Reality Co-Processor (RSP and RDP)', era: '1996',
+    players: 'One: the first controller port is wired',
+    /* AN EVALUATION PREVIEW (23 Nov 2026: "We can call it an evaluation preview of it"). `preview` puts the
+       small Evaluation preview tag (.cw-preview-tag) on the home card, the Systems menu tile, the drawer, the
+       play window and the Compatibility list's part (window.cwSysPreview). Delete the line when it is done. */
+    preview: true,
+    /* THE EMULATION TAB SWITCH (23 Nov 2026: "We won't be including the emulation tab for N64 in the first
+       release"). false hides the drawer's Emulation tab, the home card's See the proof and the /n64/emulation
+       page (it opens Hardware), all through window.cwEmulationTabShown. The tab's files stay
+       (n64-emulation-tab.js, WASM_Source/n64-tabs): set true, or delete the line, to bring it back. */
+    emulationTab: false,
+  },
+  /* THE SUPER NINTENDO (23 Nov 2026): one wall device on its own core (play/cores/snes/), riding this table's
+     machinery as the N64 does: adopted from the game servers (their system id snes is the prefix), the same
+     drawer, the one play host (sys snes) and the tile picture. The Super Famicom is the same machine: a Machine
+     choice and a region, not a wall of its own. A full console: its Hardware and Emulation tabs are both shown. */
+  snes: {
+    prefix: 'snes', label: 'Super Nintendo', short: 'SNES', series: 'snes', family: 'snes',
+    art: 'SnesConsole.png', shelf: null,
+    play: 'play/snes/', exts: '.sfc, .smc or .swc',
+    raster: '256 or 512 × 224 or 239 (448 or 478 interlaced)', cpu: '65C816 (Ricoh 5A22) at 3.58, 2.68 or 1.79 MHz',
+    chip: '5A22 S-CPU + S-PPU1 and S-PPU2 + S-SMP and S-DSP', era: '1990',
+    players: 'Up to 2, and 5 with a multitap',
+  },
+  /* THE SUFAMI TURBO (24 Nov 2026): Bandai's two-slot adaptor for the Super Famicom, its own wall device beside the
+     Super Nintendo (one device per library folder). The same core and the same play host (family snes; its play
+     path is sent to the SNES play host by play/shared/host-bridge.js, and the core opens a mini-cartridge in the
+     adaptor's slot A by its content). Adopted from the game servers under the system id sufami; cws.js also sends a
+     .st file a server lists under snes here. With no game listed it has no tiles, and its Systems menu row behaves as any other system's with no games. */
+  sufami: {
+    prefix: 'sufami', label: 'Sufami Turbo', short: 'Sufami Turbo', series: 'sufami', family: 'snes',
+    art: 'SufamiConsole.png', shelf: null,
+    play: 'play/sufami/', exts: '.st',
+    raster: '256 or 512 × 224 or 239 (448 or 478 interlaced)', cpu: '65C816 (Ricoh 5A22) at 3.58, 2.68 or 1.79 MHz',
+    chip: 'the Super Famicom’s, with no chip in the adaptor', era: '1996',
+    players: 'Up to 2',
+    /* No Emulation tab of its own: the adaptor is described in the Super Nintendo's Emulation tab (its cartridges
+       chapter), which shows only on the Super Nintendo. Delete the line if a Sufami Turbo tab is ever made. */
+    emulationTab: false,
+  },
 };
+/* The two switches above, for the other files (drawer-unified.js, deeplinks.js, emulators-table.js, emby.js,
+   compat.js, play-file.js): a system's catalogue id (n64, atari2600, ...). Any other system is shown as before. */
+window.cwSysPreview = sys => !!(ATARI_SYSTEMS[sys] && ATARI_SYSTEMS[sys].preview);
+window.cwEmulationTabShown = sys => !(ATARI_SYSTEMS[sys] && ATARI_SYSTEMS[sys].emulationTab === false);
+window.CW_PREVIEW_TAG = '<span class="cw-preview-tag" title="New here and still being tuned">Evaluation preview</span>';
+if (!window.CW_SUFAMI_ON) delete ATARI_SYSTEMS.sufami;   // the Sufami Turbo switch (window.CW_SUFAMI_ON, above SERIES): no wall device while off
+const isSega8Sys =sys => !!(ATARI_SYSTEMS[sys] && ATARI_SYSTEMS[sys].family === 'sega8');
+/* THE GAMES BUILT INTO THE MASTER SYSTEM'S START-UP FIRMWARE (21 Nov 2026). A console whose firmware holds a
+   game plays it when it is switched on with no cartridge. Each image here, when the player's game server lists
+   it, becomes a title of the Master System wall (id sms-x<its hash>): a version of its game in the cartridge's
+   drawer (firmware/variants/mastersystem: the original cartridge keeps the tile while it is there), or its own
+   tile when there is no cartridge (Snail Maze). The play window starts the console with that image as its
+   firmware and an empty cartridge slot (play/cores/sega8/core.mjs builtInGame). By SHA-256. */
+const SEGA8_BUILT_IN = {
+  e9eb04ec80ded8658f765c4eca75cdbe23cbc7d8fed73f9c3db7a868dbf649ff: { title: 'Hang On & Safari Hunt', console: 'Master System' },
+  '1a73bc6e1a9973b98432774a1480b3ac1259027a97590d5e67d52745159abbbc': { title: 'Hang On', console: 'Master System' },
+  '13c0639cc037167f53e6151dbdea013758c3d09a76b064a894bf15c39c0a3897': { title: 'Missile Defense 3-D', console: 'Master System' },
+  '0c08e17b0ecc3967e1094f12841fdc97fdcbbf986e3bf9a06b35b69e7d95e4cd': { title: 'Alex Kidd in Miracle World', console: 'Master System II' },
+  '57abf3c00c82a8e042ebeb2bfe412adac9ba005e9009845236390de3ee645248': { title: 'Alex Kidd in Miracle World', console: 'Korean Master System II' },
+  c51ec80b7a609c5ee3d203ceee2b602ae4dfb4479caf15dc1d030c40c0364e93: { title: 'Sonic The Hedgehog', console: 'Master System II' },
+  '477617917a12a30f9f43844909dc2de6e6a617430f5c9a36306c86414a670d50': { title: 'Snail Maze', console: 'Master System', hidden: true },
+  '1eb16fc06ceaf05651d7cfd69d1713e6ddccc4349a511f6fd17e037d71f9d85b': { title: 'Snail Maze', console: 'Master System', hidden: true },
+  /* The Othello Multivision's own Othello (25 Nov 2026): Tsukuda's program in the console, which answers when the slot
+     is empty. A tile of its own on the SG-1000 wall (id sg1000-x<its hash>); the core runs it as the cartridge on that
+     machine (core.mjs BUILT_IN asCart). From the game server's sg1000 firmware only, never from this site. */
+  ab259b6b9be3a422aed5424af388f41f546cb9485210bdeea697a71916ce3d14: { title: 'Othello Multivision', console: 'Othello Multivision', sys: 'sg1000' },
+};
+/* The built-in games among the firmware the game servers list: { '<sys>-x<sha12>': {s, n, z, bi} } added to the manifest
+   (sys: the entry's own, the Master System's when it names none). */
+function _sega8BuiltInTitles(manifest) {
+  const list = (window.CWS && typeof CWS.firmwareList === 'function') ? CWS.firmwareList() : [];
+  let out = manifest;
+  for (const f of list) {
+    const b = f && SEGA8_BUILT_IN[f.sha256];
+    const sys = b && (b.sys || 'sms');
+    if (!b || f.system !== sys) continue;
+    const id = sys + '-x' + f.sha256.slice(0, 12);
+    if (out && out[id]) continue;
+    out = Object.assign({}, out || {});
+    out[id] = { s: sys, n: b.title, z: f.size, bi: { sha: f.sha256, title: b.title, console: b.console, hidden: !!b.hidden, file: f.fileName || f.name || '' } };
+  }
+  return out;
+}
+/* Is the firmware holding a built-in game on a game server that answers now? */
+function _sega8BuiltInReachable(d) {
+  try { return !!(d && d.builtIn && window.CWS && CWS.firmwareList().some(f => f.sha256 === d.builtIn.sha && f.reachable)); } catch (e) { return false; }
+}
 /* The reverse direction, built from the table rather than written out, so a
    prefix cannot be spelled two ways. */
 const ATARI_BY_PREFIX = (() => {
@@ -16459,7 +16674,7 @@ const _atariCartBytes = new Map();   // id -> Uint8Array, this visit only
 function _atariLoadShelf(sys) {
   if (_atariShelfPromise[sys]) return _atariShelfPromise[sys];
   const t = ATARI_SYSTEMS[sys];
-  if (!t) return Promise.resolve(null);
+  if (!t || !t.shelf) return Promise.resolve(null);   // no baked shelf (the Sega devices): nothing to fetch
   _atariShelfPromise[sys] = fetch(t.shelf, { cache: 'no-store' })
     .then(r => (r.ok ? r.json() : null))
     .then(j => {
@@ -16515,6 +16730,7 @@ function ensureAtariFiles() {
     })
     .then(() => (window.CWS && CWS.first ? CWS.first() : null))   // the servers' first answer, read once (cws.js first)
     .then(() => { if (window.CWS) _atariManifest = CWS.mergeManifest('atari', _atariManifest); })   // game servers (cws.js)
+    .then(() => { try { _atariManifest = _sega8BuiltInTitles(_atariManifest); } catch (e) {} })   // the firmware's built-in games
     .then(() => { try { const a = _atariAdoptTitles(); if (window.CWS) CWS.decorate(a); } catch (e) {} })
     .then(() => { _atariContentResolved = true; });
   return _atariProbe;
@@ -16553,6 +16769,7 @@ function atariReloadContent() {
    emulator yet", which is the truth, instead of lying in either direction. */
 function atariCartAvailable(d) {
   if (!d || !ATARI_SYSTEMS[d.catalogue]) return false;
+  if (d.builtIn) return _sega8BuiltInReachable(d);    // a firmware's built-in game: its firmware on a game server that answers
   const shelf = _atariContent[d.catalogue];
   if (shelf && shelf[d.id]) return true;
   if (window.CWS && CWS.available(d.id)) return true;   // game servers (cws.js)
@@ -16586,7 +16803,7 @@ function _atariDisplayTitle(raw) {
   t = t.replace(/\s*~+\s*$/, '').trim();
   /* A library's own marks are not part of a title (5 Nov): the "ZZZ-UNK-" prefix on Lynx dumps and a file's
      extension left in its name ("abtest0.bin"). */
-  t = t.replace(/^ZZZ-UNK-/i, '').replace(/\.(?:bin|a26|a52|a78|lnx|lyx|o|zip)$/i, '').trim();
+  t = t.replace(/^ZZZ-UNK-/i, '').replace(/\.(?:bin|a26|a52|a78|lnx|lyx|o|zip|sms|gg|sg|sc|mv|z64|n64|v64|ndd|sfc|smc|swc|fig)$/i, '').trim();
   const parts = t.split(/\s+-\s+/);
   parts[0] = parts[0].replace(/^(.+),\s*(The|A|An|Le|La|Les|El|Los|Las|Der|Die|Das)$/i, '$2 $1');
   return parts.join(': ').trim() || String(raw || '');
@@ -16598,6 +16815,32 @@ function _atariDisplayTitle(raw) {
    search, the Media grid and the play window all reach them with no second code
    path -- the NES's arrangement, and the reason there is no Atari catalogue page
    to repaint anywhere below. */
+/* THE 64DD DISKS (26 Nov 2026: "64DD disk games get their own console art, the way the Famicom Disk System does").
+   A disk (the server's .ndd listing, cws.js dd; or its size, the .ndd form's 0x3DEC800 bytes the play page's disk.mjs
+   reads) wears the 64DD: the tile is the television with the pad and, where there is a picture of that game's disk,
+   the disk beside the pad (N64DDConsole-<key>.png); the drawer is the N64 on the 64DD drive (N64DDConsoleFull.png,
+   stageArtKey) and its gallery shows the disk (N64DDDisk-<key>.png, drawer-unified.js). A disk with no picture
+   (the Randnet and Dezaemon disks) has N64DDConsole-Blank.png, a plain empty disk beside the pad, and no disk in its gallery.
+   MATCHED BY TITLE: the file's title with its bracketed tags dropped, letters and digits only, lower case, so every
+   version of a game (the (J) (N64DD) and (Japan) dumps, betas, a demo, a translation) finds its disk. Keys as in
+   WASM_Source/n64-artwork/n64dd-from-psd.py DISKS. */
+const N64_DD_DISKS = {
+  fzeroxexpansionkit: 'FZeroXExpansionKit',
+  kyojinnodoshin: 'KyojinNoDoshin',
+  kyojinnodoshinkaihousensenchibikkochikkodaishuugou: 'KyojinNoDoshinKaihouSensen',
+  marioartistcommunicationkit: 'MarioArtistCommunicationKit',
+  marioartistpaintstudio: 'MarioArtistPaintStudio',
+  marioartistpolygonstudio: 'MarioArtistPolygonStudio',
+  marioartisttalentstudio: 'MarioArtistTalentStudio',
+  nihonprogolftour64: 'NihonProGolfTour64', japanprogolftour64: 'NihonProGolfTour64',   // the same disk under its English title
+  simcity64: 'SimCity64',
+  supermario64diskversion: 'SuperMario64DiskVersion',
+};
+function _n64IsDisk(x) { return !!(x && (x.dd || x.z === 0x3DEC800)); }
+function _n64DiskKey(title) {
+  const k = String(title || '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/\.ndd$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return N64_DD_DISKS[k] || null;
+}
 function _atariAdoptTitles() {
   if (!_atariManifest) return [];
   const have = new Set(ATARI.map(d => d.id));
@@ -16623,9 +16866,12 @@ function _atariAdoptTitles() {
     const lynxTurn = sys !== 'atarilynx' ? 0
       : (x.r === 1 || x.r === 2) ? x.r
       : (typeof lynxTurnOf === 'function' ? lynxTurnOf(id) : 0);
+    const dd = !!(t.artDisk && _n64IsDisk(x)), ddKey = dd ? _n64DiskKey(x.n) : null;   // a 64DD disk (26 Nov 2026)
     const d = {
-      id, catalogue: sys, series: t.series, system: sys,
-      img: lynxTurn ? 'AtariLynxConsoleTurned.webp' : t.art,
+      id, catalogue: sys, series: dd ? 'n64dd' : t.series, system: sys,   // a 64DD disk: the 64DD's own series (26 Nov 2026)
+      img: lynxTurn ? 'AtariLynxConsoleTurned.webp' : dd ? (ddKey ? 'N64DDConsole-' + ddKey + '.png' : t.artDisk) : (t.artPokemon && _isPokemonTitle(x.n)) ? t.artPokemon : t.art,
+      art: dd ? 'n64-dd' : (t.artPokemon && _isPokemonTitle(x.n)) ? 'n64-pikachu' : undefined,   // n64-screen.css: the Pikachu console's, and the 64DD's, own screen boxes
+      n64Disk: dd || undefined, n64DiskArt: ddKey ? 'N64DDDisk-' + ddKey + '.png' : undefined,   // a 64DD disk (drawer-unified.js: DISK PRESENT, the disk in the gallery)
       lynxTurn,
       name: _atariDisplayTitle(x.n), fullName: x.n || id,
       developer: '-', genre: '-', players: '-',
@@ -16638,11 +16884,16 @@ function _atariAdoptTitles() {
          the dump's claim about the release, in a field this site prints as fact,
          and the bracket strip has already thrown the rest of that tag away. */
       released: '', features: [], regions: [],
-      description: `Supplied by you: ${x.z ? x.z.toLocaleString() + ' bytes' : 'an ' + t.label + ' cartridge'} for the ${t.label}. This site holds nothing else about it: there is no Atari reference index here, so its size is the file's size and its name is the name of your file, tidied. It is catalogued as <b>${esc_(x.n || id)}</b>.${
+      description: `Supplied by you: ${x.z ? x.z.toLocaleString() + ' bytes' : (t.family === 'sega8' || t.family === 'n64' || t.family === 'snes' ? 'a ' : 'an ') + t.label + ' cartridge'} for the ${t.label}. This site holds nothing else about it: there is no ${t.family === 'sega8' || t.family === 'n64' || t.family === 'snes' ? 'reference index for it' : 'Atari reference index'} here, so its size is the file's size and its name is the name of your file, tidied. It is catalogued as <b>${esc_(x.n || id)}</b>.${
         t.play ? '' : ` The ${t.short} core and its measured artwork are in place, but its play page is not built yet, so this title is catalogued rather than playable.`
       }`,
       additional: '', promo: '', fromPack: true
     };
+    /* A game built into the console's start-up firmware (SEGA8_BUILT_IN): no cartridge, its firmware's own words. */
+    if (x.bi) Object.assign(d, { builtIn: x.bi, fullName: x.bi.file || d.fullName, cartridge: 'None: built into the start-up firmware',
+      description: x.bi.hidden
+        ? `Hidden in the ${x.bi.console}’s start-up firmware: the console starts it when Up and buttons 1 and 2 are held as it is switched on with no cartridge. Here they are held for you as it starts. The firmware is <b>${esc_(x.bi.file || x.bi.title)}</b> on your game server.`
+        : `Built into the ${x.bi.console}’s start-up firmware: the console plays it when it is switched on with no cartridge, and it starts here the same way. The firmware is <b>${esc_(x.bi.file || x.bi.title)}</b> on your game server.` });
     ATARI.push(d); ALL_DEVICES.push(d); added.push(d);
   }
   return added;
@@ -16675,6 +16926,10 @@ function atariProbeContent() {
    the memory cache, the open pack, then that machine's own baked shelf. */
 function _atariFetchCart(id) {
   if (_atariCartBytes.has(id)) return Promise.resolve(_atariCartBytes.get(id));
+  /* a firmware's built-in game: the firmware image itself, by its hash, from a game server */
+  const bi = (ALL_DEVICES.find(x => x && x.id === id) || {}).builtIn;
+  if (bi) return (window.CWS && typeof CWS.fetchBootSha === 'function' ? CWS.fetchBootSha(bi.sha) : Promise.resolve(null))
+    .then(u => { if (u) _atariCartBytes.set(id, u); return u || null; }, () => null);
   return Promise.resolve(ensureAtariFiles())
     .then(function () {
       const d = ALL_DEVICES.find(x => x.id === id);
@@ -16781,7 +17036,127 @@ function atariHardwareTabHTML(d) {
   if (!t) return '';
   const specRows = atariSpecRows(d.catalogue)
     .map(r => `<div class="row"><span class="k">${r.k}</span><span class="v">${r.v}</span></div>`).join('');
-  const ref = (typeof atariHardwareReference === 'function') ? atariHardwareReference(d.catalogue) : null;
+  const sega = t.family === 'sega8';
+  /* The Nintendo 64 (22 Nov 2026): no hardware reference of its own yet; the machine's facts, this
+     cartridge and the emulator. */
+  if (t.family === 'n64') return `
+    <div class="hw-tab">
+      <div class="hw-chip-header">
+        <h2>${t.label}</h2>
+        <p class="hw-chip-tag">${t.chip} &middot; ${t.era}</p>
+      </div>
+      <section class="sect">
+        <h3 class="sect-h">The machine</h3>
+        <div class="factbox">${specRows}</div>
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">This cartridge</h3>
+        <div class="factbox">
+          <div class="row"><span class="k">Size</span><span class="v">${d.bytes ? d.bytes.toLocaleString() + ' bytes (' + d.cartridge + ')' : d.cartridge}</span></div>
+          <div class="row"><span class="k">Identified as</span><span class="v">${esc_(d.fullName || 'not identified')}</span></div>
+          <div class="row"><span class="k">Content hash</span><span class="v">${String(d.id).replace(/^[a-z0-9]+-x/, '')}, the first 12 hex of its SHA-256</span></div>
+        </div>
+        <p class="hw-readable">A Nintendo 64 cartridge file begins with a header that names the game and the region it was sold in, in one of three byte orders. The play window reads the order from the first four bytes, finds the cartridge&rsquo;s save chip from its fingerprint, and starts the game with the start-up program of its region when your game server holds one, or with its own when it does not.</p>
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">The emulator</h3>
+        <p class="hw-readable">The emulator is written in C and compiled to WebAssembly. It follows the console&rsquo;s timing closely. Where the browser allows it, it draws the picture and runs the signal processor on threads of their own beside the machine; on many computers it still runs below full speed, and then the sound can break up. A game file is 4 to 64 MB, so the play window fetches it in pieces, checks it whole and keeps it on this device for the next time. Every file of the emulator is named with its fingerprint in <code>play/cores/n64/BUILD.json</code>.</p>
+      </section>
+    </div>`;
+  /* The Sufami Turbo (24 Nov 2026): the adaptor, its linked games, this mini-cartridge and the emulator; the console
+     underneath is the Super Nintendo's own tab (the same machine). Facts from the SNES source's cartridges chapter (C-ST). */
+  if (d.catalogue === 'sufami') return `
+    <div class="hw-tab">
+      <div class="hw-chip-header">
+        <h2>${t.label}</h2>
+        <p class="hw-chip-tag">Bandai &middot; ${t.era} &middot; Japan only</p>
+      </div>
+      <section class="sect">
+        <h3 class="sect-h">The adaptor</h3>
+        <p class="hw-readable">Bandai released the Sufami Turbo in Japan in June 1996. It plugs into the Super Famicom&rsquo;s cartridge slot and stands on top of the console with two slots of its own, A and B, for its mini-cartridges. The adaptor holds a 256 KB start-up program and no chip: the Super Famicom runs everything. Its program starts the mini-cartridge in slot A; slot B holds a second mini-cartridge that a linked game can read.</p>
+        <p class="hw-readable">A mini-cartridge is a fraction of the size of a Super Famicom cartridge and was cheaper to make. Each one starts with a short header of its own: the game&rsquo;s number in its series, its size in 128 KB steps (up to 1 MB) and how much save memory it carries. A mini-cartridge with a save keeps it on the cartridge, so the same save comes along in either slot. Thirteen games were released, all in Japan.</p>
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">Linked games</h3>
+        <p class="hw-readable">With a game in slot A and its partner in slot B, a linked game reads the other cartridge&rsquo;s data and save.</p>
+        <ul class="hw-readable">
+          <li><b>SD Ultra Battle:</b> Ultraman Densetsu and Seven Densetsu link with each other: heroes from the cartridge in slot B appear in the game in slot A. The partner&rsquo;s save has to be set up first, by playing that cartridge on its own once.</li>
+          <li><b>SD Gundam Generation:</b> the six parts link with each other.</li>
+          <li><b>Poi Poi Ninja World:</b> links with a second copy of itself, which keeps a save of its own.</li>
+        </ul>
+        <p class="hw-readable">The other games do not link.</p>
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">This mini-cartridge</h3>
+        <div class="factbox">
+          <div class="row"><span class="k">Size</span><span class="v">${d.bytes ? d.bytes.toLocaleString() + ' bytes (' + d.cartridge + ')' : d.cartridge}</span></div>
+          <div class="row"><span class="k">Identified as</span><span class="v">${esc_(d.fullName || 'not identified')}</span></div>
+          <div class="row"><span class="k">Content hash</span><span class="v">${String(d.id).replace(/^[a-z0-9]+-x/, '')}, the first 12 hex of its SHA-256</span></div>
+        </div>
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">The emulator</h3>
+        <p class="hw-readable">The Sufami Turbo plays on the Super Nintendo emulator. It needs the adaptor&rsquo;s own start-up program, from your own base cartridge, on your game server; the play window starts it with this mini-cartridge in slot A. For a game that links, the cartridge in slot B is chosen in the play window. The console itself is described in the Super Nintendo&rsquo;s Hardware tab.</p>
+        <div class="factbox" style="margin-top:10px">${specRows}</div>
+      </section>
+    </div>`;
+  /* The Super Nintendo (23 Nov 2026): its hardware reference (snes-hardware-tab.js), then this cartridge and the emulator. */
+  if (t.family === 'snes') {
+    const r = (typeof snesHardwareReference === 'function') ? snesHardwareReference('snes') : null;
+    const notes = (typeof SNES_HW !== 'undefined' && SNES_HW) || {};
+    return `
+    <div class="hw-tab">${r ? r.header + r.body : `
+      <div class="hw-chip-header">
+        <h2>${t.label}</h2>
+        <p class="hw-chip-tag">${t.chip} &middot; ${t.era}</p>
+      </div>
+      <section class="sect">
+        <h3 class="sect-h">The machine</h3>
+        <div class="factbox">${specRows}</div>
+      </section>`}
+      <section class="sect">
+        <h3 class="sect-h">This cartridge</h3>
+        <div class="factbox">
+          <div class="row"><span class="k">Size</span><span class="v">${d.bytes ? d.bytes.toLocaleString() + ' bytes (' + d.cartridge + ')' : d.cartridge}</span></div>
+          <div class="row"><span class="k">Identified as</span><span class="v">${esc_(d.fullName || 'not identified')}</span></div>
+          <div class="row"><span class="k">Content hash</span><span class="v">${String(d.id).replace(/^[a-z0-9]+-x/, '')}, the first 12 hex of its SHA-256</span></div>
+        </div>
+        ${notes.cartridgeNote ? `<p class="hw-readable">${notes.cartridgeNote}</p>` : ''}
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">The emulator</h3>
+        ${notes.emulatorNote ? `<p class="hw-readable">${notes.emulatorNote}</p>` : ''}
+        <div class="factbox" style="margin-top:10px">${specRows}</div>
+      </section>${r ? r.sources : ''}
+    </div>`;
+  }
+  const ref = sega ? ((typeof sega8HardwareReference === 'function') ? sega8HardwareReference(d.catalogue) : null)
+    : (typeof atariHardwareReference === 'function') ? atariHardwareReference(d.catalogue) : null;
+  if (sega) return `
+    <div class="hw-tab">${ref ? ref.header + ref.body : `
+      <div class="hw-chip-header">
+        <h2>${t.label}</h2>
+        <p class="hw-chip-tag">${t.chip} &middot; ${t.era}</p>
+      </div>
+      <section class="sect">
+        <h3 class="sect-h">The machine</h3>
+        <div class="factbox">${specRows}</div>
+      </section>`}
+      <section class="sect">
+        <h3 class="sect-h">This cartridge</h3>
+        <div class="factbox">
+          <div class="row"><span class="k">Size</span><span class="v">${d.bytes ? d.bytes.toLocaleString() + ' bytes (' + d.cartridge + ')' : d.cartridge}</span></div>
+          <div class="row"><span class="k">Identified as</span><span class="v">${esc_(d.fullName || 'not identified')}</span></div>
+          <div class="row"><span class="k">Content hash</span><span class="v">${String(d.id).replace(/^[a-z0-9]+-x/, '')}, the first 12 hex of its SHA-256</span></div>
+        </div>
+        <p class="hw-readable">Nothing in a Sega 8-bit cartridge names its mapper board, its cartridge RAM or the console it was made for. The play window looks the file up by its fingerprint in a table of every known release, and where the table is silent it reads the board from the program itself. The console it starts on is the table's choice, and the Machine menu in the play window lets you pick another model; saves and save states are kept for each model.</p>
+      </section>
+      <section class="sect">
+        <h3 class="sect-h">The emulator</h3>
+        <p class="hw-readable">One emulator plays the whole family: the SG-1000, the Master System and the Game Gear are model records of the same core, which is written in C and compiled to WebAssembly. Its version, the fingerprints of its source files and its list of calls are in <code>play/cores/sega8/CORE-VERSION.json</code>, written when the core is installed and never edited by hand. How it is built and checked is in the Emulation tab.</p>
+        <div class="factbox" style="margin-top:10px">${specRows}</div>
+      </section>${ref ? ref.sources : ''}
+    </div>`;
   return `
     <div class="hw-tab">${ref ? ref.header + ref.body : `
       <div class="hw-chip-header">
@@ -18907,34 +19282,9 @@ function resumeCollectionTiles() {
 function showDeviceStage(id) {
   const stage = document.getElementById('device-stage');
   if (!stage) return;
-  // Pokémon mini: when the game's file + BIOS are available, the tilted console
-  // stage shows the game running LIVE (like a G&W device reveal). When absent,
-  // fall through to the STATIC_PREVIEW_IDS branch below (the static console).
-  const _pmStageDev = ALL_DEVICES.find(x => x.id === id);
-  if (_pmStageDev && _pmStageDev.catalogue === 'pokemon-mini' && pmPlayable(_pmStageDev)) {
-    showPmDeviceStage(_pmStageDev, stage); return;
-  }
-  // Game Boy: identical rule. Cartridge reachable -> the tilted DMG console with
-  // the game running LIVE on it; not reachable -> fall through to the
-  // STATIC_PREVIEW_IDS branch below (the static console).
-  if (_pmStageDev && _pmStageDev.catalogue === 'game-boy' && gbPlayable(_pmStageDev)) {
-    if (_pmStageDev.sgb && window.SGB) { SGB.showStage(_pmStageDev, stage); return; }   // Super Game Boy: the drawer shows the TV photograph
-    showGbDeviceStage(_pmStageDev, stage); return;
-  }
-  // NES: the same rule again. An NES entry only exists when its cartridge is
-  // reachable (the catalogue is built from the content), so unlike the two
-  // above there is no not-reachable case to fall through to -- the guard is
-  // kept anyway, because a pack closed while its drawer is open makes one.
-  if (_pmStageDev && _pmStageDev.catalogue === 'nes' && nesPlayable(_pmStageDev)) {
-    showNesDeviceStage(_pmStageDev, stage); return;
-  }
-  /* Atari: the same rule a fourth time. atariPlayable() is true only when BOTH a
-     cartridge and a play page exist for that machine, so a system whose trio has
-     not been built yet gets the static stage below rather than an iframe
-     pointing at a directory with no document in it. */
-  if (_pmStageDev && ATARI_SYSTEMS[_pmStageDev.catalogue] && atariPlayable(_pmStageDev)) {
-    showAtariDeviceStage(_pmStageDev, stage); return;
-  }
+  /* Game Boy, Super Game Boy, NES, Atari, Sega and Pokemon mini games no longer come here: since 21 Nov 2026
+     the drawer shows the game's box in 3D beside it (case3d.js) and the console with its clip as the drawer's
+     first picture (drawer-unified.js). Only the Game & Watch family is staged here. */
   // Static-preview devices (e.g. SMB Special): their gnw emulator Unit.png is the
   // ZOOMED play crop (screen + control panel), not the full flip-lid cabinet the
   // collection shows, so there's no clean LIVE full-device preview to mount here.
@@ -19227,7 +19577,7 @@ function _stageArtClearAt(card, off) {
    the colour units and Tetris Jr., Pokemon mini, Lynx) and the films' stage are unchanged.
    'nes' covers the NES, the Famicom and the Disk System (one system, data-nes-console tells
    them apart); 'super-game-boy' is the Super Game Boy's television (sgb-shelf.js showStage). */
-const STAGE_FIXED_SYSTEMS = { nes: true, atari2600: true, atari5200: true, atari7800: true, sgb: true,
+const STAGE_FIXED_SYSTEMS = { nes: true, atari2600: true, atari5200: true, atari7800: true, sgb: true, sg1000: true, mastersystem: true, n64: true, snes: true, sufami: true,
                               famicom: true, 'famicom-disk-system': true, 'super-game-boy': true };
 function _stageFixed(card) {
   const k = card && (card.getAttribute('data-system') || card.getAttribute('data-series'));
@@ -19240,14 +19590,18 @@ function _stageFixed(card) {
  * browser does. A pose is [degrees about X, degrees about Y, true when Y is applied first
  * (rotateX() rotateY())]. Used by the game stages (_stageFitWatch) and the films' (emby.js). */
 const STAGE_BREATH = 12, STAGE_PERSPECTIVE = 1400;   // the perspective is #device-stage's and #video-stage's
-function _stageFitReach(w, h, P, poses) {   // the furthest painted reach from the centre, as [x, y]
+function _stageFitReach(w, h, P, poses, d) {   // the furthest painted reach from the centre, as [x, y]
+  /* d (21 Nov 2026, the 3D case): the box's depth in px. The box turns about its own centre, which sits
+     half its depth behind the card's plane, so its front is the card at rest; 0 is a flat picture. */
   let mx = 0, my = 0;
+  const zs = d ? [-d / 2, d / 2] : [0];
   for (const [ax, ay, yFirst] of poses) {
     const a = ax * Math.PI / 180, b = ay * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    for (const x0 of [-w / 2, w / 2]) for (const y0 of [-h / 2, h / 2]) {
+    for (const x0 of [-w / 2, w / 2]) for (const y0 of [-h / 2, h / 2]) for (const z0 of zs) {
       let x, y, z;
-      if (yFirst) { x = x0 * cb; z = -x0 * sb; y = y0 * ca - z * sa; z = y0 * sa + z * ca; }
-      else { y = y0 * ca; z = y0 * sa; x = x0 * cb + z * sb; z = -x0 * sb + z * cb; }
+      if (yFirst) { x = x0 * cb + z0 * sb; z = -x0 * sb + z0 * cb; y = y0 * ca - z * sa; z = y0 * sa + z * ca; }
+      else { y = y0 * ca - z0 * sa; z = y0 * sa + z0 * ca; x = x0 * cb + z * sb; z = -x0 * sb + z * cb; }
+      if (d) z -= d / 2;
       const s = P / (P - z);
       mx = Math.max(mx, Math.abs(x * s)); my = Math.max(my, Math.abs(y * s));
     }
@@ -19258,7 +19612,7 @@ function _stageFitNow(card) {
   const f = card.__stageFit, stage = card.parentElement;
   if (!f || !stage || !stage.clientWidth) return;   // hidden at this window size: the next resize does it
   const roomW = stage.clientWidth - 2 * STAGE_BREATH, roomH = stage.clientHeight - 2 * STAGE_BREATH;
-  const fits = h => { const r = _stageFitReach(h * f.aspect, h, STAGE_PERSPECTIVE, f.poses); return 2 * r[0] <= roomW && 2 * r[1] <= roomH; };
+  const fits = h => { const r = _stageFitReach(h * f.aspect, h, STAGE_PERSPECTIVE, f.poses, (f.depth || 0) * h); return 2 * r[0] <= roomW && 2 * r[1] <= roomH; };
   let lo = 40, hi = typeof f.normalH === 'function' ? f.normalH() : f.normalH;
   if (fits(hi)) lo = hi;
   else for (let i = 0; i < 16; i++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
@@ -19266,8 +19620,8 @@ function _stageFitNow(card) {
   card.style.setProperty('--fit-h', lo.toFixed(1) + 'px');
   card.classList.add('stage-fit');
 }
-window.gnwStageFit = function (card, aspect, poses, normalH) {
-  card.__stageFit = { aspect, poses, normalH };
+window.gnwStageFit = function (card, aspect, poses, normalH, depth) {   // depth: a 3D case's depth as a share of its height (case3d.js)
+  card.__stageFit = { aspect, poses, normalH, depth: depth || 0 };
   _stageFitNow(card);
 };
 let _stageFitRaf = 0;
@@ -19275,7 +19629,7 @@ window.addEventListener('resize', () => {
   if (_stageFitRaf) return;
   _stageFitRaf = requestAnimationFrame(() => {
     _stageFitRaf = 0;
-    document.querySelectorAll('#device-stage .stage-card, #video-stage .vstage-card').forEach(_stageFitNow);
+    document.querySelectorAll('#device-stage .stage-card, #video-stage .vstage-card, .case-card').forEach(_stageFitNow);
   });
 });
 /* The picture's normal height: what the rules before .stage-fit draw in their full 920 x 736 box
@@ -19408,8 +19762,6 @@ function hideDeviceStage() {
     if (!stage.classList.contains('open')) {
       if (window.gnwStopBigPreview) window.gnwStopBigPreview();
       _tftStopBigPreview(); // tear down the ARM-twin big reveal if this was a TFT device
-      _pmStopBigPreview();  // tear down the Pokémon mini big reveal if this was a PM device
-      _gbStopBigPreview(); _nesStopBigPreview(); _atariStopBigPreview();  // tear down the Game Boy big reveal if this was a GB device
       stage.innerHTML = '';
     }
   }, 1800); // after the 1.7s reverse animation finishes
@@ -19444,7 +19796,7 @@ function _tftInjectScript(src) {
 }
 function _tftLoadEngine() {
   if (window.ArmTwin) return Promise.resolve();
-  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.2.2');
+  if (!_tftEnginePromise) _tftEnginePromise = _tftInjectScript('play/twin.js?v=2.3.0');
   return _tftEnginePromise;
 }
 function _tftLoadFirmware(unit) {
@@ -19950,7 +20302,7 @@ let _pmPreviewLastError = null;
 function _pmPreviewLoad() {
   if (_pmPreviewLoadPromise) return _pmPreviewLoadPromise;
   if (!_pmWasmModulePromise) {
-    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.2.2')
+    _pmWasmModulePromise = pmFetchWithRetry('play/pokemini/pokemini.wasm?v=2.3.0')
       .then(r => { if (!r.ok) throw new Error('pokemini.wasm HTTP ' + r.status); return r.arrayBuffer(); })
       .then(b => WebAssembly.compile(b))
       .then(m => { _pmWasmModule = m; return m; });
@@ -20383,36 +20735,6 @@ function mountPmTilePreviews() {
 function _pmSchedule() { PMEmu.schedule(); }
 function _pmSuspendAllTiles() { PMEmu.suspendAll(); }
 
-/* The drawer's big reveal is the SAME code path, with always:true because it is
-   on screen by definition. It used to be a second, parallel implementation. */
-function _pmMountBigPreview(canvas, id) { _pmStopBigPreview(); PMEmu.mount(canvas, id, { always: true }); }
-function _pmStopBigPreview() { PMEmu.unmountWhere(rec => rec.always); }
-// PM branch of showDeviceStage(): the tilted colour console with the game
-// running LIVE on its screen (canvas carries NO data-pm so the tile sweep skips
-// it). Same slide-in + cursor tilt + specular sheen as the gnw/TFT stages.
-function showPmDeviceStage(d, stage) {
-  const artSrc = imgSrc(pmConsoleKey(d));
-  stage.innerHTML =
-    '<div class="device-card stage-card" data-series="' + d.series + '"><div class="img stage-img">' +
-      '<div class="pm-emu">' +
-        '<img class="pm-emu-art" src="' + artSrc.replace(/"/g, '&quot;') + '" alt="">' +
-        '<canvas class="pm-emu-screen" width="' + _PM_WIN_W + '" height="' + _PM_WIN_H + '"></canvas>' +
-      '</div>' +
-    '</div></div>';
-  stage.classList.remove('open');
-  void stage.offsetWidth;
-  stage.classList.add('open');
-  initStageTilt(stage.querySelector('.stage-card'));
-  const emuEl = stage.querySelector('.pm-emu');
-  if (emuEl) {
-    const sheen = document.createElement('div');
-    sheen.className = 'stage-sheen';
-    sheen.style.setProperty('--unit-mask', 'url("' + artSrc.replace(/"/g, '&quot;') + '")');
-    emuEl.appendChild(sheen);
-  }
-  const cv = stage.querySelector('.pm-emu-screen');
-  if (cv) _pmMountBigPreview(cv, d.id);
-}
 
 /* ===========================================================================
    Game Boy LIVE tile/stage previews
@@ -20826,6 +21148,14 @@ function _atariTileSrc(id) {
   const d = ALL_DEVICES.find(x => x.id === id);
   const t = d && ATARI_SYSTEMS[d.catalogue];
   if (!t || !t.play) return null;
+  /* The Sega devices' tiles and drawer show their picture, static, until their recorded tiles
+     (clips) exist: one live machine, the play window's (20 Nov 2026). */
+  if (t.family === 'sega8') return null;
+  /* The Nintendo 64 (22 Nov 2026): never a live tile. Its games are 4 to 64 MB and its emulator is the
+     accurate one, which runs below full speed: the picture stands until its recorded tiles exist. */
+  if (t.family === 'n64') return null;
+  /* The Super Nintendo (23 Nov 2026): one live machine, the play window's; the picture stands until its recorded tiles exist. */
+  if (t.family === 'snes') return null;
   /* art=turned: this tile shows the Lynx on its side, so the framed page
      fills a portrait glass (play/atarilynx/web/render.js). */
   const turned = d.catalogue === 'atarilynx' && d.lynxTurn ? '&o.turn=1' : '';
@@ -20949,13 +21279,6 @@ window.ATARILIVE = {
   }
 };
 
-/* The big left-side reveal. showNesDeviceStage's shape, and the same exemption:
-   the wrapper carries NO data-atari, so the tile sweep skips it and cannot count
-   it against ATARI_MAX_LIVE -- a drawer that has to wait for the grid's cap to
-   release a slot is a drawer that opens onto a dead screen.
-     The stage is the WHOLE photograph, machine and controllers together, because
-   that is what the drawer is showing off. Only the play view crops to the glass. */
-let _atariStageFrame = null;
 /* THE DRAWER SHOWS THE FULL PHOTOGRAPH (2026-10-22): the tile and the play
    window show the television with its controller (the *Console keys); the drawer stage shows the
    old full photograph with the console and accessories, archived as the *ConsoleFull keys. Its
@@ -20963,52 +21286,12 @@ let _atariStageFrame = null;
 const STAGE_FULL_ART = {
   'NesConsole.png': 'NesConsoleFull.png', 'FamicomConsole.webp': 'FamicomConsoleFull.webp', 'FdsConsole.webp': 'FdsConsoleFull.webp',
   'Atari2600Console.png': 'Atari2600ConsoleFull.png', 'Atari5200Console.png': 'Atari5200ConsoleFull.png', 'Atari7800Console.png': 'Atari7800ConsoleFull.png',
+  'Sg1000Console.png': 'Sg1000ConsoleFull.png', 'MasterSystemConsole.png': 'MasterSystemConsoleFull.png',   // the Sega TVs (20 Nov); the Game Gear has one photo
+  'N64Console.png': 'N64ConsoleFull.png', 'N64PikachuConsole.png': 'N64PikachuConsoleFull.png',   // the Nintendo 64 (22 Nov): the standard console, and the Pikachu one for Pokemon games
+  'SnesConsole.png': 'SnesConsoleFull.png',   // the Super Nintendo (23 Nov): the tile is the Trinitron with one pad; the drawer, the whole photograph
+  'SufamiConsole.png': 'SufamiConsoleFull.png',   // the Sufami Turbo (24 Nov): the same Trinitron with the Super Famicom pad; the drawer, the Super Famicom with the adaptor
 };
-function stageArtKey(key) { return STAGE_FULL_ART[key] || key; }
-function showAtariDeviceStage(d, stage) {
-  const artSrc = imgSrc(stageArtKey(d.img));
-  stage.innerHTML =
-    '<div class="device-card stage-card" data-series="' + d.series + '" data-system="' + d.system + '"' +
-      (d.catalogue === 'atarilynx' && d.lynxTurn ? ' data-lynx-turn="' + d.lynxTurn + '"' : '') + '>' +
-      '<div class="img stage-img">' +
-        '<div class="atari-emu atari-art-frame">' +
-          '<img class="atari-art" src="' + artSrc.replace(/"/g, '&quot;') + '" alt="">' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  stage.classList.remove('open');
-  void stage.offsetWidth;
-  stage.classList.add('open');
-  initStageTilt(stage.querySelector('.stage-card'));
-  const emuEl = stage.querySelector('.atari-emu');
-  if (!emuEl) return;
-  /* The specular sheen is masked to the artwork's own alpha, so over the glass it
-     lands at that layer's own opacity and reads as one more reflection on the
-     tube rather than a wash across the whole card. */
-  const sheen = document.createElement('div');
-  sheen.className = 'stage-sheen';
-  sheen.style.setProperty('--unit-mask', 'url("' + artSrc.replace(/"/g, '&quot;') + '")');
-  emuEl.appendChild(sheen);
-  const src = _atariTileSrc(d.id);
-  if (!src) return;
-  const f = document.createElement('iframe');
-  f.className = 'atari-screen';
-  f.setAttribute('aria-hidden', 'true');
-  f.setAttribute('tabindex', '-1');
-  f.setAttribute('scrolling', 'no');
-  f.src = src;
-  f.addEventListener('load', () => emuEl.classList.add('ready'), { once: true });
-  emuEl.appendChild(f);
-  _atariStageFrame = f;
-}
-/* Torn down with the drawer rather than left running behind it, for
-   _nesStopBigPreview's reason: this is a document, so the only way to stop its
-   core is to remove it, and leaving it would be a second machine running for as
-   long as the tab is open. */
-function _atariStopBigPreview() {
-  if (_atariStageFrame && _atariStageFrame.parentNode) _atariStageFrame.remove();
-  _atariStageFrame = null;
-}
+function stageArtKey(key) { return STAGE_FULL_ART[key] || (/^N64DDConsole(-\w+)?\.png$/.test(key) ? 'N64DDConsoleFull.png' : key); }   // every 64DD disk tile (26 Nov 2026): the N64 on the 64DD drive
 
 const GB_MAX_LIVE = 4;   // 1 Oct: raised from 2. A limit is
                          // still right for Game Boy -- see the NES block --
@@ -21028,7 +21311,7 @@ const _gbCartBytes = new Map();   // slot -> Uint8Array, held in memory this vis
 // The ONE place the served Game Boy core's URL and ?v= tag live. gbrec.js reads
 // window.GB_WASM_URL for its build stamp, so a core install bumps this line only
 // and the stamp follows it (22 Oct 2026).
-var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.2.2';
+var GB_WASM_URL = 'play/gameboy/build/gb.wasm?v=2.3.0';
 
 // Lazy: nothing below is fetched until a Game Boy tile actually needs it, so a
 // visitor who never opens the catalogue pays nothing.
@@ -21247,7 +21530,6 @@ document.addEventListener('cw-wall-slow', function () {
   if (_gbFastHeld) { _gbFastHeld = false; try { mountGbTilePreviews(); } catch (e) {} }
   try { if (Object.keys(_gbTileDevices).length) _gbStartLoop(); } catch (e) {}
 });
-let _gbBigDevice = null;          // the drawer's big reveal, its own device
 
 /* Geometric visibility, used ALONGSIDE the observer below — the same
    arrangement PMEmu uses and for the same reason. IntersectionObserver is not
@@ -21367,7 +21649,7 @@ function _gbLoop(now) {
   /* Held by a foreground player: no frame at all, not an idle one. The drawer's
      reveal is the one reason to keep turning. _fgRelease() re-bases the pacers
      and restarts the loop. */
-  if (_fgActive && !_gbBigDevice) { _gbRaf = 0; return; }
+  if (_fgActive) { _gbRaf = 0; return; }
   _gbRaf = requestAnimationFrame(_gbLoop);
   _gbRefreshVisible(now);
   const idle = document.hidden || _tilesHeld();
@@ -21401,17 +21683,6 @@ function _gbLoop(now) {
     dev.blit();
     const wrap = dev.root.parentElement;
     if (wrap && !wrap.classList.contains('ready')) wrap.classList.add('ready');
-  }
-  // The reveal runs while the drawer is open, which is exactly when the tiles
-  // are paused -- so it is gated on document.hidden only.
-  if (_gbBigDevice && _gbBigDevice.root) {
-    if (document.hidden) { _gbBigDevice.pacer.last = now; }
-    else {
-      _gbBigDevice.step(now);
-      _gbBigDevice.blit();
-      const w = _gbBigDevice.root.parentElement;
-      if (w && !w.classList.contains('ready')) w.classList.add('ready');
-    }
   }
 }
 function _gbStartLoop() { if (!_gbRaf) _gbRaf = requestAnimationFrame(_gbLoop); }
@@ -21484,18 +21755,6 @@ function mountGbTilePreviews() {
       const dev = _gbTileDevices[id];
       if (dev) dev.teardown();
       delete _gbTileDevices[id];
-    });
-    /* The drawer's cached devices go with them. They are paused rather than
-       torn down between opens (see _gbDrawerDevices), which is what stops the
-       arena growing per open -- but they are still LIVE, and live.size must
-       reach ZERO for the core to reclaim the arena at all. Leaving them behind
-       when the catalogue leaves the screen would trade a per-open leak for a
-       permanent one. */
-    _gbStopBigPreview(); _nesStopBigPreview(); _atariStopBigPreview();
-    Object.keys(_gbDrawerDevices).forEach(function (id) {
-      const dev = _gbDrawerDevices[id];
-      if (dev) dev.teardown();
-      delete _gbDrawerDevices[id];
     });
     return;
   }
@@ -21690,220 +21949,6 @@ function _gbBuild(wraps) {
   }).catch(function () { /* silent -- the tiles keep the static console art */ });
 }
 
-// The drawer's big reveal gets its OWN device (like _pmBigInstance), always
-// running while mounted, torn down by hideDeviceStage().
-function _gbMountBigPreview(wrap, id) {
-  _gbStopBigPreview(); _nesStopBigPreview(); _atariStopBigPreview();
-  /* Re-opening a title MOVES its running device into the new wrapper, exactly
-     as the tile sweep does, so it resumes mid-game and costs no arena. */
-  const cached = _gbDrawerDevices[id];
-  if (cached && cached.root && cached.machine && cached.machine.alive) {
-    wrap.appendChild(cached.root);
-    cached.running = true;
-    _gbBigDevice = cached;
-    _gbAttachDrawerMatrix(cached);
-    _gbStartLoop();
-    return;
-  }
-  _gbLoadEmbed().then(function (GameBoyDevice) {
-    if (!document.body.contains(wrap)) {           // drawer closed before the core loaded
-      console.warn('[gb] drawer ' + id + ': wrapper detached before the core finished loading');
-      return;
-    }
-    const slot = id.slice(3);
-    return _gbFetchCart(slot).then(function (bytes) {
-      if (!document.body.contains(wrap)) {         // drawer closed while fetching
-        console.warn('[gb] drawer ' + id + ': wrapper detached while the cartridge was fetching');
-        return;
-      }
-      /* These three bails all used to be silent, which is why "it does not
-         boot" could not be told apart from "it cannot boot": the drawer showed
-         console art and a dead screen either way. Say which one it is. */
-      if (!bytes) { console.warn('[gb] drawer ' + id + ': no cartridge bytes'); return; }
-      const kind = _gbDeviceFor(id);
-      if (!kind) {             // cgb-only with no CGB boot program
-        console.warn('[gb] drawer ' + id + ': cgb-only and no CGB boot program is mounted');
-        return;
-      }
-      if (kind === 'cgb' && !_gbBiosCgb) {         // promised, but the bytes never arrived
-        console.warn('[gb] drawer ' + id + ': CGB boot program was promised by the carts index but never arrived');
-        return;
-      }
-      const dev = new GameBoyDevice(_gbHost, { label: slot,   /* default palette: see the tile sweep */
-                                               device: kind,
-                                               useBios: !!(kind === 'cgb' ? _gbBiosCgb : _gbBios) });
-      dev.mount(wrap);
-      if (!dev.setCart(bytes, { label: slot, useBios: !!_gbBios })) {
-        console.warn('[gb] drawer ' + id + ': setCart() refused ' + bytes.length + ' bytes for slot "' +
-                     slot + '" -- ' + (dev.error && (dev.error.message || dev.error)));
-        dev.teardown(); return;
-      }
-      _gbDrawerDevices[id] = dev;
-      _gbBigDevice = dev;
-      _gbAttachDrawerMatrix(dev);
-      _gbStartLoop();
-    });
-  }).catch(function (e) {
-    /* This used to be an empty catch, so ANY throw in the chain above --
-       notably PoolExhausted from the core's finite instance pool, which is
-       reached by opening drawers repeatedly -- produced console art with a
-       dead screen and nothing in the log. That is the shape of "it does not
-       boot": not a decision the code made, an exception it hid. */
-    console.warn('[gb] drawer failed to mount a device:', e && (e.stack || e.message || e));
-  });
-}
-/* MATRIX MODE IN THE DRAWER.
- *
- * The play window owns the setting and persists it (play/gameboy/matrix.js,
- * localStorage "gb.matrix"/"gb.matrixStrength"); the drawer READS it and lays
- * the same grid over its own canvas. Deliberately the DRAWER ONLY -- the
- * catalogue's grid tiles get none of this, so a tile is the same picture it has
- * always been (and a tile served from a published clip by gbvideo.js is not
- * touched by any of it at all).
- *
- * The overlay is a sibling canvas. It never draws on the device's canvas, so
- * the vendored gb-embed.js needs no change and nothing here can reach a
- * framebuffer. A ResizeObserver keeps it on the screen as the stage scales. */
-let _gbMatrixModPromise = null;
-function _gbMatrixModule() {
-  if (!_gbMatrixModPromise) _gbMatrixModPromise = import('./play/gameboy/matrix.js');
-  return _gbMatrixModPromise;
-}
-function _gbAttachDrawerMatrix(dev) {
-  if (!dev || !dev.root || !dev.canvas) return;
-  _gbMatrixModule().then(function (M) {
-    if (!dev.root || !dev.canvas || !dev.root.isConnected) return;
-    if (dev._matrix) { try { dev._matrix.destroy(); } catch (e) {} dev._matrix = null; }
-    dev._matrix = new M.MatrixOverlay(dev.canvas, dev.root, {
-      on: M.storedMatrixOn(), strength: M.storedMatrixStrength(),
-      palette: dev.palette, id: 'gb-drawer-matrix'
-    });
-    if (typeof ResizeObserver !== 'undefined' && !dev._matrixRO) {
-      dev._matrixRO = new ResizeObserver(function () { if (dev._matrix) dev._matrix.sync(); });
-      dev._matrixRO.observe(dev.canvas);
-    }
-  }).catch(function (e) { console.warn('[gb] Matrix Mode could not load:', e && (e.message || e)); });
-}
-/** Re-read the stored choice into whatever drawer device is on screen. */
-function _gbSyncDrawerMatrix() {
-  const dev = _gbBigDevice;
-  if (!dev || !dev._matrix) return;
-  _gbMatrixModule().then(function (M) {
-    if (!dev._matrix) return;
-    dev._matrix.strength = M.storedMatrixStrength();
-    dev._matrix.setOn(M.storedMatrixOn());
-  }).catch(function () {});
-}
-
-/* The drawer's devices, cached BY ID and paused rather than torn down -- the
- * same rule mountGbTilePreviews() applies to tiles.
- *   THE BUG THAT FORCED THIS IS FIXED IN THE CORE. Building a device per open
- * used to bump-allocate another cartridge's worth of a 16 MiB arena every
- * time, because reclaim required an empty host and the tiles were never not
- * running: five Game Boy Color opens (1-2 MB each) exhausted it, after which
- * setCart() refused every cartridge and the drawer showed console art with a
- * dead screen and no message. It looked per-title only because the GBC game files are
- * the big ones, so they were refused first while the small DMG ones kept
- * working. The core now has a buddy allocator with per-cartridge free, and the
- * host stages each game file once and reference counts it, so a drawer open over a
- * running tile allocates NOTHING -- it shares the tile's staged cartridge.
- *   The cache is kept because it is still the better behaviour: re-opening a
- * title resumes it mid-game rather than rebooting it. */
-const _gbDrawerDevices = {};
-function _gbStopBigPreview() {
-  if (!_gbBigDevice) return;
-  /* Paused and detached, NOT torn down: teardown() would drop the machine and
-     the next open would have to allocate the cartridge again. */
-  _gbBigDevice.stop();
-  _gbBigDevice.running = false;
-  if (_gbBigDevice.root && _gbBigDevice.root.parentNode) _gbBigDevice.root.remove();
-  _gbBigDevice = null;
-}
-
-// Game Boy branch of showDeviceStage(): the tilted DMG console with the game
-// running LIVE on its screen (the wrapper carries NO data-gb, so the tile sweep
-// skips it). Same slide-in + cursor tilt + specular sheen as the gnw/PM stages.
-function showGbDeviceStage(d, stage) {
-  const artSrc = imgSrc(d.img);
-  stage.innerHTML =
-    '<div class="device-card stage-card" data-series="' + d.series + '"' +
-      (d.system ? ' data-system="' + d.system + '"' : '') +
-      (d.art ? ' data-art="' + d.art + '"' : '') +
-    '><div class="img stage-img">' +
-      '<div class="gb-emu">' +
-        '<img class="gb-emu-art" src="' + artSrc.replace(/"/g, '&quot;') + '" alt="">' +
-      '</div>' +
-    '</div></div>';
-  stage.classList.remove('open');
-  void stage.offsetWidth;
-  stage.classList.add('open');
-  initStageTilt(stage.querySelector('.stage-card'));
-  const emuEl = stage.querySelector('.gb-emu');
-  if (emuEl) {
-    const sheen = document.createElement('div');
-    sheen.className = 'stage-sheen';
-    sheen.style.setProperty('--unit-mask', 'url("' + artSrc.replace(/"/g, '&quot;') + '")');
-    emuEl.appendChild(sheen);
-    /* Ask this artwork which side of its glass the game goes on, before the
-       core mounts -- the drawer is built here rather than by render(), so the
-       every-render sweep in _armTileArtwork() never sees it. */
-    _gbGlassSweep(emuEl);
-    _gbMountBigPreview(emuEl, d.id);
-  }
-}
-
-/* NES branch of showDeviceStage(): the tilted television with the game running
-   LIVE behind its glass. The wrapper carries NO data-nes, so the tile sweep
-   (mountNesTilePreviews) skips it and cannot count it against NES_MAX_LIVE --
-   the same exemption showGbDeviceStage relies on, and for the same reason: a
-   drawer that has to wait for the grid's cap to release a slot is a drawer that
-   opens onto a dead screen.
-     The stage is the WHOLE photograph, television and console and controllers
-   together, because that is what the drawer is showing off. Only the play view
-   crops to the tube. */
-function showNesDeviceStage(d, stage) {
-  const artSrc = imgSrc(stageArtKey(d.img));   // the full photograph (see STAGE_FULL_ART)
-  stage.innerHTML =
-    '<div class="device-card stage-card" data-series="' + d.series + '" data-system="nes" data-nes-console="' + (d.nesConsole || 'nes') + '">' +
-      '<div class="img stage-img">' +
-        '<div class="nes-emu nes-art-frame">' +
-          '<img class="nes-art" src="' + artSrc.replace(/"/g, '&quot;') + '" alt="">' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  stage.classList.remove('open');
-  void stage.offsetWidth;
-  stage.classList.add('open');
-  initStageTilt(stage.querySelector('.stage-card'));
-  const emuEl = stage.querySelector('.nes-emu');
-  if (!emuEl) return;
-  /* The specular sheen is masked to the artwork's own alpha, so over the glass
-     it lands at that layer's 34.5% and reads as one more reflection on the tube
-     rather than a wash across the whole card. */
-  const sheen = document.createElement('div');
-  sheen.className = 'stage-sheen';
-  sheen.style.setProperty('--unit-mask', 'url("' + artSrc.replace(/"/g, '&quot;') + '")');
-  emuEl.appendChild(sheen);
-  const f = document.createElement('iframe');
-  f.className = 'nes-screen';
-  f.setAttribute('aria-hidden', 'true');
-  f.setAttribute('tabindex', '-1');
-  f.setAttribute('scrolling', 'no');
-  f.src = _nesTileSrc(d.id);
-  f.addEventListener('load', () => emuEl.classList.add('ready'), { once: true });
-  emuEl.appendChild(f);
-  _nesStageFrame = f;
-}
-let _nesStageFrame = null;
-/* Torn down with the drawer rather than left running behind it. A Game Boy
-   stage is PAUSED instead, because its machine is staged in a shared host that
-   the next open re-enters cheaply; this one is a document, so the only way to
-   stop its core is to remove it, and leaving it would be a second NES running
-   for as long as the tab is open. */
-function _nesStopBigPreview() {
-  if (_nesStageFrame && _nesStageFrame.parentNode) _nesStageFrame.remove();
-  _nesStageFrame = null;
-}
 
 // TFT branch of showDeviceStage(): builds the big reveal with a live twin
 // canvas (NO data-unit, so mountTftTilePreviews()'s sweep skips it) and plays
@@ -22392,6 +22437,7 @@ async function showLightbox(keys, idx, meta) {
   lbApplyBox();
   openOverlay('lightbox-overlay');
   lbGenericLabel();   // the box is settled now, so the word lands on the picture's real size
+  if (window.cwLightboxLive) window.cwLightboxLive();
   // Both of these read the strip's real width, so they have to run after
   // lbApplyBox has settled it -- updateLightboxImage's own call above
   // measured the previous device's box and can be off.
@@ -22406,6 +22452,7 @@ addEventListener('resize', () => {
   if (!ov || !ov.classList.contains('open')) return;
   lbApplyBox();
   lbGenericLabel();
+  if (window.cwLightboxLive) window.cwLightboxLive();
   updateLightboxStripArrows();
   scrollLightboxThumbIntoView(true);
 });
@@ -22423,7 +22470,9 @@ function lbGenericLabel() {
   if (!wrap || !img) return;
   const m = lightboxState.meta && lightboxState.meta[lightboxState.idx];
   let host = wrap.querySelector(':scope > .lb-gl-host');
-  if (!m || typeof window.cwGenericLabel !== 'function' || !img.naturalWidth || img.src !== imgSrc(lightboxState.keys[lightboxState.idx])) {
+  /* only a generic box carries its type word (23 Nov 2026: "The console is not a box"): a picture's meta may be
+     the console's live recording ({ live }), which has no shelf and gets no word */
+  if (!m || !m.shelf || typeof window.cwGenericLabel !== 'function' || !img.naturalWidth || img.src !== imgSrc(lightboxState.keys[lightboxState.idx])) {
     if (host) host.remove();
     return;
   }
@@ -22457,7 +22506,7 @@ function renderLightboxStrip() {
   strip.scrollLeft = 0;
   // a generic box's thumbnail carries its type word too, whole (contained) like the drawer's
   if (meta && typeof window.cwGenericLabel === 'function') requestAnimationFrame(() => {
-    meta.forEach((m, i) => { const t = strip.children[i]; if (m && t && lightboxState.meta === meta) { try { window.cwGenericLabel(t, m.shelf, m.id, 0); } catch (_) {} } });
+    meta.forEach((m, i) => { const t = strip.children[i]; if (m && m.shelf && t && lightboxState.meta === meta) { try { window.cwGenericLabel(t, m.shelf, m.id, 0); } catch (_) {} } });
   });
 }
 
@@ -22534,6 +22583,7 @@ function updateLightboxImage() {
   $$('#lightbox-strip .lb-thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
   scrollLightboxThumbIntoView();
   lbGenericLabel();
+  if (window.cwLightboxLive) window.cwLightboxLive();   // the drawer's image 1, the console with its clip (drawer-unified.js, 21 Nov 2026)
 }
 
 // Footer email link — assembles the mailto: at click time so scrapers don't
@@ -22555,6 +22605,7 @@ function toggleLightboxZoom(event) {
   if (event) event.stopPropagation();
   document.getElementById('lightbox-overlay').classList.toggle('zoomed');
   lbGenericLabel();
+  if (window.cwLightboxLive) window.cwLightboxLive();
 }
 
 /* =====================================================================
@@ -22859,6 +22910,11 @@ PLAY_OVERLAY_IDS.forEach(id => { const el = document.getElementById(id); if (el)
 const _FG_IDS = PLAY_OVERLAY_IDS.concat(['video-player-overlay', 'device-overlay', 'rob-play-overlay']);
 function _fgCompute() {
   for (const id of _FG_IDS) { const el = document.getElementById(id); if (el && el.classList.contains('open')) return true; }
+  /* THE CHANGE LOG HOLDS THE WALL TOO (21 Nov 2026): it covers the wall and is long to scroll; clips and live tiles
+     painting under it took the time the browser needed to draw the page as it scrolled (boxes of the wall showed
+     through). emby.js's window (#video-about) with kind 'changelog', shown. */
+  const win = document.getElementById('video-about');
+  if (win && !win.hidden && win.dataset.kind === 'changelog') return true;
   return false;
 }
 /* A framed tile (NES, Atari, Tetris Jr.) is paused through its own page's
@@ -22956,7 +23012,10 @@ function _fgWatch(el) {
   _fgSync();
 }
 _FG_IDS.forEach(id => _fgWatch(document.getElementById(id)));
-new MutationObserver(() => { _fgWatch(document.getElementById('video-player-overlay')); _fgWatch(document.getElementById('rob-play-overlay')); })
+new MutationObserver(() => { _fgWatch(document.getElementById('video-player-overlay')); _fgWatch(document.getElementById('rob-play-overlay'));
+  /* The page window (emby.js, made on first use): shown or hidden, and which page it holds (the Change Log, above). */
+  const win = document.getElementById('video-about');
+  if (win && !win.__fgWatched) { win.__fgWatched = true; _fgMO.observe(win, { attributes: true, attributeFilter: ['hidden', 'data-kind'] }); _fgSync(); } })
   .observe(document.body, { childList: true });
 
 function _openPlayOverlayEl() {
@@ -23518,7 +23577,7 @@ function renderTimeline() {
       : "routeToMediaSeries('" + t.series + "')";
     // A row may name its own device picture (`ic`, 2026-10-18): Tetris Jr. and the
     // two colour units show their own unit, switched off, not the Game & Watch one.
-    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.2.2' : (iconSrc ? iconSrc(keys[0]) : '');
+    const src = t.ic ? 'images/consoles/' + t.ic + '.webp?v=2.3.0' : (iconSrc ? iconSrc(keys[0]) : '');
     // Decorative: the series name beside it already says which system it is.
     const ic = src ? `<img class="tl-ic" src="${src}" alt="" aria-hidden="true" width="40" height="40" loading="lazy" decoding="async" data-tl-sys="${keys[0]}">` : '';
     return `<div class="tl-item clickable" style="--c:${s.color}" onclick="${go}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${go}}">
@@ -24188,7 +24247,7 @@ window.openAtariPlay = function (deviceId, event) {
   _openPlayDeviceId = d.id;     // play-time tracking (cleared by closeOverlay)
   pauseCollectionTiles('play');
   const sub = document.getElementById('atari-play-sub');
-  if (sub) sub.textContent = t.label;
+  if (sub) { sub.textContent = t.label; if (t.preview) sub.insertAdjacentHTML('beforeend', window.CW_PREVIEW_TAG); }   // an evaluation preview (23 Nov 2026)
   const title = document.getElementById('atari-play-title');
   if (title) title.textContent = d.name;
   const frame = document.getElementById('atari-play-frame');
@@ -24659,8 +24718,6 @@ window.gbSetMatrix = function () {
   if (frame && frame.contentWindow) {
     frame.contentWindow.postMessage({ gbSetMatrix: { on: on, strength: strength } }, '*');
   }
-  // The drawer behind the window shares the setting, so it repaints with it.
-  _gbSyncDrawerMatrix();
 };
 // Manual Game Boy Color palette -> the play page, which holds the button
 // combination through the boot logo exactly as a thumb would.
@@ -25616,7 +25673,7 @@ function bootApp() {
      Built by WASM_Source/art-files/build.py (BUILD.md, "Device pictures as single files");
      ?v= is the index's own hash, and art-files/verify.sh fails if it is not. It must load
      before the script below, whose init() boots the page (imgSrc reads it at first use). -->
-<script src="images/art/art-index.js?v=2.2.2"></script>
+<script src="images/art/art-index.js?v=ca54207023"></script>
 <script>
 /* THE PICTURE ARCHIVES ARE RETIRED (2026-10-24).
    Until today eleven files (images_b64.json ... images_gbc_shells_b64.json, 59.9 MB on 23 Oct,
@@ -25809,46 +25866,50 @@ function _hideLoadingOverlay() {
      caching can serve a stale copy for up to Cache-Control's max-age after
      a deploy. -->
 <!-- Data sources switched off in Settings, kept set up (28 Oct): read by content_pack.js, cws.js and emby.js. -->
-<script src="source-switch.js?v=2.2.2"></script>
-<script src="firmware/site/sha.js?v=2.2.2"></script>
+<script src="source-switch.js?v=2.3.0"></script>
+<script src="firmware/site/sha.js?v=2.3.0"></script>
 <!-- The unsupported list (2026-10-05): hashes of games and firmware that are refused
      at load, with a reason each. Read by every play window, the tiles (variants.js),
      the Continue row and Settings; generated by tools/unsupported/build.mjs. -->
-<script src="firmware/site/unsupported.js?v=2.2.2"></script>
-<script src="firmware/site/content_pack.js?v=2.2.2"></script>
-<script src="firmware/site/cloud_storage.js?v=2.2.2"></script>
-<script src="keys-diagram.js?v=2.2.2"></script>
-<script src="play/gnw/gwc-core.js?v=2.2.2"></script>
-<script src="play/gnw/gwc-saves.js?v=2.2.2"></script>
-<script src="play/play-pill.js?v=2.2.2"></script>
-<script src="play/gnw/gnw-host.js?v=2.2.2"></script>
+<script src="firmware/site/unsupported.js?v=2.3.0"></script>
+<script src="firmware/site/content_pack.js?v=2.3.0"></script>
+<script src="firmware/site/cloud_storage.js?v=2.3.0"></script>
+<script src="keys-diagram.js?v=2.3.0"></script>
+<script src="play/gnw/gwc-core.js?v=2.3.0"></script>
+<script src="play/gnw/gwc-saves.js?v=2.3.0"></script>
+<script src="play/play-pill.js?v=2.3.0"></script>
+<script src="play/gnw/gnw-host.js?v=2.3.0"></script>
 <!-- Subtitles: the player's own subtitle engine (subs.js) loads before emby.js so the
      Settings panel emby.js draws at load can include its section. subsync.js is
      lazy-loaded by subs.js on the first Auto-sync. -->
-<script src="subs.js?v=2.2.2"></script>
+<script src="subs.js?v=2.3.0"></script>
 <!-- Server conversion (Emby A): Emby's transcoder for files the browser can't play, picture
      subtitles burned in, and /Sessions/Playing reports. After subs.js (it registers the
      picture-subtitle handler there), before emby.js (its Settings section draws at load).
      Loads hls.js from vendor/hls.js-1.6.13/ only when a conversion actually starts. -->
-<script src="embytranscode.js?v=2.2.2"></script>
+<script src="embytranscode.js?v=2.3.0"></script>
 <!-- Player add-ons (Emby B): seek bar with preview thumbnails and chapters, and Up Next.
      Before emby.js so its Settings panel can include the Up Next card at load. -->
-<script src="embytrick.js?v=2.2.2"></script>
-<script src="embyupnext.js?v=2.2.2"></script>
-<script src="embytitle.js?v=2.2.2"></script>
+<script src="embytrick.js?v=2.3.0"></script>
+<script src="embyupnext.js?v=2.3.0"></script>
+<script src="embytitle.js?v=2.3.0"></script>
 <!-- variants.js: one tile per game, variants grouped by file hash (firmware/variants/). Before emby.js, which collapses its pools through it. -->
-<script src="variants.js?v=2.2.2"></script>
+<script src="variants.js?v=2.3.0-ddvar1"></script>
 <!-- drawer-unified.js: ONE game drawer for every system, the default since 2026-10-14; ?drawer=default (or old) brings back the old drawers (docs/UNIFIED-BUILD-PLAN.md phase 7). Before keys.js, so its B-in-a-version-submenu key comes first. -->
-<script src="emulation-test-carts.js?v=2.2.2"></script>
-<script src="drawer-unified.js?v=2.2.2-preload"></script>
-<script src="widgets-extra.js?v=2.2.2"></script>
-<script src="emby.js?v=2.2.2-welcomenav4"></script>
-<script src="features.js?v=2.2.2-recoverhash"></script>
-<script src="checked-rebuilding.js?v=2.2.2-atari9"></script>
+<script src="emulation-test-carts.js?v=2.3.0"></script>
+<!-- case3d.js (21 Nov 2026): the game's box or the film's case in 3D beside a drawer; it loads case3d-gl.mjs and three.js only when a case is about to show on a wide window. -->
+<script src="case3d.js?v=2.3.0-boxsite4"></script>
+<script src="drawer-unified.js?v=2.3.0-ddart2"></script>
+<script src="widgets-extra.js?v=2.3.0-prepush1"></script>
+<script src="emby.js?v=2.3.0-fdsicon"></script>
+<script src="features.js?v=2.3.0-prepush4"></script>
+<script src="checked-rebuilding.js?v=2.3.0-crsnes4"></script>
 <!-- R.O.B.: the Play Time tile, his drawer and window (rob-shelf.js, 2026-10-21); his Systems menu entry is emby.js ROB_SYSTEM (22 Oct). -->
-<script src="rob-shelf.js?v=2.2.2"></script>
+<script src="rob-shelf.js?v=2.3.0"></script>
 <!-- The compatibility list window (compat.js, 2026-10-21): opened by the toolbar button left of Timeline. Before keys.js and nav.js, so its row keys come first. -->
-<script src="compat.js?v=2.2.2-welcomenav"></script>
+<script src="compat.js?v=2.3.0-noclip1"></script>
+<!-- The Change Log window (changelog.js, 21 Nov 2026): opened from the Info menu, under Compatibility. It loads changelog.css itself. -->
+<script src="changelog.js?v=2.3.0-prepush1"></script>
 <!-- In-browser Game Boy recorder for the Video page. TURNED OFF 2026-09-24
      (GBREC.ENABLED = false): clips are being published for the whole
      library, so the wall plays those and boots the real machine for titles that
@@ -25860,7 +25921,7 @@ function _hideLoadingOverlay() {
      run before this file simply reads no GBREC and builds `data-gb` tiles,
      which is today's behaviour anyway — so re-enabling the recorder takes a
      re-render (any route change) or a reload, as gbrec.js's setEnabled says. -->
-<script src="gbrec.js?v=2.2.2"></script>
+<script src="gbrec.js?v=2.3.0"></script>
 <!-- Published Game Boy clips, served from R2 and keyed by cartridge SHA-1. It
      owns `.gb-emu[data-gb]`, which since 2026-09-24 means the MEDIA WALL as
      well as the catalogue grids: a claimed tile never builds a core at all (see
@@ -25868,31 +25929,38 @@ function _hideLoadingOverlay() {
      gbrec.js above owns `#video-grid .gb-emu[data-gbrec]` and is turned off, so
      that selector matches nothing. Same load position and for the same reasons
      — after emby.js, after the inline script. -->
-<script src="gbvideo.js?v=2.2.2"></script>
+<script src="gbvideo.js?v=2.3.0-boxsite"></script>
 <!-- Recorded NES / Famicom / FDS tiles (`.nes-emu[data-nes]`), the NES
      counterpart of gbvideo.js. OFF until its LIST_URL names a published clip
      list (NES_Capture tools/clip_list.mjs); until then it claims nothing and
      every NES tile is live or a photograph exactly as before. Always muted. -->
-<script src="nesvideo.js?v=2.2.2-clipfix"></script>
+<script src="nesvideo.js?v=2.3.0"></script>
 <!-- Recorded Atari 2600 / 5200 / 7800 / Lynx tiles (`.atari-emu[data-atari]`), the
      Atari counterpart of nesvideo.js: one R2 bucket per machine, `<id>.webm`, no
      list; a 404 hands the tile back to the live sweep. Always muted. -->
-<script src="atarivideo.js?v=2.2.2"></script>
+<script src="atarivideo.js?v=2.3.0-prepush1"></script>
 <!-- The Media page's Continue row: Emby resume + Up Next + the games closed here,
      one save per game in this browser's IndexedDB. After emby.js (it reads window.Emby)
      and after the inline script (it wraps closePlayModal / closePmPlay and is called
      from closeOverlay). Silent: its cards are still pictures. -->
-<script src="play/host/save-purge.js?v=2.2.2"></script>
-<script src="continuerow.js?v=2.2.2"></script>
+<script src="play/host/save-purge.js?v=2.3.0"></script>
+<script src="continuerow.js?v=2.3.0-tracker6"></script>
+<!-- My games, the private game tracker (21 Nov 2026): the browser copy and its sync with the vault, the drawer section,
+     the Settings card, the wall marks, owned and wishlist tiles, filters, sorts and export. After continuerow.js
+     (its play record) and emby.js. Silent. -->
+<script src="mygames.js?v=2.3.0-snessite"></script>
+<!-- RetroAchievements, read only (21 Nov 2026): the Achievements tile's panel in Settings, Media and content (the key
+     stays in this browser), and the drawer's Achievements section. Before settings-sources.js. Silent. -->
+<script src="retroachievements.js?v=2.3.0-prepush1"></script>
 <!-- The Control Bar's host side (play/shared/host-bridge.js, docs/UNIFIED-PLAY-INTERFACE.md):
      the ?ui=unified flag, the title bar with only the title and x (A14), Last closed,
      the Variant item, full screen (A13). After continuerow.js and variants.js. Silent. -->
-<script src="play/shared/host-bridge.js?v=2.2.2-audioservo"></script>
+<script src="play/shared/host-bridge.js?v=2.3.0-sufamisite1"></script>
 <!-- The one game-file relay for the play host (play/host/site-relay.js, 2026-10-14): {cwNeed} from a host frame, answered from the content pack, the site files, then a game server. -->
-<script src="play/host/site-relay.js?v=2.2.2"></script>
+<script src="play/host/site-relay.js?v=2.3.0-ddcart1"></script>
 <!-- Settings > Play a file: a game file from this device, played from memory (28 Oct). -->
-<script src="loadbar.js?v=2.2.2-slowserver"></script>
-<script src="play-file.js?v=2.2.2"></script>
+<script src="loadbar.js?v=2.3.0-n64site"></script>
+<script src="play-file.js?v=2.3.0-n64push1"></script>
 <!-- Keyboard first, phase 1 (docs/tv-controller-support.md): one Back, focus into and
      out of every overlay, the pause menu in play windows, the Play key, the player's
      keys and Media Session, Settings -> Display -> TV mode. After emby.js. -->
@@ -25900,52 +25968,52 @@ function _hideLoadingOverlay() {
      that keys.js, nav.js and shortcuts.js dispatch through. Before keys.js. -->
 <!-- The System Switcher (30 Oct 2026): the carousel panel for LB / RB and [ ] , . over the wall.
      Before actions.js and keys.js: its keys are caught first, only while it is open. -->
-<script src="system-switcher.js?v=2.2.2"></script>
-<script src="actions.js?v=2.2.2"></script>
-<script src="keys.js?v=2.2.2"></script>
+<script src="system-switcher.js?v=2.3.0"></script>
+<script src="actions.js?v=2.3.0"></script>
+<script src="keys.js?v=2.3.0"></script>
 <!-- Keyboard first, phase 2 (docs/tv-controller-support.md): arrow keys everywhere -- zones,
      nearest-by-position movement, one Tab stop per row, Settings as a tablist; the TV tile
      lift. After keys.js. -->
-<script src="nav.js?v=2.2.2-welcome7"></script>
+<script src="nav.js?v=2.3.0-fixround"></script>
 <!-- Keyboard first, phase 3: quick jump (/ or Ctrl+K), the ? key list, g-then-letter jumps,
      focus mode, [ and ] (also , and .) through libraries and systems. After nav.js. Silent. -->
-<script src="shortcuts.js?v=2.2.2-filterbuild"></script>
+<script src="shortcuts.js?v=2.3.0-snessite"></script>
 <!-- Keyboard first, phase 4: gamepads site-wide (pad buttons are keys of registry actions) and TV
      remote keys; play/play-pad.js is the play windows' pad layer (in-page G&W and Pokemon mini). -->
-<script src="play/play-pad.js?v=2.2.2"></script>
-<script src="gamepad.js?v=2.2.2-filterbuild"></script>
+<script src="play/play-pad.js?v=2.3.0-snessite"></script>
+<script src="gamepad.js?v=2.3.0"></script>
 <!-- Keyboard first, phase 5: Settings -> Keyboard & controllers -- rebind the site's keys and pad
      buttons and each system's game controls, saved per viewer (actions.js applies the saved keys
      as it loads). After gamepad.js. Silent. -->
-<script src="keybind.js?v=2.2.2"></script>
+<script src="keybind.js?v=2.3.0-snessite"></script>
 <!-- Settings, reorganised into four pages and a phone sheet (docs/SETTINGS-REDESIGN.md).
      After keybind.js: it gathers the panels the other files mount. -->
-<script src="settings-ui.js?v=2.2.2"></script>
+<script src="settings-ui.js?v=2.3.0"></script>
 <!-- Settings > Media and content: a tile per source (media server, game server, content pack)
      and one shared set-up / change panel (2026-10-24; docs/SETTINGS-REDESIGN.md 9). -->
-<script src="settings-sources.js?v=2.2.2"></script>
-<script src="settings-config.js?v=2.2.2-filterbuild"></script>
+<script src="settings-sources.js?v=2.3.0-raphasea"></script>
+<script src="settings-config.js?v=2.3.0-rawidget"></script>
 <!-- Settings > Look and feel > Home screen: phones only (2026-10-17). -->
-<script src="install-app.js?v=2.2.2"></script>
-<script src="notify.js?v=2.2.2"></script>
+<script src="install-app.js?v=2.3.0"></script>
+<script src="notify.js?v=2.3.0"></script>
 <!-- Home: the 11 emulators, chip by chip (2026-10-18). -->
-<script src="emulators-table.js?v=2.2.2-gbsweep-atarifw-gbmbc30"></script>
-<script src="docterms.js?v=2.2.2"></script>
+<script src="emulators-table.js?v=2.3.0-emucount2-dd1"></script>
+<script src="docterms.js?v=2.3.0"></script>
 <!-- The Control Bar in the site's own document (2026-10-11), for the Pokemon mini window,
      which plays in this page rather than in a frame: the on-screen buttons, the bar, and
      the Pokemon mini's adapter (docs/UNIFIED-PLAY-INTERFACE.md). After keys.js, shortcuts.js
      and play-pad.js, so their Back, help and pad listeners keep their order. ?ui=legacy
      keeps the old window. Silent. -->
-<script src="play/shared/overlay.js?v=2.2.2"></script>
-<script src="play/shared/control-bar.js?v=2.2.2"></script>
+<script src="play/shared/overlay.js?v=2.3.0-overlay"></script>
+<script src="play/shared/control-bar.js?v=2.3.0-overlay"></script>
 <!-- CrystalVault Server client: discovery, pairing, PIN, merged library
      and verified downloads from the player's own servers. After the inline
      script (it wraps logoutVault/importVaultCode/rotateVaultCode and reads
      vaultCode) and after content_pack.js (identify()). -->
-<script src="cws.js?v=2.2.2-recoverhash"></script>
+<script src="cws.js?v=2.3.0-ddart1"></script>
 <!-- Pre-load on device (18 Nov 2026): up to 20 games kept in this browser, used before any download. After cws.js. -->
-<script src="preload.js?v=2.2.2-preload"></script>
-<script src="sgb-shelf.js?v=2.2.2"></script>
+<script src="preload.js?v=2.3.0-snessite"></script>
+<script src="sgb-shelf.js?v=2.3.0-artall2"></script>
 <script>
 /* Settings → Content: open/clear a content pack (.zip). Talks to window.__GNW_PACK
    (firmware/site/content_pack.js); the emulators pick it up on the next reload. */
@@ -26163,12 +26231,23 @@ function _hideLoadingOverlay() {
 </script>
 <!-- Same manual-cache-buster convention as gnw.js above -- bump whenever
      manual_booklet.js changes. -->
-<script src="manual_booklet.js?v=2.2.2"></script>
+<script src="manual_booklet.js?v=2.3.0-ddmeta1"></script>
 <!-- The recording director (director.js, not part of the public copy): fetched only with ?director=1
      in the address or the local setting cw.director=1; a normal visit never loads it. -->
-<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.2.2-filterbuild'; document.body.appendChild(s); } catch (e) {} })();</script>
+<script>(function () { try { var u = location.search, nv = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; if (nv) u += ' ' + nv.name; if (!/[?&]director=1(&|#|\s|$)/.test(u) && localStorage.getItem('cw.director') !== '1') return; var s = document.createElement('script'); s.src = 'director.js?v=2.3.0'; document.body.appendChild(s); } catch (e) {} })();</script>
 <!-- The offline page for the installed app (sw.js, offline.html): registered once the page has loaded, never
      on file:, silent if the browser refuses. sw.js handles top-level page loads only. -->
-<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.2.2', { scope: './' }).catch(function () {}); } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
+<script>(function () { try { if (location.protocol === 'file:' || !('serviceWorker' in navigator)) return; var go = function () { try { navigator.serviceWorker.register('sw.js?v=2.3.0', { scope: './' }).then(function () { return navigator.serviceWorker.ready; }).then(once).catch(function () {}); } catch (e) {} };
+  /* ONE RELOAD ON THE FIRST TAKE-OVER (22 Nov 2026, the Nintendo 64's drawing thread): a page the worker does not yet control
+     is not isolated where the host sends no headers itself (this site's own server does: then crossOriginIsolated is
+     already true and nothing happens). Once per tab (sessionStorage), and never while a play window is open: then it waits
+     until the window closes. */
+  var once = function () { try {
+    if (self.crossOriginIsolated || navigator.serviceWorker.controller || sessionStorage.getItem('cw.sw.reloaded')) return;
+    var busy = function () { return !!document.querySelector('[id$="-play-overlay"].open, #play-overlay.open'); };
+    var now = function () { try { sessionStorage.setItem('cw.sw.reloaded', '1'); } catch (e) { return; } location.reload(); };
+    if (!busy()) return now();
+    var t = setInterval(function () { if (!busy()) { clearInterval(t); now(); } }, 2000);
+  } catch (e) {} }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true }); } catch (e) {} })();</script>
 </body>
 </html>

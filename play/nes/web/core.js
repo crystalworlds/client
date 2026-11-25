@@ -52,7 +52,7 @@ export const CIRAM_NAME = ['PPU-A11 (horizontal)', 'PPU-A10 (vertical)',
 /* THE SECOND CONTAINER.  See web/unif_boards.js for why it exists and for the
  * rule about what may be in its table. */
 import { UNIF_BOARDS, UNIF_UNSERVED, MIRR_TO_CIRAM, resolveBoard } from './unif_boards.js';
-import { hdrLookup, hdrDecide, crc32, HDR_R18, HDR_DISPATCHED } from './hdr_table.js?v=2.2.2-neskaraoke';
+import { hdrLookup, hdrDecide, crc32, HDR_R18, HDR_DISPATCHED } from './hdr_table.js?v=2.3.0';
 import { SAVE_INIT, SAVE_INIT_DEFAULT, SAVE_INIT_BOARDS, saveInitLookup } from './save_init_table.js';
 /* The header-table switches (noRamRow
  * mirrorRow), re-exported so a page can turn each off. */

@@ -68,50 +68,50 @@
      "id": "dpad",
      "label": "D-pad",
      "shape": "dpad",
-     "x": 0.2396,
-     "y": 0.6221,
-     "w": 0.2337,
-     "h": 0.1385
+     "x": 0.2456,
+     "y": 0.6128,
+     "w": 0.2292,
+     "h": 0.1397
     },
     {
      "id": "b",
      "label": "B",
      "input": "KeyZ",
      "shape": "circle",
-     "x": 0.6604,
-     "y": 0.6379,
-     "w": 0.1307,
-     "h": 0.0775
+     "x": 0.6583,
+     "y": 0.6288,
+     "w": 0.1282,
+     "h": 0.0782
     },
     {
      "id": "a",
      "label": "A",
      "input": "KeyX",
      "shape": "circle",
-     "x": 0.8238,
-     "y": 0.6068,
-     "w": 0.1307,
-     "h": 0.0775
+     "x": 0.8185,
+     "y": 0.5974,
+     "w": 0.1282,
+     "h": 0.0782
     },
     {
      "id": "select",
      "label": "SELECT",
      "input": "ShiftRight",
      "shape": "pill",
-     "x": 0.4347,
-     "y": 0.7758,
-     "w": 0.095,
-     "h": 0.0282
+     "x": 0.4369,
+     "y": 0.7679,
+     "w": 0.0932,
+     "h": 0.0285
     },
     {
      "id": "start",
      "label": "START",
      "input": "Enter",
      "shape": "pill",
-     "x": 0.5693,
-     "y": 0.7758,
-     "w": 0.095,
-     "h": 0.0282
+     "x": 0.5689,
+     "y": 0.7679,
+     "w": 0.0932,
+     "h": 0.0285
     }
    ],
    "cgbAtomic": [
@@ -221,50 +221,50 @@
      "id": "dpad",
      "label": "D-pad",
      "shape": "dpad",
-     "x": 0.1757,
-     "y": 0.3694,
-     "w": 0.1158,
-     "h": 0.1959
+     "x": 0.1704,
+     "y": 0.3368,
+     "w": 0.1203,
+     "h": 0.1897
     },
     {
      "id": "b",
      "label": "B",
      "input": "KeyZ",
      "shape": "circle",
-     "x": 0.7628,
-     "y": 0.3952,
-     "w": 0.0655,
-     "h": 0.1117
+     "x": 0.7805,
+     "y": 0.3618,
+     "w": 0.0681,
+     "h": 0.1081
     },
     {
      "id": "a",
      "label": "A",
      "input": "KeyX",
      "shape": "circle",
-     "x": 0.8399,
-     "y": 0.3488,
-     "w": 0.0655,
-     "h": 0.1117
+     "x": 0.8606,
+     "y": 0.3169,
+     "w": 0.0681,
+     "h": 0.1081
     },
     {
      "id": "select",
      "label": "SELECT",
      "input": "ShiftRight",
      "shape": "circle",
-     "x": 0.2346,
-     "y": 0.6546,
-     "w": 0.0363,
-     "h": 0.0619
+     "x": 0.2316,
+     "y": 0.6129,
+     "w": 0.0377,
+     "h": 0.0599
     },
     {
      "id": "start",
      "label": "START",
      "input": "Enter",
      "shape": "circle",
-     "x": 0.2346,
-     "y": 0.5739,
-     "w": 0.0363,
-     "h": 0.0619
+     "x": 0.2316,
+     "y": 0.5348,
+     "w": 0.0377,
+     "h": 0.0599
     }
    ]
   }
@@ -394,12 +394,12 @@
  "provenance": [
   {
    "what": "art buttons (the whole console, shown on a tall narrow screen, 2026-10-17)",
-   "source": "measured 2026-10-17 by colour masks on the site's own art (play/cores/gb/art.mjs BEZEL images), checked on 3-4x gridded crops: GameBoyConsole.png 496x843: d-pad cross 58..170 x 479..591, B cap centre (340.5,547.5) dia 54, A (415,513.5) dia 53, SELECT pill centre (186,647), START (263,646.5), slant -25deg (the float pad's measured slant); GameBoyColorConsole.png and the four colour shells (all 505x852, identical to 2 px): d-pad 66..176 x 475..585, B (333.5,543.5) dia 52, A (416,517) dia 52, SELECT (219.5,661) 37x12, START (287.5,661); GameBoyColorPokemonConsole.svg rendered at 722x1250: d-pad 70..234 x 743..911, B (484.5,849.5) dia 81, A (614.5,807) dia 82, SELECT (304,1036.5) 56x19, START (411,1037.5) 58x23. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons about 1.25x, pills about 1.2x long and 1.4x to 2x thick). Used only while the whole console is shown (setArtView); the cropped band keeps the float pad",
+   "source": "Moved 2026-11-25 (variant cgb, and with it the Berry, Grape, Kiwi and Teal shells recoloured from it) onto the COLORFUL kit picture GameBoyColorConsole.png 1030x1689: the same photograph, registered by edge correlation (scale 2.0000, offset +11,-25 px); the boxes were carried over by that map and checked by eye on all five. The Game Boy (dmg) picture is the old one at exactly twice the size and offset 0,0, so its fractions stand; Atomic Purple and the Pokemon edition are unchanged. The numbers below are the 505x852 measurement: measured 2026-10-17 by colour masks on the site's own art (play/cores/gb/art.mjs BEZEL images), checked on 3-4x gridded crops: GameBoyConsole.png 496x843: d-pad cross 58..170 x 479..591, B cap centre (340.5,547.5) dia 54, A (415,513.5) dia 53, SELECT pill centre (186,647), START (263,646.5), slant -25deg (the float pad's measured slant); GameBoyColorConsole.png and the four colour shells (all 505x852, identical to 2 px): d-pad 66..176 x 475..585, B (333.5,543.5) dia 52, A (416,517) dia 52, SELECT (219.5,661) 37x12, START (287.5,661); GameBoyColorPokemonConsole.svg rendered at 722x1250: d-pad 70..234 x 743..911, B (484.5,849.5) dia 81, A (614.5,807) dia 82, SELECT (304,1036.5) 56x19, START (411,1037.5) 58x23. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons about 1.25x, pills about 1.2x long and 1.4x to 2x thick). Used only while the whole console is shown (setArtView); the cropped band keeps the float pad",
    "licence": "site-owned measurement of the site's own artwork"
   },
   {
    "what": "art buttons on the Game Boy Advance (variant agb, the whole device on a wide stage, 2026-11-15)",
-   "source": "measured 2026-11-15 by colour masks on the site's own art (images/art/gba/GameBoyAdvanceConsole.webp, 993x582, built by WASM_Source/gba-shells), checked on 3x and 4x gridded crops: d-pad cross 121..228 x 162..268, B cap centre (757.5,230) dia 52, A (834,203) dia 53, START button centre (233,334) dia 24, SELECT (233,381) dia 24. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons 1.25x, Start and Select 1.5x as they are small). Used only while the whole device is shown; a portrait stage crops it to its screen and keeps the float pad",
+   "source": "Moved 2026-11-25 onto the COLORFUL kit picture GameBoyAdvanceConsole.webp 1147x721: the same photograph, registered by edge correlation (scale 1.2004 x 1.1993, offset -14,-15 px); the boxes were carried over by that map and checked by eye. The numbers below are the 993x582 measurement: measured 2026-11-15 by colour masks on the site's own art (images/art/gba/GameBoyAdvanceConsole.webp, 993x582, built by WASM_Source/gba-shells), checked on 3x and 4x gridded crops: d-pad cross 121..228 x 162..268, B cap centre (757.5,230) dia 52, A (834,203) dia 53, START button centre (233,334) dia 24, SELECT (233,381) dia 24. Hit areas are the printed button plus a thumb's margin (d-pad about 4 px a side, face buttons 1.25x, Start and Select 1.5x as they are small). Used only while the whole device is shown; a portrait stage crops it to its screen and keeps the float pad",
    "licence": "site-owned measurement of the site's own artwork"
   },
   {

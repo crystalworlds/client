@@ -649,6 +649,8 @@
      its own, so nothing that looks after Continue touches it: not Remove, not the 40-game cap, not
      the orphan sweep, not deleting saves. NOTHING PRUNES IT, and there is no way to clear it.
        { sid, id, sha256, title, sys, version, machine, started, played, v: 1 }
+     Since 21 Nov 2026 (My games, mygames.js) also vt (the vault tag, never the vault code) and fa (the game's
+     anchor), with v: 2.
      played is ms of real play: the Continue clock's time, less anything after a cheat came on (play
      time's rule of 26 Oct, index.html). Device, address, inputs, cheats and game bytes are never in it.
      THE RECORD IS WRITTEN WHILE THE GAME IS OPEN: at 30 s, each minute after, on a hidden page and
@@ -717,19 +719,41 @@
   }
   /* What the window holds, read once, as soon as its game is running: the frame is the right one
      then and may be gone by the time the session ends. Cheap, and no save routine. */
+  /* THE MACHINE IT REALLY RAN ON (21 Nov 2026): the model the play window chose (its Machine menu, or the cartridge's own
+     default), not the cartridge's family. The Game Boy core says which model it built (agb, mgb, sgb...); the Sega core's
+     model is the console itself. Read as the game runs and again each time the record is written, so a machine changed
+     in the play window during the sitting is the one written. Other consoles have one machine each (systemLabel). */
+  const GB_MACHINE = { gb: 'Game Boy', dmg0: 'Game Boy', mgb: 'Game Boy Pocket', cgb0: 'Game Boy Color', cgba: 'Game Boy Color', cgbb: 'Game Boy Color',
+    cgbc: 'Game Boy Color', cgbd: 'Game Boy Color', gbc: 'Game Boy Color', agb: 'Game Boy Advance', ags: 'Game Boy Advance SP',
+    sgb: 'Super Game Boy', sgbpal: 'Super Game Boy', sgb2: 'Super Game Boy 2' };
+  const SEGA_MACHINE = { 'sms1-ntsc': 'Master System', 'sms1-pal': 'Master System', 'sms2-ntsc': 'Master System II', 'sms2-pal': 'Master System II',
+    mark3: 'Mark III', 'mark3-fm': 'Mark III with FM Sound Unit', smsj: 'Japanese Master System', gg: 'Game Gear', 'gg-1asic': 'Game Gear',
+    'gg-va0': 'Game Gear', 'gg-jp': 'Japanese Game Gear', sg1000: 'SG-1000', 'sg1000-2': 'SG-1000 II', 'sg1000-2b': 'SG-1000 II' };
+  function machineNow(overlayId, H) {
+    try {
+      const sys = SYSTEMS[overlayId].id;
+      if (sys === 'gb') {
+        const x = typeof H.coreExtras === 'function' ? H.coreExtras() : null;
+        if (x && GB_MACHINE[x.machine]) return GB_MACHINE[x.machine];
+        if (H.model) return H.model === 'cgb' ? 'Game Boy Color' : 'Game Boy';
+      }
+      if (sys === 'atari' && H.model && SEGA_MACHINE[H.model]) return SEGA_MACHINE[H.model];
+    } catch (e) {}
+    return null;
+  }
   function historyLook(overlayId, s) {
     try {
       const win = frameWin(SYSTEMS[overlayId].frame), H = win && win.__cwHost;
       if (!H || H.state !== 'running') return;   // a page still loading counts as open, before it has a game
       s.looked = true;
       if (typeof H.sha256 === 'string') s.sha256 = H.sha256;
-      // The machine it really ran on: a Game Boy game can play on the Color.
-      if (SYSTEMS[overlayId].id === 'gb' && H.model) s.machine = H.model === 'cgb' ? 'Game Boy Color' : 'Game Boy';
+      const mm = machineNow(overlayId, H); if (mm) s.machine = mm;
     } catch (e) {}
   }
   function historySave(overlayId, s) {
     try {
       if (!s || s.real < MIN_PLAY_MS || s.real === s.kept) return;
+      try { const win = frameWin(SYSTEMS[overlayId].frame), H = win && win.__cwHost; if (H && H.state === 'running') { const mm = machineNow(overlayId, H); if (mm) s.machine = mm; } } catch (e) {}
       // A file opened from this computer has no id here, as with Continue and play time (play-file.js).
       const id = overlayId === 'play-overlay' && typeof deviceIdForGameKey === 'function' ? deviceIdForGameKey(s.dev) : s.dev;
       if (!id) return;
@@ -737,8 +761,13 @@
       let version = null;
       try { version = (window.Variants && window.Variants.cardLabel(id)) || null; } catch (e) {}
       s.kept = s.real;
-      historyKeep({ sid: s.sid, id, sha256: s.sha256 || null, title: (d && d.name) || String(id), sys: sysId, version,
-        machine: s.machine || systemLabel({ sys: sysId }, d), started: s.started, played: Math.round(s.real), v: 1 });
+      let rec = { sid: s.sid, id, sha256: s.sha256 || null, title: (d && d.name) || String(id), sys: sysId, version,
+        machine: s.machine || systemLabel({ sys: sysId }, d), started: s.started, played: Math.round(s.real), v: 1 };
+      /* MY GAMES (21 Nov 2026, mygames.js): the record carries the vault tag (vt, never the vault code) and
+         the game's anchor (fa), so it is sent to its own vault only and found under its game; v becomes 2. */
+      try { if (window.CwMyGames) rec = window.CwMyGames.stamp(rec); } catch (e) {}
+      historyKeep(rec);
+      try { if (window.CwMyGames) window.CwMyGames.noteSession(rec); } catch (e) {}
     } catch (e) {}
   }
   function historySaveOpen() {

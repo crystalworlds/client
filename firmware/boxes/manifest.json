@@ -1,0 +1,452 @@
+{
+ "about": "The 3D case templates the drawer paints each cover onto (case3d.js and case3d-gl.mjs), one per box shape, sizes measured from real boxes in millimetres, wide x tall x deep. Axes in the files: metres, origin at the centre, +Y up, front facing +Z, spine on -X.",
+ "written": "2026-11-21",
+ "templates": {
+  "nes": {
+   "file": "box-nes.glb",
+   "label": "NES box (USA and Europe)",
+   "kind": "card",
+   "size_mm": [
+    127,
+    178,
+    24
+   ],
+   "front_art_mm": [
+    126.707,
+    177.707
+   ],
+   "spine_art_mm": [
+    23.707,
+    177.707
+   ],
+   "triangles": 132,
+   "bytes": 9200,
+   "sha256": "ebd0da3a99f557e816f597f6bb814273d5c47b1f88b2687beb9dbfa80fdf0890"
+  },
+  "famicom": {
+   "file": "box-famicom.glb",
+   "label": "Famicom box, medium (the default)",
+   "kind": "card",
+   "size_mm": [
+    88,
+    129,
+    22
+   ],
+   "front_art_mm": [
+    87.707,
+    128.707
+   ],
+   "spine_art_mm": [
+    21.707,
+    128.707
+   ],
+   "triangles": 132,
+   "bytes": 9212,
+   "sha256": "c1f4f318c954ba803e7c7d62572ba665b2d65e0c4af7a0015801bacd79723163"
+  },
+  "fds": {
+   "file": "box-fds.glb",
+   "label": "Famicom Disk System soft plastic case",
+   "kind": "case",
+   "size_mm": [
+    91,
+    99,
+    16.5
+   ],
+   "front_art_mm": [
+    88,
+    96
+   ],
+   "spine_art_mm": [
+    13.5,
+    96
+   ],
+   "triangles": 760,
+   "bytes": 28860,
+   "sha256": "aac5243e67dea5c5795ca4cc2b153b0de2c48f3761a03d613b2d42e7fad78f8f"
+  },
+  "gb-west": {
+   "file": "box-gb-west.glb",
+   "label": "Game Boy and Game Boy Color box (USA and Europe), also the Super Game Boy shelf",
+   "kind": "card",
+   "size_mm": [
+    125,
+    125,
+    23
+   ],
+   "front_art_mm": [
+    124.707,
+    124.707
+   ],
+   "spine_art_mm": [
+    22.707,
+    124.707
+   ],
+   "triangles": 132,
+   "bytes": 9168,
+   "sha256": "77fcb7f951fcd0be93dcd141568c9745ec816f64204ae1b145e7afabca860c84"
+  },
+  "gb-japan": {
+   "file": "box-gb-japan.glb",
+   "label": "Game Boy and Game Boy Color box (Japan, later size; the default for Japan)",
+   "kind": "card",
+   "size_mm": [
+    97,
+    122,
+    21
+   ],
+   "front_art_mm": [
+    96.707,
+    121.707
+   ],
+   "spine_art_mm": [
+    20.707,
+    121.707
+   ],
+   "triangles": 132,
+   "bytes": 9208,
+   "sha256": "f20d707ab9402a546d1a06819db22347002e66d0312281c335884f888ea7204d"
+  },
+  "atari": {
+   "file": "box-atari.glb",
+   "label": "Atari 2600, 5200 and 7800 box",
+   "kind": "card",
+   "size_mm": [
+    140,
+    191,
+    25
+   ],
+   "front_art_mm": [
+    139.707,
+    190.707
+   ],
+   "spine_art_mm": [
+    24.707,
+    190.707
+   ],
+   "triangles": 132,
+   "bytes": 9200,
+   "sha256": "44f406e967ff0de3caf1d9f13d1735d9d58ea14076dc202a04770229c0d43dd7"
+  },
+  "lynx": {
+   "file": "box-lynx.glb",
+   "label": "Atari Lynx box (later standard size)",
+   "kind": "card",
+   "size_mm": [
+    122,
+    150,
+    24
+   ],
+   "front_art_mm": [
+    121.707,
+    149.707
+   ],
+   "spine_art_mm": [
+    23.707,
+    149.707
+   ],
+   "triangles": 132,
+   "bytes": 9196,
+   "sha256": "b33bac5a3cc3e00cec4f6723deaae919b21dab16066c126bcd4032e83e3d5120"
+  },
+  "pm": {
+   "file": "box-pm.glb",
+   "label": "Pokemon mini box",
+   "kind": "card",
+   "size_mm": [
+    90,
+    90,
+    17
+   ],
+   "front_art_mm": [
+    89.707,
+    89.707
+   ],
+   "spine_art_mm": [
+    16.707,
+    89.707
+   ],
+   "triangles": 132,
+   "bytes": 9188,
+   "sha256": "be5cfb78e01672ac3262497375b0867a6577fa978e3288d6f8ed1fdda5226009"
+  },
+  "sg1000": {
+   "file": "box-sg1000.glb",
+   "label": "SG-1000 cartridge box, large (the default)",
+   "kind": "card",
+   "size_mm": [
+    130,
+    183,
+    24
+   ],
+   "front_art_mm": [
+    129.707,
+    182.707
+   ],
+   "spine_art_mm": [
+    23.707,
+    182.707
+   ],
+   "triangles": 132,
+   "bytes": 9204,
+   "sha256": "514978f56652e781ed027c93bab93d13f50b5f06c10949f0638e3d9a75c71f66"
+  },
+  "sms": {
+   "file": "box-sms.glb",
+   "label": "Master System plastic case (Europe, USA, most other countries)",
+   "kind": "case",
+   "size_mm": [
+    129,
+    178,
+    26
+   ],
+   "front_art_mm": [
+    126,
+    175
+   ],
+   "spine_art_mm": [
+    23,
+    175
+   ],
+   "triangles": 748,
+   "bytes": 26988,
+   "sha256": "73f06d6e71e7f8e5ac7aea50b5c555505f74f4a086df338f517b08572e36697d"
+  },
+  "mark3": {
+   "file": "box-mark3.glb",
+   "label": "Mark III and Japanese Master System box",
+   "kind": "card",
+   "size_mm": [
+    101,
+    143,
+    26
+   ],
+   "front_art_mm": [
+    100.707,
+    142.707
+   ],
+   "spine_art_mm": [
+    25.707,
+    142.707
+   ],
+   "triangles": 132,
+   "bytes": 9200,
+   "sha256": "5ea95dda5b53cac164e966c8769c6e2860356a5dca3ecf3b4ffcf055f63d4a87"
+  },
+  "gg-west": {
+   "file": "box-gg-west.glb",
+   "label": "Game Gear box (USA and Europe)",
+   "kind": "card",
+   "size_mm": [
+    111,
+    157,
+    25
+   ],
+   "front_art_mm": [
+    110.707,
+    156.707
+   ],
+   "spine_art_mm": [
+    24.707,
+    156.707
+   ],
+   "triangles": 132,
+   "bytes": 9196,
+   "sha256": "a6baea7c077370398de7b5b036f45e7d71443d7a99e00fb4cdd200d154c65a1a"
+  },
+  "gg-japan": {
+   "file": "box-gg-japan.glb",
+   "label": "Game Gear box (Japan)",
+   "kind": "card",
+   "size_mm": [
+    96,
+    110,
+    21
+   ],
+   "front_art_mm": [
+    95.707,
+    109.707
+   ],
+   "spine_art_mm": [
+    20.707,
+    109.707
+   ],
+   "triangles": 132,
+   "bytes": 9204,
+   "sha256": "a65796bf0aa8378c7740d2f7a556436a2aa3389f742dd61e7d7a398f4f6d01bc"
+  },
+  "film-4k": {
+   "file": "box-film-4k.glb",
+   "label": "4K film case",
+   "kind": "case",
+   "size_mm": [
+    135,
+    171.5,
+    13
+   ],
+   "front_art_mm": [
+    132,
+    168.5
+   ],
+   "spine_art_mm": [
+    10,
+    168.5
+   ],
+   "triangles": 748,
+   "bytes": 27008,
+   "sha256": "e25f01ddf22c2108e55aeb2e22641081a6437bd23c6e72ce87f8f38b6f03e089"
+  },
+  "film-bluray": {
+   "file": "box-film-bluray.glb",
+   "label": "Blu-ray film case",
+   "kind": "case",
+   "size_mm": [
+    135,
+    171.5,
+    13
+   ],
+   "front_art_mm": [
+    132,
+    168.5
+   ],
+   "spine_art_mm": [
+    10,
+    168.5
+   ],
+   "triangles": 760,
+   "bytes": 28900,
+   "sha256": "f8defa1c92befd377bc2027a82706628ec87d9101420c9ff00bd5fc769c14a45"
+  },
+  "film-dvd": {
+   "file": "box-film-dvd.glb",
+   "label": "DVD film case",
+   "kind": "case",
+   "size_mm": [
+    135,
+    190,
+    14
+   ],
+   "front_art_mm": [
+    132,
+    187
+   ],
+   "spine_art_mm": [
+    11,
+    187
+   ],
+   "triangles": 748,
+   "bytes": 27000,
+   "sha256": "9f466d3393558d000d8f1da1fe2a533963d77991a477c212e3fa1887028bc472"
+  },
+  "n64-west": {
+   "file": "box-n64-west.glb",
+   "label": "Nintendo 64 box (USA and Europe, landscape)",
+   "kind": "card",
+   "size_mm": [
+    180,
+    127,
+    32
+   ],
+   "front_art_mm": [
+    179.707,
+    126.707
+   ],
+   "spine_art_mm": [
+    31.707,
+    126.707
+   ],
+   "triangles": 132,
+   "bytes": 9208,
+   "sha256": "ac7dfaefce8f78add28f2689de126d9ab78c526faad8b3b37260b778a5d1266b"
+  },
+  "n64-japan": {
+   "file": "box-n64-japan.glb",
+   "label": "Nintendo 64 box (Japan)",
+   "kind": "card",
+   "size_mm": [
+    137,
+    190,
+    30
+   ],
+   "front_art_mm": [
+    136.707,
+    189.707
+   ],
+   "spine_art_mm": [
+    29.707,
+    189.707
+   ],
+   "triangles": 132,
+   "bytes": 9204,
+   "sha256": "1218165c8174565f9f488967a1a9de03915014b9690cdf8bf1180638cde56499"
+  }
+ },
+ "pick": {
+  "nes": {
+   "nes": "nes",
+   "famicom": "famicom",
+   "fds": "fds"
+  },
+  "gb": {
+   "west": "gb-west",
+   "east": "gb-japan"
+  },
+  "atari2600": "atari",
+  "atari5200": "atari",
+  "atari7800": "atari",
+  "atarilynx": "lynx",
+  "pm": "pm",
+  "sg1000": "sg1000",
+  "mastersystem": {
+   "west": "sms",
+   "east": "mark3"
+  },
+  "gamegear": {
+   "west": "gg-west",
+   "east": "gg-japan"
+  },
+  "film": {
+   "4k": "film-4k",
+   "bluray": "film-bluray",
+   "dvd": "film-dvd"
+  },
+  "n64": {
+   "west": "n64-west",
+   "east": "n64-japan"
+  }
+ },
+ "east": [
+  "Japan",
+  "Korea"
+ ],
+ "region_codes": {
+  "J": "Japan",
+  "K": "Korea",
+  "U": "USA",
+  "E": "Europe",
+  "W": "World",
+  "A": "Australia",
+  "B": "Brazil",
+  "C": "China",
+  "F": "France",
+  "G": "Germany",
+  "H": "Netherlands",
+  "I": "Italy",
+  "S": "Spain",
+  "Sw": "Sweden",
+  "D": "Netherlands",
+  "Unk": "Unknown"
+ },
+ "flat": {
+  "about": "Tile ids (the key each cover is named by) whose cover is more than 10% off its box: the slide-in shows the flat cover, with its own shape.",
+  "n64": [
+   "n64-x15fcd8a0535f",
+   "n64-x3a584303610e",
+   "n64-x92c25b26356e",
+   "n64-xc2c9edaadac5",
+   "n64-xf23351e263aa",
+   "n64-x5ace3ace7272",
+   "n64-xa8267610ebf5"
+  ]
+ }
+}

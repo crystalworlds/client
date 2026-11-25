@@ -1,0 +1,155 @@
+{
+ "format": "cw-overlay/1",
+ "sys": "snes",
+ "label": "Super Nintendo",
+ "device": "float",
+ "theme": {
+  "press": "rgba(120,96,200,.72)",
+  "pressInk": "#120a2a"
+ },
+ "float": {
+  "unit": [
+   104,
+   26,
+   168
+  ],
+  "unitPortrait": [
+   118,
+   34,
+   152
+  ],
+  "gap": 10,
+  "groups": [
+   {
+    "id": "dpad",
+    "dock": "bl",
+    "w": 1,
+    "h": 1,
+    "controls": [
+     {
+      "id": "dpad",
+      "label": "D-pad",
+      "shape": "dpad",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1,
+      "h": 1
+     }
+    ]
+   },
+   {
+    "id": "face",
+    "dock": "br",
+    "w": 1.2,
+    "h": 1.2,
+    "controls": [
+     {
+      "id": "x",
+      "label": "X",
+      "input": "KeyS",
+      "shape": "circle",
+      "x": 0.5,
+      "y": 0.17,
+      "w": 0.3,
+      "sq": true
+     },
+     {
+      "id": "y",
+      "label": "Y",
+      "input": "KeyA",
+      "shape": "circle",
+      "x": 0.17,
+      "y": 0.5,
+      "w": 0.3,
+      "sq": true
+     },
+     {
+      "id": "a",
+      "label": "A",
+      "input": "KeyX",
+      "shape": "circle",
+      "x": 0.83,
+      "y": 0.5,
+      "w": 0.3,
+      "sq": true
+     },
+     {
+      "id": "b",
+      "label": "B",
+      "input": "KeyZ",
+      "shape": "circle",
+      "x": 0.5,
+      "y": 0.83,
+      "w": 0.3,
+      "sq": true
+     }
+    ]
+   },
+   {
+    "id": "l",
+    "dock": "tl",
+    "w": 1,
+    "h": 0.32,
+    "controls": [
+     {
+      "id": "l",
+      "label": "L",
+      "input": "KeyQ",
+      "shape": "pill",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 0.9,
+      "h": 0.8
+     }
+    ]
+   },
+   {
+    "id": "r",
+    "dock": "tr",
+    "w": 1,
+    "h": 0.32,
+    "controls": [
+     {
+      "id": "r",
+      "label": "R",
+      "input": "KeyW",
+      "shape": "pill",
+      "x": 0.5,
+      "y": 0.5,
+      "w": 0.9,
+      "h": 0.8
+     }
+    ]
+   }
+  ]
+ },
+ "strip": [
+  {
+   "id": "select",
+   "label": "Select",
+   "input": "ShiftRight"
+  },
+  {
+   "id": "start",
+   "label": "Start",
+   "input": "Enter"
+  },
+  {
+   "id": "reset",
+   "label": "Reset",
+   "input": "F1"
+  }
+ ],
+ "provenance": [
+  {
+   "what": "buttons and keys",
+   "source": "play/cores/snes/core.mjs ports(): B Z, A X, Y A, X S, L Q, R W, Start Enter, Select the right Shift, Reset F1",
+   "licence": "site-owned"
+  },
+  {
+   "what": "the format",
+   "source": "play/shared/overlays/sms.json, the site's own layout",
+   "licence": "site-owned"
+  }
+ ]
+}

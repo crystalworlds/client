@@ -22,6 +22,11 @@
  *          the d-pad's side: clamp(min px, vw% of the play area, max px), a second triple for
  *          portrait) or a [min, vw, max] px clamp of their own. Shown when Display says so.
  *          It is also the Full screen overlay (A13: the game screen only, no art).
+ *          LAID OVER (26 Nov 2026, "An overlay is an overlay. It lays over it"): wherever these
+ *          controls show (laysOver()), the host sizes the picture to the whole play area as if no
+ *          control were there, and the pad, the strip, the Control Bar and the play window's title
+ *          bar all lie over it. Nothing here takes room from the picture; a message only rises
+ *          above a group docked at the bottom centre (--cw-ov-bottom, read by the toast).
  *   strip  the console's extra switches at the BOTTOM of the window, where the Game Boy puts
  *          Select and Start (as decided: "The additional buttons on the Atari can be just placed
  *          at the bottom of the window"). Hold buttons (Reset, Select, Pause, Option) and
@@ -39,8 +44,12 @@
  *              'pm:a'      Pokemon mini's named press (_pmActiveDevice.press / release);
  *              'gnw:time'  Game & Watch's named press (gnwPress / gnwRelease);
  *              'call:NAME' a function the page hands in (`calls`), for a switch no key reaches.
+ *              'KeyA+KeyZ' two inputs held by one finger (first made for the SNES's Y and B together, REG-0338; the SNES pad no longer has them, 26 Nov 2026); a thumb
+ *                  rolling from one of them onto the pair keeps the first held throughout.
  *            A d-pad has `dirs` instead: { up, down, left, right } inputs (default the arrows).
  *   A strip item adds kind: 'hold' (default) or 'toggle' { call, arg, states: [off, on] }.
+ *   A strip item with inFloat: true is left out of the strip while the float pad is shown (the pad
+ *   draws that button itself, as the N64's Start over its stick, 26 Nov 2026); without the pad it stays.
  *   Every definition carries `provenance`: where each number came from and its licence.
  *
  * ------------------------------------------------------------------ THE MODULE
@@ -57,6 +66,7 @@
  *   ov.setUnit(u)     Game & Watch: this unit's own float pad { groups, artOff } (play/cores/gnw/art.mjs)
  *   ov.settingsNode() the Settings rows (the Control Bar's Settings -> Touch hosts it)
  *   ov.held()         the inputs held by the overlay now;  ov.lit() what is lit (show inputs)
+ *   ov.laysOver()     true where the controls lie over the picture (see LAID OVER above)
  *   ov.destroy()
  *   CwOverlay.instance(sys)  the instance already made in this document, if any
  *   CwOverlay.load(sys)      -> Promise<def> (play/shared/overlays/<sys>.json, cached)
@@ -115,7 +125,9 @@
   'use strict';
   if (window.CwOverlay) return;
 
-  const BUILD = '2.2.2';
+  const BUILD = '2.3.0';
+  /* A definition changed since the release carries its own tag, so a browser fetches it again (20 Nov 2026: the Game Gear's buttons on its picture). */
+  const DEF_REV = { gg: '20261125', alynx: '20261125', gb: '20261125', n64: '20261126c', a5200: '20261122', snes: '20261126' };   // a5200: the stick (22 Nov 2026); gg, alynx, gb: the art buttons on the new pictures (25 Nov 2026); n64: laid out as the controller, laid over the picture (26 Nov 2026); snes: the two "+" buttons taken out (26 Nov 2026)
   const STORE = 'cw.overlay.v1';
   const DEFAULTS = { display: 'auto', showInputs: false, opacity: 0.7, scale: 1, spacing: 0, rotate: true };
   const DIRS = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
@@ -184,6 +196,9 @@
     background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.42) 0%, rgba(255,255,255,.22) 55%, rgba(255,255,255,0) 100%);
     box-shadow:0 0 12px 3px rgba(255,255,255,.35) inset; }
   .cwov-art .cwov-arm { border-radius:22%; }
+  /* A console key the Control Bar leaves to this layer, reached with a remote or a pad (21 Nov 2026). */
+  .cwov-c[data-cb-ck]:focus { outline:none; }
+  .cwov-c[data-cb-ck]:focus-visible { outline:3px solid var(--cw-focus, #ffd640); outline-offset:3px; opacity:1; }
   .cwov-arm { position:absolute; pointer-events:none; }
   .cwov-arm.u { left:34%; top:0; width:32%; height:36%; } .cwov-arm.d { left:34%; bottom:0; width:32%; height:36%; }
   .cwov-arm.l { left:0; top:34%; width:36%; height:32%; } .cwov-arm.r { right:0; top:34%; width:36%; height:32%; }
@@ -234,6 +249,19 @@
     border:1px solid rgba(255,255,255,.26); box-shadow:inset 0 1px 3px rgba(0,0,0,.35); }
   .cwov-float .cwov-arm { display:flex; align-items:center; justify-content:center; border-radius:9px; color:#aeb6c2; font-size:clamp(14px,3.4vw,20px); }
   .cwov-float .cwov-arm.lit { background:var(--cwov-press); color:var(--cwov-press-ink); box-shadow:inset 0 2px 5px rgba(0,0,0,.38); }
+  /* THE STICK (22 Nov 2026): a round base with a rim, the module's rest area as a faint ring, and a thumb
+     that follows the finger (its place is set by _paintStick, in the base's own container units). */
+  .cwov-float .cwov-c[data-shape="stick"] { border-radius:50%; container-type:size; color:transparent;
+    background:radial-gradient(circle at 50% 50%, rgba(20,24,30,.14) 0 56%, rgba(20,24,30,.3) 74%), var(--cwov-fill); }
+  .cwov-c[data-shape="stick"]::after { border-radius:50%; inset:-14%; }
+  .cwov-c[data-shape="stick"].held::after { inset:-60%; }
+  .cwov-float .cwov-c[data-shape="stick"]::before { display:none; }
+  .cwov-rest { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); border-radius:50%; pointer-events:none;
+    border:1px dashed rgba(255,255,255,.22); }
+  .cwov-thumb { position:absolute; left:50%; top:50%; width:46%; height:46%; transform:translate(-50%,-50%); border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle at 50% 32%, rgba(255,255,255,.34), rgba(150,162,180,.3) 60%, rgba(60,66,78,.4));
+    border:1px solid rgba(255,255,255,.5); box-shadow:0 4px 12px -4px rgba(0,0,0,.75), inset 0 -3px 6px rgba(0,0,0,.3); }
+  .cwov-float .cwov-c[data-shape="stick"].held .cwov-thumb { background:var(--cwov-press); border-color:rgba(255,255,255,.7); }
   /* STRIP: the console switches, bottom centre of the window. */
   .cwov-strip { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(6px + env(safe-area-inset-bottom, 0px));
     display:flex; gap:8px; flex-wrap:nowrap; pointer-events:none; max-width:calc(100% - 12px); }
@@ -287,6 +315,27 @@
   }
   const pmDev = () => { try { return typeof _pmActiveDevice !== 'undefined' ? _pmActiveDevice : null; } catch (_) { return null; } };   // eslint-disable-line no-undef
 
+  /* ------------------------------------------------------------ sticks */
+  /* THE "sticks" KIND (cw-overlay/1, 22 Nov 2026). A definition may list analogue sticks at its top level:
+       { kind: 'stick', id, group, axes: ['LSX', 'LSY'], x, y, r, dead }
+     group  the float group the stick sits in; x, y its centre and r its radius, as fractions of the group's box
+     axes   which of the pad's axes it is (the left stick: the port's axes 0 and 1, read by input.mjs)
+     dead   the console module's own rest area, drawn as a faint ring only; nothing here applies it.
+     The control of that group marked fallbackFor: 'stick' (an eight-way pad on the arrows, for an overlay.js
+     that does not know sticks) is left out where the stick is drawn. */
+  function withSticks(def) {
+    const S = Array.isArray(def && def.sticks) ? def.sticks.filter(s => s && s.kind === 'stick' && s.group) : [];
+    if (!S.length || !def.float || !Array.isArray(def.float.groups)) return def;
+    const groups = def.float.groups.map(g => {
+      const mine = S.filter(s => s.group === g.id);
+      if (!mine.length) return g;
+      const keep = g.controls.filter(c => c.fallbackFor !== 'stick');
+      const sticks = mine.map(s => { const r = +s.r || 0.5; return { id: s.id || 'stick', label: s.label || 'Stick', shape: 'stick', x: +s.x || 0.5, y: +s.y || 0.5, w: 2 * r, h: 2 * r, sq: true, stick: s }; });
+      return Object.assign({}, g, { controls: sticks.concat(keep) });
+    });
+    return Object.assign({}, def, { float: Object.assign({}, def.float, { groups }) });
+  }
+
   /* ------------------------------------------------------------ geometry */
   function px(v, unit, stageW, scale) {
     if (Array.isArray(v)) return Math.min(v[2], Math.max(v[0], stageW * v[1] / 100)) * scale;
@@ -319,6 +368,8 @@
          was dropped, and _move then ignored it for good). */
       this.active = new Set();
       this.dpadOf = new Map();        // pointerId -> the d-pad it went down on: it keeps steering it
+      this.stickOf = new Map();       // pointerId -> the stick it went down on (22 Nov 2026)
+      this.stickPos = new Map();      // stick id -> { x, y, k }: where its finger is now, raw, -1..1
       this.count = new Map();         // input -> refcount (overlay presses)
       this.keyHeld = new Set();       // codes held as key events (show inputs)
       this.ctls = [];                 // { el, def, layer }
@@ -360,6 +411,7 @@
         this._art0 = this.def.art;
         this._buildArt();
       }
+      this.def = withSticks(this.def);
       for (const g of (this.def.float && this.def.float.groups) || []) for (const c of g.controls) this._build(c, this.floatEl, 'float', g);
       for (const c of this.def.strip || []) this._build(c, this.stripEl, 'strip');
       for (const el of [this.root, this.artEl].filter(Boolean)) {
@@ -388,7 +440,14 @@
       el.dataset.layer = layer;
       if (c.kind) el.dataset.kind = c.kind;
       el.setAttribute('aria-hidden', 'true');
-      if (c.shape === 'dpad') {
+      if (c.shape === 'stick') {
+        /* An analogue stick (22 Nov 2026): a round base, the rest area drawn for the eye only, and a thumb. */
+        const ring = doc.createElement('div'); ring.className = 'cwov-rest';
+        const dz = Math.min(0.9, Math.max(0, +(c.stick && c.stick.dead) || 0));
+        ring.style.width = ring.style.height = (dz * 100).toFixed(1) + '%'; if (!dz) ring.hidden = true;
+        const th = doc.createElement('div'); th.className = 'cwov-thumb';
+        el.appendChild(ring); el.appendChild(th);
+      } else if (c.shape === 'dpad') {
         if (layer === 'float') { const x = doc.createElement('div'); x.className = 'cwov-cross'; el.appendChild(x); }
         for (const [k, g] of [['u', '↑'], ['d', '↓'], ['l', '←'], ['r', '→']]) {
           const a = doc.createElement('div'); a.className = 'cwov-arm ' + k; if (layer === 'float') a.textContent = g; el.appendChild(a);
@@ -529,7 +588,8 @@
         let limit = H - gap;
         for (const q of placed) if (q !== p && q.dock[0] !== 't' && q.gx < p.gx + p.gw && q.gx + q.gw > p.gx) limit = Math.min(limit, q.gy - gap);
         // The console's picture below it on the same side (a phone upright: the television under the bar).
-        const art = this.frame || this.stage.querySelector('#lcdWrap');
+        // Not while the controls lie over the picture (26 Nov 2026): the picture then fills the play area under them.
+        const art = this.laysOver() ? null : this.frame || this.stage.querySelector('#lcdWrap');
         if (art && art.getClientRects().length) {
           const fr = art.getBoundingClientRect();
           let top = fr.top; for (const im of art.querySelectorAll('img, canvas')) { const q = im.getBoundingClientRect(); if (q.height && q.top < top) top = q.top; }   // the art drawn past its box
@@ -543,6 +603,10 @@
         for (const s of p.sizes) { s.x *= k; s.y *= k; s.w *= k; s.h *= k; }
         p.gx = p.dock === 'tr' ? right - p.gw : p.dock === 'tl' ? p.gx : mid - p.gw / 2;
       }
+      // A message rises above a group docked at the bottom centre (the N64's stick, a pad's Select and Start), as above the strip.
+      // Only the toast reads this while the controls lie over the picture: the picture is never fitted around it (26 Nov 2026).
+      const feet = placed.filter(p => p.dock === 'bc');
+      if (feet.length) { const top = Math.min(...feet.map(p => p.gy)); try { this.stage.style.setProperty('--cw-ov-bottom', Math.ceil(Math.max(stripH ? stripH + 12 : 0, H - top + 6)) + 'px'); } catch (_) {} }
       for (const { g, sizes, gx, gy } of placed) {
         sizes.forEach((s, i) => {
           const k = this.ctls.find(c => c.def === g.controls[i]); if (!k) return;
@@ -562,6 +626,11 @@
       this._apply();
     }
     mode() { return this._mode; }
+    /* THE CONTROLS LIE OVER THE PICTURE (26 Nov 2026: "An overlay is an overlay. It lays over it. Also with the
+       control bar"): true where the on-screen controls show (Display: a touch screen with no controller, or On). The host
+       then sizes the picture to the whole play area and lets this layer, the Control Bar and the title bar lie over it.
+       Told on every change as a 'cwov-over' event on the window (a controller plugged in, Display changed). */
+    laysOver() { return !!this.root && this._mode !== 'off' && floatWanted(); }
     _apply() {
       if (!this.root) return;
       const m = this._mode, f = floatWanted();
@@ -580,13 +649,32 @@
         // A toggle whose switch the machine does not have now (the 2600 on the 5200's VCS
         // Cartridge Adapter has no TV type switch) is not shown: its call says so.
         if (on && k.def.kind === 'toggle' && k.def.call) { const c = this.calls[k.def.call]; try { if (c && c.has && !c.has(k.def.arg)) on = false; } catch (_) {} }
+        if (on && k.def.inFloat && floatOn) on = false;   // the float pad draws this one itself (inFloat)
         k.el.style.display = on ? '' : 'none'; if (on) shown++;
       }
       this.stripEl.hidden = m === 'off' || !shown;
       if (wasFloat && !floatOn) this.release();
       this.root.style.setProperty('--cwov-op', String(cfg.opacity));
       this._paintToggles(); this._paint();
+      const over = this.laysOver();
+      if (over !== this._over) { this._over = over; try { (this.stage || this.root).classList.toggle('cwov-over', over); } catch (_) {} try { dispatchEvent(new CustomEvent('cwov-over', { detail: { over } })); } catch (_) {} }
       this._layout();
+      if (typeof this.onShown === 'function') { try { this.onShown(); } catch (_) {} }
+    }
+    /* THE CONTROLS DRAWN NOW (21 Nov 2026: "if you have the console buttons like pause and reset
+       displayed in the game area, no need to duplicate it on the control bar"): each control shown
+       in the strip, on the console's picture or in the float pad, with its element. The Control Bar
+       leaves out a console key drawn here and lets a remote reach it here. onShown is told after
+       every change of what is shown (a mode, an art view, a unit, a strip switch). */
+    shownControls() {
+      if (!this.root || this.root.hidden) return [];
+      const out = [];
+      for (const k of this.ctls) {
+        const layer = k.layer === 'strip' ? this.stripEl : k.layer === 'art' ? this.artEl : this.floatEl;
+        if (!layer || layer.hidden || k.el.hidden || k.el.style.display === 'none') continue;
+        out.push({ id: k.def.id, input: k.def.input || null, label: k.def.label || k.def.id, layer: k.layer, el: k.el });
+      }
+      return out;
     }
 
     /* ---- the gesture ---- */
@@ -594,7 +682,7 @@
     _hit(x, y, id) {
       const out = new Set();
       const k = this._pick(x, y, id, false);             // a toggle answers a tap (pointerup), not a hold
-      if (k) { if (k.def.shape === 'dpad') this._dpad(k, x, y, out); else if (k.def.input) out.add(k.def.input); }
+      if (k) { if (k.def.shape === 'dpad') this._dpad(k, x, y, out); else if (k.def.input) for (const i of String(k.def.input).split('+')) out.add(i); }   // 'KeyA+KeyZ': one finger holds two (23 Nov 2026, the SNES's Y and B: REG-0338)
       return out;
     }
     /* The ONE control a finger at x, y gets (see BEHAVIOUR). Only where touch areas overlap does
@@ -618,7 +706,7 @@
       const drawn = at(true).filter(k => cand.includes(k));
       if (drawn.length) return drawn.reduce((a, b) => (area(b) < area(a) ? b : a));
       const mine = id != null && this.byPointer.get(id);
-      const held = mine && cand.find(k => k.def.input && mine.has(k.def.input));
+      const held = mine && cand.find(k => k.def.input && mine.has(String(k.def.input).split('+')[0]));
       if (held) return held;
       const gap = k => { const r = k.el.getBoundingClientRect(); return Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom)); };
       return cand.reduce((a, b) => (gap(b) < gap(a) ? b : a));
@@ -643,8 +731,31 @@
       try { k.el.setPointerCapture(e.pointerId); } catch (_) {}
       if (k.def.kind === 'toggle') { this._tapToggle = { id: e.pointerId, k }; k.el.classList.add('lit'); return; }
       this.active.add(e.pointerId);
+      if (k.def.shape === 'stick') { this.stickOf.set(e.pointerId, k); this._stickAt(k, e.clientX, e.clientY); this._apply1(e.pointerId, new Set()); return; }
       if (k.def.shape === 'dpad') this.dpadOf.set(e.pointerId, k);
       this._apply1(e.pointerId, this._inputsAt(e.pointerId, e.clientX, e.clientY));
+    }
+    /* THE STICK (22 Nov 2026): the finger's RAW place on the base, x and y from -1 to 1 (right and down
+       positive), kept inside the round base and nothing more: no rest area and no curve here (the console's
+       module applies its own; `dead` is only drawn). The thumb follows the finger. The port reads it once a
+       frame through stickAxes(), the same path a pad's left stick takes (play/host/input.mjs). */
+    _stickAt(k, x, y) {
+      const r = k.el.getBoundingClientRect(), rad = (r.width / 2) || 1;
+      let nx = (x - (r.left + r.width / 2)) / rad, ny = (y - (r.top + r.height / 2)) / ((r.height / 2) || 1);
+      const d = Math.hypot(nx, ny); if (d > 1) { nx /= d; ny /= d; }
+      this.stickPos.set(k.def.id, { x: nx, y: ny, k });
+      this._paintStick(k, nx, ny);
+    }
+    _stickFree(k) { this.stickPos.delete(k.def.id); this._paintStick(k, 0, 0); }
+    _paintStick(k, nx, ny) {
+      const th = k.el.querySelector('.cwov-thumb'); if (!th) return;
+      th.style.transform = `translate(-50%,-50%) translate(${(nx * 50).toFixed(2)}cqw, ${(ny * 50).toFixed(2)}cqh)`;
+      k.el.classList.toggle('lit', nx !== 0 || ny !== 0 || this.stickPos.has(k.def.id));
+    }
+    /** The first stick held now as [x, y] (-1..1, raw), or null when no finger is on a stick. */
+    stickAxes() {
+      for (const s of this.stickPos.values()) return [Math.round(s.x * 1000) / 1000, Math.round(s.y * 1000) / 1000];
+      return null;
     }
     /* A finger that went down on a d-pad steers that d-pad by its angle wherever it slides,
        as a real pad's thumb does: off its square it still points the same way. */
@@ -656,6 +767,8 @@
     _move(e) {
       if (!this.active.has(e.pointerId)) return;
       e.preventDefault();
+      const sk = this.stickOf.get(e.pointerId);
+      if (sk) { this._stickAt(sk, e.clientX, e.clientY); return; }
       this._apply1(e.pointerId, this._inputsAt(e.pointerId, e.clientX, e.clientY));
     }
     _up(e) {
@@ -665,6 +778,8 @@
         if (e.type === 'pointerup') this.toggle(t.k.def.id);
       }
       this.active.delete(e.pointerId); this.dpadOf.delete(e.pointerId);
+      const sk = this.stickOf.get(e.pointerId);
+      if (sk) { this.stickOf.delete(e.pointerId); if (![...this.stickOf.values()].includes(sk)) this._stickFree(sk); }
       if (this.byPointer.has(e.pointerId)) this._apply1(e.pointerId, new Set());
     }
     _apply1(id, inputs) {
@@ -678,6 +793,8 @@
     _rel(i) { const n = (this.count.get(i) || 0) - 1; if (n > 0) { this.count.set(i, n); return; } this.count.delete(i); this._send(i, false); }
     release() {
       this.byPointer.clear(); this.active.clear(); this.dpadOf.clear();
+      for (const s of Array.from(this.stickPos.values())) this._stickFree(s.k);
+      this.stickOf.clear();
       for (const i of Array.from(this.count.keys())) { this.count.delete(i); this._send(i, false); }
       if (this._tapToggle) { this._tapToggle.k.el.classList.remove('lit'); this._tapToggle = null; }
       this._paint();
@@ -744,7 +861,8 @@
       const litOf = k => (src && k.layer !== 'float') ? new Set([...L0, ...src]) : (pad.size ? new Set([...L0, ...pad]) : L0);
       for (const k of this.ctls) {
         const held = Array.from(this.byPointer.values()).some(set => k.def.shape === 'dpad'
-          ? ['up', 'down', 'left', 'right'].some(n => set.has(Object.assign({}, DIRS, k.def.dirs || {})[n])) : set.has(k.def.input));
+          ? ['up', 'down', 'left', 'right'].some(n => set.has(Object.assign({}, DIRS, k.def.dirs || {})[n])) : !!k.def.input && String(k.def.input).split('+').every(i => set.has(i)));
+        if (k.def.shape === 'stick') { k.el.classList.toggle('held', this.stickPos.has(k.def.id)); continue; }   // its thumb is its own paint (_paintStick)
         k.el.classList.toggle('held', held);
         if (k.def.kind === 'toggle') continue;
         const L = litOf(k);
@@ -753,7 +871,7 @@
           for (const [cls, n] of [['u', 'up'], ['d', 'down'], ['l', 'left'], ['r', 'right']]) {
             const a = k.el.querySelector('.cwov-arm.' + cls); if (a) a.classList.toggle('lit', L.has(d[n]));
           }
-        } else k.el.classList.toggle('lit', L.has(k.def.input));
+        } else k.el.classList.toggle('lit', !!k.def.input && String(k.def.input).split('+').every(i => L.has(i)));
       }
     }
 
@@ -807,7 +925,7 @@
   const defs = new Map();
   function load(sys) {
     if (defs.has(sys)) return defs.get(sys);
-    const p = fetch(HERE + 'overlays/' + sys + '.json?v=' + BUILD).then(r => { if (!r.ok) throw new Error('no overlay for ' + sys); return r.json(); });
+    const p = fetch(HERE + 'overlays/' + sys + '.json?v=' + BUILD + (DEF_REV[sys] ? '-' + DEF_REV[sys] : '')).then(r => { if (!r.ok) throw new Error('no overlay for ' + sys); return r.json(); });
     defs.set(sys, p); p.catch(() => defs.delete(sys));
     return p;
   }

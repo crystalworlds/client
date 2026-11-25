@@ -1,0 +1,35 @@
+{
+ "format": 1,
+ "list": "snes",
+ "label": "Super Nintendo",
+ "guards": [
+  "snes"
+ ],
+ "count": 4,
+ "entries": {
+  "5443a97e9c40e25821a8fb8c91b63c7bd8c3060d9ff888ee6c573b87b53935f4": {
+   "kind": "cartridge",
+   "code": "UNSUPPORTED_MAPPER",
+   "reason": "it needs the competition board’s second chip, which this emulator does not run yet.",
+   "title": "PowerFest 94 (USA) (Competition Cart, 10k points)"
+  },
+  "67c1a4917f4cd0fd704b83330a7e91763736c2d2a10a7e12318fdac54cd9c6c6": {
+   "kind": "cartridge",
+   "code": "UNSUPPORTED_MAPPER",
+   "reason": "it needs the competition board’s second chip, which this emulator does not run yet.",
+   "title": "Nintendo Challenge (Japan) (En) (Competition Cart)"
+  },
+  "6c83ee132db777b306caeb2da6f2cd971735fb06805af55979d99028b33bf659": {
+   "kind": "cartridge",
+   "code": "UNSUPPORTED_MAPPER",
+   "reason": "it needs the competition board’s second chip, which this emulator does not run yet.",
+   "title": "Nintendo Campus Challenge 1992 (USA, Europe) (Competition Cart)"
+  },
+  "7fa4550886acb4d56b86a848ee1fb92e1cd12b87f1e7c0c510227959c041666f": {
+   "kind": "cartridge",
+   "code": "UNSUPPORTED_MAPPER",
+   "reason": "it needs the competition board’s second chip, which this emulator does not run yet.",
+   "title": "PowerFest 94 (USA) (Competition Cart, 1m points)"
+  }
+ }
+}

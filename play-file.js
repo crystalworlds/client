@@ -54,6 +54,14 @@
     a5200: { label: 'Atari 5200', max: MB16, cat: 'atari5200' },
     a7800: { label: 'Atari 7800', max: MB16, cat: 'atari7800' },
     alynx: { label: 'Atari Lynx', max: MB16, cat: 'atarilynx' },
+    /* The Sega devices (20 Nov 2026): one core, three wall devices (index.html ATARI_SYSTEMS). */
+    sg1000: { label: 'SG-1000', max: 4 * 1024 * 1024, cat: 'sg1000' },
+    sms:   { label: 'Master System', max: 4 * 1024 * 1024, cat: 'mastersystem' },
+    gg:    { label: 'Game Gear', max: 4 * 1024 * 1024, cat: 'gamegear' },
+    /* The Nintendo 64 (22 Nov 2026): index.html ATARI_SYSTEMS n64, the largest cartridge 64 MB. */
+    n64:   { label: 'Nintendo 64', max: 64 * 1024 * 1024, cat: 'n64' },
+    /* The Super Nintendo (23 Nov 2026): index.html ATARI_SYSTEMS snes; the largest board 8 MB with a copier's header, and the overdumps the loading rule trims. */
+    snes:  { label: 'Super Nintendo', max: 16 * 1024 * 1024 + 512, cat: 'snes' },
   };
   const EXT = {
     gb: 'gb', gbc: 'gb', sgb: 'gb', cgb: 'gb', gbs: 'gb',
@@ -61,6 +69,8 @@
     min: 'pm',
     a26: 'a2600', a52: 'a5200', car: 'a5200', a78: 'a7800',
     lnx: 'alynx', lyx: 'alynx', o: 'alynx',
+    sms: 'sms', gg: 'gg', sg: 'sg1000', sc: 'sg1000', mv: 'sg1000',
+    z64: 'n64', n64: 'n64', v64: 'n64', ndd: 'n64', sfc: 'snes', smc: 'snes', swc: 'snes', fig: 'snes',
   };
   const ACCEPT = Object.keys(EXT).map(e => '.' + e).concat(['.zip', '.bin']).join(',');
   const extOf = n => ((/\.([a-z0-9]+)$/i.exec(String(n || '')) || [])[1] || '').toLowerCase();
@@ -74,6 +84,13 @@
     if (ascii(u, 0, 4) === 'UNIF') return { sys: 'nes', fds: false };
     if (ascii(u, 1, 9) === 'ATARI7800') return { sys: 'a7800' };
     if (ascii(u, 0, 4) === 'LYNX') return { sys: 'alynx' };
+    /* A Nintendo 64 cartridge: its first word in any of the three byte orders (big-endian, byte-swapped, little-endian). */
+    if (u.length >= 4096) { const w = ((u[0] << 24) | (u[1] << 16) | (u[2] << 8) | u[3]) >>> 0; if (w === 0x80371240 || w === 0x37804012 || w === 0x40123780) return { sys: 'n64' }; }
+    /* A Sega cartridge's header ("TMR SEGA" at $7FF0, $3FF0 or $1FF0; a 512-byte copier header moves it):
+       its region code says Master System (3, 4) or Game Gear (5, 6, 7). Only for a .bin, whose name says nothing. */
+    if (extOf(name) === 'bin') for (const at of [0x7FF0, 0x3FF0, 0x1FF0, 0x81F0, 0x41F0, 0x21F0]) {
+      if (u.length > at + 16 && ascii(u, at, 8) === 'TMR SEGA') { const r = u[at + 15] >> 4; if (r === 3 || r === 4) return { sys: 'sms' }; if (r >= 5 && r <= 7) return { sys: 'gg' }; }
+    }
     // The Game Boy's boot logo at 0x104 (its first bytes are fixed: CE ED 66 66).
     if (u.length > 0x150 && u[0x104] === 0xCE && u[0x105] === 0xED && u[0x106] === 0x66 && u[0x107] === 0x66) return { sys: 'gb' };
     if (ascii(u, 0, 3) === 'GBS' && u[3] === 1) return { sys: 'gb' };   // a GBS music file
@@ -84,9 +101,9 @@
     return { err: 'unknown' };
   }
   const MSG = {
-    bin: 'A .bin file carries no header, so nothing in it says which machine it is for. Rename it to .a26 (Atari 2600), .a52 (Atari 5200) or .a78 (Atari 7800) and choose it again. Game & Watch programs and the colour units\' flash go in a content pack, with their artwork.',
+    bin: 'A .bin file carries no header, so nothing in it says which machine it is for. Rename it to .a26 (Atari 2600), .a52 (Atari 5200), .a78 (Atari 7800), .sms (Master System), .gg (Game Gear) or .sg (SG-1000) and choose it again. Game & Watch programs and the colour units\' flash go in a content pack, with their artwork.',
     gnw: 'Game & Watch units need their program, their artwork and their other parts together. Put them in one .zip and open it as a content pack (the Content pack tile).',
-    unknown: 'This is not a game file the site can play. It takes Game Boy (.gb, .gbc, and .gbs music), NES and Famicom (.nes, .unf, .fds), Pokémon mini (.min), Atari (.a26, .a52, .a78, .lnx) files, and a .zip of them.',
+    unknown: 'This is not a game file the site can play. It takes Game Boy (.gb, .gbc, and .gbs music), NES and Famicom (.nes, .unf, .fds), Pokémon mini (.min), Atari (.a26, .a52, .a78, .lnx), Sega SG-1000, Master System and Game Gear (.sg, .sms, .gg) Nintendo 64 (.z64, .n64, .v64, and 64DD disks .ndd) and Super Nintendo (.sfc, .smc, .swc) files, and a .zip of them.',
     empty: 'There is no game file the site can play in this .zip.',
     big: 'This file is larger than any game the site plays.',
     zip: 'This .zip could not be read. It may be damaged, or packed in a way the browser cannot open.',
@@ -225,6 +242,7 @@
       const t = (typeof ATARI_SYSTEMS !== 'undefined' && ATARI_SYSTEMS[S.cat]) || null;   // eslint-disable-line no-undef
       if (!t || !t.play) return { ok: false, msg: S.label + ' games cannot be played here yet.' };
       set('atari-play-sub', t.label); set('atari-play-title', title);
+      if (t.preview && window.CW_PREVIEW_TAG) { const sb = document.getElementById('atari-play-sub'); if (sb) sb.insertAdjacentHTML('beforeend', window.CW_PREVIEW_TAG); }   // an evaluation preview (23 Nov 2026, index.html ATARI_SYSTEMS)
       if (frame) frame.title = t.label;
       session = { sys: det.sys, slot, b64: b64of(bytes), frame, ov: ovId };
       window._playFrameGo(frame, t.play + 'index.html#' + encodeURIComponent(slot));

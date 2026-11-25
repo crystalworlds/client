@@ -25,7 +25,10 @@
  *   game details gamemeta.js's block (descriptions, publisher, ratings, the review score)
  *   body         About / Overview / Gameplay / Legacy / Additional Info / From the Promo / Releases, each only when held
  *   sidebar      Variants (variants.js), Facts (game rows first, then the machine's),
- *                Play time, Built-in Games, the status panel
+ *                My games (mygames.js, 21 Nov 2026: play time over every version and device, status,
+ *                completion, favourite, rating, lengths, playthroughs, the diary; Play time without it),
+ *                Achievements (retroachievements.js, 21 Nov 2026: read only, when connected and the game has a set),
+ *                Built-in Games, the status panel (the green panel, always last)
  * PER-SYSTEM DIFFERENCES ARE DATA ONLY: the PROFILES table and profileOf().
  *
  * DESIGN DECISIONS IT CARRIES:
@@ -53,7 +56,7 @@
   'use strict';
   if (window.CwDrawer) return;
 
-  const BUILD = '20261026-cht1';
+  const BUILD = '20261121-boxsite';
   /* THE UNIFIED DRAWER IS THE ONLY DRAWER (2026-10-15: no two versions, no URL switch).
      The ?drawer= switch and its sessionStorage key are gone. */
   try { sessionStorage.removeItem('cw.drawer.flag'); } catch (_) {}
@@ -130,13 +133,22 @@
       present: d => d.nesConsole === 'fds' ? 'DISK PRESENT' : 'CARTRIDGE PRESENT',
     },
     atari: {
-      kind: 'cart', fit: 'contain', system: d => (atariOf(d).label || 'ATARI').toUpperCase(),
+      kind: 'cart', fit: 'contain', system: d => d.n64Disk ? 'NINTENDO 64DD' : (atariOf(d).label || 'ATARI').toUpperCase(),   // a 64DD disk (26 Nov 2026)
       playable: d => !!call('atariPlayable', d), play: 'openAtariPlay', playTitle: d => 'Play on the ' + (atariOf(d).label || 'Atari') + ' emulator',
       /* The Atari build guides (2026-10-18: "put the Atari emulation pages on the site"):
          atari*-emulation-tab.js, generated from the Atari emulation documents. */
-      emu: d => call('atariEmulationTabHTML', d),
-      machine: d => ({ Machine: atariOf(d).label, Cartridge: d.bytes ? d.bytes.toLocaleString('en-AU') + ' bytes, ' + d.cartridge : d.cartridge,
-        'Controller ports': atariOf(d).players, File: d.fullName }),
+      /* A system whose Emulation tab is switched off for now (index.html ATARI_SYSTEMS emulationTab: false, the
+         Nintendo 64 from 23 Nov 2026) has no tab: '' leaves out its button and its content. */
+      emu: d => (window.cwEmulationTabShown && !window.cwEmulationTabShown(d.catalogue) ? '' : atariOf(d).family === 'n64' ? call('n64EmulationTabHTML', d) : atariOf(d).family === 'snes' ? call('snesEmulationTabHTML', d) : atariOf(d).family === 'sega8' ? call('sega8EmulationTabHTML', d) : call('atariEmulationTabHTML', d)),   // the Sega 8-bit guide (20 Nov 2026); the Nintendo 64 tab (22 Nov 2026, n64-emulation-tab.js)
+      machine: d => (d.builtIn   /* a game built into the console's start-up firmware (21 Nov 2026): no cartridge */
+        ? { Machine: d.builtIn.console, Cartridge: 'None', 'Start-up firmware': d.bytes ? d.bytes.toLocaleString('en-AU') + ' bytes' : 'Yes',
+            'Controller ports': atariOf(d).players, File: d.fullName }
+        : d.n64Disk   /* a 64DD disk (26 Nov 2026): a disk in the drive, not a cartridge, as the Disk System's */
+        ? { Machine: atariOf(d).label + ' with the 64DD disk drive', Disk: d.bytes ? d.bytes.toLocaleString('en-AU') + ' bytes' : '64DD disk',
+            'Controller ports': atariOf(d).players, File: d.fullName }
+        : { Machine: atariOf(d).label, Cartridge: d.bytes ? d.bytes.toLocaleString('en-AU') + ' bytes, ' + d.cartridge : d.cartridge,
+            'Controller ports': atariOf(d).players, File: d.fullName }),
+      present: d => (d.builtIn ? 'FIRMWARE PRESENT' : d.n64Disk ? 'DISK PRESENT' : 'CARTRIDGE PRESENT'),
       notYet: d => !!call('atariCartAvailable', d),
     },
     pm: {
@@ -186,7 +198,9 @@
     } catch (_) {}
     return k;
   }
+  let _builtSpec = null;
   function heroHTML(d, p, k) {
+    _builtSpec = null;
     const missingBox = msg => `<div class="device-modal-img missing"><div style="height:100%;display:flex;align-items:center;justify-content:center;color:#2a3242;letter-spacing:.2em;text-transform:uppercase;font-size:13px;text-align:center;padding:0 24px;">${esc(msg)}</div></div>`;
     if (p.kind === 'unit') {
       const broken = k && g('BROKEN_IMG_KEYS') && g('BROKEN_IMG_KEYS').has(k);
@@ -200,13 +214,13 @@
       const data = src ? ` data-hero-src="${esc(src)}" data-hero-key="${esc(k)}"` : '';
       return `<div class="device-modal-img"${data} style="${src ? `background-image:url('${attr(src)}')` : ''}" onclick="openLightbox('${attr(d.id)}', ${idx})"></div>`;
     }
-    /* The Super Game Boy shelf (25 Oct): the drawer shows the television photograph
-       switched off (screen black, no clip, as every system's drawer picture; 26 Oct: the clip plays only on the
-       device that slides in from the left, sgb-shelf.js showStage), not the Game Boy console its tile wears. */
-    if (d.sgb && window.SGB && typeof SGB.frameHTML === 'function') return `<div class="device-modal-img sgb-hero" onclick="openLightbox('${attr(d.id)}', 0)">${SGB.frameHTML(d, 'sgb-drawer')}</div>`;
-    const src = k ? call('imgSrc', k) : '';
-    if (!src) return missingBox(d.name);
-    return `<div class="device-modal-img" onclick="openLightbox('${attr(d.id)}', 0)" data-hero-key="${esc(k)}" style="background-image:url('${attr(src)}');background-color:transparent;background-size:${p.fit};background-position:center;background-repeat:no-repeat;"></div>`;
+    /* IMAGE 1 (21 Nov 2026, the drawer design section 3): the console switched on, the game's tile clip on
+       its screen (liveSpec above); the Super Game Boy's television photograph is switched on too, which
+       ends the 26 Oct "drawer picture is off" rule. A click opens the viewer at this same picture. */
+    const spec = liveSpec(d, p, k);
+    _builtSpec = spec;
+    if (!spec) return missingBox(d.name);
+    return `<div class="device-modal-img ud-live-hero" data-ud-live="${esc(d.id)}" title="Open the pictures">${liveHTML(spec)}</div>`;
   }
   /* ------------------------------------------------------------ the picture strip (2026-10-14)
      "the design of the old image viewer and how the thumbnails show on the drawer": the old
@@ -234,6 +248,14 @@
              '3d': 'https://pub-1879504402bc44fe84720eeb9497317d.r2.dev' /* atari7800-covers-3d */ },
     alynx: { '2d': 'https://pub-6a52666460d64b4a8b732cfc2d1ca0ee.r2.dev' /* atarilynx-covers-2d (2026-10-18) */,
              '3d': 'https://pub-bd2be751db6e4b27a33dfd21fccff2ab.r2.dev' /* atarilynx-covers-3d */ },
+    /* The Sega 8-bit family (20 Nov 2026): 2D covers only (no 3D buckets), named like the Atari art by the tile's
+       variant-group representative ('<prefix>-x' + 12 hex), the prefix picking the console's bucket. */
+    sg1000: { '2d': 'https://pub-172174e21b8847c49b4205c2358adda6.r2.dev' /* sg1000-covers-2d */, '3d': '' },
+    sms:    { '2d': 'https://pub-62873088d8c44a32954ea1ec5c2a36d2.r2.dev' /* sms-covers-2d */, '3d': '' },
+    gg:     { '2d': 'https://pub-67d416b00308450382d33c630f9b75c1.r2.dev' /* gg-covers-2d */, '3d': '' },
+    /* The Nintendo 64 (22 Nov 2026): named by the tile id, as the Sega art; 2D covers only (no 3D bucket). */
+    n64:    { '2d': 'https://pub-84001b5c96714c34898dbe219cfe5055.r2.dev' /* n64-covers-2d */, '3d': '' },
+    snes:   { '2d': 'https://pub-fb9d36bc6e4444f9a39418933369b83f.r2.dev' /* snes-covers-2d (23 Nov 2026) */, '3d': '' },
   };
   /* GAME MAPS (2026-10-23): bucket site-images, maps/<shelf>/<cover key>-map.jpg (Game Boy:
      the cartridge's SHA-1, as its covers). NO LIST: the drawer asks directly; a 404 means no map. */
@@ -275,7 +297,7 @@
      runs cheats (the others join when their cheat build is installed), so the drawer never offers
      what the player cannot run. A 404 shows nothing. */
   const CHEAT_SYSTEMS = new Set(['gnw', 'nes', 'gb', 'atari', 'pm']);   // NES, Game Boy and Atari cheat builds installed 28 Oct 2026; Pokemon mini (our own cheats, served core unchanged) 28 Oct
-  const CHEATS_MJS = './play/host/cheats.mjs?v=2.2.2';
+  const CHEATS_MJS = './play/host/cheats.mjs?v=2.3.0-snessite';
   async function cheatPlaces(d, p) {
     if (p === PROFILES.gb) {
       const sha = await gbSha1(d); if (!sha) return [];
@@ -288,7 +310,7 @@
     }
     if (p === PROFILES.atari) {
       const id = atariArtId(d); if (!id) return [];
-      const bucket = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx' }[id.slice(0, 5)];
+      const bucket = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx', sg1000: 'sg1000', sms: 'sms', gg: 'gg', n64: 'n64', snes: 'snes' }[artShelf(id)];   // Sega: 20 Nov 2026; n64-cheats: 22 Nov 2026
       return bucket ? [{ bucket, key: id }] : [];
     }
     if (p.kind === 'unit' && (g('GNW_EMULATED_GAMES') || {})[d.id]) return [{ bucket: 'gnw', key: d.id }];
@@ -360,7 +382,7 @@
       const id = nesCoverId(d), ownShelf = d.nesConsole || 'nes';
       for (const s of [ownShelf, 'nes', 'famicom', 'fds']) { const b = COVERS[s] && COVERS[s][mode]; if (b && !out.includes(b + '/' + id + '.png')) out.push(b + '/' + id + '.png'); }
     } else if (p === PROFILES.atari) {
-      const id = atariArtId(d), b = id && COVERS[id.slice(0, 5)] && COVERS[id.slice(0, 5)][mode];
+      const id = atariArtId(d), b = id && COVERS[artShelf(id)] && COVERS[artShelf(id)][mode];
       if (b) out.push(b + '/' + id + '.png');
     }
     /* THE LAST SOURCE (21 Oct): the system's generic box, generic.png in its 2D bucket, as
@@ -373,7 +395,7 @@
     if (p === PROFILES.pm) return 'pm';
     if (p === PROFILES.gb) return (d.series === 'game-boy-color' || d.system === 'gbc') ? 'gbc' : 'gb';
     if (p === PROFILES.nes) return d.nesConsole || 'nes';
-    if (p === PROFILES.atari) { const id = atariArtId(d); return id ? id.slice(0, 5) : null; }
+    if (p === PROFILES.atari) { const id = atariArtId(d); return id ? artShelf(id) : null; }
     return null;
   }
   function LEX_BA3D() { return typeof BOX_ART_3D_IMAGES !== 'undefined' ? BOX_ART_3D_IMAGES : undefined; }   // eslint-disable-line no-undef
@@ -395,12 +417,26 @@
     a5200: 'https://pub-45aeb460c42f4714909c889f7d4ac278.r2.dev', // atari5200-marquee (2026-10-18)
     a7800: 'https://pub-fa8459afca964d62bb1a27fdd4c6b864.r2.dev', // atari7800-marquee (2026-10-18)
     alynx: 'https://pub-439768261e8b43949da7b5625ac85a6c.r2.dev', // atarilynx-marquee (2026-10-18)
+    sg1000: 'https://pub-8ff4076b965a499380eed679ccab1212.r2.dev', // sg1000-marquee (2026-11-20)
+    sms: 'https://pub-d107f63080834f9186894744fce47811.r2.dev',    // sms-marquee (2026-11-20)
+    gg: 'https://pub-47024a14b8f2459294088d81666b0df9.r2.dev',     // gg-marquee (2026-11-20)
+    n64: 'https://pub-a9ffa893b42944859b07bd2747d85eb0.r2.dev',    // n64-marquee (2026-11-22)
+    snes: 'https://pub-f69c69f498794038a9f3fe1a3931dea0.r2.dev',   // snes-marquee (2026-11-23)
   };
   /* Atari art (atari-art.py) is named by the tile's clip id: the variant group's
      representative (atarivideo.js clipId). The id's prefix (a2600, a5200, a7800, alynx) picks
      the machine's buckets (all four have covers and a marquee since 2026-10-18). */
+  /* The Sega 8-bit family (20 Nov 2026) is named the same way: its tables are sg1000, mastersystem, gamegear
+     (variants.js), its prefixes sg1000, sms, gg. */
+  const SEGA8_TABLE = { sg1000: 'sg1000', sms: 'mastersystem', gg: 'gamegear', n64: 'n64', snes: 'snes' };   // snes: 23 Nov 2026   // the Nintendo 64's table is n64 (22 Nov 2026)
+  const artShelf = id => (/^([a-z0-9]+)-x[0-9a-f]{12}$/.exec(id || '') || [])[1] || null;   // the id's prefix: picks the buckets
   function atariArtId(d) {
     const own = String(d && d.id || '');
+    const seg = /^(sg1000|sms|gg|n64|snes)-x[0-9a-f]{12}$/.exec(own);
+    if (seg) {
+      try { const r = window.Variants && Variants.repOf(SEGA8_TABLE[seg[1]], own); if (r) return seg[1] + '-x' + String(r).slice(0, 12); } catch (_) {}
+      return own;
+    }
     if (!/^(a2600|a5200|a7800|alynx)-x[0-9a-f]{12}$/.test(own)) return null;
     try { const c = window.ATARIVIDEO && ATARIVIDEO.clipId ? ATARIVIDEO.clipId(own) : own; return c || own; } catch (_) { return own; }
   }
@@ -412,7 +448,7 @@
     }
     if (p === PROFILES.nes) return [MARQUEE.nes + '/' + nesCoverId(d) + '.png'];
     /* ?v= (28 Oct): the 2600, 5200, 7800 and Lynx marquees were replaced under the same names; the tag keeps a browser from showing a cached old logo. */
-    if (p === PROFILES.atari) { const id = atariArtId(d), b = id && MARQUEE[id.slice(0, 5)]; return b ? [b + '/' + id + '.png' + (/^a(2600|5200|7800|lynx)-/.test(id) ? '?v=20261028' : '')] : []; }
+    if (p === PROFILES.atari) { const id = atariArtId(d), b = id && MARQUEE[artShelf(id)]; return b ? [b + '/' + id + '.png' + (/^a(2600|5200|7800|lynx)-/.test(id) ? '?v=20261028' : '')] : []; }
     return [];
   }
   function fillMarquee(modal, d, p) {
@@ -428,6 +464,434 @@
     }).catch(() => {});
   }
 
+  /* ------------------------------------------------------------ IMAGE 1: THE CONSOLE SWITCHED ON (21 Nov 2026)
+     The drawer design (section 3): the drawer's pictures start with the console switched on, the game's
+     tile clip playing on its screen, muted. It is the big picture on a desktop and the first picture of
+     the strip and the viewer everywhere; it opens and zooms with the same one click as box art. Its
+     screen is the rectangle the tiles use, read from the one declaration in the screen stylesheets (a
+     hidden card with the picture's own marks: data-photo="full" picks the full photographs' blocks), so
+     no number is copied here. The clip is exactly the tile's (GBVIDEO.clipUrls, NESVIDEO.urlFor and its
+     Disk System start-up clip, ATARIVIDEO.urlFor, SGB.clipUrls), from its start, looped, never trimmed;
+     a clip shorter than two minutes holds its last frame until the two-minute mark, as on the tiles.
+     ONE clip element for the drawer, carrying none of the tiles' marks, so the tile scripts never count
+     or hold it; muted by property and attribute, never routed to sound. No clip (or no clip for this
+     system, Pokemon mini): the console switched off, today's picture. Game & Watch units are unchanged. */
+  const LIVE = { v: null, id: null, spec: null, where: null, urls: null, seq: 0, relT: 0, missing: new Set() };
+  function liveKind(d, p) {
+    if (p === PROFILES.gb) return d.sgb ? 'sgb' : 'gb';
+    if (p === PROFILES.nes) return 'nes';
+    if (p === PROFILES.atari) return 'tv';
+    if (p === PROFILES.pm) return 'pm';
+    return null;
+  }
+  let _probeHost = null;
+  function probeHost() {
+    if (_probeHost && _probeHost.isConnected) return _probeHost;
+    const h = document.createElement('div');
+    h.setAttribute('aria-hidden', 'true');
+    h.style.cssText = 'position:fixed;left:-4000px;top:0;width:1000px;height:1000px;visibility:hidden;pointer-events:none;overflow:hidden';
+    document.body.appendChild(h);
+    return (_probeHost = h);
+  }
+  function screenOf(kind, attrs) {
+    const host = probeHost();
+    try {
+      if (kind === 'sgb') {
+        host.innerHTML = '<div class="sgb-emu" style="position:absolute;left:0;top:0;width:1000px;height:1000px;transform:none"><div class="sgb-scr"></div></div>';
+        const s = host.querySelector('.sgb-scr'), pc = n => (n / 10).toFixed(3) + '%';
+        return { l: pc(s.offsetLeft), t: pc(s.offsetTop), w: pc(s.offsetWidth), h: pc(s.offsetHeight), bg: getComputedStyle(s).backgroundColor || '#000', radius: '', z: 1 };
+      }
+      const el = document.createElement('div');
+      el.className = 'device-card';
+      Object.keys(attrs).forEach(k => el.setAttribute('data-' + k, attrs[k]));
+      host.appendChild(el);
+      const cs = getComputedStyle(el), v = n => cs.getPropertyValue(n).trim();
+      const pre = kind === 'nes' ? '--nes-scr-' : (kind === 'tv' && v('--at-scr-l')) ? '--at-scr-' : '--gb-scr-';
+      const r = { l: v(pre + 'l'), t: v(pre + 't'), w: v(pre + 'w'), h: v(pre + 'h'), bg: v(pre + 'bg') || v('--gb-scr-bg') || '#000', radius: v(pre + 'radius'), z: +(v('--gb-scr-z') || 1) };
+      return r.l && r.w && r.h ? r : null;
+    } catch (_) { return null; } finally { host.innerHTML = ''; }
+  }
+  /* The clip's own picture size, for the smooth-when-shrunk drawing (GBVIDEO.fitScale), as the tiles give it. */
+  const NAT = { gb: [160, 144], sgb: [256, 224], nes: [256, 240], tv: [320, 228], sega: [256, 218], n64: [320, 237], snes: [256, 224] };   // n64: the N64 clips (22 Nov 2026)
+  function liveSpec(d, p, heroKey) {
+    const kind = liveKind(d, p);
+    if (!kind) return null;
+    const art = kind === 'sgb' ? (window.SGB && typeof SGB.drawUrl === 'function' ? SGB.drawUrl() : '') : (heroKey ? call('imgSrc', heroKey) : '');
+    if (!art) return null;
+    const attrs = {};
+    if (kind === 'gb') {
+      attrs.system = d.system || 'gb';
+      if (/AtomicPurple/i.test(heroKey || '')) attrs.art = 'cgb-atomic';
+      else if (/Pokemon.*\.svg$/i.test(heroKey || '')) attrs.art = 'cgb-pokemon';
+      else if (heroKey === d.img && d.art) attrs.art = d.art;
+    } else if (kind === 'nes') { attrs.photo = 'full'; attrs.system = 'nes'; attrs['nes-console'] = d.nesConsole || 'nes'; }
+    else if (kind === 'tv') { attrs.photo = 'full'; attrs.system = d.system || ''; if (d.catalogue === 'atarilynx' && d.lynxTurn) attrs['lynx-turn'] = String(d.lynxTurn); if (d.art) attrs.art = d.art; }   // d.art: the Pikachu Nintendo 64 (22 Nov 2026)
+    const sega = kind === 'tv' && /^(sg1000|mastersystem|gamegear)$/.test(d.system || '');
+    const scr = kind === 'pm' ? null : screenOf(kind, attrs);
+    return { id: d.id, d, p, kind, art, attrs, scr, sega, clips: kind !== 'pm' && !!scr, nat: NAT[sega ? 'sega' : (kind === 'tv' && d.system === 'n64') ? 'n64' : (kind === 'tv' && (d.system === 'snes' || d.system === 'sufami')) ? 'snes' : kind] || [256, 240], fit: kind === 'gb' ? 0.88 : kind === 'pm' ? 0.82 : 1 };
+  }
+  function liveHTML(spec, extra) {
+    const s = spec.scr;
+    const rect = s ? `left:${s.l};top:${s.t};width:${s.w};height:${s.h};${s.radius ? 'border-radius:' + s.radius + ';' : ''}` : '';
+    return `<div class="cw-live${extra ? ' ' + extra : ''}" data-live-kind="${spec.kind}"${spec.attrs['lynx-turn'] === '1' ? ' data-turn="180"' : ''}>` +
+      (s ? `<div class="cw-live-scr" style="${rect}background:${esc(s.bg)}"></div><div class="cw-live-slot${s.z >= 5 ? ' cw-front' : ''}" style="${rect}"></div>` : '') +
+      `<img class="cw-live-art" src="${esc(spec.art)}" alt="" draggable="false" decoding="async"></div>`;
+  }
+  /* Fit a .cw-live box inside its host (contain), its own picture's proportions. */
+  function fitLive(host, box, frac) {
+    const art = box.querySelector('.cw-live-art');
+    const go = () => {
+      if (!art.naturalWidth || !host.isConnected) return;
+      const W = host.clientWidth, H = host.clientHeight * (frac || 1);
+      if (!W || !H) return;
+      const a = art.naturalWidth / art.naturalHeight, w = Math.min(W, H * a), h = w / a;
+      box.style.width = w.toFixed(1) + 'px'; box.style.height = h.toFixed(1) + 'px';
+      box.classList.add('cw-sized');
+    };
+    if (art.complete) go(); else art.addEventListener('load', go, { once: true });
+    if (typeof ResizeObserver === 'function') { const ro = new ResizeObserver(go); ro.observe(host); box.__ro = ro; }
+  }
+  /* The addresses the tile would play for this game, in its order. */
+  function waitVariants() {
+    return new Promise(res => {
+      const t = setTimeout(done, 20000);
+      function done() { clearTimeout(t); window.removeEventListener('gnw-variants', done); res(); }
+      window.addEventListener('gnw-variants', done);
+    });
+  }
+  function liveUrls(spec) {
+    const d = spec.d;
+    if (!spec.clips) return Promise.resolve({ urls: [] });
+    if (spec.kind === 'sgb') return (window.SGB && SGB.clipUrls ? SGB.clipUrls(d.id) : Promise.resolve([])).then(urls => ({ urls }));
+    if (spec.kind === 'gb') return gbSha1(d).then(sha => (window.GBVIDEO && GBVIDEO.clipUrls ? GBVIDEO.clipUrls(d.id, sha) : [])).then(urls => ({ urls: urls || [] }));
+    if (spec.kind === 'nes') {
+      const N = window.NESVIDEO; if (!N) return Promise.resolve({ urls: [] });
+      const wrap = document.createElement('div');
+      wrap.setAttribute('data-nes', d.id); wrap.setAttribute('data-nes-console', d.nesConsole || 'nes');
+      const once = () => { const u = N.urlFor(d.id, wrap); return u ? { urls: [u], boot: (N.isFds(wrap) && N.bootUrl) ? N.bootUrl() : null } : null; };
+      const now = once();
+      if (now || (N.clipId && N.clipId(d.id) !== undefined)) return Promise.resolve(now || { urls: [] });
+      return waitVariants().then(() => once() || { urls: [] });
+    }
+    if (spec.kind === 'tv') {
+      const A = window.ATARIVIDEO; if (!A) return Promise.resolve({ urls: [] });
+      const once = () => { let u = null; try { u = A.urlFor(d.id); } catch (_) {} return u ? { urls: [u] } : null; };
+      const now = once();
+      let pending = false; try { pending = A.clipId(d.id) === undefined; } catch (_) {}
+      if (now || !pending) return Promise.resolve(now || { urls: [] });
+      return waitVariants().then(() => once() || { urls: [] });
+    }
+    return Promise.resolve({ urls: [] });
+  }
+  function liveVideo(spec) {
+    const v = document.createElement('video');
+    v.className = 'cw-live-vid';
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.loop = true;
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true'); v.setAttribute('tabindex', '-1');
+    v.disablePictureInPicture = true; v.preload = 'auto';
+    v.addEventListener('volumechange', () => { if (!v.muted) v.muted = true; });
+    if (window.GBVIDEO && GBVIDEO.fitScale) { try { GBVIDEO.fitScale(v, spec.nat[0], spec.nat[1]); } catch (_) {} }
+    return v;
+  }
+  function slotOf(where) {
+    if (where === 'viewer') return document.querySelector('#lightbox-overlay .lb-live-host .cw-live-slot');
+    return document.querySelector('#device-modal .ud-live-hero .cw-live-slot');
+  }
+  function playV(v) { try { const r = v.play(); if (r && r.catch) r.catch(() => {}); } catch (_) {} }
+  /* Start (or move) the drawer's clip into the hero or the viewer. */
+  function liveTo(where) {
+    const spec = LIVE.spec;
+    if (!spec || !spec.clips || LIVE.missing.has(spec.id)) return;
+    const slot = slotOf(where);
+    if (!slot) return;
+    clearTimeout(LIVE.relT);
+    LIVE.where = where;
+    if (LIVE.id === spec.id && (LIVE.v || LIVE.pending)) {
+      if (LIVE.v) {
+        if (LIVE.v.parentNode !== slot) slot.appendChild(LIVE.v);
+        if (LIVE.v._shown) slot.classList.add('on');
+        if (!document.hidden) playV(LIVE.v);
+      }
+      return;
+    }
+    liveRelease();
+    const seq = ++LIVE.seq, id = spec.id;
+    LIVE.id = id; LIVE.where = where; LIVE.pending = true;
+    liveUrls(spec).then(r => {
+      if (seq !== LIVE.seq || !LIVE.spec || LIVE.spec.id !== id) return;
+      LIVE.pending = false;
+      const urls = (r && r.urls || []).slice();
+      if (!urls.length) { LIVE.missing.add(id); return; }
+      const v = liveVideo(spec);
+      LIVE.v = v; LIVE.urls = urls;
+      let t0 = 0, hold = 0, boot = r.boot || null, inBoot = !!boot, gi = 0;
+      const short = () => isFinite(v.duration) && v.duration < 119;
+      const shown = () => { if (LIVE.v !== v) return; v._shown = true; if (v.parentNode && v.parentNode.classList) v.parentNode.classList.add('on'); };
+      const paint = () => { if (typeof v.requestVideoFrameCallback === 'function') v.requestVideoFrameCallback(shown); else v.addEventListener('loadeddata', shown, { once: true }); };
+      const startGame = () => { inBoot = false; v.loop = true; v.src = urls[gi]; paint(); playV(v); };
+      v.addEventListener('loadedmetadata', () => { if (inBoot) { v.loop = false; return; } if (short()) v.loop = false; });
+      v.addEventListener('playing', () => { if (!t0) t0 = Date.now(); });
+      v.addEventListener('ended', () => {
+        if (inBoot) { startGame(); return; }
+        clearTimeout(hold);
+        const again = () => { if (LIVE.v !== v) return; t0 = Date.now(); if (boot) { inBoot = true; v.loop = false; v.src = boot; playV(v); } else { try { v.currentTime = 0; } catch (_) {} playV(v); } };
+        if (!short()) { again(); return; }
+        hold = setTimeout(again, Math.max(0, 120000 - (Date.now() - (t0 || Date.now()))));
+      });
+      v._hold = () => clearTimeout(hold);
+      v.addEventListener('error', () => {
+        if (LIVE.v !== v) return;
+        if (inBoot) { boot = null; startGame(); return; }   // no start-up clip for this firmware: the game alone
+        gi++;
+        if (gi < urls.length) { v.src = urls[gi]; paint(); playV(v); return; }
+        LIVE.missing.add(id); liveRelease();             // no clip: the console switched off
+      });
+      const s = slotOf(LIVE.where);
+      if (s) s.appendChild(v);
+      v.src = inBoot ? boot : urls[0];
+      if (inBoot) v.loop = false;
+      paint();
+      if (!document.hidden && s) playV(v);
+    }).catch(() => { LIVE.pending = false; });
+  }
+  function livePause() { if (LIVE.v) { try { LIVE.v.pause(); } catch (_) {} } }
+  function liveRelease() {
+    clearTimeout(LIVE.relT);
+    const v = LIVE.v;
+    LIVE.v = null; LIVE.urls = null; LIVE.where = null; LIVE.pending = false; LIVE.id = null; LIVE.seq++;
+    if (!v) return;
+    try { if (v._hold) v._hold(); v.pause(); v.removeAttribute('src'); v.load(); } catch (_) {}
+    const s = v.parentNode; if (s && s.classList) s.classList.remove('on');
+    try { v.remove(); } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    const v = LIVE.v; if (!v) return;
+    if (document.hidden) livePause();
+    else if (LIVE.where === 'hero' || (LIVE.where === 'viewer' && viewerOnLive())) playV(v);
+  });
+  /* The drawer closing: the clip plays on through the slide-out, then is released (as the slide-in's
+     emulator was); another game's drawer releases it at once. */
+  function watchDrawerClose() {
+    const dov = document.getElementById('device-overlay');
+    if (!dov || dov.__udLive) return;
+    dov.__udLive = true;
+    new MutationObserver(() => {
+      if (dov.classList.contains('open') || !(LIVE.v || LIVE.pending)) return;
+      const id = LIVE.id;
+      const out = (parseFloat(getComputedStyle(dov).getPropertyValue('--drawer-out')) || 1.4) * 1000 + 300;
+      clearTimeout(LIVE.relT);
+      LIVE.relT = setTimeout(() => { if (!dov.classList.contains('open') && LIVE.id === id) { liveRelease(); LIVE.spec = null; } }, out);
+    }).observe(dov, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  /* ------------------------------------------------------------ the viewer's image 1 */
+  function lbState() { try { return typeof lightboxState !== 'undefined' ? lightboxState : null; } catch (_) { return null; } }   // eslint-disable-line no-undef
+  function viewerOnLive() {
+    const ov = document.getElementById('lightbox-overlay'), st = lbState();
+    const m = st && st.meta && st.meta[st.idx];
+    return !!(ov && ov.classList.contains('open') && m && m.live && LIVE.spec && m.live === LIVE.spec.id);
+  }
+  /* Called by index.html whenever the viewer's picture, size or zoom changes (window.cwLightboxLive). */
+  function viewerSync() {
+    const ov = document.getElementById('lightbox-overlay'), st = lbState();
+    if (!ov) return;
+    const wrap = ov.querySelector('.lb-stage-wrap'), img = document.getElementById('lightbox-img');
+    const m = st && st.meta && st.meta[st.idx];
+    let host = wrap && wrap.querySelector(':scope > .lb-live-host');
+    const on = !!(m && m.live && LIVE.spec && m.live === LIVE.spec.id && wrap && img);
+    if (!on) {
+      if (host) host.remove();
+      ov.classList.remove('lb-live-on');
+      if (LIVE.where === 'viewer') livePause();
+      return;
+    }
+    if (!host || host.dataset.live !== LIVE.spec.id) {
+      if (host) host.remove();
+      host = document.createElement('div');
+      host.className = 'lb-live-host'; host.dataset.live = LIVE.spec.id; host.setAttribute('aria-hidden', 'true');
+      host.innerHTML = liveHTML(LIVE.spec);
+      wrap.appendChild(host);
+    }
+    ov.classList.add('lb-live-on');
+    const box = host.firstElementChild;
+    if (ov.classList.contains('zoomed')) {
+      const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1, W = window.innerWidth, H = window.innerHeight;
+      const s = Math.min(W / nw, H / nh), w = nw * s, h = nh * s;
+      host.style.cssText = `left:${((W - w) / 2).toFixed(1)}px;top:${((H - h) / 2).toFixed(1)}px;width:${w.toFixed(1)}px;height:${h.toFixed(1)}px`;
+    } else host.style.cssText = `left:${img.offsetLeft}px;top:${img.offsetTop}px;width:${img.offsetWidth}px;height:${img.offsetHeight}px`;
+    box.style.width = '100%'; box.style.height = '100%'; box.classList.add('cw-sized');
+    liveTo('viewer');
+  }
+  document.addEventListener('load', e => { if (e.target && e.target.id === 'lightbox-img') viewerSync(); }, true);
+  const BACKS_LB = new Set(['Escape', 'Esc', 'Backspace', 'GoBack', 'BrowserBack', 'XF86Back']);
+  function watchViewer() {
+    const ov = document.getElementById('lightbox-overlay');
+    if (!ov || ov.__udLive) return;
+    ov.__udLive = true;
+    let was = ov.classList.contains('open');
+    new MutationObserver(() => {
+      const now = ov.classList.contains('open');
+      if (now && !was) setTimeout(viewerSync, 0);
+      if (!now && was) {
+        const host = ov.querySelector('.lb-live-host'); if (host) host.remove();
+        ov.classList.remove('lb-live-on');
+        const dov = document.getElementById('device-overlay');
+        if ((LIVE.v || LIVE.pending) && dov && dov.classList.contains('open') && slotOf('hero') && !narrow()) liveTo('hero');
+        else liveRelease();
+      }
+      was = now;
+    }).observe(ov, { attributes: true, attributeFilter: ['class'] });
+    /* Enter or OK on the picture zooms (the picture takes focus, with the site's focus ring); Back or
+       Escape leaves zoom before closing; a sideways swipe moves, by the Home banner's rule. */
+    const img = document.getElementById('lightbox-img');
+    if (img && !img.hasAttribute('tabindex')) {
+      img.setAttribute('tabindex', '0'); img.setAttribute('role', 'button'); img.setAttribute('aria-label', 'Zoom the picture');
+      img.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+        e.preventDefault(); e.stopPropagation();
+        if (!e.repeat) call('toggleLightboxZoom', e);
+      });
+    }
+    const wrap = ov.querySelector('.lb-stage-wrap');
+    if (wrap && !wrap.__udSwipe) {
+      wrap.__udSwipe = true;
+      let sx = 0, sy = 0, tr = false;
+      wrap.addEventListener('touchstart', e => { if (e.touches.length !== 1) { tr = false; return; } sx = e.touches[0].clientX; sy = e.touches[0].clientY; tr = true; }, { passive: true });
+      wrap.addEventListener('touchend', e => {
+        if (!tr) return; tr = false;
+        const t = e.changedTouches && e.changedTouches[0]; if (!t) return;
+        const dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) < 46 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        const st = lbState(); if (!st || !st.keys || st.keys.length < 2) return;
+        call('lightboxNav', dx < 0 ? 1 : -1);
+      }, { passive: true });
+    }
+  }
+  window.addEventListener('keydown', e => {
+    if (!(BACKS_LB.has(e.key) || e.keyCode === 10009 || e.keyCode === 461)) return;
+    const ov = document.getElementById('lightbox-overlay');
+    if (!ov || !ov.classList.contains('open') || !ov.classList.contains('zoomed')) return;
+    if (e.key === 'Backspace' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (!e.repeat) call('toggleLightboxZoom', e);
+  }, true);
+  /* The big picture opens the viewer at image 1 of the strip's own list. */
+  function heroOpen(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const modal = document.getElementById('device-modal'), strip = modal && modal.querySelector('[data-ud-strip]');
+    let list = (strip && strip.__ud) || [];
+    if (!list.some(x => x.live) && LIVE.spec) list = [{ slot: -1, url: LIVE.spec.art, label: 'Console', live: LIVE.spec.id, contain: true }].concat(list);
+    const pics = list.filter(x => !x.manual);
+    if (!pics.length) return;
+    call('showLightbox', pics.map(x => x.url), 0, pics.map(metaOf));
+  }
+  const metaOf = x => (x.generic ? { shelf: x.gshelf, id: x.gid } : x.live ? { live: x.live } : null);
+
+  /* ------------------------------------------------------------ the case beside the drawer (21 Nov 2026)
+     Every game but a Game & Watch unit: its box in 3D (case3d.js), the front its 2D cover in the strip's
+     order (ending with the system's generic box and its type word), the spine its picture from the
+     system's spine bucket, named like its covers (no list: a 404 falls back), else drawn from the cover
+     and the title. */
+  const SPINE_BUCKETS = {
+    gb: 'https://pub-b691726dbc724cedb7dbed5a3abefbc6.r2.dev',      // gb-covers-spine
+    gbc: 'https://pub-75f930015a9d4b6db612821554522c94.r2.dev',     // gbc-covers-spine
+    nes: 'https://pub-5510f48daff34a15966cd8d28e01c3e3.r2.dev',     // nes-covers-spine
+    famicom: 'https://pub-b3d54e8e26b64e5b827693db8853692e.r2.dev', // famicom-covers-spine
+    fds: 'https://pub-28d4f99b3d40438e8d6b1532b04fa18b.r2.dev',     // fds-covers-spine
+    a2600: 'https://pub-d9fdc004bc434a60bc5a68ba4ed277bb.r2.dev',   // atari2600-covers-spine
+    a5200: 'https://pub-eace320b87da403d81219a6f210e367c.r2.dev',   // atari5200-covers-spine
+    a7800: 'https://pub-cf71a5561b12496790405e4201aa1eee.r2.dev',   // atari7800-covers-spine
+    alynx: 'https://pub-57768826ed454ca2916d3fb00a129247.r2.dev',   // atarilynx-covers-spine
+    pm: 'https://pub-a549cc690be941219933cc4ae1e87613.r2.dev',      // pm-covers-spine
+    sg1000: 'https://pub-0606e2156d264b7980b69f639c587afc.r2.dev',  // sg1000-covers-spine
+    sms: 'https://pub-257576469bcc417a88cb4733fdfab9b9.r2.dev',     // sms-covers-spine
+    gg: 'https://pub-ec8fd806c23d4ffa8f5deb8612cdbf5f.r2.dev',      // gg-covers-spine
+    n64: 'https://pub-ee58826d4efe4327b1071cd878b7a97c.r2.dev',     // n64-covers-spine (22 Nov 2026)
+    snes: 'https://pub-bfd5b0e0df6b47c8afacb7387a15d3b2.r2.dev',    // snes-covers-spine (23 Nov 2026)
+  };
+  async function spineUrls(d, p) {
+    if (p === PROFILES.gb) {
+      const sha = await gbSha1(d); if (!sha) return [];
+      const shelf = (d.series === 'game-boy-color' || d.system === 'gbc') ? 'gbc' : 'gb';
+      return [SPINE_BUCKETS[shelf], SPINE_BUCKETS[shelf === 'gb' ? 'gbc' : 'gb']].map(b => b + '/' + sha + '.png');
+    }
+    if (p === PROFILES.nes) {
+      const id = nesCoverId(d), own = d.nesConsole || 'nes', out = [];
+      for (const s of [own, 'nes', 'famicom', 'fds']) { const u = SPINE_BUCKETS[s] && SPINE_BUCKETS[s] + '/' + id + '.png'; if (u && !out.includes(u)) out.push(u); }
+      return out;
+    }
+    if (p === PROFILES.atari) { const id = atariArtId(d), b = id && SPINE_BUCKETS[artShelf(id)]; return b ? [b + '/' + id + '.png'] : []; }
+    if (p === PROFILES.pm) return [SPINE_BUCKETS.pm + '/' + (d.pmVariantOf || d.id) + '.png'];
+    return [];
+  }
+  /* The case's front and spine addresses for the last few games, kept with their answers once they arrive, so a drawer
+     opened after its tile was hovered or clicked hands the case its pictures at once (22 Nov 2026). */
+  const _artMemo = new Map();   // id -> { front: Promise, frontV, spines: Promise, spinesV, done }
+  function artFor(d, p) {
+    let m = _artMemo.get(d.id);
+    if (m) { _artMemo.delete(d.id); _artMemo.set(d.id, m); return m; }
+    m = {};
+    m.front = coverUrls(d, p, '2d').then(firstOf).catch(() => null)
+      .then(url => (url ? { url, generic: /\/generic\.png$/.test(url) ? { shelf: genericShelf(d, p), id: d.id } : null } : null));
+    m.spines = spineUrls(d, p).catch(() => []);
+    m.front.then(v => { m.frontV = v; m.frontDone = true; });
+    m.spines.then(v => { m.spinesV = v; m.spinesDone = true; });
+    _artMemo.set(d.id, m);
+    while (_artMemo.size > 12) _artMemo.delete(_artMemo.keys().next().value);
+    return m;
+  }
+  function frontCover(d, p) { return artFor(d, p).front.then(v => (v ? v.url : null)); }
+  /* THE BOX FOLLOWS THE COVER SHOWN (21 Nov 2026). Covers, spines and clips are the variant group's
+     representative's, so its console (NES / Famicom / Disk System) and its region (a Japanese box or a western
+     one) choose the box too: the Japanese version of a game whose tile is the US release shows the US box. */
+  function shownDevice(d, p) {
+    const V = window.Variants;
+    /* the group's representative file (the table's R row), when it is in the library */
+    let rep = null;
+    try { if (V && typeof V.members === 'function') rep = (V.members(d) || []).find(x => { const e = V.info(x); return e && String(e.flags || '').indexOf('R') >= 0; }) || null; } catch (_) { rep = null; }
+    if (rep && rep.catalogue === d.catalogue) return rep;
+    /* not in the library: its region and shelf from the table, under the key its cover is named by */
+    try {
+      let rid = null, shelf = null;
+      if (p === PROFILES.nes) { rid = nesCoverId(d); const r = V && V.repRow ? V.repRow('nes', d.id) : null; shelf = r && r.shelf; }
+      else if (p === PROFILES.atari) rid = atariArtId(d);
+      else if (p === PROFILES.gb && V && V.repOf) { const r = V.repOf('gb', d.sgbOf || d.id); if (r) rid = 'gb-x' + String(r).slice(0, 12); }
+      if (!rid || rid === d.id || !V || typeof V.regionOf !== 'function') return d;
+      const words = V.regionOf({ id: rid, catalogue: d.catalogue });
+      if (!words || !words.length) return d;
+      const nice = w => ({ japan: 'Japan', korea: 'Korea' })[w] || w;
+      return Object.assign({}, d, { id: rid, fullName: '', name: d.name, regions: words.map(w => ({ region: nice(w) })),
+        nesConsole: (shelf === 'famicom' || shelf === 'fds' || shelf === 'nes') ? shelf : d.nesConsole });
+    } catch (_) { return d; }
+  }
+  function caseIntent(el) {
+    if (!window.CwCase || !CwCase.wanted() || narrow()) return;
+    const id = el && el.getAttribute('data-id'); if (!id) return;
+    const d = (g('ALL_DEVICES') || []).find(x => x.id === id), p = d && profileOf(d);
+    if (!p || p.kind === 'unit') return;
+    const m = artFor(d, p);
+    CwCase.prefetch({ front: m.front, spines: m.spines });
+  }
+  let _intentT = 0, _intentEl = null;
+  document.addEventListener('pointerover', e => {
+    const el = e.target && e.target.closest && e.target.closest('.device-card[data-id]');
+    if (!el || el === _intentEl || el.closest('#device-stage')) return;
+    _intentEl = el; clearTimeout(_intentT);
+    _intentT = setTimeout(() => { if (_intentEl === el) caseIntent(el); }, 140);   // resting on it, not passing over
+  }, { passive: true });
+  document.addEventListener('focusin', e => { const el = e.target && e.target.closest && e.target.closest('.device-card[data-id]'); if (el && !el.closest('#device-stage')) caseIntent(el); });
+  document.addEventListener('click', e => { const el = e.target && e.target.closest && e.target.closest('.device-card[data-id]'); if (el && !el.closest('#device-stage')) caseIntent(el); }, true);   // before the drawer builds
+  function showCase(d, p) {
+    const st = document.getElementById('device-stage');
+    if (!st || !window.CwCase) return false;
+    const m = artFor(d, p);
+    const key = p === PROFILES.atari ? atariArtId(d) : p === PROFILES.nes ? nesCoverId(d) : p === PROFILES.pm ? (d.pmVariantOf || d.id) : d.id;
+    CwCase.showGame(st, shownDevice(d, p), { title: d.name || '', key, front: m.front, spines: m.spines,
+      frontNow: m.frontDone ? m.frontV : null, spinesNow: m.spinesDone ? m.spinesV : null, spineFill: (p === PROFILES.nes && d.nesConsole === 'fds') ? '#e8ecee' : null,
+      onClose: () => call('closeOverlay', 'device-overlay') });
+    return true;
+  }
+
   function stripShell(color) { return `<div class="gallery-strip ud-gallery" data-ud-strip style="--c:${color}" hidden></div>`; }
   function fillStrip(modal, d, p) {
     const strip = modal.querySelector('[data-ud-strip]');
@@ -439,7 +903,7 @@
       const seen = new Set(), list = items.filter(it => !seen.has(it.url) && seen.add(it.url));
       const had = strip.contains(document.activeElement) ? +document.activeElement.dataset.udI : -1;
       strip.innerHTML = list.map((it, i) =>
-        `<button type="button" class="gallery-thumb ud-thumb${it.contain ? ' ud-contain' : ''}" data-ud-i="${i}" style="background-image:url('${attr(it.url)}')" aria-label="${esc(it.label)}, ${i + 1} of ${list.length}" title="${esc(it.label)}"><span class="thumb-idx">${i + 1}</span></button>`).join('');
+        `<button type="button" class="gallery-thumb ud-thumb${it.contain ? ' ud-contain' : ''}" data-ud-i="${i}" style="background-image:url('${attr(it.url)}')" aria-label="${esc(it.label)}, ${i + 1} of ${list.length}" title="${esc(it.label)}"><span class="thumb-idx">${i + 1}</span>${it.mark ? '<span class="ud-live-mark" aria-hidden="true">Live</span>' : ''}</button>`).join('');
       strip.hidden = !list.length;
       strip.__ud = list;
       if (had >= 0) { const b = strip.querySelector('[data-ud-i="' + Math.min(had, list.length - 1) + '"]'); if (b) b.focus({ preventScroll: true }); }
@@ -447,9 +911,12 @@
       list.forEach((it, i) => {
         if (!it.generic || typeof window.cwGenericLabel !== 'function') return;
         const b = strip.querySelector('[data-ud-i="' + i + '"]');
-        if (b) requestAnimationFrame(() => { try { window.cwGenericLabel(b, genericShelf(d, p), d.id, 0); } catch (_) {} });
+        if (b) requestAnimationFrame(() => { if (strip.__ud !== list || !b.isConnected) return; try { window.cwGenericLabel(b, genericShelf(d, p), d.id, 0); } catch (_) {} });   // a later paint renumbers the buttons: the word goes only on this paint's box (23 Nov 2026)
       });
     };
+    // Image 1, the console (21 Nov 2026): known now. A system with clips carries the Live mark.
+    const ls = LIVE.spec && LIVE.spec.id === d.id ? LIVE.spec : null;
+    if (ls) items.push({ slot: -1, url: ls.art, label: ls.clips ? 'Console, switched on' : 'Console', live: ls.clips ? ls.id : null, mark: ls.clips, contain: true });
     // Photos and stills the system holds (the units), then the manual: known now.
     if (p.kind === 'unit') {
       (call('getDeviceImages', d) || []).forEach((k, i) => {
@@ -467,6 +934,8 @@
     [['2d', 0, 'Box art'], ['3d', 1, '3D box art']].forEach(([mode, slot, label]) => {
       coverUrls(d, p, mode).then(firstOf).then(url => { if (url) { const gen = /\/generic\.png$/.test(url); items.push({ slot, url, label, contain: true, generic: gen, gshelf: gen ? genericShelf(d, p) : null, gid: d.id }); paint(); } }).catch(() => {});
     });
+    // A 64DD disk's own disk (26 Nov 2026): its picture after the covers (index.html N64_DD_DISKS; none for a disk with no picture).
+    if (d.n64DiskArt) { const u = call('imgSrc', d.n64DiskArt); if (u) { items.push({ slot: 2, url: u, label: 'Disk', contain: true }); paint(); } }
     // The game's map (23 Oct): a picture in the strip, opened larger like the covers.
     if (p === PROFILES.gb) {
       gbSha1(d).then(sha => sha ? probe(MAPS + '/maps/gb/' + sha + '-map.jpg') : null)
@@ -484,7 +953,7 @@
     const pics = list.filter(x => !x.manual);
     /* A generic box carries its type word into the viewer too (25 Oct: the large picture
        showed the box without it); index.html draws it with window.cwGenericLabel, as the tile does. */
-    call('showLightbox', pics.map(x => x.url), pics.indexOf(it), pics.map(x => x.generic ? { shelf: x.gshelf, id: x.gid } : null));
+    call('showLightbox', pics.map(x => x.url), pics.indexOf(it), pics.map(metaOf));
   }
   function seriesPill(d, s, p) {
     // Every series pill is a link to its shelf on Media (the per-system pages are gone,
@@ -492,8 +961,16 @@
     const go = p.kind === 'unit' && fn('routeToMediaSeries')
       ? `routeToMediaSeries('${attr(s.id)}')`
       : `routeToMediaSystems(mediaSystemsForSeries('${attr(s.id)}'))`;
-    return `<span class="pill series-pill" role="link" tabindex="0" onclick="closeOverlay('device-overlay');${go}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" style="cursor:pointer">${esc(s.name)}</span>`;
+    /* THE SHORT NAME OFF A PC (21 Nov 2026: "on smaller screens, the ones that are not a PC, it should
+       just say 'NES' as the text is otherwise too long"). html.cw-small (settings-ui.js: 760 px wide or
+       500 px tall or less, or a handheld) shows the system's short name from SERIES; the full name stays
+       the pill's name for a screen reader and its tooltip. Measured on a 360 px phone, only the NES pill
+       was too long (205 px); Famicom Disk System (146 px) and the rest fit, so they keep their names. */
+    const sn = SHORT_ON_SMALL.has(s.id) && s.short && s.short !== s.name
+      ? `<span class="ud-sp-full">${esc(s.name)}</span><span class="ud-sp-short" aria-hidden="true">${esc(s.short)}</span>` : '';
+    return `<span class="pill series-pill" role="link" tabindex="0"${sn ? ` aria-label="${esc(s.name)}" title="${esc(s.name)}"` : ''} onclick="closeOverlay('device-overlay');${go}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" style="cursor:pointer">${sn || esc(s.name)}</span>`;
   }
+  const SHORT_ON_SMALL = new Set(['nes']);
   function playButton(d, p) {
     const can = val(p, 'playable', d) || (p.playable2 && p.playable2(d));
     if (!can) return '';
@@ -519,6 +996,13 @@
       return `<div class="row"><span class="k">${esc(r.region)}</span><span class="v">${esc(when)}${ser}</span></div>`;
     }).join('');
     return `<div class="factbox">${rows}</div>`;
+  }
+  /* AN EVALUATION PREVIEW (23 Nov 2026): one short line just above the title (the game details go under the title), for a system index.html marks so
+     (ATARI_SYSTEMS preview, window.cwSysPreview: the Nintendo 64). */
+  function previewLine(d) {
+    if (!(window.cwSysPreview && window.cwSysPreview(d.catalogue))) return '';
+    const label = atariOf(d).label || 'This console';
+    return `<p class="cw-preview-line">${window.CW_PREVIEW_TAG || ''}The ${esc(label)} is new here and still being tuned.</p>`;
   }
   function sect(title, html) { return `<section class="sect"><h3 class="sect-h">${title}</h3>${html}</section>`; }
   function para(title, text) { return unknown(text) ? '' : sect(title, `<p>${text}</p>`); }   // curated HTML, as the old drawers print it
@@ -608,7 +1092,9 @@
             ${date ? `<span class="pill">${esc(date)}</span>` : '<span class="pill" data-ud-fill="date" style="display:none"></span>'}
             ${playButton(d, p)}
             ${manualButton(d)}
+            ${(window.CwMyGames && window.CwMyGames.favButtonHTML(d)) || ''}
           </div>
+          ${previewLine(d)}
           <div class="drawer-title-row">
             <h2>${esc(d.name)}</h2>
             ${extras ? `<div class="drawer-title-extras">${extras}</div>` : ''}
@@ -625,7 +1111,8 @@
       <aside class="drawer-sidebar" style="--c:${color}">
         <div class="sidebar-inner">
           ${sect('Facts', `<div class="factbox">${factsHTML(d, p)}</div>`)}
-          ${call('playTimeSectionHTML', d) || ''}
+          ${(window.CwMyGames && window.CwMyGames.drawerHTML(d)) || call('playTimeSectionHTML', d) || ''}
+          ${(window.CwRA && window.CwRA.drawerSlotHTML(d)) || ''}
           ${games ? sect('Built-in Games', `<div class="games-list">${games}</div>`) : ''}
           ${statusHTML(d, p, s)}
         </div>
@@ -684,23 +1171,31 @@
     }
     document.body.classList.toggle('no-demo-device', !stage);
 
+    /* Image 1's clip follows the game on the box: another game's drawer lets the last one go at once. */
+    if (LIVE.id && LIVE.id !== d.id) liveRelease();
     modal.innerHTML = build(d);
+    LIVE.spec = _builtSpec || (p.kind !== 'unit' ? liveSpec(d, p, heroKeyOf(d, p)) : null);
     modal.dataset.udId = d.id;
     modal.setAttribute('aria-label', d.name || 'Game');   // no title bar any more: the dialog still names its game
     modal.classList.add('ud-drawer');
     modal.classList.remove('leaving');
     void modal.offsetWidth;   // commit the closed transform so the slide-in plays (openDevice's note)
     call('openOverlay', 'device-overlay');
-    if (stage) call('showDeviceStage', d.id);
-    if (p.stageNote && stage && !val(p, 'playable', d)) {
-      const known = g('_pmFileAvailable');
-      call('_pmStageNote', known === null ? 'Looking for the Pok\u00e9mon mini game files\u2026' : 'Pok\u00e9mon mini game files not found on this server or in a content pack.');
+    /* THE SLIDE-IN (21 Nov 2026): the game's box in 3D for every system but the Game & Watch units, which
+       keep their live unit. A refresh of the same drawer (a content probe adding Play) leaves it in place. */
+    if (stage) {
+      const ds = document.getElementById('device-stage'), same = ds && ds.classList.contains('open') && ds.dataset.caseFor === d.id && opts && opts.refresh;
+      if (p.kind === 'unit') { if (ds) delete ds.dataset.caseFor; call('showDeviceStage', d.id); }
+      else if (!same) { if (showCase(d, p)) ds.dataset.caseFor = d.id; }
     }
+    { const hero = modal.querySelector('.ud-live-hero');
+      if (hero && LIVE.spec) { fitLive(hero, hero.firstElementChild, LIVE.spec.fit); if (!thin) liveTo('hero'); } }
     fillStrip(modal, d, p);
     fillMarquee(modal, d, p);
     fillCheats(modal, d, p);
     fillResume(modal, d);
     fillUnknown(modal, d);
+    if (window.CwRA) { try { window.CwRA.fillDrawer(modal, d); } catch (_) {} }   // RetroAchievements, read only (21 Nov 2026)
     call('probeModalImage');
     call('hwMountSegMaps', modal);
 
@@ -829,7 +1324,8 @@
     if (!on()) return;
     if (e.target && e.target.closest && e.target.closest('#device-modal .ud-thumb')) { stripClick(e); return; }
     const b = e.target && e.target.closest && e.target.closest('#device-modal .play-now, #device-modal .resume-play, #device-modal .vr-item[data-vr-play]');
-    if (b) { wakeSound(); if (_fromPlay) _fromPlay.leaving = true; }   // a new game takes the play window: nothing resumes under it
+    if (b) { wakeSound(); liveRelease(); if (_fromPlay) _fromPlay.leaving = true; }   // a new game takes the play window: nothing resumes under it; image 1's clip is let go first
+    if (e.target && e.target.closest && e.target.closest('#device-modal .ud-live-hero')) heroOpen(e);
   }, true);
 
   /* ------------------------------------------------------------ styles */
@@ -843,6 +1339,10 @@
         #device-modal.ud-drawer .drawer-left > .device-modal-img,
         #device-modal.ud-drawer .drawer-left > .device-modal-demo { display: none !important; }
       }
+      /* The system pill's short name off a PC (21 Nov 2026; seriesPill). */
+      #device-modal .series-pill .ud-sp-short { display: none; }
+      html.cw-small #device-modal .series-pill .ud-sp-full { display: none; }
+      html.cw-small #device-modal .series-pill .ud-sp-short { display: inline; }
       /* The picture strip: the old viewer's thumbnails, as buttons so a remote and a pad reach them. */
       #device-modal.ud-drawer .ud-gallery[hidden] { display: none; }
       /* Resume play (8 Nov 2026): Play's shape, outlined, left of it; the pair sits at the row's end. */
@@ -899,12 +1399,37 @@
       .overlay .modal-head .ud-pm-logo { display: block; width: auto; height: 100%; max-width: min(60vw, 360px); object-fit: contain;
         filter: drop-shadow(0 1px 3px rgba(0,0,0,.55)) drop-shadow(0 0 1px rgba(0,0,0,.45)); }
       .overlay .modal-head .ud-pm-year { font-size: 15px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+      /* The Evaluation preview tag beside the logo (23 Nov 2026): the logo gives it room; on a phone the year steps aside. */
+      .overlay .modal-head .ud-pm-row .cw-preview-tag { flex: 0 0 auto; margin-left: 0; }
+      .overlay .modal-head .ud-pm-row:has(.cw-preview-tag) .ud-pm-logo { max-width: min(42vw, 300px); }
+      @media (max-width: 560px) { .overlay .modal-head .ud-pm-row:has(.cw-preview-tag) .ud-pm-year { display: none; } }
       /* The head's marquee (or its two lines) opens the game's drawer (18 Nov 2026). */
       .overlay .modal-head .ud-pm-go { cursor: pointer; border-radius: 8px; outline: none; min-width: 0; transition: opacity .15s; }
       .overlay .modal-head .ud-pm-go:hover { opacity: .85; }
       .overlay .modal-head .ud-pm-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
       /* The drawer over a play window: the window steps one place down while the drawer is up. */
       .overlay.ud-under-drawer { z-index: 99 !important; }
+      /* IMAGE 1 (21 Nov 2026): the console with its clip on the screen, laid out by the screen rectangle the
+         tiles use; the picture's glass falls on the game, as on a real screen. */
+      #device-modal .ud-live-hero { display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; background-image: none; }
+      .cw-live { position: relative; flex: none; visibility: hidden; }
+      .cw-live.cw-sized { visibility: visible; }
+      .cw-live > .cw-live-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; pointer-events: none; -webkit-user-drag: none; }
+      .cw-live[data-turn="180"] > .cw-live-art { transform: rotate(180deg); }
+      .cw-live > .cw-live-scr { position: absolute; z-index: 0; }
+      .cw-live > .cw-live-slot { position: absolute; z-index: 1; overflow: hidden; opacity: 0; transition: opacity .3s ease; }
+      .cw-live > .cw-live-slot.cw-front { z-index: 3; }
+      .cw-live > .cw-live-slot.on { opacity: 1; }
+      .cw-live-slot > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; display: block; background: #000; }
+      #device-modal.ud-drawer .ud-thumb { position: relative; }
+      #device-modal.ud-drawer .ud-thumb .ud-live-mark { position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; font-size: 10px; line-height: 1.3;
+        font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: rgba(10,14,20,.8); pointer-events: none; }
+      #lightbox-overlay .lb-live-host { position: absolute; pointer-events: none; z-index: 1; transform: translateY(10px) scale(.985); transition: transform .28s cubic-bezier(.2,.7,.2,1); }
+      #lightbox-overlay.open .lb-live-host { transform: none; }
+      #lightbox-overlay.zoomed .lb-live-host { position: fixed; transform: none; }
+      #lightbox-overlay .lb-live-host > .cw-live { width: 100%; height: 100%; }
+      #lightbox-overlay.lb-live-on #lightbox-img { opacity: 0; }
+      #lightbox-img:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
       /* A game we have not tested (9 Nov 2026): the notice, and the contact address as the footer shows it. */
       #device-modal .ud-unknown { border: 1px solid rgba(var(--accent-rgb),.35); border-radius: 12px; padding: 12px 14px; background: rgba(var(--accent-rgb),.06); }
       #device-modal .ud-unknown p { margin: 0; color: var(--text); line-height: 1.55; }
@@ -1059,11 +1584,12 @@
         row.className = 'ud-pm-row'; row.style.height = h + 'px';
         img.style.maxHeight = h + 'px';
         row.appendChild(img);
+        if (window.cwSysPreview && window.cwSysPreview(d.catalogue)) row.insertAdjacentHTML('beforeend', window.CW_PREVIEW_TAG || '');   // an evaluation preview (23 Nov 2026): the tag stays beside the logo
         box.appendChild(row);
         head.classList.add('ud-pm-on');
         yearP.then(year => {
           if (!year || !live() || !row.isConnected) return;
-          const s = document.createElement('span'); s.className = 'ud-pm-year'; s.textContent = year; row.appendChild(s);
+          const s = document.createElement('span'); s.className = 'ud-pm-year'; s.textContent = year; row.insertBefore(s, row.querySelector('.cw-preview-tag'));
         }).catch(() => {});
       };
       img.onerror = () => {};   // keep the two lines
@@ -1085,7 +1611,8 @@
     }
   }
 
-  function wire() { styles(); wrap(); watchPlayOverlays(); watchDrawerForPlay(); }
+  function wire() { styles(); wrap(); watchPlayOverlays(); watchDrawerForPlay(); watchDrawerClose(); watchViewer(); }
+  window.cwLightboxLive = () => { try { viewerSync(); } catch (e) { console.warn('[drawer] viewer', e); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire, { once: true }); else wire();
   // index.html's own script runs before DOMContentLoaded; wrap as soon as the names exist too.
   wrap();
@@ -1101,5 +1628,56 @@
     return box ? { url: box, kind: 'box' } : null;
   }
 
-  window.CwDrawer = { BUILD, on, profileOf, build, open: id => { const d = (g('ALL_DEVICES') || []).find(x => x.id === id); return d ? open(d) : false; }, PROFILES, widgetArt };
+  /* A test knob (as NESVIDEO.setBase): give a system's cover and spine buckets another origin. */
+  function setArtBase(shelf, covers, spines) { if (COVERS[shelf] && covers != null) COVERS[shelf]['2d'] = covers; if (spines != null) SPINE_BUCKETS[shelf] = spines; _artMemo.clear(); }
+  /* What image 1 is doing, for the test pages. */
+  function liveInfo() {
+    const v = LIVE.v;
+    return { id: LIVE.id, where: LIVE.where, pending: !!LIVE.pending, kind: LIVE.spec && LIVE.spec.kind, scr: LIVE.spec && LIVE.spec.scr,
+      src: v ? (v.currentSrc || v.src) : null, paused: v ? v.paused : null, muted: v ? v.muted : null, t: v ? v.currentTime : null, rs: v ? v.readyState : null,
+      clips: document.querySelectorAll('video.cw-live-vid').length, missing: [...LIVE.missing] };
+  }
+  window.CwDrawer = { BUILD, on, profileOf, build, open: id => { const d = (g('ALL_DEVICES') || []).find(x => x.id === id); return d ? open(d) : false; }, PROFILES, widgetArt, liveInfo,
+    shownDevice: id => { const d = (g('ALL_DEVICES') || []).find(x => x.id === id), p = d && profileOf(d); return p ? shownDevice(d, p) : null; },
+    setArtBase,
+    spineUrls: id => { const d = (g('ALL_DEVICES') || []).find(x => x.id === id), p = d && profileOf(d); return p ? spineUrls(d, p) : Promise.resolve([]); } };
+
+  /* COLLAPSIBLE SECTIONS (23 Nov 2026): Variants, My games and Achievements open by default and can be folded
+     away, like Cheats (which stays folded by default). A section's header button toggles it; the choice is kept
+     per kind on this device, and survives the section redrawing itself. */
+  (function collapsibleSections() {
+    const KEY = 'cw.drawer.closed';
+    const closedKinds = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { return []; } };
+    const saveKinds = (a) => { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (_) {} };
+    const apply = (btn) => {
+      const sec = btn.closest('.sect'); if (!sec) return;
+      const closed = closedKinds().indexOf(btn.dataset.sectKind) >= 0;
+      sec.classList.toggle('sect-closed', closed);
+      btn.setAttribute('aria-expanded', closed ? 'false' : 'true');
+    };
+    const applyAll = (root) => { if (root && root.querySelectorAll) root.querySelectorAll('.sect-tog[data-sect-kind]').forEach(apply); };
+    document.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest && e.target.closest('.sect-tog[data-sect-kind]');
+      if (!btn) return;
+      const k = btn.dataset.sectKind, list = closedKinds().filter(x => x !== k);
+      if (btn.getAttribute('aria-expanded') === 'true') list.push(k);
+      saveKinds(list);
+      applyAll(btn.closest('#device-modal') || document);
+    });
+    const st = document.createElement('style');
+    st.textContent = '.sect-tog{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;width:100%;box-sizing:border-box}' +
+      '.sect-tog::before{content:"";width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;transform:rotate(90deg);transition:transform .15s;opacity:.7}' +
+      '.sect-tog[aria-expanded="false"]::before{transform:none}.sect-tog:focus-visible{outline:2px solid var(--accent,#7c9cff);outline-offset:2px;border-radius:4px}' +
+      '.sect.sect-closed>:not(.sect-h){display:none!important}';
+    document.head.appendChild(st);
+    /* only the drawer is watched, so the wall's tiles cost nothing */
+    const watch = () => {
+      const modal = document.getElementById('device-modal');
+      if (!modal) return setTimeout(watch, 500);
+      new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) { if (n.matches && n.matches('.sect-tog[data-sect-kind]')) apply(n); else applyAll(n); } })
+        .observe(modal, { childList: true, subtree: true });
+      applyAll(modal);
+    };
+    watch();
+  })();
 })();

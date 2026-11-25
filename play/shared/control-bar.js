@@ -115,14 +115,14 @@
   'use strict';
   if (window.ControlBar) return;
 
-  const BUILD = '20261108-cb50-saves';
+  const BUILD = '20261121-cb52-drawnkeys';
   /* Families whose unified bar is proven and on by default. */
-  const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx']); // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
+  const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx', 'sg1000', 'sms', 'gg', 'n64', 'snes']);   // snes: 23 Nov 2026   // n64: the Nintendo 64, 22 Nov 2026   // the Sega devices: 20 Nov 2026 // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
   const framed = window.parent && window.parent !== window;
   /* Screenshot -> phone photo library (play/shared/save-image.js), loaded now so it is ready before the tap. */
-  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.2.2', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
+  if (!window.CwSaveImage) try { const s = document.createElement('script'); s.src = new URL('save-image.js?v=2.3.0', document.currentScript.src).href; document.head.appendChild(s); } catch (_) {}
   /* The one save table (play/shared/save-table.js, 8 Nov 2026), loaded now; renderSaves waits for it. */
-  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.2.2', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
+  const saveTableReady = window.CwSaveTable ? Promise.resolve() : new Promise(res => { try { const s = document.createElement('script'); s.src = new URL('save-table.js?v=2.3.0', document.currentScript.src).href; s.onload = res; s.onerror = res; document.head.appendChild(s); } catch (_) { res(); } });
 
   /* ------------------------------------------------------------------ flag */
   /* One bar for every console, in the one play host (2026-10-15): the ?ui= switch is gone. */
@@ -309,8 +309,10 @@
       if (tokenObs) addEventListener('pagehide', () => { try { tokenObs.disconnect(); } catch (_) {} tokenObs = null; });
     }
   }
+  /* --cw-top-over (26 Nov 2026): the height of the site's title bar where it lies over this window (the on-screen controls
+     laid over the picture, play/host/host.mjs); the bar and the panels start under it. 0 everywhere else. */
   const CSS = `
-  .cb-bar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:90;display:flex;justify-content:center;box-sizing:border-box;
+  .cb-bar{position:absolute;top:calc(10px + var(--cw-top-over, 0px));left:50%;transform:translateX(-50%);z-index:90;display:flex;justify-content:center;box-sizing:border-box;
     max-width:calc(100% - 20px);overflow:hidden;background:var(--cw-bar-pill,rgba(16,18,22,.72));border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 6px;
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 8px 24px -12px rgba(0,0,0,.7);
     font:12px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -417,7 +419,7 @@
   body.cb-tv .cb-menu button.cb-vr-x{width:44px;height:44px;font-size:20px}
   body.cb-tv .cb-menu{font-size:16px}
   /* Panels: one at a time, over the play area, under the collapsed bar. */
-  .cb-panel{position:absolute;inset:0;z-index:80;display:none;overflow:auto;box-sizing:border-box;padding:56px 18px 18px;
+  .cb-panel{position:absolute;inset:0;z-index:80;display:none;overflow:auto;box-sizing:border-box;padding:calc(56px + var(--cw-top-over, 0px)) 18px 18px;
     background:linear-gradient(180deg,var(--cw-bar-panel-from,#15171b),var(--cw-bar-panel-to,#0b0c0e));color:var(--cw-bar-ink,#e6e8ec);
     font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   .cb-panel.open{display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -456,6 +458,7 @@
     border-radius:999px;color:var(--cw-bar-ink,#e6e8ec);padding:7px 14px;font:600 12.5px ui-sans-serif,system-ui,sans-serif;display:flex;gap:10px;align-items:center;
     box-shadow:0 8px 26px rgba(0,0,0,.5);max-width:calc(100% - 30px)}
   .cb-toast[hidden]{display:none}
+  .cb-toast.cb-toast-two{width:max-content}.cb-toast.cb-toast-two button{white-space:nowrap}   /* two buttons (26 Nov 2026): the note's full width, the buttons on one line each */
   /* A toast never takes a press meant for the device under it (2026-10-17: a toast over a Lynx's
      lower A key ate the tap); only its own buttons answer. */
   .cb-toast{pointer-events:none}.cb-toast button{pointer-events:auto}
@@ -517,6 +520,45 @@
       return { id: 'ck:' + k.id, ck: k.id, group: 'console', icon, label, text: icon === 'keys' ? label : null, iconOnly: icon !== 'keys', short: k.short || null, key: k.key, more: true, hold: true };
     });
   }
+
+  /* CONSOLE KEYS DRAWN IN THE GAME AREA ARE NOT REPEATED HERE (21 Nov 2026: "if you have the console
+     buttons like pause and reset displayed in the game area, no need to duplicate it on the control
+     bar. The only exception is reset because it's a standard button the consoles happen to also
+     have"). A console key whose button the on-screen layer shows now (the strip under the screen,
+     the console's picture, the float pad: overlay.js shownControls, by the key's id or its default
+     key) leaves the bar and its menus; the bar's own Reset stays. Its keys and pad buttons are
+     unchanged. The remote and the pad reach it there: Down from the bar's last row, Left and Right
+     along them, OK or A held presses it, Up or Back returns to the bar. Shown again on the bar
+     when the layer stops drawing it (Full screen hides the console's picture). */
+  function drawnKeys() {
+    const out = new Map();
+    const list = Array.isArray(caps.consoleKeys) ? caps.consoleKeys : [];
+    if (!list.length) return out;
+    const shownCtl = overlayCall('shownControls');
+    if (!Array.isArray(shownCtl) || !shownCtl.length) return out;
+    for (const k of list) {
+      if (!k || !k.id) continue;
+      const c = shownCtl.find(x => x.id === k.id) || (k.code ? shownCtl.find(x => x.input === k.code) : null);
+      if (c && c.el) out.set(k.id, { el: c.el, label: k.label || c.label || k.id });
+    }
+    return out;
+  }
+  const notDrawn = list => { const d = drawnKeys(); return d.size ? list.filter(it => !it.ck || !d.has(it.ck)) : list; };
+  /* The drawn keys the remote may focus, in their order across the screen. */
+  function screenKeys() {
+    const out = [];
+    for (const [id, d] of drawnKeys()) {
+      const el = d.el;
+      if (el.dataset.cbCk !== id) {
+        el.dataset.cbCk = id; el.tabIndex = -1; el.setAttribute('role', 'button');
+        el.setAttribute('aria-label', d.label); el.removeAttribute('aria-hidden');
+      }
+      if (el.getClientRects().length) out.push(el);
+    }
+    return out.sort((a, b) => { const p = a.getBoundingClientRect(), q = b.getBoundingClientRect(); return Math.abs(p.top - q.top) > 8 ? p.top - q.top : p.left - q.left; });
+  }
+  let screenHold = null;            // the drawn console key held by OK, Space or a pad's A
+  function screenKeyUp() { if (screenHold) { const id = screenHold; screenHold = null; ckUp(id); } }
 
   /* A cartridge's peripherals (caps.devices): an item each, with its menu. Not behind More:
      a camera or a tilt sensor is how the game is played. */
@@ -605,7 +647,8 @@
        finger holds them; the host sends a pad's A on a focused item as that Enter, down and up.
        Only a short press (under 300 ms) of Rewind still shows the tip. The key's own click is
        stopped, so the item does not also tap. */
-    addEventListener('keyup', e => { if (keyHold && holdKeyOf(e)) holdKeyUp(e); }, true);
+    addEventListener('keyup', e => { if (keyHold && holdKeyOf(e)) holdKeyUp(e); else if (screenHold && (holdKeyOf(e) || padA(e))) { e.preventDefault(); e.stopImmediatePropagation(); screenKeyUp(); } }, true);
+    addEventListener('blur', screenKeyUp);
     addEventListener('blur', () => holdKeyUp(null));
     for (const m of Object.values(menus)) m.addEventListener('click', onMenuClick);
     if ('ResizeObserver' in window) new ResizeObserver(fit).observe(stage); else addEventListener('resize', fit);
@@ -720,6 +763,13 @@
       sw.classList.toggle('active', on);
       sw.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
+    { const drawn = drawnKeys();
+      for (const k of (Array.isArray(caps.consoleKeys) ? caps.consoleKeys : [])) {
+        const el = k && k.id ? $b('ck:' + k.id) : null; if (!el) continue;
+        const off = drawn.has(k.id);
+        if ((el.style.display === 'none') !== off) { if (off) ckUp(k.id); el.style.display = off ? 'none' : ''; relabelled = true; }
+      }
+      if (drawn.size) screenKeys(); }
     const pr = $b('print');
     if (pr) {
       let v = false; try { v = !!(C.printer && C.printer.visible()); } catch (_) {}
@@ -1143,7 +1193,7 @@
         + (cur != null ? '<button type="button" role="menuitem" data-media-eject="1"><span class="tick"></span><span>Eject</span></button>' : '');
     }
     if (id === 'console') {
-      m.innerHTML = consoleItems().map(it => `<button type="button" role="menuitem" data-ck-tap="${esc(it.ck)}"><span class="tick">${ICON[it.icon] && !it.text ? ICON[it.icon] : ''}</span><span>${esc(it.label)}</span>${it.key ? `<span class="own">${esc(it.key)}</span>` : ''}</button>`).join('');
+      m.innerHTML = notDrawn(consoleItems()).map(it => `<button type="button" role="menuitem" data-ck-tap="${esc(it.ck)}"><span class="tick">${ICON[it.icon] && !it.text ? ICON[it.icon] : ''}</span><span>${esc(it.label)}</span>${it.key ? `<span class="own">${esc(it.key)}</span>` : ''}</button>`).join('');
     }
     if (id === 'device') {
       let d = null; try { d = C && C.device ? C.device(devOpen) : null; } catch (_) { d = null; }
@@ -1155,7 +1205,7 @@
       const cur = C && C.speed ? +C.speed() || 1 : 1;
       m.innerHTML = speedChoices().map(x => `<button type="button" role="menuitemradio" data-speed="${x}" aria-checked="${x === cur ? 'true' : 'false'}"><span class="tick">${x === cur ? '✓' : ''}</span><span>${esc(speedLabel(x))}</span>${x > 2 ? '<span class="own">sound off</span>' : ''}</button>`).join('');
     }
-    if (id === 'more') m.innerHTML = ITEMS.filter(it => it.more && shown(it)).concat(consoleItems()).map(it =>
+    if (id === 'more') m.innerHTML = ITEMS.filter(it => it.more && shown(it)).concat(notDrawn(consoleItems())).map(it =>
       `<button type="button" role="menuitem" data-more-act="${it.id}"><span class="tick">${ICON[it.icon]}</span><span>${esc(it.id === 'speed' && C && C.speed ? 'Turbo: ' + speedLabel(+C.speed() || 1) : it.label)}</span>${it.key ? `<span class="own">${esc(it.key)}</span>` : ''}</button>`).join('');
     if (!m.innerHTML) return;
     m.hidden = false;
@@ -1270,6 +1320,16 @@
       b.addEventListener('focus', () => clearTimeout(toastT));     // the note stays while its button has the focus
       b.addEventListener('blur', () => setTimeout(() => { if (toastEl.contains(b) && !toastEl.hidden && !toastFocused()) toastEl.hidden = true; }, 0));
       toastEl.appendChild(b);
+      /* action.dismiss (26 Nov 2026): a second button that only takes the note down (the N64's slow-game notice:
+         "Not now" beside "Switch to Performance"). The focus may move between the two without the note closing. */
+      if (action.dismiss) {
+        const x = document.createElement('button'); x.type = 'button'; x.textContent = action.dismiss;
+        x.addEventListener('click', () => toastClose());
+        x.addEventListener('focus', () => clearTimeout(toastT));
+        x.addEventListener('blur', () => setTimeout(() => { if (toastEl.contains(x) && !toastEl.hidden && !toastFocused()) toastEl.hidden = true; }, 0));
+        toastEl.appendChild(x);
+        toastEl.classList.add('cb-toast-two');
+      }
     }
     toastEl.hidden = false;
     clearTimeout(toastT);
@@ -1891,6 +1951,15 @@
     // Clearly highlighted for a TV, a remote and a pad, however focus arrived.
     if (list[0]) { try { list[0].focus({ focusVisible: true }); } catch (_) { list[0].focus(); } }
   }
+  function toBarFrom(a) {
+    const l = focusables(bar.querySelector('.pill-controls')); if (!l.length) { focusBar(); return; }
+    const r = a.getBoundingClientRect(), cx = r.left + r.width / 2;
+    let bot = -Infinity; for (const el of l) bot = Math.max(bot, el.getBoundingClientRect().top);
+    let best = null, bd = Infinity;
+    for (const el of l) { const q = el.getBoundingClientRect(); if (q.top < bot - 6) continue; const d = Math.abs(q.left + q.width / 2 - cx); if (d < bd) { bd = d; best = el; } }
+    if (!best) { focusBar(); return; }
+    try { best.focus({ focusVisible: true }); } catch (_) { best.focus(); }
+  }
   function exited(what) { try { if (C && C.onExit) C.onExit(what); } catch (_) {} }
   let backTaken = false;
   const BACK_KEYS = new Set(['Escape', 'Esc', 'GoBack', 'BrowserBack', 'XF86Back', 'Backspace']);
@@ -1985,13 +2054,26 @@
       if ((e.key === 'Enter' || e.key === ' ') && a && (root.contains(a) || a === back)) { e.stopImmediatePropagation(); return; }   // the browser presses it; the game never sees it
       if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key !== 'Tab' && !/^F\d+$/.test(e.key)) { if (root.contains(a) && /^(INPUT|SELECT)$/.test(a.tagName)) return; e.stopImmediatePropagation(); return; }
     }
+    // Focus on a console key drawn on the screen (drawnKeys): held by OK, Space or A; Left / Right along them; Up or Back to the bar.
+    if (!root && a && a.dataset && a.dataset.cbCk && !inBar) {
+      if (holdKeyOf(e) || padA(e)) { stop(); if (!e.repeat && !screenHold) { screenHold = a.dataset.cbCk; ckDown(screenHold, null); } return; }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { stop(); moveIn(screenKeys(), e.key === 'ArrowRight' ? 1 : -1); return; }
+      if (e.key === 'ArrowUp' || isBackKey(e)) { stop(); screenKeyUp(); toBarFrom(a); return; }
+      if (e.key === 'ArrowDown') { stop(); return; }
+    }
     // Focus on the bar: Left / Right along it, Down opens a menu.
     if (inBar && !panel) {
       { const hb = holdItem(a); if (hb && holdKeyOf(e)) { holdKeyDown(e, hb); return; } }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { stop(); moveIn(focusables(bar.querySelector('.pill-controls')), e.key === 'ArrowRight' ? 1 : -1); return; }
       /* Up and Down go between the two rows (2026-10-29), to the nearest button in the other row;
-         Down on a menu's button of the lower row (none today), or with no row below, opens it. */
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { stop(); if (barRow(a, e.key === 'ArrowDown' ? 1 : -1)) return; if (e.key === 'ArrowDown' && a.getAttribute('aria-haspopup') === 'menu') a.click(); return; }
+         Down on a menu's button of the lower row, or with no row below, opens it, unless console
+         keys are drawn on the screen: then Down from any button of the lowest row goes to them and
+         OK opens the menu (21 Nov 2026: from Variant on the Atari 2600 the remote opened the menu
+         and never reached the drawn Select and Reset). */
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { stop(); if (barRow(a, e.key === 'ArrowDown' ? 1 : -1)) return; const sk = e.key === 'ArrowDown' ? screenKeys() : [];
+        if (e.key === 'ArrowDown' && !sk.length && a.getAttribute('aria-haspopup') === 'menu') a.click();
+        else if (e.key === 'ArrowDown') { if (sk.length) { const r = a.getBoundingClientRect(), cx = r.left + r.width / 2; let best = sk[0], bd = Infinity; for (const el of sk) { const q = el.getBoundingClientRect(), d = Math.abs(q.left + q.width / 2 - cx); if (d < bd) { bd = d; best = el; } } try { best.focus({ focusVisible: true }); } catch (_) { best.focus(); } } }
+        return; }
       if (padA(e)) { stop(); a.click(); return; }
       if (e.key === 'Enter' || e.key === ' ') { e.stopImmediatePropagation(); return; }
     }
@@ -2054,7 +2136,7 @@
     document.body.classList.add('cb-on');
     build();
     // The on-screen buttons (overlay.js) live in the same stage, under the panels (z 70).
-    if (caps.overlay && core.overlay) { try { core.overlay.mount(core.stage, { mode: 'device' }); } catch (e) { console.warn('[control bar] overlay mount failed', e); } }
+    if (caps.overlay && core.overlay) { try { core.overlay.onShown = () => { if (bar) sync(); }; core.overlay.mount(core.stage, { mode: 'device' }); } catch (e) { console.warn('[control bar] overlay mount failed', e); } }
     if (typeof core.onChange === 'function') core.onChange(sync);
     // In-page: the key-up of a Back this bar took never reaches the site either.
     if (core.hostPost) addEventListener('keyup', e => { if (C && C.live && C.live() && isBackKey(e) && backTaken) { backTaken = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);

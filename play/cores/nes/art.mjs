@@ -17,15 +17,19 @@
    fds 893x591 (238,62) (206,12). */
 import { artFileUrl } from '../artfile.mjs';   // single picture files since 24 Oct
 const CONSOLES = {
-  nes: { key: 'NesConsole.png', ar: 630 / 756,
-    scr: { l: 100 / 630, t: 62 / 756, w: 429 / 630, h: 323 / 756 }, tv: { l: 24 / 630, t: 18 / 756, w: 582 / 630, h: 414 / 756 },
-    glass: '#4f4f4f', radius: '3.1% / 4.1%' },
-  famicom: { key: 'FamicomConsole.webp', ar: 520 / 624,
-    scr: { l: 54 / 520, t: 74 / 624, w: 323 / 520, h: 243 / 624 }, tv: { l: 22 / 520, t: 24 / 624, w: 475 / 520, h: 347 / 624 },
-    glass: '#4d5353', radius: '10% / 13%' },
-  fds: { key: 'FdsConsole.webp', ar: 520 / 624,
-    scr: { l: 54 / 520, t: 74 / 624, w: 323 / 520, h: 243 / 624 }, tv: { l: 22 / 520, t: 24 / 624, w: 475 / 520, h: 347 / 624 },
-    glass: '#5d605d', radius: '10% / 13%' },
+  /* 2026-11-24: the COLORFUL kit's television, 780x936 (nes-screen.css :root); was 630x756,
+     scr (100,62,429,323), tv (24,18,582,414), glass #4f4f4f, radius 3.1% / 4.1%. */
+  nes: { key: 'NesConsole.png', ar: 780 / 936,
+    scr: { l: 80 / 780, t: 95 / 936, w: 488 / 780, h: 368 / 936 }, tv: { l: 33 / 780, t: 22 / 936, w: 713 / 780, h: 514 / 936 },
+    glass: '#1b1b1b', radius: '8.2% / 10.9%' },
+  /* 2026-11-25: the Famicom and Disk System tiles are the COLORFUL kit's television too, 780x936
+     (nes-screen.css); were 520x624, scr (54,74,323,243), tv (22,24,475,347), glass #4d5353 / #5d605d, radius 10% / 13%. */
+  famicom: { key: 'FamicomConsole.webp', ar: 780 / 936,
+    scr: { l: 80 / 780, t: 109 / 936, w: 487 / 780, h: 368 / 936 }, tv: { l: 33 / 780, t: 36 / 936, w: 713 / 780, h: 513 / 936 },
+    glass: '#1a1b1b', radius: '8.2% / 10.9%' },
+  fds: { key: 'FdsConsole.webp', ar: 780 / 936,
+    scr: { l: 80 / 780, t: 109 / 936, w: 487 / 780, h: 368 / 936 }, tv: { l: 33 / 780, t: 36 / 936, w: 713 / 780, h: 513 / 936 },
+    glass: '#1a1b1b', radius: '8.2% / 10.9%' },
 };
 
 export function consoleFor({ params, result }) {

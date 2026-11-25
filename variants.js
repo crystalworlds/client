@@ -59,18 +59,25 @@
   })();
   const LS = 'gnw.variants.v1';
   /* The tables' own cache tag: bump it whenever build_variants.mjs is re-run. */
-  const TABLES = '2.2.2';
+  const TABLES = '2.3.0-ddvar1';   // 26 Nov: the N64 table gains the 64DD disks, one tile per game (was 2.3.0-prepolish1)
   const T = {};           // sys -> { by12: Map(sha12 -> row), ids: {}, groups: [] }
   const loading = {};     // sys -> Promise
   let version = 0;        // bumps when a table lands
   const hit = new WeakMap();   // dev -> { v, row, sha }
 
   /* ---------------------------------------------------------------- tables */
+  /* The Sega 8-bit shelves (20 Nov 2026): played through the same host route as the Atari machines. */
+  const SEGA8 = { sg1000: 1, mastersystem: 1, gamegear: 1 };
+  /* The Nintendo 64 (22 Nov 2026): the same host route; its table is n64, keyed by the catalogue id. */
+  const HOST_OWN = { n64: 1, snes: 1 };   // snes: the Super Nintendo (23 Nov 2026), its table snes
+  const hostCart = c => !!c && (c.indexOf('atari') === 0 || !!SEGA8[c] || !!HOST_OWN[c]);
   function sysOf(d) {
     const c = d && d.catalogue;
     if (c === 'nes') return 'nes';
     if (c === 'game-boy') return 'gb';
     if (c === 'atari2600' || c === 'atari5200' || c === 'atari7800' || c === 'atarilynx') return c;
+    if (SEGA8[c]) return c;   // the Sega 8-bit shelves (20 Nov 2026): one table each, keyed by the catalogue id
+    if (HOST_OWN[c]) return c;   // the Nintendo 64 (22 Nov 2026)
     if (c === 'pokemon-mini') return 'pm';
     return null;
   }
@@ -241,7 +248,9 @@
     for (const d of ALL_DEVICES) {
       if (sysOf(d) !== sys) continue;
       const e = info(d);
-      if (e && e.kind === 'T' && t.groups[e.g] && !d.__vrNamed) { d.__vrNamed = d.name; d.name = t.groups[e.g][0]; }
+      /* kind W (21 Nov 2026): a homebrew download page's builds, named in the library by their download file
+         ("FlyingHamburgers-GG-138"); the tile says the game's title, its versions keep their labels */
+      if (e && (e.kind === 'T' || e.kind === 'W') && t.groups[e.g] && !d.__vrNamed) { d.__vrNamed = d.name; d.name = t.groups[e.g][0]; }
     }
   }
 
@@ -261,7 +270,7 @@
       const c = d.catalogue;
       if (c === 'nes') return typeof nesPlayable === 'function' ? !!nesPlayable(d) : true;
       if (c === 'game-boy') return typeof gbPlayable === 'function' ? !!gbPlayable(d) : true;
-      if (c && c.indexOf('atari') === 0) return typeof atariPlayable === 'function' ? !!atariPlayable(d) : true;
+      if (hostCart(c)) return typeof atariPlayable === 'function' ? !!atariPlayable(d) : true;
       if (c === 'pokemon-mini') return typeof pmPlayable === 'function' ? !!pmPlayable(d) : true;
     } catch (e) {}
     return false;
@@ -571,7 +580,7 @@
      content-addressed id (<prefix>-x<12 hex>) whose system's table has landed and holds no such file; a
      table still loading, or missing, answers false (nothing is claimed about a file not yet looked up).
      The site's types table is asked by emby.js (cwUnknownGame) as well. */
-  const ID_SYS = { nes: 'nes', gb: 'gb', pm: 'pm', a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx' };
+  const ID_SYS = { nes: 'nes', gb: 'gb', pm: 'pm', a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx', sg1000: 'sg1000', sms: 'mastersystem', gg: 'gamegear', n64: 'n64', snes: 'snes' };
   function unknown(x) {
     const id = typeof x === 'string' ? x : x && x.id;
     const m = /^([a-z0-9]+)-x([0-9a-f]{12})$/.exec(id || '');
@@ -693,12 +702,12 @@
 
   /* ---------------------------------------------------------------- play */
   const OVERLAYS = { 'nes': 'nes-play-overlay', 'game-boy': 'gb-play-overlay', 'pokemon-mini': 'pm-play-overlay' };
-  const overlayFor = d => OVERLAYS[d.catalogue] || (d.catalogue.indexOf('atari') === 0 ? 'atari-play-overlay' : null);
+  const overlayFor = d => OVERLAYS[d.catalogue] || (hostCart(d.catalogue) ? 'atari-play-overlay' : null);
   function playId(id, ev) {
     const d = find(id); if (!d) return;
     if (d.catalogue === 'nes' && window.openNesPlay) return window.openNesPlay(id, ev);
     if (d.catalogue === 'game-boy' && window.openGbPlay) return window.openGbPlay(id, ev);
-    if (d.catalogue.indexOf('atari') === 0 && window.openAtariPlay) return window.openAtariPlay(id, ev);
+    if (hostCart(d.catalogue) && window.openAtariPlay) return window.openAtariPlay(id, ev);
     if (d.catalogue === 'pokemon-mini' && window.openPmPlay) return window.openPmPlay(id, ev);
   }
   function play(id, ev) { return playId(preferred(id), ev); }
@@ -808,7 +817,7 @@
         (x === ms[0] ? '<span class="vr-b">Default</span>' : '') + (x.id === pref && x !== ms[0] ? '<span class="vr-b">Preferred</span>' : '') + (x.id === last ? '<span class="vr-b">Last played</span>' : '') + '</button>';
     const more = (left) => `<button type="button" class="vr-item vr-more-d" data-vr-dmore><span class="vr-l">Show ${fmt(Math.min(PAGE, left))} more (${fmt(left)} left)</span></button>`;
     const long = ms.length > FIND_OVER;
-    sec.innerHTML = `<h3 class="sect-h">Variants <span class="vr-count">${esc(cp.versions)}</span></h3>` +
+    sec.innerHTML = `<h3 class="sect-h"><button type="button" class="sect-tog" data-sect-kind="variants" aria-expanded="true">Variants <span class="vr-count">${esc(cp.versions)}</span></button></h3>` +
       (cp.rest ? `<p class="vr-sum">${esc(cp.rest)}</p>` : '') +
       (long ? findHTML(ms.length) : '') +
       `<div class="vr-list vr-main">` + parts.r.map(row).join('') +

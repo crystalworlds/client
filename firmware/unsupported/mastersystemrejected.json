@@ -1,0 +1,11 @@
+{
+ "format": 1,
+ "list": "mastersystemrejected",
+ "label": "Master System: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "mastersystem"
+ ],
+ "internal": true,
+ "count": 0,
+ "entries": {}
+}

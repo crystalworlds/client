@@ -57,7 +57,7 @@ export class Input {
     this.dirty = true;
     this.padLast = []; this.padChord = [];
     this.enabled = true;
-    this.pointers = new Map();    // port index -> { x, y, inside, buttons } (light guns, paddles)
+    this.pointers = new Map();    // port index -> { x, y, inside, buttons, mouse? } (light guns, paddles; mouse: the mouse's own button mask)
     this.af = new Set();          // `${port index}:${bit}` with auto-fire on
     this.afStart = new Map();     // `${port index}:${bit}` -> the frame its press began
     this.afTick = 0;
@@ -146,6 +146,8 @@ export class Input {
   /* A pointer over the picture, for the port that has a pointer control (0..1 each way). */
   pointer(pi, st) { this.pointers.set(pi, st); this.dirty = true; }
   pointerPort() { return this.ports.findIndex(p => p.controls.some(c => c.type === 'pointer')); }
+  /* Every port with a pointer control, in port order (two Light Phasers: one finger each, 21 Nov 2026). */
+  pointerPorts() { const out = []; this.ports.forEach((p, i) => { if (p.controls.some(c => c.type === 'pointer')) out.push(i); }); return out; }
   rebuildKeys() {
     this.keyMap.clear(); this.fnMap.clear();
     const all = storedJson(KEY_STORE), remap = (all && all[this.sys]) || {};
@@ -279,7 +281,7 @@ export class Input {
     if (this.overlay) { try { this.overlay.release(); } catch (_) {} }
     this.touch.clear();
     if (this.kb) this.kb.held.clear();
-    for (const [k, pt] of this.pointers) this.pointers.set(k, Object.assign({}, pt, { buttons: 0 }));
+    for (const [k, pt] of this.pointers) this.pointers.set(k, Object.assign({}, pt, { buttons: 0 }, 'mouse' in pt ? { mouse: 0 } : null));
     if (core) this.ports.forEach((p, pi) => { this.sent[pi] = 0; this.sig[pi] = '~'; try { core.setInput(p.port, { buttons: 0 }); } catch (_) {} });
     this.dirty = true;
   }
@@ -287,7 +289,7 @@ export class Input {
   releaseAll(why) {
     this.keys.clear(); this.touch.clear(); this.ck.clear(); this.releasePad();
     if (this.kb) this.kb.held.clear();
-    for (const [k, pt] of this.pointers) this.pointers.set(k, Object.assign({}, pt, { buttons: 0 }));
+    for (const [k, pt] of this.pointers) this.pointers.set(k, Object.assign({}, pt, { buttons: 0 }, 'mouse' in pt ? { mouse: 0 } : null));
     this.latched.clear(); this.out.clear();
     this.stats.releases++;
     this.dirty = true;
@@ -332,12 +334,23 @@ export class Input {
     if (this.ports.some(p => Array.isArray(p.axes))) { try { pads = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).filter(g => g && g.connected); } catch (_) { pads = null; } }
     this.ports.forEach((p, pi) => {
       let axes = null;
-      if (p.kind === 'player') { if (Array.isArray(p.axes)) { const g = pads && pads[player]; axes = g ? p.axes.map(i => Math.round((g.axes[i] || 0) * 1000) / 1000) : null; } player++; }
+      if (p.kind === 'player') {
+        if (Array.isArray(p.axes)) {
+          /* The on-screen stick (22 Nov 2026, play/shared/overlay.js stickAxes): while a finger is on it, player
+             one's left stick is the finger's raw place, as a pad's left stick would be; a pad's own otherwise. */
+          let t = null; try { t = player === 0 && this.overlay && typeof this.overlay.stickAxes === 'function' ? this.overlay.stickAxes() : null; } catch (_) { t = null; }
+          const g = pads && pads[player];
+          axes = t ? p.axes.map(i => (i === 0 ? t[0] : i === 1 ? t[1] : g ? Math.round((g.axes[i] || 0) * 1000) / 1000 : 0))
+            : g ? p.axes.map(i => Math.round((g.axes[i] || 0) * 1000) / 1000) : null;
+        }
+        player++;
+      }
       let m = 0;
       p.controls.forEach((c, bit) => { if (held.has(pi + ':' + bit)) m |= (1 << bit); });
       const pt = this.pointers.get(pi) || null;
       const keys = this.kb && this.kb.port === pi ? Array.from(this.kb.held) : null;
-      const sig = (pt ? `${pt.x.toFixed(4)},${pt.y.toFixed(4)},${pt.inside ? 1 : 0},${pt.buttons}` : '') + (keys ? '|' + keys.join(',') : '') + (axes ? '#' + axes.join(',') : '');
+      /* `mouse` in the signature: a right or middle press alone, the left state unchanged, is a change too (SNESPAD). */
+      const sig = (pt ? `${pt.x.toFixed(4)},${pt.y.toFixed(4)},${pt.inside ? 1 : 0},${pt.buttons},${pt.mouse || 0}` : '') + (keys ? '|' + keys.join(',') : '') + (axes ? '#' + axes.join(',') : '');
       if (m !== this.sent[pi] || sig !== this.sig[pi]) {
         this.sent[pi] = m; this.sig[pi] = sig;
         const st = { buttons: m };

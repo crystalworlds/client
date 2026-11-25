@@ -25,8 +25,8 @@ A fan-built video and game preservation project that runs in the browser. It hos
   every Nintendo Game & Watch (the segmented-LCD units on our own Sharp SM5A /
   SM510 / SM511 / SM512 core, the two colour ARM units on our own STM32 twin,
   and the Tetris Jr. prototype), Game Boy and Game Boy Color, Pokémon mini,
-  NES / Famicom / Famicom Disk System / VS., and the Atari 2600, 5200, 7800
-  and Lynx.
+  NES / Famicom / Famicom Disk System / VS., the Atari 2600, 5200, 7800
+  and Lynx, and the Sega SG-1000, Master System and Game Gear.
 - **Hardware and Emulation pages** for each system: how the console works, how
   our core is built, how we test it, and how it compares with other emulators,
   plus a compatibility list for every system.
@@ -37,9 +37,9 @@ this repository.
 
 ---
 
-## Version 2.2.2
+## Version 2.3.0
 
-This is version 2.2.2. What changed in each release is in
+This is version 2.3.0. What changed in each release is in
 [`CHANGELOG.md`](CHANGELOG.md). The first release, 2.0.0, in short:
 
 - **Emulators and systems.** Eleven emulators written for this project, plus
@@ -268,7 +268,7 @@ need their console's firmware from a content pack or a game server.
 | `play/rob/` | The 3D R.O.B. that plays along with Gyromite and Stack-Up. |
 | `gameboy-core/` | The Game Boy core's source (`src/gb.c`, with `apu.c` and `apu.h`). `bash gameboy-core/tools/build.sh` (or `tools\build.bat`) builds `gameboy-core/build/gb.wasm` with a clang that has the WebAssembly target (LLVM); the result is byte-identical to `play/gameboy/build/gb.wasm`. |
 | `firmware/` | Site code and data for games (`firmware/site/`, `firmware/variants/`, `firmware/compat/`, `firmware/unsupported/`) and the build scripts in `firmware/scripts/`. Games you add go in `firmware/games/`, and builds write `firmware/output/`; both folders are ignored. See `firmware/README.md`. |
-| `metadata/` | The built-in game details (names, years, makers, descriptions and review scores) shown in a game's drawer, a few files per system. |
+| `metadata/` | The built-in game details (names, years, makers, descriptions and review scores) shown in a game's drawer, a few files per system. The `playtimes-*` files are play times from IGDB.com: IGDB's data, not covered by this project's licence (see `licenses/THIRD-PARTY-NOTICES`). |
 | `artwork/` | Game & Watch device artwork, one folder per device. |
 | `images/art/` | The device photos, box art and console art, one file each, with the index `images/art/art-index.js` that says which file holds each picture. |
 | `frame/`, `images/`, `fonts/`, `FavIcon/` | Page frame textures, site art, the credits roll fonts and app icons. |
@@ -319,8 +319,9 @@ hosts or shares them. The details are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
   one, once per browser; a new licence version asks again.
 
 - This is a fan project. It is not affiliated with, endorsed by or sponsored by
-  Nintendo, Atari or any other company. "Game & Watch", "Game Boy", "Pokémon",
-  "Famicom", "Atari" and related names are trademarks of their owners.
+  Nintendo, Atari, Sega or any other company. "Game & Watch", "Game Boy", "Pokémon",
+  "Famicom", "Atari", "Sega", "Master System", "Game Gear" and related names are
+  trademarks of their owners.
 
 - **The per-device screen and button geometry** of the Game & Watch units was
   read from the 53 `gnw_*.lay` community external-artwork layouts:

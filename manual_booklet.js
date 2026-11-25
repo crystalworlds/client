@@ -63,7 +63,7 @@
 /* ------------------------------------------------------------ the indexes */
 // One index per system (metadata/manuals/<system>.json, written by manuals.py); the Atari
 // ones are wired with no manuals yet (2026-10-17), so a pipeline run is all it takes.
-const MANUAL_SYSTEMS = ['gnw', 'gb', 'gbc', 'sgb', 'atari2600', 'atari5200', 'atari7800', 'lynx', 'nes'];   // sgb: 25 Oct; nes (NES, Famicom, Disk System): 1 Nov
+const MANUAL_SYSTEMS = ['gnw', 'gb', 'gbc', 'sgb', 'atari2600', 'atari5200', 'atari7800', 'lynx', 'nes', 'sg1000', 'sms', 'gg', 'n64', 'snes', 'n64dd'];   // n64dd: the 64DD's disks, n64-x tiles in the N64 bucket (26 Nov 2026); sgb: 25 Oct; nes (NES, Famicom, Disk System): 1 Nov; the Sega 8-bit family: 20 Nov 2026; the Nintendo 64: 22 Nov 2026
 window.CW_MANUAL_INDEX = window.CW_MANUAL_INDEX || {};
 let _manualIndexPromise = null;
 
@@ -84,7 +84,7 @@ function loadManualIndex() {
       const j = window.CW_MANUAL_INDEX[s];
       if (!j || j.format !== 'pdf') return null;
       const k = Object.keys(j.manuals)[0];
-      if (!k) { j.reachable = false; return null; }
+      if (!k || !j.base) { j.reachable = false; return null; }   // no bucket yet (an empty base: the Super Nintendo's until its bucket exists)
       // An index may name an older bucket as 'alt' (gb-manual, replaced by gb-manuals on
       // 2026-10-17): it is used only while the new bucket does not answer.
       const head = b => fetch(b + '/' + k + '.pdf', { method: 'HEAD', mode: 'cors', cache: 'no-store' }).then(r => r.ok, () => false);

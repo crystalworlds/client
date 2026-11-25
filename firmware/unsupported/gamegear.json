@@ -1,0 +1,47 @@
+{
+ "format": 1,
+ "list": "gamegear",
+ "label": "Game Gear",
+ "guards": [
+  "gamegear"
+ ],
+ "count": 6,
+ "entries": {
+  "03077531065e4999e09397c2e349cea1cad261841435b4021cf64d77ba8acc6e": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Lion King, The (USA, Brazil) (En) (Beta 1)"
+  },
+  "237a83ba02887699def80d83d94994e0a3a2294775971f8597a42b0b31a11d76": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "this copy does not run on a real Game Gear either; it needs a fan patch.",
+   "title": "GG Aleste 3 (Japan) (En) (Aleste Collection)"
+  },
+  "4b1ad1f3e8d4b67822b6e21f078b8612bcd0531ef7c83a722072c2682189ab00": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "David Robinson's Supreme Court (USA) (Auto Demo)"
+  },
+  "93e2b56674f3dd396c8f5e1d95eea99cbd2de67d20cc439d6783a657b62daff8": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Prime (USA) (Proto 2)"
+  },
+  "a9343ca0350fb0fce62d66084ce4284de28686073ab892fb31a04ab030375896": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Ecco the Dolphin (USA, Europe, Brazil) (En) (Beta 1)"
+  },
+  "d610d0cd0bc7308d2a0bb52ba96f74808e7607d6ef54d5d350eb95c1d91fc821": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Prime (USA) (Proto 1)"
+  }
+ }
+}

@@ -9,8 +9,8 @@
  },
  "art": {
   "size": [
-   1009,
-   540
+   1273,
+   686
   ],
   "controls": [
    {
@@ -18,80 +18,80 @@
     "label": "D-pad",
     "input": null,
     "shape": "dpad",
-    "x": 0.1431,
-    "y": 0.4433,
-    "w": 0.1288,
-    "h": 0.2444
+    "x": 0.1621,
+    "y": 0.3867,
+    "w": 0.1225,
+    "h": 0.2309
    },
    {
     "id": "b",
     "label": "B",
     "input": "KeyZ",
     "shape": "circle",
-    "x": 0.7958,
-    "y": 0.1722,
-    "w": 0.0634,
-    "h": 0.1185
+    "x": 0.783,
+    "y": 0.1306,
+    "w": 0.0603,
+    "h": 0.1119
    },
    {
     "id": "a",
     "label": "A",
     "input": "KeyX",
     "shape": "circle",
-    "x": 0.8746,
-    "y": 0.1333,
-    "w": 0.0634,
-    "h": 0.1185
+    "x": 0.8579,
+    "y": 0.0938,
+    "w": 0.0603,
+    "h": 0.1119
    },
    {
     "id": "b2",
     "label": "B",
     "input": "KeyZ",
     "shape": "circle",
-    "x": 0.7958,
-    "y": 0.7176,
-    "w": 0.0634,
-    "h": 0.1185
+    "x": 0.783,
+    "y": 0.6458,
+    "w": 0.0603,
+    "h": 0.1119
    },
    {
     "id": "a2",
     "label": "A",
     "input": "KeyX",
     "shape": "circle",
-    "x": 0.8731,
-    "y": 0.7593,
-    "w": 0.0634,
-    "h": 0.1185
+    "x": 0.8565,
+    "y": 0.6852,
+    "w": 0.0603,
+    "h": 0.1119
    },
    {
     "id": "opt1",
     "label": "Option 1",
     "input": "Digit1",
     "shape": "rect",
-    "x": 0.7319,
-    "y": 0.3218,
-    "w": 0.0357,
-    "h": 0.1
+    "x": 0.7222,
+    "y": 0.2719,
+    "w": 0.034,
+    "h": 0.0945
    },
    {
     "id": "pause",
     "label": "Pause",
     "input": "Enter",
     "shape": "rect",
-    "x": 0.7354,
-    "y": 0.4435,
-    "w": 0.0337,
-    "h": 0.0963
+    "x": 0.7255,
+    "y": 0.3869,
+    "w": 0.0321,
+    "h": 0.091
    },
    {
     "id": "opt2",
     "label": "Option 2",
     "input": "Digit2",
     "shape": "rect",
-    "x": 0.7328,
-    "y": 0.5637,
-    "w": 0.0357,
-    "h": 0.1
+    "x": 0.723,
+    "y": 0.5004,
+    "w": 0.034,
+    "h": 0.0945
    }
   ]
  },
@@ -175,7 +175,7 @@
  "provenance": [
   {
    "what": "art buttons",
-   "source": "measured 2026-10-07 on AtariLynxConsole.png (images_atari_b64.json, 1009x540) on 4-5x crops ruled every 5 px: d-pad cross 80..209 x 174..305; B cap centre (803,93) radius 23, A (882,74), lower B (803,387.5), lower A (879,411) (the Lynx II's second pair for left-handed play); Option 1 723..754 x 148..200, Pause 729..756 x 215..264, Option 2 724..755 x 279..330. Hit circles 64 px (the cap plus a thumb), inside the 75 px recess. Re-measured 2026-10-17 on 4x gridded crops (A cap centre (882.5,72), lower A (881,410); the rest confirmed to a pixel). These are fractions of the WHOLE photograph: the host draws the body cut (play/cores/atari/art.mjs GEOM: 21,12 968x517), turned for a turned title, and says so through setArtView (overlayView), which maps every button onto the drawn art. Before 2026-10-17 the numbers were applied to the cut as if it were the whole photograph (about 15 px off sideways) and were never turned",
+   "source": "Moved 2026-11-25 onto the COLORFUL kit picture (images/art/atari/AtariLynxConsole.webp, 1273x686): the same photograph, registered onto the new one by edge correlation (scale 1.2002 x 1.2000, offset +33,-22 px, a sharp peak); every box above was carried over by that map, sizes scaled with it, and checked by eye on the new picture, upright and turned. The numbers below are the 1009x540 measurement they came from: measured 2026-10-07 on AtariLynxConsole.png (images_atari_b64.json, 1009x540) on 4-5x crops ruled every 5 px: d-pad cross 80..209 x 174..305; B cap centre (803,93) radius 23, A (882,74), lower B (803,387.5), lower A (879,411) (the Lynx II's second pair for left-handed play); Option 1 723..754 x 148..200, Pause 729..756 x 215..264, Option 2 724..755 x 279..330. Hit circles 64 px (the cap plus a thumb), inside the 75 px recess. Re-measured 2026-10-17 on 4x gridded crops (A cap centre (882.5,72), lower A (881,410); the rest confirmed to a pixel). These are fractions of the WHOLE photograph: the host draws the body cut (play/cores/atari/art.mjs GEOM: 21,12 968x517), turned for a turned title, and says so through setArtView (overlayView), which maps every button onto the drawn art. Before 2026-10-17 the numbers were applied to the cut as if it were the whole photograph (about 15 px off sideways) and were never turned",
    "licence": "site-owned measurement of the site's own artwork"
   },
   {

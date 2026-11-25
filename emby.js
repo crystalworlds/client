@@ -815,7 +815,8 @@
   const getItem = async id => {
     // People (cast/crew) only needed for the single-item drawer, so it's requested
     // here rather than in the global FIELDS (which would bloat every grid page).
-    const { items } = await getList(`/Users/${session.userId}/Items`, listParams({ Ids: id, Fields: FIELDS + ',People,RemoteTrailers,Chapters' }));
+    /* Box (21 Nov 2026): the film's case front, when the server holds one (case3d.js; the poster otherwise). */
+    const { items } = await getList(`/Users/${session.userId}/Items`, listParams({ Ids: id, Fields: FIELDS + ',People,RemoteTrailers,Chapters', EnableImageTypes: IMAGE_TYPES + ',Box' }));
     return items[0] ?? null;
   };
 
@@ -911,6 +912,10 @@
       tag,
       maxWidth: maxWidth ? Math.round(maxWidth * dpr) : null,
       maxHeight: maxHeight ? Math.round(maxHeight * dpr) : null,
+      /* The server's own picture, never one an image-enhancer plugin has drawn on (22 Nov 2026: a cover-art
+         plugin painted a Blu-ray / 4K / DVD case frame onto the posters, which the site then cropped and which
+         doubled the site's own 3D case). Emby honours this; Jellyfin ignores it. */
+      EnableImageEnhancers: false,
       ...tokenQ(),
     });
   }
@@ -1629,7 +1634,7 @@
      the pointer and the others slide to make room. Keys, a controller and a TV remote: the handle is
      a stop of its own, and with it focused Up and Down move the row one place (its name says so).
      The order is saved as before (gnw.widgets order) and does what widgetPlaceOrder says. */
-  const WIDGET_SWITCH = { clock: 'w-clock-on', weather: 'w-weather-on', trailer: 'w-trailer-on', facts: 'w-facts-on', quotes: 'w-quotes-on', games: 'w-games-on', cast: 'w-cast-on', stats: 'w-stats-on', image: 'w-image-on', playtime: 'w-playtime-on' };
+  const WIDGET_SWITCH = { clock: 'w-clock-on', weather: 'w-weather-on', trailer: 'w-trailer-on', facts: 'w-facts-on', quotes: 'w-quotes-on', games: 'w-games-on', cast: 'w-cast-on', stats: 'w-stats-on', image: 'w-image-on', playtime: 'w-playtime-on', achievements: 'w-achievements-on' };
   const keyOfSwitch = id => Object.keys(WIDGET_SWITCH).find(k => WIDGET_SWITCH[k] === id) || '';
   const GRIP_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></g></svg>';
   function widgetRowName(it) { const n = it.querySelector('.cfg-name'); return (n && n.textContent.trim()) || 'This widget'; }
@@ -1809,6 +1814,11 @@
        most first; never played after, in the Shuffle order. A new key on purpose: 'played' (Recently
        played) left the menu on 19 Oct and a saved one still falls back to Shuffle (loadVideoPrefs). */
     most:   { def: 'desc' },
+    /* MY GAMES (21 Nov 2026, mygames.js): Last played and Time played from the vault's play diary (every
+       version, every device), My rating from the player's own stars. Never played or unrated go last. */
+    last:     { def: 'desc' },
+    time:     { def: 'desc' },
+    myrating: { def: 'desc' },
   };
 
   const videoState = {
@@ -3197,6 +3207,13 @@
       body.gnw-tv #video-body .vgames-head .vgcoll-head { min-height:48px; }
       body.gnw-tv #video-body .vgames-head .vgcoll-pic, body.gnw-tv #video-body .vgames-head .vgcoll-pic img, body.gnw-tv #video-body .vgames-head .vgcoll-pic svg { width:38px; height:38px; }
       body.gnw-tv #video-body .vgames-head .vgcoll-txt b { font-size:15px; }
+      /* ONE ROW, TWO LINES (21 Nov 2026: "place the text across two lines and have all four be only on a
+         single row"). However many collections there are (four since the Sega Collection), one column each,
+         all the width of the widest, never wrapping to a second row; each name on two lines (its words, then
+         "Collection"). On a computer the row is only as wide as it needs, the close button at the far end. */
+      #video-body .vgames-head .vghz-coll { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); grid-template-columns:none; width:max-content; max-width:100%; align-items:stretch; }
+      #video-body .vgames-head .vgcoll-txt b { white-space:normal; line-height:1.15; text-align:left; }
+      #video-body .vgames-head .vgcoll-txt b .vgcoll-l { display:block; white-space:nowrap; }
       /* Display and Sort, moved from the search bar: their menus open over the strip. */
       #video-body .vgames-head .vtb-dd { position:relative; display:inline-flex; z-index:3; }
       #video-body .vgames-head .vtb-dd .vtb-menu { text-align:left; }
@@ -3215,10 +3232,14 @@
       #video-body .vgames-menu.vg-full .vghz-end .vghead-grp { flex-wrap:nowrap; gap:4px; }
       #video-body .vgames-menu.vg-full .vghz-end .vghead-grp .vgtypes { flex-wrap:nowrap; gap:4px; }
       #video-body .vgames-menu.vg-full .vgames-head .vgdiv2 { margin:0 3px; }
-      #video-body .vgames-menu.vg-full .vghz-coll { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:stretch; }
-      #video-body .vgames-menu.vg-full .vgames-head .vgcoll-head { flex-direction:column; gap:2px; padding:5px 3px; text-align:center; position:relative; }
+      /* Full screen (a phone, a fold, a small tablet): the four share the row's width beside the close
+         button; picture over the two-line name, the name sized to the screen so "Game & Watch" fits a
+         quarter of a 344 px fold (the real count, not the three of 24 Oct). */
+      #video-body .vgames-menu.vg-full .vghz-coll { display:grid; grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); width:auto; gap:3px; align-items:stretch; }
+      #video-body .vgames-menu.vg-full .vgames-head.vgh-lean { column-gap:6px; }
+      #video-body .vgames-menu.vg-full .vgames-head .vgcoll-head { flex-direction:column; gap:2px; padding:5px 1px; text-align:center; position:relative; }
       #video-body .vgames-menu.vg-full .vgames-head .vgcoll-txt { align-items:center; }
-      #video-body .vgames-menu.vg-full .vgames-head .vgcoll-txt b { white-space:normal; font-size:11px; }
+      #video-body .vgames-menu.vg-full .vgames-head .vgcoll-txt b { white-space:normal; text-align:center; font-size:clamp(8.5px, 2.5vw, 12px); letter-spacing:-.01em; }
       #video-body .vgames-menu.vg-full .vgames-head .vgcoll-head > svg { position:absolute; top:4px; right:4px; width:12px; height:12px; }
       #video-body .vgames-menu.vg-full .vghz-end { justify-content:flex-end; }
       /* A phone: Display's and Sort's menus open under the whole top row, the screen's width. */
@@ -3922,6 +3943,8 @@
       /* A collection's picture: four of its consoles, two by two (24 Oct). */
       .video-person-banner .vpb-ava.vpb-collpics { display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:4px; align-self:flex-start; height:86px; min-height:0; padding:2px; }
       .video-person-banner .vpb-ava.vpb-collpics img { width:100%; height:100%; min-width:0; min-height:0; }
+      /* Three consoles (the Sega Collection, 21 Nov 2026): the third sits centred under the first two. */
+      .video-person-banner .vpb-ava.vpb-collpics img:nth-child(3):last-child { grid-column:1 / -1; justify-self:center; width:50%; }
       @media (max-width: 560px) { .video-person-banner .vpb-ava.vpb-collpics { width:60px; height:60px; gap:2px; } }
       .video-person-banner .vpb-bio.vpb-bio-full { -webkit-line-clamp:unset; display:block; margin-top:6px; }
       .video-person-banner .vpb-bio-full + .vpb-meta { margin-top:8px; }
@@ -4009,14 +4032,17 @@
      Enter, the pad's A, or Right; Left closes it again); no hover anywhere. Each system opens its Emulation
      page at its own address (/gb/emulation ...), the same way a pasted link does. Only where the site shows
      those pages (index.html __cwNoDocs); off our own address the whole menu is hidden, like the old buttons. */
-  const INFO_KINDS = new Set(['compat', 'timeline', 'about']);
+  const INFO_KINDS = new Set(['compat', 'changelog', 'timeline', 'about']);   // Change Log (21 Nov 2026), under Compatibility
+  IC.changelog = '<path d="M3.8 12.5a8.3 8.3 0 1 0 2.4-6.1"/><polyline points="3.4 3.9 3.8 8.2 8.1 7.7"/><polyline points="12 7.6 12 12.3 15.2 14.3"/>';
   const INFO_SYS = [['game-and-watch', 'Game &amp; Watch'], ['game-and-watch-colour', 'Game &amp; Watch colour'], ['gb', 'Game Boy'], ['gbc', 'Game Boy Color'],
     ['nes', 'NES'], ['famicom', 'Famicom'], ['fds', 'Famicom Disk System'], ['pokemon-mini', 'Pokémon mini'],
-    ['atari2600', 'Atari 2600'], ['atari5200', 'Atari 5200'], ['atari7800', 'Atari 7800'], ['atarilynx', 'Atari Lynx']];
+    ['atari2600', 'Atari 2600'], ['atari5200', 'Atari 5200'], ['atari7800', 'Atari 7800'], ['atarilynx', 'Atari Lynx'],
+    ['sg1000', 'SG-1000'], ['mastersystem', 'Master System'], ['gamegear', 'Game Gear']];
   IC.research = '<path d="M9 3.5h6"/><path d="M10 3.5v6L4.8 18.3A1.5 1.5 0 0 0 6.1 20.5h11.8a1.5 1.5 0 0 0 1.3-2.2L14 9.5v-6"/><line x1="7.5" y1="14.5" x2="16.5" y2="14.5"/>';
   function infoMenuHTML() {
     const it = (id, kind, label, icon) => `<button type="button" role="menuitem" class="vtb-item vinfo-win" id="${id}" aria-pressed="${aboutOpen && aboutKind === kind}" aria-controls="video-about">${svg(icon)}<span class="vtb-lbl">${label}</span></button>`;
     return it('video-compat-btn', 'compat', 'Compatibility', '<line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/><polyline points="3.5 6 5 7.5 7.5 4.5"/><polyline points="3.5 12 5 13.5 7.5 10.5"/><polyline points="3.5 18 5 19.5 7.5 16.5"/>')
+      + it('video-changelog-btn', 'changelog', 'Change Log', IC.changelog)   // changelog.js draws it (21 Nov 2026)
       + `<button type="button" role="menuitem" class="vtb-item vinfo-research" aria-expanded="false" aria-controls="vinfo-sys">${svg(IC.research)}<span class="vtb-lbl">Emulator Research</span>${svg('<polyline points="9 6 15 12 9 18"/>').replace('<svg ', '<svg class="vinfo-chev" aria-hidden="true" ')}</button>`
       + `<div class="vinfo-sys" id="vinfo-sys" role="group" aria-label="Emulator Research" hidden>`
       + INFO_SYS.map(([k, l]) => `<button type="button" role="menuitem" class="vtb-item vinfo-doc" data-vinfo-doc="${k}"><span class="vtb-lbl">${l}</span></button>`).join('')
@@ -4093,7 +4119,7 @@
           <!-- No logo button here (23 Oct): the logo and site name sit in the grid's top-left
                corner (#video-brand), or on their own line above the bar on a narrow screen. -->
           <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-home-btn" title="Home" aria-label="Home" aria-pressed="${aboutOpen && aboutKind === 'home'}" aria-controls="video-about">${svg(IC.home)}</button>
-          <!-- FEATURES (31 Oct): right of Home, the same window (features.js draws it). -->
+          <!-- Features: right of Home, the same window (features.js draws it). -->
           <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-features-btn" title="Features" aria-label="Features" aria-pressed="${aboutOpen && aboutKind === 'features'}" aria-controls="video-about">${svg(IC.features)}</button>
           <!-- STORIES (7 Nov): right of Features, the same window (stories.js draws it). Hidden unless signed in. -->
           <button type="button" class="vtb-btn vtb-settings vtb-about" id="video-stories-btn" title="Stories" aria-label="Stories" aria-pressed="${aboutOpen && aboutKind === 'stories'}" aria-controls="video-about">${svg(IC.stories)}</button>
@@ -4181,13 +4207,15 @@
       <div id="video-status"></div>`;
   }
 
-  const SORT_TITLES = { name: 'Name', year: 'Release date', added: 'Date added', rating: 'Rating', random: 'Shuffle', played: 'Recently played', most: 'Most played' };
+  const SORT_TITLES = { name: 'Name', year: 'Release date', added: 'Date added', rating: 'Rating', random: 'Shuffle', played: 'Recently played', most: 'Most played', last: 'Last played', time: 'Time played', myrating: 'My rating' };
   /* The words beside a sort in the Sorting menu: [ascending, descending]. The
      checked one shows its current direction (choosing it again reverses it);
      the others show the direction they start in. */
-  const SORT_HINTS = { name: ['A–Z', 'Z–A'], year: ['Oldest', 'Newest'], added: ['Oldest', 'Newest'], rating: ['Lowest', 'Highest'], played: ['Longest ago', 'Latest'], most: ['Least', 'Most'] };
+  const SORT_HINTS = { name: ['A–Z', 'Z–A'], year: ['Oldest', 'Newest'], added: ['Oldest', 'Newest'], rating: ['Lowest', 'Highest'], played: ['Longest ago', 'Latest'], most: ['Least', 'Most'], last: ['Longest ago', 'Latest'], time: ['Least', 'Most'], myrating: ['Lowest', 'Highest'] };
   /* Most played's icon: three bars (8 Nov 2026). */
   const IC_MOST = '<line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="9"/>';
+  /* Time played's icon (My games, 21 Nov 2026): an hourglass. */
+  const IC_TIME = '<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>';
   function updateSortButtons(scope) {
     scope = scope || document;
     const paint = (b, key, active, dirNow, defs) => {
@@ -4226,6 +4254,7 @@
   let aboutOpen = false, aboutKind = 'about';
   function aboutHTML(kind) {
     if (kind === 'compat') return window.CompatList ? window.CompatList.html() : '';   // compat.js draws its own frame
+    if (kind === 'changelog') return window.CwChangelog ? window.CwChangelog.html() : '';   // changelog.js too (21 Nov 2026)
     if (kind === 'timeline' && typeof window.renderTimeline === 'function' && !document.querySelector('#timeline-list .tl-item')) { try { window.renderTimeline(); } catch {} }
     const src = kind === 'home' || kind === 'features' || kind === 'stories' ? null : document.querySelector(kind === 'timeline' ? '#view-series .section' : '#view-about .section');
     let inner = '';
@@ -4306,7 +4335,7 @@
     let p = document.getElementById('video-about');
     if (!p && aboutOpen) { p = document.createElement('div'); p.id = 'video-about'; p.className = 'video-about'; p.hidden = true; document.body.appendChild(p); }
     if (aboutOpen) aboutReveal();
-    for (const [id, k] of [['video-about-btn', 'about'], ['video-timeline-btn', 'timeline'], ['video-compat-btn', 'compat'], ['video-home-btn', 'home'], ['video-features-btn', 'features'], ['video-stories-btn', 'stories']]) {
+    for (const [id, k] of [['video-about-btn', 'about'], ['video-timeline-btn', 'timeline'], ['video-compat-btn', 'compat'], ['video-changelog-btn', 'changelog'], ['video-home-btn', 'home'], ['video-features-btn', 'features'], ['video-stories-btn', 'stories']]) {
       const b = document.getElementById(id); if (b) b.setAttribute('aria-pressed', String(aboutOpen && aboutKind === k));
     }
     { const ib = document.getElementById('video-info-btn'); if (ib) ib.classList.toggle('vinfo-on', aboutOpen && INFO_KINDS.has(aboutKind)); }
@@ -4318,6 +4347,7 @@
         + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>'
         + aboutHTML(aboutKind); p.dataset.kind = aboutKind;
       if (aboutKind === 'compat') { try { window.CompatList.mount(p); } catch (e) { console.warn('[compat]', e); } }
+      if (aboutKind === 'changelog') { try { window.CwChangelog.mount(p); } catch (e) { console.warn('[changelog]', e); } }
       if (aboutKind === 'home') homeMount(p);
       if (aboutKind === 'about') { try { if (window.aboutCredits) window.aboutCredits.attach(p); } catch (e) { console.warn('[about]', e); } }   // the credits roll in the copy (index.html)
       /* Home's narration controls belong to the window (it pauses when the window closes); its section
@@ -4453,7 +4483,7 @@
       ev.preventDefault(); ev.stopPropagation();
       const k = aboutKind;
       aboutSet(false);
-      const b = document.getElementById(k === 'timeline' ? 'video-timeline-btn' : k === 'compat' ? 'video-compat-btn' : k === 'home' ? 'video-home-btn' : k === 'features' ? 'video-features-btn' : k === 'stories' ? 'video-stories-btn' : k === 'keys' ? 'video-keys-btn' : 'video-about-btn'); winFocus(b);
+      const b = document.getElementById(k === 'timeline' ? 'video-timeline-btn' : k === 'compat' ? 'video-compat-btn' : k === 'changelog' ? 'video-changelog-btn' : k === 'home' ? 'video-home-btn' : k === 'features' ? 'video-features-btn' : k === 'stories' ? 'video-stories-btn' : k === 'keys' ? 'video-keys-btn' : 'video-about-btn'); winFocus(b);
       return;
     }
     if (t.closest('#video-about .about-xbar')) return;
@@ -4509,7 +4539,7 @@
     if (ev.target && ev.target.closest && ev.target.closest('#cw-notify-host, .toast-host')) return;
     ev.preventDefault(); ev.stopPropagation();
     aboutSet(false);
-    const b = document.getElementById(aboutKind === 'timeline' ? 'video-timeline-btn' : aboutKind === 'compat' ? 'video-compat-btn' : aboutKind === 'home' ? 'video-home-btn' : aboutKind === 'features' ? 'video-features-btn' : aboutKind === 'stories' ? 'video-stories-btn' : aboutKind === 'keys' ? 'video-keys-btn' : 'video-about-btn'); winFocus(b);
+    const b = document.getElementById(aboutKind === 'timeline' ? 'video-timeline-btn' : aboutKind === 'compat' ? 'video-compat-btn' : aboutKind === 'changelog' ? 'video-changelog-btn' : aboutKind === 'home' ? 'video-home-btn' : aboutKind === 'features' ? 'video-features-btn' : aboutKind === 'stories' ? 'video-stories-btn' : aboutKind === 'keys' ? 'video-keys-btn' : 'video-about-btn'); winFocus(b);
   }, true);
   /* THE SEARCH BOX CLOSES THE WINDOW (2 Nov: "Clicking, tapping or focusing the wall's
      search bar must close whatever window is open on top of the content page, so the search results
@@ -4694,11 +4724,11 @@
   })();
   document.addEventListener('click', (ev) => {
     const t = ev.target; if (!t || !t.closest) return;
-    const winBtn = t.closest('#video-about-btn, #video-timeline-btn, #video-compat-btn, #video-home-btn, #video-features-btn, #video-stories-btn');
+    const winBtn = t.closest('#video-about-btn, #video-timeline-btn, #video-compat-btn, #video-changelog-btn, #video-home-btn, #video-features-btn, #video-stories-btn');
     if (winBtn) {
       vtbClose(!!winBtn.closest('.vinfo-menu'));   // from the Info menu the focus goes back to Info
       try { vgCloseMenu(); } catch {}
-      const k = winBtn.id === 'video-timeline-btn' ? 'timeline' : winBtn.id === 'video-compat-btn' ? 'compat' : winBtn.id === 'video-home-btn' ? 'home' : winBtn.id === 'video-features-btn' ? 'features' : winBtn.id === 'video-stories-btn' ? 'stories' : 'about';
+      const k = winBtn.id === 'video-timeline-btn' ? 'timeline' : winBtn.id === 'video-compat-btn' ? 'compat' : winBtn.id === 'video-changelog-btn' ? 'changelog' : winBtn.id === 'video-home-btn' ? 'home' : winBtn.id === 'video-features-btn' ? 'features' : winBtn.id === 'video-stories-btn' ? 'stories' : 'about';
       aboutSet(!(aboutOpen && aboutKind === k), k);
       return;
     }
@@ -5021,7 +5051,20 @@
    *  Sound: none.
    * ===================================================================== */
   let fpTab = null;   // the sheet's tab this visit: order | games | films | display
-  const FP_TABS = [['order', 'Order'], ['games', 'Games'], ['films', 'Films'], ['display', 'Display']];
+  const FP_TABS = [['order', 'Order'], ['games', 'Games'], ['mygames', 'My games'], ['films', 'Films'], ['display', 'Display']];
+  /* MY GAMES (21 Nov 2026): its column, chips and clear come from mygames.js (statuses, favourites, the two
+     tile ticks, the length); a change redraws the wall from the top, as a Systems pick does. */
+  const fpMgChips = () => { try { return window.CwMyGames ? window.CwMyGames.chips() : []; } catch { return []; } };
+  function fpMgApplied() {
+    _poolMemoDrop(); reseedAmbientTiles(); redrawWallFromTop(); vgSyncMenu();
+    const m = document.querySelector('#video-body .vmf-menu'), c = m && m.querySelector('[data-fp-g="mygames"]');
+    if (c && window.CwMyGames) {
+      const a = document.activeElement, key = a && c.contains(a) ? a.getAttribute('data-mg-f') : null;
+      c.innerHTML = window.CwMyGames.filterColHTML();
+      const t = key && (c.querySelector('[data-mg-f="' + key + '"]') || c.querySelector('[data-mg-f]'));
+      if (t) { try { t.focus({ preventScroll: true }); } catch {} }
+    }
+  }
   const FP_X = svg('<path d="M6 6l12 12M18 6L6 18"/>');
   const fpFilmsGroup = () => mediaAvailable();
   /* The kinds of game that differ from the start (Commercial and Unknown on). Unknown counts only
@@ -5048,7 +5091,7 @@
     for (const d of mf.decades) out.push({ id: 'decade:' + d, label: d + 's' });
     return out;
   }
-  const fpChipList = () => fpKindChips().concat(fpFilmChips());
+  const fpChipList = () => fpKindChips().concat(fpMgChips(), fpFilmChips());
   const fpCount = () => fpChipList().length;
   /* How many titles the wall holds now: the films when they are on it (as the films Filter always
      said), else the games. null while the film list is still arriving. */
@@ -5084,6 +5127,7 @@
   /* CLEAR ALL (20 Nov 2026, question 4: filters only). */
   function fpClearAll() {
     const kinds = !!getWidgetCfg().games.types, films = mfActive();
+    if (fpMgChips().length) { window.CwMyGames.clearFilter(); fpMgApplied(); }
     mf.unwatched = mf.fav = mf.uhd = false; mf.genres = []; mf.decades = [];
     mfSave();
     if (kinds) { reseedAmbientTiles(); saveWidgetCfg({ games: { types: null } }); }   // repaints the wall, the film choices already off
@@ -5099,6 +5143,7 @@
   function fpRemoveChip(id) {
     const i = id.indexOf(':'), kind = id.slice(0, i), v = id.slice(i + 1);
     if (kind === 'kind') { fpToggleKind(v); return; }
+    if (kind === 'mg') { if (window.CwMyGames) window.CwMyGames.removeChip(id); fpMgApplied(); return; }
     if (kind === 'mf' && (v === 'unwatched' || v === 'fav' || v === 'uhd')) mf[v] = false;
     else if (kind === 'genre') mf.genres = mf.genres.filter(x => x !== v);
     else if (kind === 'decade') mf.decades = mf.decades.filter(x => x !== Number(v));
@@ -5114,11 +5159,12 @@
     `<button type="button" role="menuitemcheckbox" class="vtb-item fp-swi${on ? ' active' : ''}" ${attrs} aria-checked="${on}"><span class="vtb-lbl">${label}</span><span class="fp-sw" aria-hidden="true"></span></button>`;
   function mfMenuHTML() {
     const films = fpFilmsGroup(), filmsOn = films && mediaShown();
-    const kN = fpKindChips().length, fN = fpFilmChips().length, n = kN + fN;
+    const kN = fpKindChips().length, fN = fpFilmChips().length, n = kN + fN + fpMgChips().length;
     if (!fpTab || (fpTab === 'films' && !films)) fpTab = kN ? 'games' : fN ? 'films' : 'order';
     const col = (k, label, html) => `<div class="fp-col${fpTab === k ? ' fp-on' : ''}" data-fp-g="${k}" role="group" aria-label="${label}">${html}</div>`;
-    const tabs = FP_TABS.filter(([k]) => k !== 'films' || films).map(([k, l]) => {
-      const c = k === 'games' ? kN : k === 'films' ? fN : 0;
+    const mN = fpMgChips().length;
+    const tabs = FP_TABS.filter(([k]) => (k !== 'films' || films) && (k !== 'mygames' || !!window.CwMyGames)).map(([k, l]) => {
+      const c = k === 'games' ? kN : k === 'films' ? fN : k === 'mygames' ? mN : 0;
       return `<button type="button" role="menuitemradio" class="vtb-item fp-tab${fpTab === k ? ' active' : ''}" data-fp-tab="${k}" aria-checked="${fpTab === k}"><span class="vtb-lbl">${l}</span><i class="fp-tc">${c || ''}</i></button>`;
     }).join('');
     const head = `<div class="fp-top"><div class="fp-head"><span class="fp-title">Filter</span><span class="fp-n" aria-live="polite">${esc(fpHeadText())}</span>
@@ -5132,6 +5178,9 @@
       + fpSort('data-vgsort', videoState.gameSort, 'rating', IC.star, 'Rating')
       + fpSort('data-vgsort', videoState.gameSort, 'random', IC.rand, 'Shuffle')
       + fpSort('data-vgsort', videoState.gameSort, 'most', IC_MOST, 'Most played')
+      + (window.CwMyGames ? fpSort('data-vgsort', videoState.gameSort, 'last', IC.clock, 'Last played')
+        + fpSort('data-vgsort', videoState.gameSort, 'time', IC_TIME, 'Time played')
+        + fpSort('data-vgsort', videoState.gameSort, 'myrating', IC.star, 'My rating') : '')
       + (films ? '<div class="fp-sub">Films and series</div>'
         + fpSort('data-vsort', videoState.sort, 'added', IC.clock, 'Date added')
         + fpSort('data-vsort', videoState.sort, 'year', IC.cal, 'Release date')
@@ -5148,6 +5197,8 @@
       }).join('')
       + '<p class="fp-tip">Commercial includes hacks and translations; they stay inside their game’s drawer. Unknown shows only when such a game is on the wall.</p>'
       + '<p class="fp-tip">The game counts on the Systems menu follow these boxes.</p>');
+    /* 2b. My games (mygames.js). */
+    const mine = window.CwMyGames ? col('mygames', 'My games', window.CwMyGames.filterColHTML()) : '';
     /* 3. Films and series (with a media server). */
     let filmsCol = '';
     if (films) {
@@ -5190,7 +5241,7 @@
       + fpArt('hardware', IC.hardware, 'Live devices') + fpArt('boxart', IC.boxart, 'Box art')
       + (window.CW_BOX_ART_3D === true ? fpArt('boxart3d', IC.boxart3d, '3D box art') : '')
       + (CR ? fpSwitch('data-vcontinue="1" data-tip="Continue row"', contOn, 'Continue row') : ''));
-    return head + '<div class="fp-cols">' + order + games + filmsCol + disp + '</div>'
+    return head + '<div class="fp-cols">' + order + games + mine + filmsCol + disp + '</div>'
       + `<div class="vmf-sf">
         <button type="button" role="menuitem" class="vtb-item vmf-clear" data-mf="clear"${n ? '' : ' disabled'}><span class="vtb-lbl">Clear all</span></button>
         <button type="button" role="menuitem" class="vtb-item vmf-done" data-mf="done"><span class="vtb-lbl">${esc(fpTitlesText(true))}</span></button>
@@ -5270,12 +5321,12 @@
   }
   /* The counts in the panel (head, tabs, Clear, the foot's Show N), changed in place. */
   function fpCountsPaint(m) {
-    const k = fpKindChips().length, f = fpFilmChips().length, n = k + f;
+    const k = fpKindChips().length, f = fpFilmChips().length, mg = fpMgChips().length, n = k + f + mg;
     const h = m.querySelector('.fp-n'); if (h) { const t = fpHeadText(); if (h.textContent !== t) h.textContent = t; }
     const a = document.activeElement;
     m.querySelectorAll('[data-mf="clear"]').forEach(b => { b.disabled = !n; });
     if (a && m.contains(a) && a.disabled) { const t = (mfSheet() && m.querySelector('.vmf-done')) || vtbItems(m)[0]; if (t) { try { t.focus({ preventScroll: true }); } catch {} } }
-    m.querySelectorAll('[data-fp-tab]').forEach(b => { const i = b.querySelector('.fp-tc'), c = b.dataset.fpTab === 'games' ? k : b.dataset.fpTab === 'films' ? f : 0; if (i) i.textContent = c ? String(c) : ''; });
+    m.querySelectorAll('[data-fp-tab]').forEach(b => { const i = b.querySelector('.fp-tc'), c = b.dataset.fpTab === 'games' ? k : b.dataset.fpTab === 'films' ? f : b.dataset.fpTab === 'mygames' ? mg : 0; if (i) i.textContent = c ? String(c) : ''; });
     const d = m.querySelector('.vmf-done .vtb-lbl'); if (d) d.textContent = fpTitlesText(true);
   }
   /* After the kinds of game, the systems or the films' on and off change (vgSyncMenu, updateStrips):
@@ -5426,8 +5477,9 @@
   }
   document.addEventListener('click', (ev) => {
     const t = ev.target; if (!t || !t.closest) return;
-    const b = t.closest('#video-body .vtb-menu [data-mf], #video-body .vtb-menu [data-mf-genre], #video-body .vtb-menu [data-mf-decade], #video-body .vtb-menu [data-mf-jump], #video-body .vmf-menu [data-fp-tab], #video-body .vmf-menu [data-vg-type], #video-body .fp-chips [data-fp-chip], #video-status [data-mf="clear"]');
+    const b = t.closest('#video-body .vtb-menu [data-mf], #video-body .vtb-menu [data-mf-genre], #video-body .vtb-menu [data-mf-decade], #video-body .vtb-menu [data-mf-jump], #video-body .vmf-menu [data-fp-tab], #video-body .vmf-menu [data-vg-type], #video-body .vmf-menu [data-mg-f], #video-body .fp-chips [data-fp-chip], #video-status [data-mf="clear"]');
     if (!b || b.disabled) return;
+    if (b.hasAttribute('data-mg-f')) { if (window.CwMyGames) window.CwMyGames.toggleFilter(b.getAttribute('data-mg-f')); fpMgApplied(); return; }
     if (b.hasAttribute('data-fp-tab')) { fpShowTab(b.getAttribute('data-fp-tab'), true); return; }
     if (b.hasAttribute('data-vg-type')) { fpToggleKind(b.getAttribute('data-vg-type')); return; }
     if (b.hasAttribute('data-fp-chip')) {
@@ -5705,6 +5757,243 @@
         <div class="meta">${meta}</div>
       </div>
     </div>`;
+  }
+
+  /* =====================================================================
+   *  MEDIA ENHANCED COVERS (22 Nov 2026). Settings > Configurations > Films and series, off by
+   *  default, saved only in this browser (localStorage gnw.mediaBadges = '1'). When on, every film
+   *  and series poster on the wall, and the drawer's flat poster, shows a small mark in its
+   *  TOP-LEFT corner (the corner nothing else uses: the episode count sits top-right): 4K, Blu-ray
+   *  or DVD. The 3D case shows none: its colour already says the kind.
+   *  The kind is the 3D case's rule (case3d.js filmKind): the copy Play would play (its first
+   *  source); at least 3200 wide or 1600 high is 4K, the 720p class and up Blu-ray, smaller DVD; a
+   *  series by its first episode (first season after the specials). Unknown: no mark.
+   *  Where it comes from, first found wins: the case's own remembered kinds (cw.case.film.v1, a
+   *  title once opened), this list's (cw.mediabadge.v1, at most 8000 titles, asked again after 14
+   *  days, the old mark shown meanwhile), else asked of the media server for tiles near the screen
+   *  only: films 40 at a time (Ids=, Fields=MediaSources), a series its first few episodes. Read
+   *  only; nothing is ever sent to the server but these questions.
+   *  The marks are our own drawings (no Blu-ray Disc, DVD or Ultra HD logo is copied): a 4K plate in
+   *  black with gold, a Blu-ray plate in blue with white, a DVD plate in black with silver.
+   *  Placed on the poster itself, not the tile: the poster is drawn 'contain' inside the tile's 10px
+   *  border, so its corner moves with its shape (--mb-a, the poster's width / height, set when it
+   *  loads). Shown only once the poster is.
+   *  Sound: none.
+   * ===================================================================== */
+  const MB_KEY = 'gnw.mediaBadges', MB_STORE = 'cw.mediabadge.v1', MB_CASE = 'cw.case.film.v1';
+  const MB_MAX = 8000, MB_STALE = 14 * 864e5;
+  let _mbOn = null;
+  function mbOn() { if (_mbOn === null) { try { _mbOn = localStorage.getItem(MB_KEY) === '1'; } catch { _mbOn = false; } } return _mbOn; }
+  let _mbMap = null;
+  function mbMap() {
+    if (_mbMap) return _mbMap;
+    try { const o = JSON.parse(localStorage.getItem(MB_STORE) || 'null'); _mbMap = (o && typeof o === 'object' && o.m) ? o.m : {}; } catch { _mbMap = {}; }
+    return _mbMap;
+  }
+  let _mbSaveT = 0;
+  function mbSave() {
+    clearTimeout(_mbSaveT);
+    _mbSaveT = setTimeout(() => {
+      const m = mbMap(), ks = Object.keys(m);
+      for (let i = 0; i < ks.length - MB_MAX; i++) delete m[ks[i]];
+      try { localStorage.setItem(MB_STORE, JSON.stringify({ v: 1, m })); } catch {}
+    }, 800);
+  }
+  /* The case's remembered kinds, read at most once a second (a wall asks for thousands of tiles at once). */
+  let _mbCase = null, _mbCaseAt = 0;
+  function mbCaseMap() {
+    const t = Date.now();
+    if (!_mbCase || t - _mbCaseAt > 1000) { try { _mbCase = JSON.parse(localStorage.getItem(MB_CASE) || '{}') || {}; } catch { _mbCase = {}; } _mbCaseAt = t; }
+    return _mbCase;
+  }
+  /* id -> '4k' | 'bluray' | 'dvd' | '' (asked, not known) | null (never asked). */
+  function mbKnown(id) {
+    if (!id) return null;
+    const r = mbMap()[id], mine = typeof r === 'string' ? r.split('|')[0] : null;
+    if (mine) return mine;
+    const c = mbCaseMap()[id];
+    return c === '4k' || c === 'bluray' || c === 'dvd' ? c : mine;
+  }
+  function mbStale(id) { const r = mbMap()[id]; if (typeof r !== 'string') return true; const t = +r.split('|')[1] || 0; return Date.now() - t * 864e5 > MB_STALE; }
+  function mbKindOf(src) {
+    if (window.CwCase && CwCase.filmKind) { try { return CwCase.filmKind(src); } catch {} }
+    const v = src && (src.MediaStreams || []).find(s => s && s.Type === 'Video');
+    if (!v || !(v.Width || v.Height)) return null;
+    const w = v.Width || 0, h = v.Height || 0;
+    if (w >= 3200 || h >= 1600) return '4k';
+    return Math.max(w, Math.round(h * 16 / 9)) >= 1260 ? 'bluray' : 'dvd';
+  }
+  /* Record a kind and put it on every tile (and the open drawer) of that title at once. */
+  function mbSet(id, kind) {
+    if (!id) return;
+    const k = kind === '4k' || kind === 'bluray' || kind === 'dvd' ? kind : '';
+    const m = mbMap(), was = m[id] ? m[id].split('|')[0] : null;
+    delete m[id]; m[id] = k + '|' + Math.floor(Date.now() / 864e5);
+    mbSave();
+    if (was === k && was !== null) return;
+    if (!mbOn()) return;
+    const grid = document.getElementById('video-grid');
+    if (grid) grid.querySelectorAll('.video-card[data-id="' + CSS.escape(id) + '"]:not(.trailer) > .img').forEach(box => mbPut(box, mbKnown(id)));
+    const ov = document.getElementById('video-overlay');
+    if (ov && ov.dataset.openId === id) mbDrawer({ Id: id });
+  }
+
+  /* Our own marks, drawn here (viewBox 64 x 24, text kept inside by textLength). */
+  const MB_ART = {
+    '4k': { name: '4K Ultra HD', svg:
+      '<defs><linearGradient id="mbg4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26221a"/><stop offset="1" stop-color="#050505"/></linearGradient>' +
+      '<linearGradient id="mbo4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d77a"/><stop offset=".55" stop-color="#c9952c"/><stop offset="1" stop-color="#f3cf6a"/></linearGradient></defs>' +
+      '<rect x=".75" y=".75" width="62.5" height="22.5" rx="4.5" fill="url(#mbg4)" stroke="url(#mbo4)" stroke-width="1.5"/>' +
+      '<text x="5.5" y="18.2" font-size="16.5" font-weight="900" fill="#fff" textLength="21" lengthAdjust="spacingAndGlyphs">4K</text>' +
+      '<rect x="29.5" y="5" width="1.2" height="14" rx=".6" fill="url(#mbo4)"/>' +
+      '<text x="34" y="16.4" font-size="10.5" font-weight="800" fill="url(#mbo4)" textLength="25" lengthAdjust="spacingAndGlyphs">UHD</text>' },
+    bluray: { name: 'Blu-ray', svg:
+      '<defs><linearGradient id="mbgb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f86ff"/><stop offset="1" stop-color="#0b3f9e"/></linearGradient></defs>' +
+      '<rect x=".75" y=".75" width="62.5" height="22.5" rx="4.5" fill="url(#mbgb)" stroke="#9cc6ff" stroke-opacity=".75" stroke-width="1.2"/>' +
+      '<text x="32" y="16.3" text-anchor="middle" font-size="11.2" font-weight="900" fill="#fff" textLength="51" lengthAdjust="spacingAndGlyphs">BLU-RAY</text>' },
+    dvd: { name: 'DVD', svg:
+      '<defs><linearGradient id="mbgd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2c30"/><stop offset="1" stop-color="#08090a"/></linearGradient>' +
+      '<linearGradient id="mbsd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset=".5" stop-color="#a4abb3"/><stop offset="1" stop-color="#e6e9ec"/></linearGradient></defs>' +
+      '<rect x=".75" y=".75" width="62.5" height="22.5" rx="4.5" fill="url(#mbgd)" stroke="url(#mbsd)" stroke-width="1.4"/>' +
+      '<text x="32" y="17.6" text-anchor="middle" font-size="15" font-weight="900" fill="url(#mbsd)" textLength="38" lengthAdjust="spacingAndGlyphs">DVD</text>' },
+  };
+  /* Each mark's gradients get their own ids per copy (an id used twice on one page would be found in the first copy only). */
+  let _mbUid = 0;
+  function mbSvg(kind) {
+    const a = MB_ART[kind]; if (!a) return '';
+    const u = 'mb' + (++_mbUid).toString(36);
+    return `<svg viewBox="0 0 64 24" width="64" height="24" font-family="'Arial Black','Segoe UI',Arial,Helvetica,sans-serif" aria-hidden="true" focusable="false">${a.svg.replace(/\b(mb[gos][4bd])\b/g, '$1' + u)}</svg>`;
+  }
+  /* Put (or change, or take off) the mark in one tile's picture box. Done after the tile is drawn,
+     never in videoCardHTML: renderGrid keeps a tile by its exact markup. */
+  function mbPut(box, kind) {
+    let el = box.querySelector(':scope > .mb-mark');
+    if (!kind || !MB_ART[kind] || !mbOn()) { if (el) el.remove(); return; }
+    if (el && el.dataset.mb === kind) return;
+    if (!el) { el = document.createElement('span'); el.className = 'mb-mark'; el.setAttribute('role', 'img'); box.appendChild(el); }
+    el.dataset.mb = kind; el.title = MB_ART[kind].name; el.setAttribute('aria-label', MB_ART[kind].name);
+    el.innerHTML = mbSvg(kind);
+    mbAspect(box.querySelector('img.video-poster'));
+  }
+  /* The poster's own shape, so the mark sits on its corner (see the CSS). */
+  function mbAspect(img) {
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    const box = img.parentElement; if (!box) return;
+    const a = (img.naturalWidth / img.naturalHeight).toFixed(4);
+    if (box.style.getPropertyValue('--mb-a') !== a) box.style.setProperty('--mb-a', a);
+  }
+  document.addEventListener('load', e => { const t = e.target; if (t && t.classList && t.classList.contains('video-poster')) mbAspect(t); }, true);
+
+  /* The asking: tiles near the screen only, films in batches, series one by one (at most 3 at a time). */
+  const _mbAsked = new Set(), _mbFilmQ = [], _mbSeriesQ = [];
+  let _mbIO = null, _mbBusy = 0, _mbT = 0, _mbIdx = null, _mbIdxOf = null, _mbIdxN = -1;
+  function mbRow(id) {
+    const c = videoState.cache || [];
+    if (_mbIdxOf !== c || _mbIdxN !== c.length) { _mbIdx = new Map(c.map(x => [x.Id, x])); _mbIdxOf = c; _mbIdxN = c.length; }
+    return _mbIdx.get(id) || (videoState.items || []).find(x => x.Id === id) || (videoState.filtered || []).find(x => x && x.Id === id) || null;
+  }
+  function mbScan() {
+    if (!mbOn() || !session.active) return;
+    const grid = document.getElementById('video-grid'); if (!grid) return;
+    if (!_mbIO && typeof IntersectionObserver === 'function') {
+      _mbIO = new IntersectionObserver(es => {
+        for (const e of es) {
+          if (!e.isIntersecting) continue;
+          const card = e.target; _mbIO.unobserve(card);
+          const id = card.dataset.id; if (!id || _mbAsked.has(id)) continue;
+          _mbAsked.add(id);
+          const row = mbRow(id), type = row && row.Type;
+          if (type === 'Series') _mbSeriesQ.push(id); else if (!type || type === 'Movie') _mbFilmQ.push(id);   // not known: asked as a film, a series answer goes on to its episodes
+        }
+        clearTimeout(_mbT); _mbT = setTimeout(mbPump, 120);
+      }, { rootMargin: '600px 0px' });
+    }
+    grid.querySelectorAll(':scope > .video-card[data-id]:not(.trailer)').forEach(card => {
+      const box = card.querySelector(':scope > .img'); if (!box || box.classList.contains('missing')) return;
+      const id = card.dataset.id, k = mbKnown(id);
+      if (k) mbPut(box, k);
+      mbAspect(box.querySelector('img.video-poster'));
+      if ((k === null || mbStale(id)) && !_mbAsked.has(id) && !card._mbObs && _mbIO) { card._mbObs = true; _mbIO.observe(card); }
+    });
+  }
+  async function mbPump() {
+    if (_mbBusy >= 3 || !session.active || !mbOn()) return;
+    if (_mbFilmQ.length) {
+      const ids = _mbFilmQ.splice(0, 40);
+      _mbBusy++;
+      try {
+        const r = await getListBg(`/Users/${session.userId}/Items`, { Ids: ids.join(','), Fields: 'MediaSources', EnableImages: false, EnableUserData: false });
+        const got = new Set();
+        for (const it of r.items || []) { got.add(it.Id); if (it.Type === 'Series') _mbSeriesQ.push(it.Id); else mbSet(it.Id, mbKindOf((it.MediaSources || [])[0])); }
+        for (const id of ids) if (!got.has(id)) mbSet(id, '');
+      } catch (e) { console.warn('[Emby] media marks:', (e && e.message) || e); }
+      _mbBusy--; mbPump(); return;
+    }
+    if (_mbSeriesQ.length) {
+      const id = _mbSeriesQ.shift();
+      _mbBusy++;
+      mbPump();   // up to three series at once
+      try {
+        let r = await getListBg(`/Shows/${id}/Episodes`, { UserId: session.userId, Fields: 'MediaSources', EnableImages: false, EnableUserData: false, Limit: 8 });
+        let eps = r.items || [], ep = eps.find(x => (x.ParentIndexNumber ?? 1) > 0);
+        if (!ep && eps.length >= 8) {
+          r = await getListBg(`/Shows/${id}/Episodes`, { UserId: session.userId, Fields: 'MediaSources', EnableImages: false, EnableUserData: false, StartIndex: 8, Limit: 100 });
+          ep = (r.items || []).find(x => (x.ParentIndexNumber ?? 1) > 0);
+        }
+        ep = ep || eps[0];
+        mbSet(id, ep ? mbKindOf((ep.MediaSources || [])[0]) : '');
+      } catch (e) { console.warn('[Emby] media marks:', (e && e.message) || e); }
+      _mbBusy--; mbPump();
+    }
+  }
+
+  /* The drawer's flat poster (no 3D case: the case's colour says it already). A film from its full
+     record; a series from the episodes the drawer loads; else what is remembered. */
+  function mbDrawer(item, ep) {
+    const st = document.getElementById('video-stage'); if (!st || !item || !item.Id) return;
+    if (item.MediaSources && item.MediaSources.length && item.Type !== 'Series') {
+      const k = mbKindOf(item.MediaSources[0]); if (k && k !== mbKnown(item.Id)) mbSet(item.Id, k);
+    }
+    if (ep && ep.MediaSources) { const k = mbKindOf(ep.MediaSources[0]); if (k && !mbKnown(item.Id)) mbSet(item.Id, k); }
+    const host = st.querySelector('.vstage-card') || st.querySelector('.case-card[data-kind="film"] > .case-flat');
+    if (!host) return;
+    let el = host.querySelector(':scope > .mb-mark');
+    const kind = mbOn() ? mbKnown(item.Id) : null;
+    if (!kind || !MB_ART[kind]) { if (el) el.remove(); return; }
+    if (el && el.dataset.mb === kind) return;
+    if (!el) { el = document.createElement('span'); el.className = 'mb-mark mb-stage'; el.setAttribute('role', 'img'); host.insertBefore(el, host.querySelector('.vstage-sheen, .case-sheen')); }
+    el.dataset.mb = kind; el.title = MB_ART[kind].name; el.setAttribute('aria-label', MB_ART[kind].name);
+    el.innerHTML = mbSvg(kind);
+  }
+  function mbStyles() {
+    if (document.getElementById('mb-style')) return;
+    const s = document.createElement('style'); s.id = 'mb-style';
+    /* On the wall: the poster is 'contain' in the tile's box less 10px each side, and the box is 6/5 as
+       high as wide (both layouts), so with a = the poster's width / height its top-left corner is
+       left = 10px + max(0, (W - 20px - (1.2W - 20px) a) / 2), top = 10px + max(0, (H - 20px - (H/1.2 - 20px) / a) / 2).
+       The mark is about a quarter of the poster's width, 6px in from its corner. */
+    s.textContent = `
+      .video-card .img .mb-mark { position:absolute; z-index:4; pointer-events:none; line-height:0;
+        left: calc(16px + max(0px, calc((100% - 20px - (120% - 20px) * var(--mb-a, .6667)) / 2)));
+        top: calc(16px + max(0px, calc((100% - 20px - (83.3333% - 20px) / var(--mb-a, .6667)) / 2)));
+        width: clamp(32px, 18%, 54px); opacity:0; transition:opacity .4s ease;
+        filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 0 3px rgba(0,0,0,.35)); }
+      .video-card .img .video-poster.loaded ~ .mb-mark { opacity:1; }
+      .mb-mark svg { display:block; width:100%; height:auto; }
+      #video-stage .mb-mark.mb-stage { position:absolute; left:4.5%; top:3.2%; width:24%; max-width:96px; min-width:44px; z-index:2;
+        pointer-events:none; line-height:0; filter: drop-shadow(0 1px 2px rgba(0,0,0,.55)) drop-shadow(0 0 4px rgba(0,0,0,.3)); }
+      #video-stage .case-card.gl-on .mb-mark { display:none; }
+      @media (prefers-reduced-motion: reduce) { .video-card .img .mb-mark { transition:none; } }
+    `;
+    document.head.appendChild(s);
+  }
+  mbStyles();
+  /* The switch: on draws the marks on the tiles already there (and asks for the rest), off takes them all away. */
+  function setMediaBadges(on) {
+    _mbOn = !!on;
+    try { if (_mbOn) localStorage.setItem(MB_KEY, '1'); else localStorage.removeItem(MB_KEY); } catch {}
+    if (_mbOn) { mbScan(); const ov = document.getElementById('video-overlay'); if (ov && ov.dataset.openId) mbDrawer({ Id: ov.dataset.openId }); }
+    else document.querySelectorAll('.mb-mark').forEach(el => el.remove());
   }
 
   /* A double-wide grid tile (two tiles + the gap) that plays the title's muted,
@@ -6061,7 +6350,7 @@
    * machine's. There is no copy of any of those four measurements in this file,
    * and there must never be one.
    */
-  const atariSystem = (sys, label) => ({
+  const atariSystem = (sys, label, keep) => ({
     /* MIXED IN, NOT searchOnly (2026-10-03: "When I show all devices,
        the Atari's and NES don't show. They should be mixed in on the Media tab
        like the other devices are."). Cost stays bounded by ATARI_MAX_LIVE
@@ -6070,7 +6359,7 @@
     pool: () => {
       if (typeof ATARI === 'undefined' || !Array.isArray(ATARI)) return [];
       const playable = (typeof atariPlayable === 'function') ? atariPlayable : () => false;
-      return ATARI.filter(d => d.catalogue === sys && playable(d));
+      return ATARI.filter(d => d.catalogue === sys && playable(d) && (!keep || keep(d)));   // keep: the Nintendo 64 leaves its 64DD disks to their own system
     },
     /* Mirrors deviceCardHTML's isAtariTile branch. `atari-art-frame` is
        atari-screen.css's -- the shared declaration this page, the catalogue tile
@@ -6295,7 +6584,25 @@
      atariSystem('atari2600', 'Atari 2600'),
      atariSystem('atari5200', 'Atari 5200'),
      atariSystem('atari7800', 'Atari 7800'),
-     atariSystem('atarilynx', 'Atari Lynx')];
+     atariSystem('atarilynx', 'Atari Lynx'),
+     /* The Sega 8-bit family (20 Nov 2026): index.html's ATARI_SYSTEMS holds them (family sega8), so
+        the same builder draws them; their tiles hold the picture, static, until recorded tiles exist. */
+     atariSystem('sg1000', 'SG-1000'),
+     atariSystem('mastersystem', 'Master System'),
+     atariSystem('gamegear', 'Game Gear'),
+     /* The Nintendo 64 (22 Nov 2026): in index.html's ATARI_SYSTEMS too (family n64); its tiles hold the
+        picture, never a live machine, until its recorded tiles exist. */
+     atariSystem('n64', 'Nintendo 64', d => !d.n64Disk),
+     /* THE 64DD (26 Nov 2026: "I think they need their own tile ... separate them out in the client as their own
+        system. Just like the FDS is."): the Nintendo 64 catalogue's disks (index.html n64Disk, the .ndd listing) as
+        their own system, the way the Disk System is the NES catalogue's disks. `system` stays 'n64' (n64-screen.css,
+        the play window and the clips key on it); the tiles carry data-series="n64dd" and data-art="n64-dd". */
+     Object.assign(atariSystem('n64', 'Nintendo 64DD', d => !!d.n64Disk), { id: 'n64dd' }),
+     /* The Super Nintendo (23 Nov 2026): in index.html's ATARI_SYSTEMS too (family snes); its tiles hold the
+        picture, never a live machine, until its recorded tiles exist. */
+     atariSystem('snes', 'Super Nintendo'),
+     /* The Sufami Turbo (24 Nov 2026): its own wall device beside the Super Nintendo (ATARI_SYSTEMS sufami, family snes). */
+     atariSystem('sufami', 'Sufami Turbo')].filter(s => s.id !== 'sufami' || window.CW_SUFAMI_ON);   // the Sufami Turbo switch (index.html window.CW_SUFAMI_ON)
   /* ONE TILE PER GAME (variants.js, 2026-10-05; permanent, no setting).
      Every pool is collapsed to one entry per variant group -- the best-ranked
      member the visitor has, looked up by file hash in firmware/variants/ --
@@ -6344,10 +6651,13 @@
     if (v === undefined) { v = make(); pm.m.set(key, v); }
     return Array.isArray(v) ? v.slice() : v;
   }
+  /* MY GAMES (21 Nov 2026, mygames.js): games kept as owned without a file, or on the wishlist, join their
+     shelf as tiles with no Play button, unless a real tile for the game is there (CwMyGames.extend). */
+  const _mgSig = () => (window.CwMyGames ? '|' + window.CwMyGames.sig() : '');
   GAME_SYSTEMS.forEach(s => {
     const raw = s.pool;
-    s.rawPool = () => _poolMemoGet('r|' + s.id, raw);
-    s.pool = () => _poolMemoGet('p|' + s.id, () => { const r = s.rawPool(); return window.Variants ? window.Variants.collapse(r) : r; });
+    s.rawPool = () => _poolMemoGet('r|' + s.id + _mgSig(), () => (window.CwMyGames ? window.CwMyGames.extend(s.id, raw()) : raw()));
+    s.pool = () => _poolMemoGet('p|' + s.id + _mgSig(), () => { const r = s.rawPool(); return window.Variants ? window.Variants.collapse(r) : r; });
   });
   /* THE GAME & WATCH FAMILY IS THREE SYSTEM IDS, NOT ONE.
      `gnw` is the LCD catalogue, `twin` the two TFT anniversary units and `tj`
@@ -6461,8 +6771,9 @@
     /* The order of importance set in Settings, Widgets (8 Nov 2026); null: never set. */
     _wcfg.order = (c.order && Array.isArray(c.order.list) && c.order.list.length) ? c.order.list.filter(k => typeof k === 'string') : null;
     /* Image and Play time (8 Nov 2026): off by default, each with a size (widgets-extra.js). */
-    { const X = extraW(); const e = X ? X.readCfg(c) : { image: { on: false, list: [] }, playtime: { on: false, every: 30, size: '1', games: [] } };
-      _wcfg.image = e.image; _wcfg.playtime = e.playtime; }
+    { const X = extraW(); const e = X ? X.readCfg(c) : { image: { on: false, list: [] }, playtime: { on: false, every: 30, size: '1', games: [] }, achievements: { on: false, every: 30, size: '2' } };
+      _wcfg.image = e.image; _wcfg.playtime = e.playtime;
+      _wcfg.achievements = e.achievements || { on: false, every: 30, size: '2' }; }   // RetroAchievements (23 Nov 2026, widgets-extra.js)
     /* R.O.B. IS A SYSTEM NOW (22 Oct; see ROB_SYSTEM). The old filter stored him as the
        series 'rob' over the NES and Famicom shelves; a choice saved that way is read as the system. */
     { const g = _wcfg.games;
@@ -6485,6 +6796,8 @@
         raw: () => { try { return JSON.parse(localStorage.getItem(WIDGET_KEY) || '{}') || {}; } catch { return {}; } },
         save: (patch) => saveWidgetCfg(patch),
         redraw: () => redrawWallFromTop(),
+        /* The wall drawn again where it is, as a settings change previews (Achievements coming or going, 23 Nov 2026). */
+        rerender: () => saveWidgetCfg({}),
         mostOn: () => videoState.gameSort === 'most',
       });
     }
@@ -6556,7 +6869,7 @@
      lists the widgets in that order. Trailer playback is a film playing its trailer, not a cell of
      its own, so its place changes nothing on the board. With no order saved, everything is placed
      exactly as before: clock, weather, facts, quotes, stats, cast, then Image and Play Time. */
-  const WIDGET_LIST_ORDER = ['clock', 'weather', 'trailer', 'facts', 'quotes', 'games', 'cast', 'stats', 'image', 'playtime'];
+  const WIDGET_LIST_ORDER = ['clock', 'weather', 'trailer', 'facts', 'quotes', 'games', 'cast', 'stats', 'image', 'playtime', 'achievements'];
   const widgetGroupOf = k => (String(k).indexOf('img:') === 0 ? 'image' : k);
   function widgetListOrder() {
     const o = getWidgetCfg().order;
@@ -6580,7 +6893,7 @@
      playback, Film facts (its On This Day lines are the library's), Collection stats, Cast. The
      Widgets switch and each widget's own switch still apply on top. Places in the cycle are not
      moved (getWidgetOffsets), so a widget comes back where it was. */
-  const WIDGET_CONTENT = { clock: 'general', weather: 'general', quotes: 'general', image: 'general', playtime: 'games', trailer: 'films', facts: 'films', stats: 'films', cast: 'films' };
+  const WIDGET_CONTENT = { clock: 'general', weather: 'general', quotes: 'general', image: 'general', playtime: 'games', achievements: 'games', trailer: 'films', facts: 'films', stats: 'films', cast: 'films' };
   const widgetContentGroup = k => WIDGET_CONTENT[widgetGroupOf(k)] || 'general';
   function widgetContentShown(k) {
     const g = widgetContentGroup(k);
@@ -6800,7 +7113,7 @@
   function gamePool(purpose) {
     if (!_poolMemoLive()) return _gamePoolNow(purpose);
     const g = getWidgetCfg().games;
-    return _poolMemoGet('g|' + purpose + '|' + JSON.stringify([g.systems, g.series, gameTypesOn(), _gameTypeOf ? _gameTypeOf.size : -1]), () => _gamePoolNow(purpose));
+    return _poolMemoGet('g|' + purpose + '|' + JSON.stringify([g.systems, g.series, gameTypesOn(), _gameTypeOf ? _gameTypeOf.size : -1]) + _mgSig(), () => _gamePoolNow(purpose));
   }
   function _gamePoolNow(purpose) {
     const cfg = getWidgetCfg();
@@ -6813,6 +7126,7 @@
     const narrowed = !!((want && want.length) || (wantSeries && wantSeries.length));
     const out = [], seenIds = new Set();
     const typesOn = gameTypesOn();   // the Systems menu's type boxes (21 Oct)
+    const mgShown = window.CwMyGames ? window.CwMyGames.shown : null;   // the Filter panel's My games tab (21 Nov 2026)
     for (const s of GAME_SYSTEMS) {
       /* THE COLOUR TWINS RIDE WITH GAME & WATCH.
          They ARE Game & Watch units -- the 35th-anniversary Mario and the Zelda
@@ -6842,6 +7156,7 @@
            emptied the Game Boy shelf, which is not what the box says it does. */
         if (wantSeries && wantSeries.length && GNW_FAMILY.has(s.id) && !wantSeries.includes(d.series)) continue;
         if (!gameTypeShown(d, typesOn)) continue;
+        if (mgShown && !mgShown(d)) continue;
         /* One tile per title across shelves (25 Oct): R.O.B.'s games are on the NES or
            Famicom shelf as well as his, and the first shelf in GAME_SYSTEMS order keeps them. */
         if (seenIds.has(d.id)) continue;
@@ -6924,6 +7239,26 @@
          + '<path d="M10 12.8h4"/>',
     alynx: '<rect x="1.5" y="6.5" width="21" height="11" rx="2.4"/><rect x="8.4" y="8.8" width="7.2" height="6.4" rx="0.6"/>'
          + '<path d="M4 12h2.6M5.3 10.7v2.6"/><circle cx="18.2" cy="10.8" r="0.9"/><circle cx="20.2" cy="13.2" r="0.9"/>',
+    /* The Sega devices (20 Nov 2026): the SG-1000's long flat body with its slot and joystick port;
+       the Master System's wedge with its slot at the back and the stripe along the front; the
+       Game Gear landscape, screen in the middle, d-pad left and the two buttons right. */
+    sg1000: '<rect x="2" y="9" width="20" height="8" rx="1.4"/><rect x="6" y="6.2" width="8" height="2.8" rx="0.5"/>'
+         + '<path d="M4.5 13h4"/><circle cx="18" cy="13" r="1.1"/>',
+    sms: '<path d="M2.5 17.5h19l-1.6-7.5H4.1z"/><rect x="8" y="6.4" width="8" height="3.6" rx="0.5"/>'
+         + '<path d="M4.6 14.6h14.8"/><circle cx="17.6" cy="12.2" r="0.8"/>',
+    gg: '<rect x="1.5" y="6" width="21" height="12" rx="4"/><rect x="8" y="8.4" width="8" height="6.6" rx="0.6"/>'
+         + '<path d="M3.6 12.2h2.8M5 10.8v2.8"/><circle cx="18.4" cy="13" r="0.9"/><circle cx="20.4" cy="11.4" r="0.9"/>',
+    /* The Nintendo 64 (22 Nov 2026): its controller, the thing its Systems row pictures: three grips, the
+       stick on the middle one, the d-pad left and the buttons right. */
+    n64: '<path d="M4.5 8.5h15a2.5 2.5 0 0 1 2.4 3.1l-1.6 6.1a1.6 1.6 0 0 1-3 .2L15.6 15H8.4l-1.7 2.9a1.6 1.6 0 0 1-3-.2l-1.6-6.1A2.5 2.5 0 0 1 4.5 8.5z"/>'
+         + '<path d="M12 15v4.6"/><circle cx="12" cy="13" r="1.1"/><path d="M5.2 11.6h2.8M6.6 10.2v2.8"/><circle cx="17" cy="11" r="0.8"/><circle cx="18.8" cy="12.6" r="0.8"/>',
+    /* The Super Nintendo (23 Nov 2026): the console seen from above: the cartridge slot, the two switches and the two ports. */
+    snes: '<rect x="2" y="7" width="20" height="11" rx="2.4"/><rect x="7" y="5" width="10" height="4" rx="0.8"/>'
+         + '<path d="M5 15.4h2.4M16.6 15.4H19"/><circle cx="9.4" cy="12.6" r="0.9"/><circle cx="14.6" cy="12.6" r="0.9"/>',
+    /* The Sufami Turbo (24 Nov 2026): the adaptor seen from the front: its body with the two slots on top, a
+       mini-cartridge standing in slot A. */
+    sufami: '<rect x="2.5" y="10" width="19" height="8" rx="1.6"/><path d="M4.5 10V8h6.5v2M13 10V8h6.5v2"/>'
+         + '<rect x="5.6" y="4.2" width="4.4" height="4.8" rx="0.5"/><path d="M6 14h12"/>',
     /* All Consoles: four machines in a 2 x 2 -- the grid it heads, in small. */
     all: '<rect x="2.5" y="2.5" width="8.5" height="8.5" rx="1.4"/><rect x="13" y="2.5" width="8.5" height="8.5" rx="1.4"/>'
        + '<rect x="2.5" y="13" width="8.5" height="8.5" rx="1.4"/><rect x="13" y="13" width="8.5" height="8.5" rx="1.4"/>'
@@ -6961,8 +7296,10 @@
   const VG_MENU = [
     /* `img` is the tile's picture, from a console artwork set
        (2026-10-07), trimmed to its artwork and encoded at 160 px into
-       images/consoles/. Famicom and the Disk System share fds_famicom.webp by
-       design. `ic` stays as the fallback glyph and is what the
+       images/consoles/. Famicom and the Disk System shared fds_famicom.webp by
+       design until 26 Nov 2026, when the Disk System got its own picture (the
+       Famicom on the Disk System, images/consoles/fds.webp, as the 64DD's;
+       WASM_Source/famicom-artwork/menu.sh). `ic` stays as the fallback glyph and is what the
        Game & Watch series panel still draws. */
     { key: 'gnw', label: 'Game &amp; Watch',    ids: ['gnw', 'twin', 'tj'], ic: 'gnw', img: 'gameandwatch' },
     { key: 'gb',  label: 'Game Boy',            ids: ['gb'],  ic: 'gb',  img: 'gb' },
@@ -6974,7 +7311,7 @@
     /* One emulator, three rows (decided 2026-10-03) -- the Game Boy /
        Game Boy Color arrangement. In both lists, as the paragraph above requires. */
     { key: 'famicom', label: 'Famicom',             ids: ['famicom'], ic: 'nes', img: 'fds_famicom' },
-    { key: 'fds',     label: 'Famicom Disk System', ids: ['fds'],     ic: 'fds', img: 'fds_famicom' },
+    { key: 'fds',     label: 'Famicom Disk System', ids: ['fds'],     ic: 'fds', img: 'fds' },
     /* THE FOUR ATARI MACHINES ARE FOUR ROWS, NOT ONE "Atari", and that is this
        menu's own rule applied rather than broken. The comment above explains why
        Game & Watch is ONE row over three engine ids: to the person reading the
@@ -6995,10 +7332,36 @@
     { key: 'a5200', label: 'Atari 5200',        ids: ['atari5200'], ic: 'a5200', img: 'atari5200' },
     { key: 'a7800', label: 'Atari 7800',        ids: ['atari7800'], ic: 'a7800', img: 'atari7800' },
     { key: 'alynx', label: 'Atari Lynx',        ids: ['atarilynx'], ic: 'alynx', img: 'atarilynx' },
+    /* The Sega devices (20 Nov 2026): three rows for the three wall devices, for the Atari rows'
+       reason; the other models are Machine choices in the play window, never rows here. */
+    { key: 'sg1000', label: 'SG-1000',          ids: ['sg1000'], ic: 'sg1000', img: 'sg-1000' },
+    { key: 'sms',   label: 'Master System',     ids: ['mastersystem'], ic: 'sms', img: 'mastersystem' },
+    { key: 'gg',    label: 'Game Gear',         ids: ['gamegear'], ic: 'gg', img: 'gamegear' },
+    /* The Nintendo 64 (22 Nov 2026): one row; its picture is its controller (images/consoles/n64.webp). */
+    { key: 'n64',   label: 'Nintendo 64',       ids: ['n64'], ic: 'n64', img: 'n64' },
+    /* The 64DD (26 Nov 2026): its own row beside the Nintendo 64, as the Disk System's beside the Famicom; its
+       picture is the Nintendo 64 on the 64DD drive (images/consoles/n64dd.webp, WASM_Source/n64-artwork/menu.sh). */
+    { key: 'n64dd', label: 'Nintendo 64DD',     ids: ['n64dd'], ic: 'n64', img: 'n64dd' },
+    /* The Super Nintendo (23 Nov 2026): one row (the Super Famicom is a Machine choice); its picture is the console (images/consoles/snes.webp). */
+    { key: 'snes',  label: 'Super Nintendo',    ids: ['snes'], ic: 'snes', img: 'snes' },
+    /* The Sufami Turbo (24 Nov 2026): one row for its own wall; its picture is the Super Famicom pad (images/consoles/sufami.webp). */
+    { key: 'sufami', label: 'Sufami Turbo',     ids: ['sufami'], ic: 'sufami', img: 'sufami' },
     /* R.O.B. (22 Oct): a system of this menu like the rest (ROB_SYSTEM); his picture is
        a still of his 3D model (images/consoles/rob.webp). */
     { key: 'rob',   label: 'R.O.B.',            ids: ['rob'],       ic: 'nes',   img: 'rob' },
-  ];
+  ].filter(m => m.key !== 'sufami' || window.CW_SUFAMI_ON);   // the Sufami Turbo switch (index.html window.CW_SUFAMI_ON): no row while off
+  /* IN THE ORDER THEY CAME OUT (21 Nov 2026: "the systems listed in the Systems menu sorted by release
+     year, oldest first"). Each system's first release, the year as VG_SYSTEM_YEARS gives it and the month
+     and day from that table's notes (the Sega months are the Sega Hardware tab's, the days the documented
+     Japanese launches; the Super Game Boy's is its Japanese launch too), so two
+     systems of one year still come in the order they arrived. SG-1000 and Famicom both went on sale in
+     Japan on 15 July 1983; R.O.B. came in the NES box, so he follows it. Equal dates keep the list's order. */
+  const VG_FIRST_RELEASE = {
+    a2600: '1977-09', gnw: '1980-04', a5200: '1982-11', famicom: '1983-07-15', sg1000: '1983-07-15',
+    nes: '1985-10-18', rob: '1985-10-18', sms: '1985-10-20', fds: '1986-02-21', a7800: '1986-05',
+    gb: '1989-04-21', alynx: '1989-09-01', gg: '1990-10-06', snes: '1990-11-21', sgb: '1994-06-14', sufami: '1996-06-21', n64: '1996-06-23', gbc: '1998-10-21', n64dd: '1999-12-01', pm: '2001-11-16',
+  };
+  VG_MENU.sort((a, b) => (VG_FIRST_RELEASE[a.key] || '9999').localeCompare(VG_FIRST_RELEASE[b.key] || '9999'));
   const vgIdsFor = (key) => (VG_MENU.find(m => m.key === key) || {}).ids || [];
   const VG_IMG_V = '20261007';
 
@@ -7015,14 +7378,21 @@
      (index.html: Ball 9 April 1980, the colour units 2020 and 2021, the Lynx "the first handheld
      with a colour LCD, designed by Epyx"). */
   const VG_COLLECTIONS = [
-    { key: 'nintendo', label: 'Nintendo Collection', img: 'nes', pics: ['gameandwatch', 'nes', 'gb', 'pokemini'],
-      menu: ['gnw', 'gb', 'gbc', 'sgb', 'pm', 'nes', 'famicom', 'fds', 'rob'],
-      /* 24 Oct: the span runs to the colour units (2020, 2021), which the note names. */
-      years: [1980, 2021],
-      note: 'Nintendo began in 1889 as a playing-card maker in Kyoto. In 1980 Gunpei Yokoi\'s Game & Watch put a game and a clock in a pocket, and in 1983 the Famicom brought cartridge games into Japanese homes, reaching the rest of the world as the NES in 1985 with R.O.B. the robot beside it; the Disk System followed in 1986. The Game Boy (1989) and Game Boy Color (1998) took Nintendo games everywhere, the Super Game Boy (1994) put them on the television, and the Pokémon mini (2001) was the smallest of them all. The colour Game & Watch units of 2020 and 2021 went back to where it started.' },
     { key: 'atari', label: 'Atari Collection', img: 'atari2600', pics: ['atari2600', 'atari5200', 'atari7800', 'atarilynx'],
       menu: ['a2600', 'a5200', 'a7800', 'alynx'],
       note: 'Atari was founded in 1972 and made its name with the arcade game Pong. Its 2600 of 1977 brought swappable game cartridges into millions of homes, and the 5200 followed in 1982. After the video game crash of 1983 the company was split up in 1984, and the new Atari Corporation released the 7800 in 1986 and, in 1989, the Lynx, designed by Epyx and the first handheld with a colour LCD.' },
+    /* THE SEGA COLLECTION (21 Nov 2026: "a Sega collection button in the Systems menu, like the Atari and
+       Nintendo ones; the order is Atari, Sega, then Nintendo"). Three consoles, so three pictures in the strip.
+       The note agrees with the Sega Hardware tab (the SG-1000 in Japan from 1983, the Mark III in October 1985,
+       the Game Gear in October 1990 and very nearly a Master System II inside). */
+    { key: 'sega', label: 'Sega Collection', img: 'mastersystem', pics: ['sg-1000', 'mastersystem', 'gamegear'],
+      menu: ['sg1000', 'sms', 'gg'],
+      note: 'Sega made its name with arcade machines. Its first home console, the SG-1000, went on sale in Japan in July 1983, on the same day as the Famicom. The Mark III followed in 1985 and, as the Master System, reached the rest of the world from 1986. The Game Gear of 1990 put very nearly the same machine in a colour handheld.' },
+    { key: 'nintendo', label: 'Nintendo Collection', img: 'nes', pics: ['gameandwatch', 'nes', 'gb', 'pokemini'],
+      menu: ['gnw', 'gb', 'gbc', 'sgb', 'pm', 'nes', 'famicom', 'fds', 'rob', 'snes', 'sufami', 'n64', 'n64dd'].filter(k => k !== 'sufami' || window.CW_SUFAMI_ON),   // sufami: Bandai's adaptor for the Super Famicom (24 Nov 2026); out while the switch (index.html window.CW_SUFAMI_ON) is off
+      /* 24 Oct: the span runs to the colour units (2020, 2021), which the note names. */
+      years: [1980, 2021],
+      note: 'Nintendo began in 1889 as a playing-card maker in Kyoto. In 1980 Gunpei Yokoi\'s Game & Watch put a game and a clock in a pocket, and in 1983 the Famicom brought cartridge games into Japanese homes, reaching the rest of the world as the NES in 1985 with R.O.B. the robot beside it; the Disk System followed in 1986. The Game Boy (1989) and Game Boy Color (1998) took Nintendo games everywhere, the Super Nintendo (1990) gave them sixteen bits, the Super Game Boy (1994) put them on the television, the Nintendo 64 (1996) took them into three dimensions, and the Pokémon mini (2001) was the smallest of them all. The colour Game & Watch units of 2020 and 2021 went back to where it started.' },
   ];
   const vgCollIds = (c) => c.menu.reduce((a, k) => a.concat(vgIdsFor(k)), []);
   /* The collection the stored choice is exactly, or null. */
@@ -7073,7 +7443,7 @@
   let _gameTypeOf = null;   // first 10 hex of the SHA-256 -> category; null until the table lands
   (function loadGameTypes() {
     if (typeof fetch !== 'function' || typeof DecompressionStream !== 'function') return;
-    fetch('firmware/compat/types.json.gz?v=2.2.2').then(r => {
+    fetch('firmware/compat/types.json.gz?v=2.3.0-snessite').then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).json();
     }).then(doc => {
@@ -7155,6 +7525,11 @@
     gnw: [1980, 1991], gb: [1989, 2003], gbc: [1998, 2003], sgb: [1994, 1998], pm: [2001, 2002],
     nes: [1985, 1995], famicom: [1983, 2003], fds: [1986, 2003],
     a2600: [1977, 1992], a5200: [1982, 1984], a7800: [1986, 1992], alynx: [1989, 1995],
+    sg1000: [1983, 1985], sms: [1985, 1996], gg: [1990, 1997],
+    n64: [1996, 2002],
+    n64dd: [1999, 2001],   // the 64DD (26 Nov 2026): Japan, 1 December 1999 until its Randnet service closed in February 2001
+    snes: [1990, 2003],
+    sufami: [1996, 1996],   // the Sufami Turbo (24 Nov 2026): its thirteen games all came out in 1996
     rob: [1985, 1985],
   };
 
@@ -7194,7 +7569,11 @@
       }
     }
     let src = 'titles';
-    if (VG_OWN_YEARS[key]) { [lo, hi] = VG_OWN_YEARS[key]; src = 'stated'; }
+    /* EVERY SYSTEM TILE SHOWS ITS MACHINE'S OWN YEARS (22 Nov 2026: the tiles are in the order the machines
+       came out, VG_FIRST_RELEASE, so years taken from the shelf's titles, an early-dated title or a recent
+       homebrew, made the order look wrong). All Consoles (no machine) still spans its titles. */
+    const own = VG_OWN_YEARS[key] || VG_SYSTEM_YEARS[key];
+    if (own) { [lo, hi] = own; src = 'stated'; }
     else if (lo === Infinity && VG_SYSTEM_YEARS[key]) { [lo, hi] = VG_SYSTEM_YEARS[key]; src = 'system'; }
     const yrs = lo === Infinity ? '' : lo === hi ? String(lo) : lo + ' \u2013 ' + hi;
     return { yrs, n, src };
@@ -7341,7 +7720,9 @@
     const tile = (m, on) =>
       '<button type="button" class="vgtile' + (on ? ' active' : '') + '" data-vg-pick="' + m.key + '"' +
         ' aria-pressed="' + (on ? 'true' : 'false') + '" title="Show only ' + plain(m.label) + '">' +
-        '<span class="vgimg">' + pic(m) + '</span><b>' + m.label + '</b>' + vgMetaHTML(m.ids, m.key) + '</button>';
+        '<span class="vgimg">' + pic(m) + '</span><b>' + m.label + '</b>' +
+        (window.cwSysPreview && window.cwSysPreview(m.ids[0]) ? '<span class="vg-preview">' + window.CW_PREVIEW_TAG + '</span>' : '') +   // an evaluation preview (23 Nov 2026, index.html ATARI_SYSTEMS)
+        vgMetaHTML(m.ids, m.key) + '</button>';
 
     /* THE TOP ROW (28 Oct): collections at the left, Display and Sort in the centre,
        Continue, the double divider and the type boxes at the right, then the close button. The
@@ -7392,16 +7773,19 @@
     const listed = vgSeriesListed();
     const act = gamesShown() ? vgActiveColl() : null;   // games hidden: no collection lit (28 Oct)
     const img = (k) => '<img src="images/consoles/' + k + '.webp?v=' + VG_IMG_V + '" alt="" width="160" height="160" loading="lazy" decoding="async">';
+    /* TWO LINES (21 Nov 2026: "place the text across two lines and have all four be only on a single
+       row"): the name, then "Collection", each its own line in the top row (CSS .vgcoll-l). */
+    const two = (l) => { const i = l.lastIndexOf(' '); return i > 0 ? '<span class="vgcoll-l">' + l.slice(0, i) + '</span> <span class="vgcoll-l">' + l.slice(i + 1) + '</span>' : l; };
     let row = '<button type="button" class="vgcoll-head" data-vg-sub="1" aria-expanded="' + open + '" aria-controls="vgsub-gnw" title="Game &amp; Watch Collection: its series"' + (listed.length ? '' : ' hidden') + '>' +
         '<span class="vgcoll-pic">' + picHTML + '</span>' +
-        '<span class="vgcoll-txt"><b>Game &amp; Watch Collection</b><i class="vgcoll-n">' + listed.length + ' series</i></span>' +
+        '<span class="vgcoll-txt"><b>' + two('Game &amp; Watch Collection') + '</b><i class="vgcoll-n">' + listed.length + ' series</i></span>' +
         svg('<polyline points="6 9 12 15 18 9"/>') + '</button>';
     for (const c of VG_COLLECTIONS) {
       const on = act === c;
       row += '<button type="button" class="vgcoll-head vgcoll-pick' + (on ? ' active' : '') + '" data-vg-coll="' + c.key + '" aria-pressed="' + on + '"' +
         ' title="Show the ' + c.label + '">' +
         '<span class="vgcoll-pic">' + img(c.img) + '</span>' +
-        '<span class="vgcoll-txt"><b>' + c.label + '</b><i>' + c.menu.length + ' systems</i></span></button>';
+        '<span class="vgcoll-txt"><b>' + two(c.label) + '</b><i>' + c.menu.length + ' systems</i></span></button>';
     }
     /* In the strip's top row since 28 Oct: the buttons and the series panel apart. */
     if (parts) return { row, panel: vgSeriesPanelHTML(listed, open, ser) };
@@ -7802,6 +8186,7 @@
     let key;
     if (s === 'year') key = (g) => String(g.dev.released || g.dev.year || '');
     else if (s === 'rating') key = (g) => (g.dev.score10 > 0 ? g.dev.score10 : 0);
+    else if (s === 'last' || s === 'time' || s === 'myrating') { const M = window.CwMyGames; key = (g) => (M ? M.sortValue(g.dev, s) : 0); }
     else if (s === 'most') {
       const t = (window.CwWidgetsExtra && CwWidgetsExtra.totalsNow()) || new Map();
       return (a, b) => {
@@ -8248,7 +8633,10 @@
      CLIP id (the variant group's representative, atarivideo.js clipId), as the NES family's
      covers are. One bucket pair per machine, picked by the id's prefix. '' = no bucket, the
      tile is left as it is. Memory-only misses, no list: an upload shows on the next load. */
-  const ATARI_ART_SERIES = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx' };
+  /* The Sega 8-bit family joins (20 Nov 2026): 2D covers only, named by the variant group's representative
+     the same way (its tables sg1000, mastersystem, gamegear in variants.js), one bucket per console. */
+  const ATARI_ART_SERIES = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx', sg1000: 'sg1000', sms: 'mastersystem', gg: 'gamegear', n64: 'n64', snes: 'snes' };   // n64: 22 Nov 2026; snes: 23 Nov 2026
+  ATARI_ART_SERIES.n64dd = 'n64dd';   // the 64DD's disks (26 Nov 2026): their own series, the Nintendo 64's covers (ATARI_ART_BASES.n64dd below)
   const ATARI_ART_SEL = Object.values(ATARI_ART_SERIES)
     .map(s => '#video-grid .device-card[data-series="' + s + '"]:not([data-gbart])').join(',');
   const ATARI_ART_BASES = {
@@ -8264,8 +8652,27 @@
     alynx: Object.assign({ boxart:   'https://pub-6a52666460d64b4a8b732cfc2d1ca0ee.r2.dev',   // atarilynx-covers-2d
                            boxart3d: 'https://pub-bd2be751db6e4b27a33dfd21fccff2ab.r2.dev' }, // atarilynx-covers-3d
       (window.__coverArtBase && window.__coverArtBase.atarilynx) || {}),
+    sg1000: Object.assign({ boxart: 'https://pub-172174e21b8847c49b4205c2358adda6.r2.dev', boxart3d: '' },   // sg1000-covers-2d (2026-11-20)
+      (window.__coverArtBase && window.__coverArtBase.sg1000) || {}),
+    sms: Object.assign({ boxart: 'https://pub-62873088d8c44a32954ea1ec5c2a36d2.r2.dev', boxart3d: '' },      // sms-covers-2d (2026-11-20)
+      (window.__coverArtBase && window.__coverArtBase.mastersystem) || {}),
+    gg: Object.assign({ boxart: 'https://pub-67d416b00308450382d33c630f9b75c1.r2.dev', boxart3d: '' },       // gg-covers-2d (2026-11-20)
+      (window.__coverArtBase && window.__coverArtBase.gamegear) || {}),
+    n64: Object.assign({ boxart: 'https://pub-84001b5c96714c34898dbe219cfe5055.r2.dev', boxart3d: '' },      // n64-covers-2d (2026-11-22)
+      (window.__coverArtBase && window.__coverArtBase.n64) || {}),
+    snes: Object.assign({ boxart: 'https://pub-fb9d36bc6e4444f9a39418933369b83f.r2.dev', boxart3d: '' },     // snes-covers-2d (2026-11-23)
+      (window.__coverArtBase && window.__coverArtBase.snes) || {}),
   };
-  const ATARI_ART_ID_RE = /^(a2600|a5200|a7800|alynx)-x[0-9a-f]{12}$/;
+  ATARI_ART_BASES.n64dd = ATARI_ART_BASES.n64;   // a disk's id is n64-x..., so ATARI_ART_ID_RE below still picks the n64 bucket
+  const ATARI_ART_ID_RE = /^(a2600|a5200|a7800|alynx|sg1000|sms|gg|n64|snes)-x[0-9a-f]{12}$/;
+  /* The art id of a Sega tile: its variant group's representative (undefined while the table loads). */
+  const SEGA8_ART_TABLE = { sg1000: 'sg1000', sms: 'mastersystem', gg: 'gamegear', n64: 'n64', snes: 'snes' };   // the Nintendo 64 is named the same way (22 Nov 2026)
+  function sega8ArtId(own) {
+    const m = /^(sg1000|sms|gg|n64|snes)-x[0-9a-f]{12}$/.exec(own || '');
+    if (!m || !window.Variants || typeof Variants.repOf !== 'function') return own;
+    let r; try { r = Variants.repOf(SEGA8_ART_TABLE[m[1]], own); } catch { r = null; }
+    return r === undefined ? undefined : r ? m[1] + '-x' + String(r).slice(0, 12) : own;
+  }
   const _atariArtMissed = new Set();             // "<base>/a2600-x…", this page load only
   const GB_SHA1_KEY     = 'gnw.gb.cartSha1.v1';   // { deviceId: "UPPERCASEHEX" }
   /* v2 (2026-10-21): the GB/GBC buckets gained the covers the first passes
@@ -8359,6 +8766,8 @@
     pm: [1, 0.08, 0.36, 0.84, 0.42],
     a2600: [469 / 640, 0.06, 0.52, 0.88, 0.40], a5200: [469 / 640, 0.06, 0.52, 0.88, 0.40], a7800: [469 / 640, 0.06, 0.42, 0.88, 0.48],
     alynx: [521 / 640, 0.03, 0.30, 0.74, 0.40],
+    n64: [640 / 445, 0.08, 0.38, 0.84, 0.40],   // 22 Nov 2026: the landscape box, the panel below its top-right corner flap
+    snes: [640 / 471, 0.04, 0.30, 0.76, 0.36],  // 23 Nov 2026: the North American box, the grey picture panel left of its black stripe
   };
   const GENERIC_LABEL_SHELF = { atari2600: 'a2600', atari5200: 'a5200', atari7800: 'a7800', atarilynx: 'alynx' };
   const GENERIC_LABEL_COLOURS = ['#ff6b6b', '#ffb347', '#ffe66d', '#8ce05a', '#5fe0cf', '#6ab4ff', '#b893ff', '#ff8ad8', '#ff9c5b', '#a4f06a', '#67d8ff', '#f5b0ff'];
@@ -8603,7 +9012,8 @@
     const box = card.querySelector(':scope > .img');
     if (!base || !box || !card.isConnected) return;
     let id = own;
-    try { if (window.ATARIVIDEO && ATARIVIDEO.clipId) id = ATARIVIDEO.clipId(own); } catch { id = own; }
+    if (/^(sg1000|sms|gg|n64|snes)-/.test(own)) id = sega8ArtId(own);
+    else try { if (window.ATARIVIDEO && ATARIVIDEO.clipId) id = ATARIVIDEO.clipId(own); } catch { id = own; }
     if (id === undefined) {
       window.addEventListener('gnw-variants', () => { if (card.isConnected && card.dataset.gbart === mode) paintAtariArt(card, mode); }, { once: true });
       return;
@@ -8647,7 +9057,10 @@
     if (mode !== 'hardware' && PM_ART_BASE[mode]) sel += ',' + PM_ART_SEL;
     if (mode !== 'hardware' && GBC_ART_BASE[mode]) sel += ',' + GBC_ART_SEL;
     if (mode !== 'hardware' && GB_ART_BASE[mode]) sel += ',' + SGB_ART_SEL;   // SGB covers are Game Boy covers
-    if (mode !== 'hardware' && Object.values(ATARI_ART_BASES).some(b => b[mode])) sel += ',' + ATARI_ART_SEL;
+    /* Per console (20 Nov 2026): the Sega consoles have no 3D bucket, so in 3D Box Art their tiles are left as they are. */
+    const atariSel = Object.keys(ATARI_ART_SERIES).filter(k => ATARI_ART_BASES[k][mode])
+      .map(k => '#video-grid .device-card[data-series="' + ATARI_ART_SERIES[k] + '"]:not([data-gbart])').join(',');
+    if (mode !== 'hardware' && atariSel) sel += ',' + atariSel;
     const cards = document.querySelectorAll(sel);
     if (!cards.length) return;
     cards.forEach(card => {
@@ -11189,7 +11602,7 @@
     const keep = videoState._keepWidgets;
     for (const c of grid.querySelectorAll(':scope > .vgrid-widget[data-wgi]')) {
       if (c.__wkey) continue;
-      const type = (c.className.match(/\b(vw-clock|weather-widget|vw-facts|vw-quotes|vw-stats|vw-cast|vw-image|vw-playtime)\b/) || [''])[0] + (c.dataset.wimg ? ':' + c.dataset.wimg + ':' + (c.dataset.wn || '') : '') + ((c.className.match(/\bvw-size-\d\b/) || [''])[0]);
+      const type = (c.className.match(/\b(vw-clock|weather-widget|vw-facts|vw-quotes|vw-stats|vw-cast|vw-image|vw-playtime|vw-ach)\b/) || [''])[0] + (c.dataset.wimg ? ':' + c.dataset.wimg + ':' + (c.dataset.wn || '') : '') + ((c.className.match(/\bvw-size-\d\b/) || [''])[0]);
       const key = c.dataset.wgi + ':' + type;
       const old = keep && keep.get(key);
       if (old && old !== c && !old.isConnected &&
@@ -11338,7 +11751,7 @@
   function wallOrderSig() {
     const g = getWidgetCfg().games;
     let seed = 0; try { seed = shuffleRank('g:fair-share-seed'); } catch (_) {}
-    return JSON.stringify([g.systems, g.series, g.types, videoState.gameSort, videoState.gameSortDir, seed]);
+    return JSON.stringify([g.systems, g.series, g.types, videoState.gameSort, videoState.gameSortDir, seed, window.CwMyGames ? window.CwMyGames.orderSig(videoState.gameSort) : '']);
   }
   function wallKeepOrder(list, prevShown) {
     const prev = videoState._gamesOnly, sig = wallOrderSig();
@@ -12438,6 +12851,7 @@
       _posterQueue.push({ img, tries: 0 });
     });
     while (_posterWorkers < POSTER_CONCURRENCY && _posterQueue.length) { _posterWorkers++; posterWorker(); }
+    try { mbScan(); } catch (e) { console.warn('[Emby] media marks:', e); }   // Media Enhanced Covers (22 Nov 2026)
   }
   async function posterWorker() {
     while (_posterQueue.length) {
@@ -14030,6 +14444,7 @@
     renderDrawerContent(stub);
     drawerToTop(ov);   // 2026-10-14: every open starts at the top, same title or not
     showVideoStage(stub);
+    try { mbDrawer(stub); } catch (_) {}   // Media Enhanced Covers: the flat poster's mark
     document.body.style.overflow = 'hidden';
     // Entry taken INSIDE the frame that actually opens it, never beside it: an
     // open that never lands would otherwise leave a history entry with nothing
@@ -14050,10 +14465,12 @@
     rememberItem(it);                  // keep it even if the user has moved on — the next open is free
     if (ov.dataset.openId !== id) return; // user moved on
     renderDrawerContent(it);           // re-render body with the full detail
+    caseUpdate(it);                    // the 3D case: its kind from the copy Play would play, its front from the Box image
     // If the cache stub had no artwork (item wasn't cached yet), the stage rendered
     // empty (outline only). Now that we have the full item, build the tilted stage
     // from its poster so it isn't left blank.
     if (!stubHadPoster && posterUrl(it, 660)) showVideoStage(it);
+    try { mbDrawer(it); } catch (_) {}
     if (it.Type === 'Series') loadSeriesSeasons(it);
   }
 
@@ -14069,8 +14486,35 @@
 
   /* The poster's turns for gnwStageFit: the 20 degree rest, straight on the way in, and initVStageTilt's furthest. */
   const VSTAGE_POSES = [[0, 20, false], [0, 0, false], [14, 34, false], [-14, 34, false], [14, 6, false], [-14, 6, false]];
+  /* THE FILM'S CASE (21 Nov 2026, case3d.js; the drawer design 4.2). With WebGL the poster beside the drawer
+     becomes the film's case: 4K black, Blu-ray blue or DVD, by the copy Play would play (its first source,
+     the 4K filter's rule), once the full record says; remembered per title so a later open knows at once.
+     The front is the server's Box image when it has one, else the poster fitted to the width and trimmed
+     equally top and bottom. Until then the poster slides in as before. A series takes its first episode's
+     kind once the season list has loaded. Without WebGL (or with ?case=flat) the poster card is unchanged. */
+  const caseOn = () => !!(window.CwCase && CwCase.wanted());
+  function caseFront(item) {
+    const bt = item && item.ImageTags && item.ImageTags.Box;
+    const box = bt ? imageUrl(item.Id, 'Box', { tag: bt, maxHeight: 700 }) : null;
+    if (box) return { front: { url: box }, frontMode: 'fill' };
+    const p = posterUrl(item, 660);
+    return p ? { front: { url: p }, frontMode: 'trim' } : null;
+  }
+  function caseUpdate(item, template) {
+    const st = document.getElementById('video-stage');
+    if (!caseOn() || !st || !CwCase.stateOf(st)) return;
+    const f = caseFront(item);
+    CwCase.update(st, { template: template || CwCase.filmTemplate(item), front: f && f.front, frontMode: f && f.frontMode });
+  }
   function showVideoStage(item) {
     const st = document.getElementById('video-stage');
+    if (caseOn() && st) {
+      const lo = posterUrl(item, 340), f = caseFront(item);
+      if (!lo && !f) { st.classList.remove('open'); st.innerHTML = ''; return; }
+      CwCase.show(st, { kind: 'film', title: item.Name || '', template: CwCase.filmTemplate(item, true), flatSrc: lo || f.front.url, flatUpgrade: true,
+        front: f && f.front, frontMode: f && f.frontMode, onClose: closeVideo });
+      return;
+    }
     // Paint the SAME image the tile already cached (340px) so the box art appears
     // instantly, then quietly upgrade to the crisp 660px once it's fetched.
     const lo = posterUrl(item, 340);
@@ -14129,11 +14573,12 @@
    * follow + a sheen that tracks the turn. */
   function initVStageTilt(card) {
     const MAX = 14;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');   // 21 Nov 2026: never turned under reduced motion, as the games' stage
     card.addEventListener('animationend', () => card.classList.add('settled'), { once: true });
     let raf = 0, ev = null;
     function apply() {
       raf = 0;
-      if (!ev || !card.classList.contains('settled')) return;
+      if (!ev || !card.classList.contains('settled') || reduce.matches) return;
       const r = card.getBoundingClientRect();
       const dx = Math.max(-1, Math.min(1, (ev.clientX - (r.left + r.width / 2)) / (r.width / 2)));
       const dy = Math.max(-1, Math.min(1, (ev.clientY - (r.top + r.height / 2)) / (r.height / 2)));
@@ -14732,6 +15177,12 @@
     try {
       const { items: eps } = await getEpisodes(item.Id, seasonId);
       if (!eps.length) { epsEl.innerHTML = '<div class="vd-note">No episodes in this season.</div>'; return; }
+      /* A series' case: its first episode's copy, once the season list has loaded (21 Nov 2026). */
+      try {
+        const vst = document.getElementById('video-stage'), cs = caseOn() && vst ? CwCase.stateOf(vst) : null;
+        if (cs && !cs.template && document.getElementById('video-overlay').dataset.openId === item.Id) { const t = CwCase.filmFromEpisode(item.Id, eps[0]); if (t) caseUpdate(item, t); }
+      } catch (_) {}
+      try { if (document.getElementById('video-overlay').dataset.openId === item.Id) mbDrawer(item, eps[0]); } catch (_) {}
       epsEl.innerHTML = eps.map(episodeRowHTML).join('');
       epsEl.querySelectorAll('[data-ep]').forEach(row => {
         const ep = eps.find(x => x.Id === row.dataset.ep);
@@ -15945,7 +16396,7 @@
     v.addEventListener('error', () => teardown('The stream started but the video couldn’t be decoded here. It’ll play in a media server app.'));
 
     try {
-      const mod = await import('./remux.js?v=2.2.2');
+      const mod = await import('./remux.js?v=2.3.0');
       if (!ov.classList.contains('open')) return;   // user bailed while it loaded
 
       // MPEG-4/AVI: no browser decoder, so libav decodes + we re-encode to H.264.
@@ -17141,6 +17592,7 @@
        reads it for the drawer, stage and lightbox opened anywhere, instead of
        the Game & Watch page's viewMode (that page was deleted 2026-10-02). */
     artMode: () => videoState.artMode,
+    gameSort: () => videoState.gameSort,   // mygames.js (21 Nov 2026): which order the games are in
     selectGameSystems,
     selectGameSeries,
     pickGameSystems,   // the shoulders on the Media page (29 Oct): applied and drawn at once
@@ -17188,6 +17640,7 @@
     },
     /* Settings > Configurations > Prefer games with animated demos (settings-config.js, 30 Oct). */
     preferAnimated: () => preferAnimatedOn(), setPreferAnimated: on => setPreferAnimated(!!on),
+    mediaBadges: () => mbOn(), setMediaBadges: on => setMediaBadges(!!on),
     /* Settings > Configurations > Hide systems with no games (settings-config.js, 4 Nov). */
     hideEmptySystems: () => vgHideEmptyOn(), setHideEmptySystems: on => vgSetHideEmpty(!!on),
     /* Settings > Configurations > Screen and tiles > Grid layout (settings-config.js, 31 Oct): the

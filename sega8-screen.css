@@ -1,0 +1,203 @@
+/* sega8-screen.css -- the three Sega 8-bit screen apertures (SG-1000, Master System, Game Gear),
+   each declared ONCE for the whole site.
+
+   READ atari-screen.css FIRST. This file is its sibling and uses its classes and its consuming
+   rules unchanged (.atari-art-frame, .atari-art, .atari-screen, .atari-tv-crop, all reading the
+   --at-* properties). What this file adds is only the numbers, under their own prefixes
+   (--sg1000-*, --sms-*, --gg-*), and one mapping block per device that points --at-* at them, so
+   the consuming rules are still written once.
+
+   The selector is [data-system="..."], the attribute a .device-card and the play window carry:
+   sg1000, mastersystem and gamegear.
+
+   HOW THE FIGURES WERE MEASURED
+       python3 WASM_Source/sega8-artwork/aperture.py <picture.png> --css
+   (--plinth for sg-1000-tile.png, --handheld for gamegear.png). The screen is not cut out of any
+   of these pictures: each has a translucent glass layer with the photograph's own reflections and
+   wear, so the game is stacked UNDER the picture and the glare falls on it. The box is the first
+   fully opaque ring around the glass, and each corner radius is the largest that uncovers no glass.
+   WASM_Source/sega8-artwork/verify.sh re-detects every rectangle on every run and fails if one no
+   longer matches what is written here. If a picture is ever replaced, re-measure; never by eye.
+   ------------------------------------------------------------------------- */
+:root {
+  /* 2026-11-25: the SG-1000, Master System and Game Gear numbers below are the COLORFUL kit pictures' (sg-1000-tile-colorful.png 780x936 and mastersystem-tile-colorful.png 825x990: the kit's television with the previous tile's controller drawing; gamegear-colorful.png 1295x750: the device alone); glass = the kit's Screen Mask box. Comments naming the earlier pictures are history. */
+  /* ---- SG-1000 -------------------------------------------------------------
+     Sg1000Console (sg-1000-tile.png), 520x624 (5:6): the wood-stand television with the SJ-200
+     joystick drawn below it, the 2600 tile's size. Screen 323x241 at (53,51) since 21 Nov 2026 (was
+     309x227 at (60,58): maketiles.py now widens the glass over the tube's unlit black ring, so a game
+     fills the tube face to the bezel, as in the play window). The glass is light
+     and uneven: strongest at the top (79/255, a bright reflection across the top third) and fading
+     to 26 at the bottom, so the game shows through more clearly than on the other sets. Corner
+     24 px, scored. The television body for the play window's crop is measured to the stand's foot
+     (484x322 at (19,21)), so the play window keeps the whole stand. */
+  --sg1000-scr-l: 11.28%;   /*  88 / 780 */
+  --sg1000-scr-t: 9.29%;   /*  87 / 936 */
+  --sg1000-scr-w: 59.36%;   /* 463 / 780 */
+  --sg1000-scr-h: 36.43%;   /* 341 / 936 */
+  --sg1000-scr-bg: #000000;
+  --sg1000-scr-radius: 7.3% / 10.0%;   /* 34 px, the largest leaving no glass uncovered is 45 */
+  --sg1000-tv-l: 4.10%;   /*  32 / 780 */
+  --sg1000-tv-t: 3.53%;   /*  33 / 936 */
+  --sg1000-tv-w: 91.79%;   /* 716 / 780 */
+  --sg1000-tv-h: 51.60%;   /* 483 / 936 */
+  --sg1000-tv-scale: 1.08939;   /* 780 / 716 */
+  --sg1000-art-aspect: 780 / 936;
+  --sg1000-tv-aspect: 716 / 483;
+  --sg1000-art-aspect-num: 0.83333;
+  --sg1000-tv-aspect-num: 1.48240;
+
+  /* ---- MASTER SYSTEM ---------------------------------------------------------
+     MasterSystemConsole (mastersystem-tile.png), 550x660 (5:6): the dark television with the
+     Control Pad drawn below it. It is the same television as the Atari 7800's, in the same
+     photograph, so its screen box was the 7800 tile's to the pixel: 338x253 at (59,57); since 21 Nov
+     2026 the glass is widened over the tube's unlit black ring (maketiles.py) to 350x267 at (53,50) (tone #4d4f4f,
+     corner 22 px; the 7800 box's glare 95/255, tone #4d4e4e, corner 20 px). The body for the play crop is 505x331 at (23,17). */
+  --sms-scr-l: 10.67%;   /*  88 / 825 */
+  --sms-scr-t: 8.69%;   /*  86 / 990 */
+  --sms-scr-w: 61.33%;   /* 506 / 825 */
+  --sms-scr-h: 38.48%;   /* 381 / 990 */
+  --sms-scr-bg: #000000;
+  --sms-scr-radius: 6.5% / 8.7%;   /* 33 px, the largest leaving no glass uncovered is 44 */
+  --sms-tv-l: 4.12%;   /*  34 / 825 */
+  --sms-tv-t: 2.73%;   /*  27 / 990 */
+  --sms-tv-w: 91.76%;   /* 757 / 825 */
+  --sms-tv-h: 51.31%;   /* 508 / 990 */
+  --sms-tv-scale: 1.08983;   /* 825 / 757 */
+  --sms-art-aspect: 825 / 990;
+  --sms-tv-aspect: 757 / 508;
+  --sms-art-aspect-num: 0.83333;
+  --sms-tv-aspect-num: 1.49016;
+
+  /* ---- GAME GEAR -------------------------------------------------------------
+     GameGearConsole (gamegear.png), 1080x587: the handheld itself, held flat to the camera, as the
+     Lynx is. One picture for the tile, the drawer and the play window. Its shape (1.84) is almost
+     the Lynx's (1.87), so it takes the Lynx's two-column tile the same way. Screen 311x223 at
+     (383,94), glare 85/255, tone #727374, corner 1 px. The body is measured as a handheld (the
+     grips are not a console beside a television): 978x533 at (49,36). */
+  --gg-scr-l: 35.98%;   /* 466 / 1295 */
+  --gg-scr-t: 9.47%;   /*  71 / 750 */
+  --gg-scr-w: 28.88%;   /* 374 / 1295 */
+  --gg-scr-h: 35.73%;   /* 268 / 750 */
+  --gg-scr-bg: #000000;
+  --gg-scr-radius: 2.1% / 3.0%;   /* 8 px, the largest leaving no glass uncovered is 10 */
+  --gg-tv-l: 5.87%;   /*  76 / 1295 */
+  --gg-tv-t: 0.53%;   /*   4 / 750 */
+  --gg-tv-w: 89.03%;   /* 1153 / 1295 */
+  --gg-tv-h: 79.20%;   /* 594 / 750 */
+  --gg-tv-scale: 1.12316;   /* 1295 / 1153 */
+  --gg-art-aspect: 1295 / 750;
+  --gg-tv-aspect: 1153 / 594;
+  --gg-art-aspect-num: 1.72667;
+  --gg-tv-aspect-num: 1.94108;
+}
+
+/* ---- THE MAPPING: every line a var() reference, no numbers below :root. ---- */
+[data-system="sg1000"] {
+  --at-scr-l: var(--sg1000-scr-l); --at-scr-t: var(--sg1000-scr-t);
+  --at-scr-w: var(--sg1000-scr-w); --at-scr-h: var(--sg1000-scr-h);
+  --at-scr-bg: var(--sg1000-scr-bg); --at-scr-radius: var(--sg1000-scr-radius);
+  --at-tv-l: var(--sg1000-tv-l); --at-tv-t: var(--sg1000-tv-t);
+  --at-tv-w: var(--sg1000-tv-w); --at-tv-h: var(--sg1000-tv-h);
+  --at-tv-scale: var(--sg1000-tv-scale);
+  --at-art-aspect: var(--sg1000-art-aspect); --at-tv-aspect: var(--sg1000-tv-aspect);
+  --at-art-aspect-num: var(--sg1000-art-aspect-num);
+  --at-tv-aspect-num: var(--sg1000-tv-aspect-num);
+}
+[data-system="mastersystem"] {
+  --at-scr-l: var(--sms-scr-l); --at-scr-t: var(--sms-scr-t);
+  --at-scr-w: var(--sms-scr-w); --at-scr-h: var(--sms-scr-h);
+  --at-scr-bg: var(--sms-scr-bg); --at-scr-radius: var(--sms-scr-radius);
+  --at-tv-l: var(--sms-tv-l); --at-tv-t: var(--sms-tv-t);
+  --at-tv-w: var(--sms-tv-w); --at-tv-h: var(--sms-tv-h);
+  --at-tv-scale: var(--sms-tv-scale);
+  --at-art-aspect: var(--sms-art-aspect); --at-tv-aspect: var(--sms-tv-aspect);
+  --at-art-aspect-num: var(--sms-art-aspect-num);
+  --at-tv-aspect-num: var(--sms-tv-aspect-num);
+}
+[data-system="gamegear"] {
+  --at-scr-l: var(--gg-scr-l); --at-scr-t: var(--gg-scr-t);
+  --at-scr-w: var(--gg-scr-w); --at-scr-h: var(--gg-scr-h);
+  --at-scr-bg: var(--gg-scr-bg); --at-scr-radius: var(--gg-scr-radius);
+  --at-tv-l: var(--gg-tv-l); --at-tv-t: var(--gg-tv-t);
+  --at-tv-w: var(--gg-tv-w); --at-tv-h: var(--gg-tv-h);
+  --at-tv-scale: var(--gg-tv-scale);
+  --at-art-aspect: var(--gg-art-aspect); --at-tv-aspect: var(--gg-tv-aspect);
+  --at-art-aspect-num: var(--gg-art-aspect-num);
+  --at-tv-aspect-num: var(--gg-tv-aspect-num);
+}
+
+/* ---- THE CLIP SURFACES (video.gb-vid, video.gb-rec) read --gb-scr-*, as index.html maps them
+   for the Atari machines. The same source properties, so a clip lands on the glass when the
+   Sega clips are published. ---- */
+.device-card[data-system="sg1000"] {
+  --gb-scr-l: var(--sg1000-scr-l);  --gb-scr-t: var(--sg1000-scr-t);
+  --gb-scr-w: var(--sg1000-scr-w);  --gb-scr-h: var(--sg1000-scr-h);
+  --gb-scr-bg: var(--sg1000-scr-bg);
+}
+.device-card[data-system="mastersystem"] {
+  --gb-scr-l: var(--sms-scr-l);  --gb-scr-t: var(--sms-scr-t);
+  --gb-scr-w: var(--sms-scr-w);  --gb-scr-h: var(--sms-scr-h);
+  --gb-scr-bg: var(--sms-scr-bg);
+}
+.device-card[data-system="gamegear"] {
+  --gb-scr-l: var(--gg-scr-l);  --gb-scr-t: var(--gg-scr-t);
+  --gb-scr-w: var(--gg-scr-w);  --gb-scr-h: var(--gg-scr-h);
+  --gb-scr-bg: var(--gg-scr-bg);
+}
+
+/* ---- THE DRAWER STAGE takes the artwork's own shape, as index.html does for
+   [data-system^="atari"] (the Sega ids do not start with "atari"). The doubled class keeps this
+   rule ahead of the page's own stage rules whichever loads later. ---- */
+#device-stage .device-card.device-card:is([data-system="sg1000"], [data-system="mastersystem"], [data-system="gamegear"]) .img.stage-img {
+  aspect-ratio: var(--at-art-aspect);
+  height: auto;
+}
+
+/* ---- BOX ART: the cover sits inside the tile with the shared inset, as the other cartridge
+   consoles' covers do (index.html, the [data-series] ::after rules). ---- */
+.device-card:is([data-artmode="boxart"], [data-artmode="boxart3d"]):is([data-series="sg1000"], [data-series="mastersystem"], [data-series="gamegear"]) .img::after {
+  inset: var(--cover-inset); background-size: contain;
+}
+
+/* ---- THE DRAWER SHOWS THE FULL PHOTOGRAPH, as the Atari home consoles' does: the console, its
+   controllers and the cartridge beside the television (Sg1000ConsoleFull, MasterSystemConsoleFull),
+   and since 21 Nov 2026 the game's tile clip plays on its screen, now in the drawer's first picture (drawer-unified.js).
+   Only the numbers change, on the stage card; the mapping above reads them on the same element.
+   The Game Gear has one picture, so it has no block here. ---- */
+#device-stage .stage-card[data-system="sg1000"], .device-card[data-photo="full"][data-system="sg1000"] {
+  /* 2026-11-25: sg-1000-colorful.png, the kit's whole scene. */
+  /* sg-1000-drawer.png, 761x571: screen 323x241 at (162,48) since 21 Nov 2026 (was 309x227 at
+     (169,55): maketiles.py widens the glass over the tube's unlit ring, as on the tile, so the drawer's
+     clip fills the tube face to the bezel); the television 477x302 at (130,18) */
+  --sg1000-scr-l: 21.78%;   /* 249 / 1143 */
+  --sg1000-scr-t: 6.82%;   /*  55 / 806 */
+  --sg1000-scr-w: 40.51%;   /* 463 / 1143 */
+  --sg1000-scr-h: 42.31%;   /* 341 / 806 */
+  --sg1000-tv-l: 16.36%;   /* 187 / 1143 */
+  --sg1000-tv-t: 0.12%;   /*   1 / 806 */
+  --sg1000-tv-w: 63.60%;   /* 727 / 1143 */
+  --sg1000-tv-h: 59.93%;   /* 483 / 806 */
+  --sg1000-tv-scale: 1.57221;   /* 1143 / 727 */
+  --sg1000-art-aspect: 1143 / 806;
+  --sg1000-tv-aspect: 727 / 483;
+  --sg1000-art-aspect-num: 1.41811;
+  --sg1000-tv-aspect-num: 1.50518;
+}
+#device-stage .stage-card[data-system="mastersystem"], .device-card[data-photo="full"][data-system="mastersystem"] {
+  /* 2026-11-25: mastersystem-colorful.png, the kit's whole scene. */
+  /* mastersystem-drawer.png, 917x603: screen 350x267 at (250,53) since 21 Nov 2026 (was 338x253 at
+     (256,60), widened as the SG-1000's above); the television 505x330 at (220,20) */
+  --sms-scr-l: 28.54%;   /* 413 / 1447 */
+  --sms-scr-t: 7.01%;   /*  60 / 856 */
+  --sms-scr-w: 34.97%;   /* 506 / 1447 */
+  --sms-scr-h: 44.51%;   /* 381 / 856 */
+  --sms-tv-l: 24.81%;   /* 359 / 1447 */
+  --sms-tv-t: 0.12%;   /*   1 / 856 */
+  --sms-tv-w: 52.32%;   /* 757 / 1447 */
+  --sms-tv-h: 59.23%;   /* 507 / 856 */
+  --sms-tv-scale: 1.91149;   /* 1447 / 757 */
+  --sms-art-aspect: 1447 / 856;
+  --sms-tv-aspect: 757 / 507;
+  --sms-art-aspect-num: 1.69042;
+  --sms-tv-aspect-num: 1.49310;
+}

@@ -23,7 +23,7 @@ The points below are explained in the sections named.
   (c) play/gameboy/ carries no cartridge firmware: build output and the web
       shell only.
 
-  (d) Sections 8 to 20 each say what ships, its terms and how they are met.
+  (d) Sections 8 to 22 each say what ships, its terms and how they are met.
 
 
 ===========================================================================
@@ -554,6 +554,37 @@ Licence  : SIL Open Font License 1.1. None of the three declares a Reserved
            the fonts in fonts/credits/).
 How met  : the licence and copyright lines travel with the fonts; the fonts
            are not sold on their own.
+
+
+===========================================================================
+22. Play times: IGDB.com  --  Twitch Developer Services Agreement
+===========================================================================
+
+Role     : The Rushed, Normal and Completionist times on the PLAY TIME
+           line of a game's drawer (metadata/playtimes-<shelf>.json.gz,
+           read by gamemeta.js): IGDB's time-to-beat figures ("hastily",
+           "normally", "completely") and the number of players they rest on.
+Source   : IGDB.com (https://www.igdb.com/), through its API
+           (https://api-docs.igdb.com/), fetched at each release by
+           WASM_Source/metadata/igdb-ttb.py. Only IGDB platform and game ids
+           are sent; titles are matched on this machine.
+Kept     : per game only the three times, the count of players and the path
+           of the IGDB page the times are on. The downloaded lists stay in a
+           cache outside every repository and are not shipped.
+Terms    : the Twitch Developer Services Agreement (last changed 12/04/2024,
+           https://legal.twitch.com/legal/developer-agreement/), which IGDB's
+           documentation names as its terms. IGDB asks API users to store and
+           serve the data to their visitors. The licence is non-sublicensable
+           and the data may not be redistributed.
+How met  : the times are in their own files, each headed as IGDB data, and
+           are NOT Project Material: neither the project licence nor the CC
+           BY-SA 4.0 offer of the metadata packs (section 6) covers them, and
+           nothing here grants any right to copy or reuse them; get them from
+           IGDB.com. Wherever times are shown the drawer says "Times:
+           IGDB.com" with a link to that game's IGDB page, and the About
+           page's Data credits name IGDB.com for play times. The files are
+           refreshed at each release.
+If its terms change: the files are refreshed or removed to match.
 
 
 ===========================================================================

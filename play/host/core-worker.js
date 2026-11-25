@@ -23,12 +23,20 @@
  */
 let core = null, nowMs = 0, audioRate = 48000;
 const post = (m, tr) => { try { self.postMessage(m, tr || []); } catch (_) {} };
+/* SIGNS OF LIFE: this worker says when its own script runs and when the console's
+   program has arrived, so the page's time limit on the start (runner-worker.mjs createMs) counts from the last
+   sign and its log says which part was slow: the worker itself, the program's files, or the program's own start. */
+post({ t: 'alive', stage: 'worker' });
 const env = {
   now: () => nowMs,
   emit: (ev, data) => post({ t: 'emit', ev, data: plain(data) }),
   log: (lv, m) => post({ t: 'log', lv, m: String(m) }),
   preview: false,
   audioRate: () => audioRate,
+  /* videoBitmap (26 Nov 2026, HOST-MODEB-CARD-PATCH): this runner passes a frame of format 'bitmap' (an ImageBitmap the
+     module made on the graphics card) on to the page without a copy (frameOut), and the page's presenter draws one
+     (present.mjs). A module that never sends one is unchanged; the N64's fast engine may, with the card standing. */
+  videoBitmap: true,
 };
 function plain(d) { try { return d == null ? d : JSON.parse(JSON.stringify(d)); } catch (_) { return null; } }
 function failOf(e) { return { code: (e && e.code) || 'damaged', message: String((e && e.message) || e) }; }
@@ -37,6 +45,10 @@ function failOf(e) { return { code: (e && e.code) || 'damaged', message: String(
 function frameOut(tr) {
   let v = null;
   try { v = core.video(); } catch (_) { v = null; }
+  if (v && v.format === 'bitmap' && v.bitmap) {       // transferred, not copied: the module makes a new bitmap for every frame
+    tr.push(v.bitmap);
+    return { format: 'bitmap', bitmap: v.bitmap, width: v.width, height: v.height, pixelAspect: v.pixelAspect, rotation: v.rotation };
+  }
   if (!v || !v.data) return null;
   const out = { format: v.format, width: v.width, height: v.height, stride: v.stride, pixelAspect: v.pixelAspect, rotation: v.rotation };
   if (v.palette) out.palette = v.palette.slice ? v.palette.slice() : v.palette;
@@ -54,6 +66,11 @@ function mirror() {
   try { if (x.crosshair) m.crosshair = plain(x.crosshair()); } catch (_) {}
   try { m.frames = core.frames | 0; } catch (_) {}
   try { m.model = core.model || null; } catch (_) {}
+  try { m.rumble = core.rumble | 0; } catch (_) {}
+  /* The N64's live speed and the engine running (26 Nov 2026): info crosses to the page only at create, so the
+     slow-game notice reads these from each frame's mirror. Absent on every other core. */
+  try { m.fps = core.info && core.info.fieldsPerSecond; } catch (_) {}
+  try { m.engine = (core.info && core.info.engine) || null; } catch (_) {}
   try { m.timed = !!core.timedInput; } catch (_) {}
   try { if (core.ext && core.ext.bootGate) m.ready = !!core.ext.bootGate.ready(); } catch (_) {}
   try {
@@ -72,6 +89,7 @@ self.onmessage = async ev => {
     if (m.t === 'create') {
       audioRate = m.audioRate || audioRate;
       const mod = await import(m.url);
+      post({ t: 'alive', stage: 'imported' });
       core = await mod.create(env);
       const xx = core.ext || {};
       const has = { media: !!xx.media, rotation: xx.rotation ? { option: xx.rotation.option } : null, crosshair: typeof xx.crosshair === 'function', battery: !!core.battery, options: typeof core.options === 'function', setOption: typeof core.setOption === 'function',

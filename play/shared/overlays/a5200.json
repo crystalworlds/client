@@ -34,7 +34,8 @@
       "x": 0.5,
       "y": 0.5,
       "w": 1,
-      "h": 1
+      "h": 1,
+      "fallbackFor": "stick"
      }
     ]
    },
@@ -223,6 +224,26 @@
    "what": "the format and behaviour ideas",
    "source": "Ideas only, no file or image copied: RetroArch input overlays (github.com/libretro/RetroArch tasks/task_overlay.c, input/input_driver.c) and libretro/common-overlays",
    "licence": "RetroArch GPL-3.0, common-overlays CC-BY-4.0; neither is copied, so neither applies to this file"
+  },
+  {
+   "what": "the stick (22 Nov 2026)",
+   "source": "the 5200 controller is an analogue joystick; the stick sends the finger's place to the port's axes 0 and 1, which play/cores/atari/core.mjs scales to the console's -127..127 after its own rest area of 0.12 (drawn here as dead); the eight-way pad stays as the fallback for an older overlay.js",
+   "licence": "site-owned"
+  }
+ ],
+ "sticks": [
+  {
+   "kind": "stick",
+   "id": "stick",
+   "group": "dpad",
+   "axes": [
+    "LSX",
+    "LSY"
+   ],
+   "x": 0.5,
+   "y": 0.5,
+   "r": 0.5,
+   "dead": 0.12
   }
  ]
 }

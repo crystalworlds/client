@@ -47,9 +47,9 @@
   const BUILD = '20261026-cbh23-cht1';
   /* Families whose Control Bar is proven and on by default (the same set as
      control-bar.js's DEFAULT_ON; the host's answer is the one a framed page uses). */
-  const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx']); // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
+  const DEFAULT_ON = new Set(['gb', 'pm', 'a2600', 'a5200', 'a7800', 'alynx', 'sg1000', 'sms', 'gg', 'n64', 'snes']);   // snes: the Super Nintendo, 23 Nov 2026   // n64: the Nintendo 64, 22 Nov 2026   // the Sega devices: 20 Nov 2026 // GB proven 2026-10-08 (232/232); PM 2026-10-11 (pm-cb run.mjs); the Ataris 2026-10-11 (pm-cb arun.mjs)
   /* Overlay -> the family names a window in it can register as. */
-  const OVERLAY_SYS = { 'gb-play-overlay': ['gb'], 'pm-play-overlay': ['pm'], 'atari-play-overlay': ['a2600', 'a5200', 'a7800', 'alynx'],
+  const OVERLAY_SYS = { 'gb-play-overlay': ['gb'], 'pm-play-overlay': ['pm'], 'atari-play-overlay': ['a2600', 'a5200', 'a7800', 'alynx', 'sg1000', 'sms', 'gg', 'n64', 'snes'],
     'nes-play-overlay': ['nes'],     // the NES window joins only when the one play host runs in it (wants('nes') is false otherwise)
     'play-overlay': ['gnw'],
     'tft-play-overlay': ['tft'], 'tj-play-overlay': ['tetrisjr'] };   // colour units, Tetris Jr.: likewise (2026-10-14)       // Game & Watch: likewise, only while the one play host runs in it (wants('gnw') follows wantsHost)
@@ -60,7 +60,7 @@
   try { sessionStorage.removeItem(KEY); } catch (_) {}
 
   /* ------------------------------------------------------------ the one play host (2026-10-14) */
-  const HOST_READY = new Set(['gb', 'pm', 'nes', 'a2600', 'a5200', 'a7800', 'alynx', 'gnw', 'tetrisjr', 'tft']);   // tetrisjr, tft: Phase 5, play/cores/tetrisjr/ and play/cores/tft/   // gnw: Phase 5, play/cores/gnw/   // consoles with a core module in play/host (pm: 2026-10-14; nes: Phase 4; the four Ataris: Phase 3, play/cores/atari/)
+  const HOST_READY = new Set(['gb', 'pm', 'nes', 'a2600', 'a5200', 'a7800', 'alynx', 'gnw', 'tetrisjr', 'tft', 'sg1000', 'sms', 'gg', 'n64', 'snes']);   // n64: play/cores/n64/ (22 Nov 2026)   // sg1000, sms, gg: the Sega devices, play/cores/sega8/ (20 Nov 2026)   // tetrisjr, tft: Phase 5, play/cores/tetrisjr/ and play/cores/tft/   // gnw: Phase 5, play/cores/gnw/   // consoles with a core module in play/host (pm: 2026-10-14; nes: Phase 4; the four Ataris: Phase 3, play/cores/atari/)
   /* THE ONE PLAY HOST IS THE ONLY PLAY WINDOW (2026-10-15: "no two versions, no URL
      activation"). Every console with a core module plays in it; the switch (?host=, ?ui=host,
      sessionStorage cw.host.flag, HOST_PENDING, DEFAULT_HOST) is gone. */
@@ -73,6 +73,13 @@
   const HOST_PAGES = [[/^(?:\.\/|\/)?play\/gameboy\/index\.html/, 'gb'], [/^(?:\.\/|\/)?play\/nes\/index\.html/, 'nes'],
     [/^(?:\.\/|\/)?play\/atari2600\/index\.html/, 'a2600'], [/^(?:\.\/|\/)?play\/atari5200\/index\.html/, 'a5200'],
     [/^(?:\.\/|\/)?play\/atari7800\/index\.html/, 'a7800'], [/^(?:\.\/|\/)?play\/atarilynx\/index\.html/, 'alynx'],
+    // The Sega devices (20 Nov 2026) have no page of their own: index.html's ATARI_SYSTEMS names this path for them.
+    [/^(?:\.\/|\/)?play\/sega8\/sg1000\/index\.html/, 'sg1000'], [/^(?:\.\/|\/)?play\/sega8\/sms\/index\.html/, 'sms'],
+    [/^(?:\.\/|\/)?play\/sega8\/gg\/index\.html/, 'gg'],
+    // The Nintendo 64 (22 Nov 2026): likewise no page of its own (ATARI_SYSTEMS n64 names this path).
+    [/^(?:\.\/|\/)?play\/n64\/index\.html/, 'n64'],
+    [/^(?:\.\/|\/)?play\/snes\/index\.html/, 'snes'],   // the Super Nintendo (23 Nov 2026): ATARI_SYSTEMS snes names this path
+    [/^(?:\.\/|\/)?play\/sufami\/index\.html/, 'snes'],   // the Sufami Turbo (24 Nov 2026): its own wall, the Super Nintendo's play host (the core opens a mini-cartridge in the adaptor by its content)
     // The one built-in game, and the two colour units, whose unit is the game. A third entry
     // names the game; null keeps the old page (the player's custom firmware, ?fw=custom, keeps
     // its file panel there for now).
@@ -175,7 +182,7 @@
     const arm = () => { try { window.CwPlayAudio.armGestures(() => hostAny()); } catch (_) {} };
     if (window.CwPlayAudio) { arm(); return; }
     const sc = document.createElement('script');
-    sc.src = 'play/host/cw-audio.js?v=2.2.2-audioservo';
+    sc.src = 'play/host/cw-audio.js?v=2.3.0';
     sc.onload = arm;
     (document.head || document.documentElement).appendChild(sc);
   }
@@ -341,7 +348,7 @@
   /* The families a window in this overlay can be right now: the Atari overlay holds four
      machines, so it is the playing title's own (a 2600 under ?ui=legacy must not take the
      5200's always-on bar). */
-  const CAT_SYS = { atari2600: 'a2600', atari5200: 'a5200', atari7800: 'a7800', atarilynx: 'alynx' };
+  const CAT_SYS = { atari2600: 'a2600', atari5200: 'a5200', atari7800: 'a7800', atarilynx: 'alynx', sg1000: 'sg1000', mastersystem: 'sms', gamegear: 'gg', n64: 'n64', snes: 'snes', sufami: 'snes' };   // sufami: the Sufami Turbo plays in the SNES window (24 Nov 2026)
   function sysListOf(ov) {
     const all = OVERLAY_SYS[ov.id] || [];
     if (all.length < 2) return all;

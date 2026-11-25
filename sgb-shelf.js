@@ -14,9 +14,9 @@
  *     (25 Oct: same console art, same clip or live screen, in every art mode).
  *     A title held only in the sgb folder has no Game Boy entry at all (index.html skips it); its
  *     entry is built the way index.html builds a Game Boy title (_gbConsoleArt).
- *   - The drawer stage only: our own photograph of a television, a Super NES with the Super Game
+ *   - The drawer's first picture: our own photograph of a television, a Super NES with the Super Game
  *     Boy and controllers (sgb/console/draw.png), the screen black when off, the title's clip
- *     from the sgb-clips bucket behind the television's glass when on.
+ *     from the sgb-clips bucket behind the television's glass when on (drawer-unified.js, 21 Nov 2026).
  *   - The bucket addresses (covers, 3D covers, marquees, manuals, clips, fan art borders), named
  *     like the Game Boy buckets: <SHA-1 of the cartridge, upper case>.<ext>.
  *
@@ -36,11 +36,12 @@
     manuals:  'https://pub-09110fc212204aa894cdac0107291a6b.r2.dev',   // sgb-manuals
     borders:  'https://pub-5656d877345d49ae96626afa8d6ebd56.r2.dev',   // sgb-borders (fan art, .jpg)
   };
-  /* The photograph, cropped to its own picture (1016x596 of the 1080x1080 original). The
-     television's screen is a translucent glass layer (mean alpha 95/255) at 309,42 333x248 in
-     the crop, measured from the file's own alpha; the CSS in index.html (.sgb-emu) holds the
-     same rectangle as percentages. */
-  const DRAW = 'images/consoles/sgb-draw.webp?v=2.2.2';
+  /* The picture: viking's COLORFUL Super Game Boy scene, rendered from its PSD (25 Nov 2026,
+     WASM_Source/sgb-artwork/sgb-from-psd.py), 1452x884. The television's glass is the kit's own
+     (cut from its Screen Mask, his shadow and reflection over it) at 441,63 504x375; the CSS in
+     index.html (.sgb-emu) holds the same rectangle as percentages. Until then: draw.png, 1016x596,
+     glass 309,42 333x248. */
+  const DRAW = 'images/consoles/sgb-draw.webp?v=2.3.0-artall2';
   const drawUrl = () => { try { return new URL(DRAW, document.baseURI).href; } catch (e) { return DRAW; } };
 
   const isSgb = d => !!(d && d.sgb && d.catalogue === 'game-boy');
@@ -146,8 +147,8 @@
   function sweep() {
     _sweepT = 0;
     if (document.hidden) return;
-    /* 26 Oct: the drawer's own picture is the console OFF, as on every system (screen black,
-       no clip); only the device that slides in from the left (the stage, showStage) plays the clip. */
+    /* Tiles only: the drawer's first picture plays its clip through drawer-unified.js (21 Nov 2026), so the
+       old drawer and stage frames (.sgb-drawer, .sgb-stage) are left out of this sweep. */
     document.querySelectorAll('.sgb-emu[data-sgb]:not(.sgb-stage):not(.sgb-drawer)').forEach(w => {
       if (near(w)) attach(w); else if (w._sgbArmed) release(w);
     });
@@ -170,16 +171,11 @@
     });
   });
 
-  /* The drawer: the same photograph, tilted like the other stages, the clip behind the glass. */
-  function showStage(d, stage) {
-    stage.innerHTML = '<div class="device-card stage-card" data-series="super-game-boy" data-system="sgb">'
-      + '<div class="img stage-img">' + frameHTML(d, 'sgb-stage') + '</div></div>';
-    stage.classList.remove('open'); void stage.offsetWidth; stage.classList.add('open');
-    try { if (typeof initStageTilt === 'function') initStageTilt(stage.querySelector('.stage-card')); } catch (e) {}
-    const w = stage.querySelector('.sgb-emu');
-    if (w) attach(w, true);
-  }
 
-  window.SGB = { BUCKET, drawUrl, isSgb, baseId, sgbIdOf, adopt, sha1Of, sha1Now, frameHTML, showStage, sweep: schedule,
+  /* The drawer's first picture (21 Nov 2026): the television switched on with the title's clip, as the
+     tile plays it (drawer-unified.js). The slide-in beside the drawer is the game's box now (case3d.js). */
+  function clipUrls(id) { return sha1Of(id).then(h => (h && !MISSING.has(id) ? [BUCKET.clips + '/' + h + '.webm'] : [])).catch(() => []); }
+
+  window.SGB = { BUCKET, drawUrl, isSgb, baseId, sgbIdOf, adopt, sha1Of, sha1Now, frameHTML, clipUrls, sweep: schedule,
                  MENU_YEARS: [1994, 2003] };
 })();

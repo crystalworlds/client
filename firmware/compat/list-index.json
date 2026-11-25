@@ -38,7 +38,7 @@
    "file": "list-gb.json.gz",
    "tested": "2026-11-17",
    "counts": [
-    1484,
+    1485,
     8,
     0,
     0
@@ -60,7 +60,7 @@
    "file": "list-nes.json.gz",
    "tested": "2026-11-15",
    "counts": [
-    3043,
+    3035,
     44,
     5,
     0
@@ -115,7 +115,7 @@
    "file": "list-a2600.json.gz",
    "tested": "2026-11-15",
    "counts": [
-    805,
+    676,
     3,
     0,
     0
@@ -126,7 +126,7 @@
    "file": "list-a5200.json.gz",
    "tested": "2026-11-15",
    "counts": [
-    482,
+    426,
     9,
     0,
     0
@@ -137,7 +137,7 @@
    "file": "list-a7800.json.gz",
    "tested": "2026-11-15",
    "counts": [
-    314,
+    310,
     3,
     0,
     0
@@ -148,10 +148,65 @@
    "file": "list-alynx.json.gz",
    "tested": "2026-11-19",
    "counts": [
-    809,
-    20,
+    774,
+    19,
     0,
     0
+   ]
+  },
+  {
+   "key": "sg1000",
+   "file": "list-sg1000.json.gz",
+   "tested": "2026-11-21",
+   "counts": [
+    184,
+    4,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "mastersystem",
+   "file": "list-sms.json.gz",
+   "tested": "2026-11-21",
+   "counts": [
+    841,
+    0,
+    18,
+    0
+   ]
+  },
+  {
+   "key": "gamegear",
+   "file": "list-gg.json.gz",
+   "tested": "2026-11-21",
+   "counts": [
+    475,
+    2,
+    2,
+    0
+   ]
+  },
+  {
+   "key": "n64",
+   "file": "list-n64.json.gz",
+   "tested": "2026-11-21",
+   "counts": [
+    16,
+    0,
+    0,
+    735
+   ]
+  },
+  {
+   "key": "snes",
+   "file": "list-snes.json.gz",
+   "tested": "",
+   "counts": [
+    0,
+    0,
+    0,
+    2001
    ]
   }
  ]

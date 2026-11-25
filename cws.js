@@ -52,7 +52,7 @@
   function loadReach() {
     if (_reachP) return _reachP;
     /* Through Function, so a browser that cannot read import() still reads this file. */
-    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.2.2-recoverhash'); })
+    _reachP = Promise.resolve().then(function () { return (new Function('u', 'return import(u)'))('./cws-reach.mjs?v=2.3.0-nowelcome'); })
       .then(function (m) { R = m && m.default; return R; }, function (e) { warn('reach not loaded', e && e.message); return null; });
     return _reachP;
   }
@@ -257,7 +257,7 @@
   function siteVersion() {
     var el = document.querySelector('#vault-overlay .modal-title');
     var m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.2.2';
+    return m ? m[1] : '2.3.0';
   }
   function deviceDescription() {
     var ua = navigator.userAgent || '', m, browser = 'Web browser', os = 'Unknown system';
@@ -668,6 +668,17 @@
     // A Disk System disk is an NES-catalogue title (one emulator, three consoles;
     // index.html marks it c:'fds' and the play page mounts it as a disk).
     if (sys === 'fds') return { id: 'nes-x' + h12, kind: 'nes' };
+    /* THE SAME BYTES IN THE MASTER SYSTEM AND GAME GEAR FOLDERS (20 Nov 2026): the server lists one
+       file per hash, from the folder whose path sorts first (gg), with the other in `also`. A program held in
+       both is a Master System program (programs also sold for the Game Gear stay on the Master System
+       wall), so it goes on the Master System wall. Today one file: the
+       Korean Wonder Kid, whose bytes are also the Wonder Kid (USA) (Proto) in the Game Gear folder. */
+    if (sys === 'gg' && it.also && it.also.indexOf('sms') >= 0) sys = 'sms';
+    /* THE SUFAMI TURBO (24 Nov 2026) is its own wall (index.html ATARI_SYSTEMS sufami): a server may list its
+       mini-cartridges (.st) under its own system id sufami, or under snes; either way they go on the Sufami Turbo wall. */
+    if (sys === 'snes' && String(it.format || '').toLowerCase() === 'st') sys = 'sufami';
+    /* The Sufami Turbo switch (index.html window.CW_SUFAMI_ON, 25 Nov 2026): while off, its games are not shown anywhere. */
+    if (sys === 'sufami' && !window.CW_SUFAMI_ON) return null;
     if (atariPrefixes()[sys]) return { id: sys + '-x' + h12, kind: 'atari' };
     if (sys === 'pokemini') {
       var p = identify(it.sha256);
@@ -824,9 +835,12 @@
       else if (kind === 'nes') out[id] = it.system === 'fds' ? { n: it.title, z: e.size, m: 20, c: 'fds' }
         : it.system === 'famicom' ? { n: it.title, z: e.size, m: null, c: 'famicom' }   // nes-console.js step 2: explicit console
         : { n: it.title, z: e.size, m: null };
-      else if (kind === 'atari') out[id] = { s: it.system, n: it.title, z: e.size };
+      else if (kind === 'atari') out[id] = { s: id.slice(0, id.lastIndexOf('-x')), n: it.title, z: e.size };   // the site id's system (siteIdFor: the same bytes in sms and gg go on the Master System wall), never re-read from the listing
       else if (kind === 'pm') out[id] = { n: it.title, z: e.size };
       else return;
+      /* A 64DD DISK (26 Nov 2026): the server lists it as an N64 game in the .ndd form; dd marks it, so its tile and
+         drawer show the 64DD (index.html _n64IsDisk; the size alone also says so, as the play page's disk.mjs reads it). */
+      if (kind === 'atari' && out[id].s === 'n64' && (String(it.format || '').toLowerCase() === 'ndd' || /\.ndd$/i.test(String(it.file_name || '')))) out[id].dd = 1;
       added[id] = true; n++;
     });
     C.added[kind] = added;
@@ -1233,11 +1247,11 @@
   function preloadFirmware(id) {
     var e = C.byId[id];
     if (!e || !e.entry) return [];
-    var sys = e.entry.system, want = [];
+    var sys = e.kind === 'atari' && /-x[0-9a-f]{12}$/.test(id) ? id.slice(0, id.lastIndexOf('-x')) : e.entry.system, want = [];   // the wall's system (siteIdFor)
     if (e.kind === 'gb') want = e.sgb || sys === 'sgb' ? ['gb', 'gbc', 'sgb'] : ['gb', 'gbc'];
     else if (e.kind === 'nes') want = sys === 'fds' ? ['fds'] : [];
     else if (e.kind === 'pm') want = ['pokemini'];
-    else if (e.kind === 'atari') want = sys === 'a2600' ? [] : [sys];
+    else if (e.kind === 'atari') want = sys === 'a2600' ? [] : sys === 'sufami' ? ['snes'] : [sys];   // the Sufami Turbo's base program is a Super Nintendo start-up file (24 Nov 2026)
     if (!want.length) return [];
     var out = {}, WAV = /\.wav$/i;
     var add = function (b) {
@@ -1453,6 +1467,25 @@
     var want = String(name || '').toUpperCase(), hit = null;
     cassettes().forEach(function (c) { if (!hit && String(c.name).toUpperCase() === want) hit = c.id; });
     return hit;
+  }
+  /* A LARGE GAME IN PIECES (22 Nov 2026, the Nintendo 64: 4 to 64 MB a game). The servers that hold
+     a title and answer now, nearest first, each as { sha256, size, url, server, fetch }: the file's
+     data address and a fetch that carries this device's token (a data channel too, by timedFetch).
+     Nothing is fetched here; play/host/site-relay.js asks for the file in ranges (API.md 6.3). */
+  function rangedSources(id) {
+    var e = C.byId[id]; if (!e) return [];
+    var out = [];
+    reachable(e).forEach(function (s) {
+      var tok = tokenOf(s.id); if (!tok) return;
+      out.push({ sha256: e.sha256, size: e.size, server: label(s),
+        url: s.base + '/api/v1/' + e.what + '/' + e.sha256 + '/data',
+        fetch: function (u, init) {
+          var o = Object.assign({}, init || {});
+          o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + tok.device_token });
+          return timedFetch(u, o, 30000);
+        } });
+    });
+    return out;
   }
   function readRange(id, off, len) {
     var e = C.byId[id]; if (!e) return Promise.reject(new Error('no such tape'));
@@ -1838,9 +1871,12 @@
   }
   if (nothingSetUp()) C.readyResolve();
 
+  /* No vault part to answer (21 Nov 2026): the head script's wait (index.html, html.cw-vaultwait) ends now. */
+  function liftVaultWait() { try { document.documentElement.classList.remove('cw-vaultwait'); } catch (e) {} }
+
   function init(code) {
     code = String(code || '').toLowerCase();
-    if (!UUID_RE.test(code)) { C.readyResolve(); return C.ready; }
+    if (!UUID_RE.test(code)) { liftVaultWait(); C.readyResolve(); return C.ready; }
     if (C.vault === code) return C.ready;
     var old = C.vhp;
     return storeKey(code).then(function (vhp) {
@@ -1852,7 +1888,7 @@
       injectSettings();
       if (Object.keys(C.servers).length) rebuild();
       loadReach().then(function (r) {
-        if (!r || C.vault !== code) { render(); return; }
+        if (!r || C.vault !== code) { if (!r) liftVaultWait(); render(); return; }
         /* Then look once more, so trusted servers not in the room show as not online instead of waiting. */
         return Promise.resolve(r.start(reachHooks())).then(function () { if (C.vault === code) return refresh(); });
       });
@@ -2044,14 +2080,24 @@
     var aside = all.filter(function (sid) { return shown.indexOf(sid) < 0; });
     var offline = [];
     try { offline = (R && C.vault && R.offlineTrusted) ? R.offlineTrusted() : []; } catch (e) { offline = []; }
+    /* (21 Nov): off crystalworlds.media (the home address, a local copy) the introducer is never
+       reached, so a server this vault joined over the internet is not "not online": it is reached here by
+       Direct connect only. Its row says so and offers Direct connect, and it never offers to drop the server
+       from the vault (that would remove it on every device). Once a server is connected here, these rows go. */
+    var offSite = false;
+    try { offSite = !!(R && R.offSite && R.offSite()); } catch (e) { offSite = false; }
+    if (offSite && shown.length) offline = [];
     var html = '';
     if (shown.length || offline.length) {
       shown.forEach(function (sid) { html += rowHtml(sid); });
       offline.forEach(function (o) {
         html += '<div class="cws-row" data-state="offline" style="' + BOX + '"><div style="display:flex; gap:10px; align-items:baseline; justify-content:space-between; flex-wrap:wrap;">' +
-          '<div style="font-size:13px; font-weight:700; color:var(--text);">' + esc(o.name) + '</div><div class="cws-state" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--muted);">Not online now</div></div>' +
-          '<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-top:4px;">over the internet</div>' +
-          '<button type="button" class="cws-other" data-cws-action="cwr-forget-key" data-key="' + esc(o.key) + '" style="' + LINK + '">Use a different server</button></div>';
+          '<div style="font-size:13px; font-weight:700; color:var(--text);">' + esc(o.name) + '</div><div class="cws-state" style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--muted);">' + (offSite ? 'Not on this address' : 'Not online now') + '</div></div>' +
+          (offSite
+            ? '<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-top:4px;">Over the internet, this server is reached from crystalworlds.media only. On this address, connect to it on your home network with Direct connect.</div>' +
+              '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">' + button({ label: 'Direct connect', kind: 'accent', action: 'direct' }).outerHTML + '</div></div>'
+            : '<div style="font-size:12px; color:var(--muted); line-height:1.5; margin-top:4px;">over the internet</div>' +
+              '<button type="button" class="cws-other" data-cws-action="cwr-forget-key" data-key="' + esc(o.key) + '" style="' + LINK + '">Use a different server</button></div>');
       });
     } else {
       var card = '';
@@ -2253,7 +2299,7 @@
     /* The Super Game Boy shelf (25 Oct): the Game Boy ids of every title a joined server
        holds in its sgb folder, whether or not a copy is also in gb or gbc. */
     sgbIds: function () { return Object.keys(C.byId).filter(function (id) { var e = C.byId[id]; return e.kind === 'gb' && e.sgb; }); },
-    fetchBytes: fetchBytes, fetchB64: fetchB64,
+    fetchBytes: fetchBytes, fetchB64: fetchB64, rangedSources: rangedSources,   // rangedSources: the Nintendo 64's games in pieces (22 Nov 2026)
     preloadFetch: preloadFetch, preloadFirmware: preloadFirmware, preloadFetchSha: preloadFetchSha,   // preload.js (18 Nov 2026)
     bootChoices: bootChoices, fetchBootSha: fetchBootSha, bootFileByName: bootFileByName,
     bootGeneric: bootGeneric, firmwareList: firmwareList,   // FW1 (2026-10-22)

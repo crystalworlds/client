@@ -18,7 +18,7 @@
 (function () {
   'use strict';
   if (window.CwEmuCards) return;
-  const IMG = k => 'images/consoles/' + k + '.webp?v=2.2.2';
+  const IMG = k => 'images/consoles/' + k + '.webp?v=2.3.0';
   const P = (img, name) => ({ img, name });
   const N = name => ({ name });
 
@@ -91,7 +91,7 @@
   const SITE_VERSION = (() => {
     const el = document.querySelector('#vault-overlay .modal-title');
     const m = el && /(\d+\.\d+\.\d+)/.exec(el.textContent || '');
-    return m ? m[1] : '2.2.2';
+    return m ? m[1] : '2.3.0';
   })();
   const COMPARE = {
     /* GB versions (2026-10-18): the board (gbdev.io/GBEmulatorShootout, run 'Updated On Thu, 04 Jun 2026')
@@ -203,10 +203,48 @@
       ],
       note: 'Every emulator was given the same boot firmware except Handy, which only takes its own.',
       download: { href: '/downloads/atarilynx-tests/atarilynx-test-cartridges.zip', label: 'our 10 Lynx test cartridges in one zip (the parts lynx-tests does not cover), with a read-me and their source' } },
+    /* Nintendo 64 (22 Nov 2026): 17 public test suites, three runs each on 21 Nov 2026 (UTC), every run agreeing:
+       ours on the core build 524e9587f1d2 (pilot main 1fe2ad1, the core the site serves); ares v148 and Mupen64Plus
+       2.6.0 on 21 Nov 2026 by the same instrument (their figures do not depend on our core and were not run again).
+       A suite an emulator cannot be given is "not run". "No reading": the run went, but the emulator printed nothing
+       of the program's own text, so there is no figure; never counted as a failure, nothing estimated. Failures are
+       counts. The N64 record: the N64 core's scores file (cw-scores/1, 17 suites) and its changes note. */
+    n64: { test: 'The public test programs for the Nintendo 64: 17 suites, each judged by its own count (the unit under the suite’s name). Every suite was run three times on each emulator with the same files, and every run agreed.',
+      cols: [['Ours', SITE_VERSION, '21 Nov 2026'], ['ares', 'v148', '21 Nov 2026'], ['Mupen64Plus', '2.6.0', '21 Nov 2026']],
+      suites: [
+        ['nemu64-test, base level', 'cases', '4,637 of 4,637', '4,192 of 4,637 (445 failed)', 'no reading'],
+        ['nemu64-test, base level in 4 MB', 'cases', '4,637 of 4,637', '4,192 of 4,637 (445 failed)', 'no reading'],
+        ['nemu64-test, timing and cycle levels', 'cases', '1,607 of 1,617 (10 failed)', '19 of 1,617 (1,598 failed)', 'no reading'],
+        ['nemu64-test, COP0 hazard level', 'cases', '2 of 5 (3 failed)', '0 of 5 (5 failed)', 'no reading'],
+        ['libdragon’s test program', 'tests (skipped tests left out)', '213 of 224 (11 failed)', '210 of 224 (14 failed)', 'no reading'],
+        ['n64_pi_dma_test', 'rows of 383 transfers, judged by the program', '64 of 64', '58 of 64 (6 failed)', 'no reading'],
+        ['rsp_inval_instrs', 'the program’s verdict', '1 of 1', '1 of 1', 'no reading'],
+        ['N64-IntegerMulDiv-Test', 'MULT and DIV cases', '1,499,479 of 1,499,479', '1,499,479 of 1,499,479', 'no reading'],
+        ['Dillon’s n64-tests', 'programs', '26 of 26', 'not run', '24 of 26 (2 failed)'],
+        ['N64-CPU-Tests', 'files the same as the console’s', '30 of 30', 'not run', 'not run'],
+        ['krom’s CPUTest', 'programs that draw a verdict', '95 of 97 (2 failed)', 'not run', '74 of 95 (21 failed; 2 no stable reading)'],
+        ['krom’s RSPTest', 'programs that draw a verdict', '54 of 55 (1 failed)', 'not run', 'not run'],
+        ['r64emu’s RSP goldens', 'cases', '1,380 of 1,380', 'not run', 'not run'],
+        ['snapper64 (the drawing unit)', 'tests the same as the console’s snapshots', '5,265 of 6,632 (1,367 failed)', 'not run', 'not run'],
+        ['SaveTest-N64', 'rows right', '72 of 72', 'not run', 'not run'],
+        ['Controller test programs (JoypadTest-N64, n64_controller_test, krom’s Input)', 'judged rows', '25 of 25', 'not run', 'not run'],
+        ['n64-systemcrash', 'crash cases (a case passes when the machine does not come back from it)', '24 of 29 (5 failed)', 'not run', 'not run'],
+      ],
+      note: 'We pass 10 of the 17 suites in full. Where ares ran the same suite, we pass as many or more on every one. Mupen64Plus printed nothing of the program’s own text on the eight suites that report through it, so those have no reading, not a failure; on Dillon’s tests and krom’s CPUTest it has its figures above. The suites marked not run were not given to that emulator. The timing level of nemu64-test still finds 10 of its 1,617 checks about one cycle short of the console’s, and snapper64 finds the drawing unit’s output different from the console’s snapshots in 1,367 of its 6,632 tests.',
+      download: { href: '/downloads/n64-tests/n64-test-cartridges.zip', label: 'our 49 test cartridges in one zip, with a read-me, their source and the console answers' } },
   };
   function compareHTML(key) {
     const C = COMPARE[key];
     if (!C) return '';
+    /* A console measured on several suites (the Nintendo 64): one row per suite, one column per emulator, each
+       column with its version and its date. */
+    if (C.suites) return `<details class="emu-cmp"><summary>How we compare</summary>
+      <p class="emu-lib-note">${esc(C.test)}</p>
+      <div class="emu-lad-tw"><table class="emu-lib-t emu-cmp-t"><thead><tr><th scope="col">Suite</th>${C.cols.map(([n, v, d]) => `<th scope="col"${n === 'Ours' ? ' class="emu-cmp-ours"' : ''}>${esc(n)}<br><small>${esc(v)}, ${esc(d)}</small></th>`).join('')}</tr></thead>
+      <tbody>${C.suites.map(r => `<tr><th scope="row">${esc(r[0])}<br><small>${esc(r[1])}</small></th>${r.slice(2).map((c, i) => `<td${i === 0 ? ' class="emu-cmp-ours"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="emu-lib-note">${esc(C.note)}</p>
+      ${C.download ? `<p class="emu-lib-note"><b>Download:</b> <a href="${esc(C.download.href)}" download>${esc(C.download.label)}</a>, MIT licence</p>` : ''}
+    </details>`;
     return `<details class="emu-cmp"><summary>How we compare</summary>
       <p class="emu-lib-note">${esc(C.test)}</p>
       <table class="emu-lib-t emu-cmp-t"><thead><tr><th scope="col">Emulator</th><th scope="col">Version</th><th scope="col">Score</th><th scope="col">Measured</th></tr></thead>
@@ -343,9 +381,85 @@
       ],
       score: { big: '128 of 129', text: 'on the Lynx hardware test suite, whose answers were recorded on real Lynx consoles', date: '7 Oct 2026 (tests), 29 Oct 2026 (games)' },
       proof: { fn: 'atariEmulationTabHTML', args: [{ catalogue: 'atarilynx' }], anchor: 'atarilynxemu-11-interface', title: 'Atari Lynx: the interface and the board' } },
+
+    /* The Sega 8-bit family (20 Nov 2026): one core, three cards, like the Ataris, because people know the
+       consoles, not how our cores are built. No rank: no other emulator has been measured on the same tests. */
+    { name: 'SG-1000', count: 1, lib: 'sg1000', sub: 'One core for the whole Sega 8-bit family',
+      plays: [P('sg-1000', 'SG-1000')],
+      key: ['Z80', 'TMS9918A', 'SN76489'],
+      chips: [
+        ['Processor', 'Z80 at 3.58 MHz'],
+        ['Picture', 'The TMS9918A, with its own 16 colours'],
+        ['Sound', 'The SN76489 sound chip'],
+        ['Models', 'SG-1000 and SG-1000 II, and the Mark III, which takes the same cartridges'],
+        ['Cartridges', 'Plain cartridges, the RAM cartridges and the Taiwanese boards, and My Cards through the Card Catcher'],
+        ['Firmware', 'None: the console starts the cartridge itself'],
+      ],
+      score: { big: '1,604,000 of 1,604,000', text: 'on SingleStepTests, the public Z80 processor test. {games} games tested ({files} files). {play}.', date: '21 Nov 2026' },
+      proof: { fn: 'sega8EmulationTabHTML', args: [{ catalogue: 'sg1000' }], anchor: '', title: 'SG-1000: how it is built and checked' } },
+
+    { name: 'Master System', count: 1, lib: 'sms', sub: 'The Master System, Master System II, Mark III and the Japanese Master System',
+      plays: [P('mastersystem', 'Master System')],
+      key: ['Z80', 'Sega VDP', 'SN76489, YM2413'],
+      chips: [
+        ['Processor', 'Z80 at 3.58 MHz'],
+        ['Picture', 'The 315-5124 and 315-5246 video chips, Mode 4 and the TMS modes'],
+        ['Sound', 'Sega’s SN76489 sound chip, and the YM2413 FM chip of the Japanese Master System and the FM Sound Unit'],
+        ['Firmware', 'Your console’s own start-up firmware from your game server, which refuses what a real one refuses; else ours'],
+        ['Cartridges', 'The Sega mapper with battery RAM, Codemasters, Korean and Taiwanese boards, the Korean multi-game boards, the EEPROM board, and cards'],
+        ['Accessories', 'Light Phaser, Paddle, Sports Pad and 3-D Glasses'],
+      ],
+      score: { big: '58 of 58', text: 'on VDPTest, the public Master System video test, on the Master System and Master System II, NTSC and PAL. {games} games tested ({files} files). {play}.', date: '22 Nov 2026' },
+      proof: { fn: 'sega8EmulationTabHTML', args: [{ catalogue: 'mastersystem' }], anchor: '', title: 'Master System: how it is built and checked' } },
+
+    { name: 'Game Gear', count: 1, lib: 'gg', sub: 'Every Game Gear board, and its Master System mode',
+      plays: [P('gamegear', 'Game Gear')],
+      key: ['Z80', 'Sega VDP (4,096 colours)', 'Stereo SN76489'],
+      chips: [
+        ['Processor', 'Z80 at 3.58 MHz'],
+        ['Picture', 'The 315-5378 video chip and its 160 x 144 screen of 4,096 colours, with the slow screen’s blur'],
+        ['Sound', 'The SN76489 sound chip in stereo'],
+        ['Firmware', 'Your Game Gear’s own start-up firmware from your game server, which refuses what a real one refuses; else ours'],
+        ['Modes', 'Game Gear and Master System mode, two-chip, one-chip and the first boards, and the Japanese Game Gear'],
+      ],
+      score: { big: '1,604,000 of 1,604,000', text: 'on SingleStepTests, the public Z80 processor test. {games} games tested ({files} files). {play}.', date: '21 Nov 2026' },
+      proof: { fn: 'sega8EmulationTabHTML', args: [{ catalogue: 'gamegear' }], anchor: '', title: 'Game Gear: how it is built and checked' } },
+
+    /* The Nintendo 64 (22 Nov 2026): the accurate build. Its score is the 17 public suites of COMPARE.n64, measured
+       on the core the site serves (524e9587, 21 Nov 2026). "See the proof" opens the N64 Emulation tab (22 Nov 2026, WASM_Source/n64-tabs) at the table of every suite, its scores chapter's section 2;
+       no rank yet. The bar counts only the games a real check has played. */
+    { name: 'Nintendo 64', count: 1, lib: 'n64', sub: 'It follows the console closely; in Chrome and Edge on a computer it draws and runs the signal processor on threads of their own',
+      plays: [P('n64', 'Nintendo 64'), P('n64dd', '64DD')],   // the 64DD (26 Nov 2026), as the NES card shows the Disk System; its picture is the icon wall's
+      key: ['VR4300', 'Reality Co-Processor', 'PIF'],
+      chips: [
+        ['Processor', 'NEC VR4300 at 93.75 MHz'],
+        ['Picture and sound', 'The Reality Co-Processor: its signal processor and its drawing unit, and the video and audio interfaces'],
+        ['64DD', 'The Japanese disk drive and its clock; its start-up program from your game server; each disk keeps its own save, and a disk made to expand a cartridge asks for that cartridge'],
+        ['Firmware', 'The start-up program for the game’s region from your game server, else ours'],
+        ['Saves', 'The cartridge’s EEPROM, battery RAM or flash, and the Controller Pak'],
+        ['Accessories', 'Controller Pak, Rumble Pak, and the Expansion Pak or the Jumper Pak'],
+      ],
+      score: { big: '10 of 17', text: 'public test suites passed in full, among them nemu64-test’s base level (4,637 of 4,637), the processor’s multiply and divide (1,499,479 cases), the signal processor’s goldens (1,380 of 1,380) and the save chips (72 of 72). The largest gap is in drawing: snapper64, 5,265 of 6,632. How we compare shows every suite and every failed check, with ares and Mupen64Plus', date: '21 Nov 2026' },
+      proof: { fn: 'n64EmulationTabHTML', args: [{ catalogue: 'n64' }], anchor: 'n64emu-95-scores-s2', title: 'Nintendo 64: the public test suites' } },
+
+    /* The Super Nintendo (23 Nov 2026): its score is the public 65C816 processor test the core passes in full on the build
+       the site serves (the core's chapters, the 65c816 chapter's gates). The bar counts only the games a real check has played:
+       none yet, so every game is Untested until the library check. "See the proof" opens its Emulation tab. */
+    { name: 'Super Nintendo', count: 1, lib: 'snes', sub: 'The Super Nintendo and the Super Famicom, NTSC and PAL, with the chips in their cartridges',
+      plays: [P('snes', 'Super Nintendo')],
+      key: ['65C816', 'S-PPU1 and S-PPU2', 'S-SMP and S-DSP'],
+      chips: [
+        ['Processor', 'The 5A22 S-CPU: a 65C816 at 3.58, 2.68 or 1.79 MHz, with its DMA and HDMA, timers and multiply and divide units'],
+        ['Picture', 'The two picture chips stepped dot by dot: every background mode, Mode 7, windows, colour maths, hi-res and interlace'],
+        ['Sound', 'The SPC700 and the S-DSP on its 32-step schedule, eight voices in stereo'],
+        ['Cartridges', 'LoROM, HiROM and ExHiROM boards from a table of every known release, battery saves, and the SA-1 and Super FX chips'],
+        ['Controllers', 'Two pads, the multitap, the mouse, the Super Scope and the Justifier, as the cartridge wants'],
+      ],
+      score: { big: '1,610 of 1,610', text: 'on cputest-full, the public 65C816 processor test checked against a console. {games} games tested ({files} files). {play}.', date: '23 Nov 2026' },
+      proof: { fn: 'snesEmulationTabHTML', args: [{ catalogue: 'snes' }], anchor: '', title: 'Super Nintendo: how it is built and checked' } },
   ];
   const TJ = { name: 'Tetris Jr.', plays: [P('tetrisjr', 'Tetris Jr.')],
-    text: 'Not emulated: rebuilt. No program from this 1988 prototype survives to emulate, so its rules were rebuilt from the only unit known, and it is not counted in the 11.' };
+    text: 'Not emulated: rebuilt. No program from this 1988 prototype survives to emulate, so its rules were rebuilt from the only unit known.' };
 
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const pics = list => list.map(p => p.img
@@ -442,6 +556,10 @@
     a2600: { files: 2089 },
     a5200: { files: 502 },
     a7800: { files: 805 },
+    sg1000: { files: 353 },
+    sms: { files: 1572 },
+    gg: { files: 977 },
+    snes: { files: 4766 },
   };
   function ladCounts(key) {
     const C0 = ladder && ladder.cards[key];
@@ -470,13 +588,16 @@
     }).filter(Boolean).join(' ');
   }
 
+  /* No See the proof while the Emulation tab it opens is switched off (index.html ATARI_SYSTEMS emulationTab:
+     false, the Nintendo 64 from 23 Nov 2026). The card's Evaluation preview tag: window.cwSysPreview. */
+  const proofShown = p => { const a = p.args && p.args[0]; return !(a && a.catalogue && window.cwEmulationTabShown && !window.cwEmulationTabShown(a.catalogue)); };
   function cardHTML(c, i) {
     /* rank: [place, then grey note lines, one per line] from the card's measured comparison (2026-10-18); none = not ranked yet.
        G&W 'Level with MAME' (decided: a comparison, allowed under the 2026-10-04 scoreboard rule): the 4 Oct
        acceptance A2 ran all 61 units against the reference port, 34 identical at every step and the 27 SM511/512 as the reference. */
     return `<article class="emu-card">
       <div class="emu-top"><div class="emu-pics${c.grid2 ? ' emu-pics-2x2' : ''}">${pics(c.plays)}</div>${c.rank ? `<div class="emu-rank"><b>${esc(c.rank[0])}</b>${c.rank.slice(1).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}</div>
-      <h3 class="emu-name">${esc(c.name)}${c.count > 1 ? ` <span class="emu-n">${c.count} of the 11 emulators built</span>` : ''}</h3>
+      <h3 class="emu-name">${esc(c.name)}${c.count > 1 ? ` <span class="emu-n">${c.count} of the 15 emulators built</span>` : ''}${window.cwSysPreview && window.cwSysPreview(c.lib) ? window.CW_PREVIEW_TAG : ''}</h3>
       ${c.sub ? `<p class="emu-sub">${esc(c.sub)}</p>` : ''}
       <ul class="emu-key">${c.key.map(k => chipEl('li', k)).join('')}</ul>
       <details class="emu-chips"><summary>Every chip it models${c.chips.some(([k]) => k === 'Accessories') ? ', and the accessories' : ''}</summary>
@@ -484,8 +605,8 @@
       </details>
       ${c.libLine ? `<p class="emu-lib-line">${esc(c.libLine)}</p>` : `<div class="emu-lad-slot" data-lad="${esc(c.lib)}">${ladderHTML(c.lib)}</div>`}
       ${compareHTML(c.lib)}
-      <div class="emu-score"><b>${esc(c.score.big)}</b> <span${/\{\w+\}/.test(c.score.text) ? ` data-score-lad="${esc(c.lib)}" data-score-t="${esc(c.score.text)}"` : ''}>${esc(scoreText(c.score.text, c.lib))}</span>${c.score.date ? `<small>Measured ${esc(c.score.date)}</small>` : ''}</div>
-      <button type="button" class="emu-proof" data-emu-proof="${i}">See the proof</button>
+      ${c.score ? `<div class="emu-score"><b>${esc(c.score.big)}</b> <span${/\{\w+\}/.test(c.score.text) ? ` data-score-lad="${esc(c.lib)}" data-score-t="${esc(c.score.text)}"` : ''}>${esc(scoreText(c.score.text, c.lib))}</span>${c.score.date ? `<small>Measured ${esc(c.score.date)}</small>` : ''}</div>` : ''}
+      ${c.proof && proofShown(c.proof) ? `<button type="button" class="emu-proof" data-emu-proof="${i}">See the proof</button>` : ''}
     </article>`;
   }
 

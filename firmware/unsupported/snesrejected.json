@@ -1,0 +1,57 @@
+{
+ "format": 1,
+ "list": "snesrejected",
+ "label": "Super Nintendo: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "snes"
+ ],
+ "internal": true,
+ "count": 9,
+ "entries": {
+  "05023df067d00c52dd77cc29b3af2c9d3141f752baae6383e8b8c33e9515948d": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Pro Action Replay cheat add-on with no game behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "07130e4e227724be1fec4a300d38a4bd40642cc027857294bb9749a97155cbda": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a NES cartridge adaptor’s own program: the adaptor plays NES cartridges, which this console can’t do on its own, so it is a tool, not a game."
+  },
+  "26f0c679d7c5828167681e388c26d52eaa02ecf645aa7325eb118d30b19529c4": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Pro Action Replay cheat add-on with no game behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "349e295ca03131ea2aff3833182f19aa47aeb47436c6b24225023d67f3e8bf87": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Pro Action Replay cheat add-on with no game behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "6bf730cc8c70d086fd09e34209e079ff817f04b90e4da6742b77d751aa1ff3d9": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the XBAND modem cartridge’s program: it needs its modem and the XBAND network, which closed in 1997, so it is a tool, not a game."
+  },
+  "86425e9b1ef0809efc4107af1d91ef87eb1c91a2c12b35220038c3001ffbcf53": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Pro Action Replay cheat add-on with no game behind it: a tool, not a game, and it can’t start on its own."
+  },
+  "86487277548cd3f9057756f5112fcbe8f837a5154fa32dc31411e49d09d67806": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is a NES cartridge adaptor’s own program: the adaptor plays NES cartridges, which this console can’t do on its own, so it is a tool, not a game."
+  },
+  "cb804a832aa25aac23ceaee24b1c21c26948de2ae0c3407809c83aa8fb921017": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the XBAND modem cartridge’s program: it needs its modem and the XBAND network, which closed in 1997, so it is a tool, not a game."
+  },
+  "d91623d4b58dc07e93f777a3bc74251f6584a329efdccf4c2b2181ab6c01030d": {
+   "kind": "cartridge",
+   "code": "NOT_A_PROGRAM",
+   "reason": "This file is the Pro Action Replay cheat add-on with no game behind it: a tool, not a game, and it can’t start on its own."
+  }
+ }
+}

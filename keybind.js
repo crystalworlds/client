@@ -45,8 +45,8 @@
   const isRemoteKey = k => !isPadKey(k) && DEVICE.test(k);
   const kindOf = k => (isPadKey(k) ? 'pad' : isRemoteKey(k) ? 'remote' : 'keyboard');
   const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', 'Up', 'Down', 'Left', 'Right', 'Home'];
-  const SYSTEMS = ['gb', 'nes', 'a2600', 'a5200', 'a7800', 'alynx', 'twin', 'tj', 'gnw', 'pm'];
-  const SYS_SHORT = { gb: 'Game Boy', nes: 'NES', a2600: 'Atari 2600', a5200: 'Atari 5200', a7800: 'Atari 7800', alynx: 'Atari Lynx', twin: 'Mario / Zelda', tj: 'Tetris Jr.', gnw: 'Game & Watch', pm: 'Pokémon mini' };
+  const SYSTEMS = ['gb', 'nes', 'a2600', 'a5200', 'a7800', 'alynx', 'sg1000', 'sms', 'gg', 'n64', 'snes', 'twin', 'tj', 'gnw', 'pm'];
+  const SYS_SHORT = { gb: 'Game Boy', nes: 'NES', a2600: 'Atari 2600', a5200: 'Atari 5200', a7800: 'Atari 7800', alynx: 'Atari Lynx', sg1000: 'SG-1000', sms: 'Master System', gg: 'Game Gear', n64: 'Nintendo 64', snes: 'Super Nintendo', twin: 'Mario / Zelda', tj: 'Tetris Jr.', gnw: 'Game & Watch', pm: 'Pokémon mini' };
 
   /* TABS AND FOLDING SECTIONS (2026-10-17: the menu was far too long). Three tabs at the
      top: Controller, Keyboard, Game controls; inside them, sections that fold (<details>, so a

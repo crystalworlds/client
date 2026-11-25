@@ -67,13 +67,14 @@
     if (!loads.size) { hide(); return; }
     const now = performance.now();
     let oldest = Infinity, got = 0, size = 0, unknown = false, slow = false;
-    for (const l of loads.values()) { oldest = Math.min(oldest, l.t0); got += l.got; if (l.size > 0) size += l.size; else unknown = true; if (l.slow) slow = true; }
+    let said = '';
+    for (const l of loads.values()) { oldest = Math.min(oldest, l.t0); got += l.got; if (l.size > 0) size += l.size; else unknown = true; if (l.slow) slow = true; if (l.words) said = l.words; }
     if (now - oldest < SHOW_AFTER_MS) { clearTimeout(timer); timer = setTimeout(paint, SHOW_AFTER_MS - (now - oldest) + 10); return; }
     const b = ensure();
     const known = !unknown && size > 0 && !slow;   // busy: the bar moves, with no number, until bytes come
     b.classList.toggle('lb-unknown', !known);
     b.classList.toggle('lb-slow', slow);
-    const words = slow ? 'Your game server is busy right now. Still loading…' : 'Loading the game';
+    const words = slow ? 'Your game server is busy right now. Still loading…' : said || 'Loading the game';
     b.querySelector('.lb-t').textContent = words; b.setAttribute('aria-label', words);
     const pct = known ? Math.max(0, Math.min(100, got / size * 100)) : 0;
     b.querySelector('.lb-fill').style.width = known ? pct.toFixed(1) + '%' : '';
@@ -95,9 +96,12 @@
     const l = loads.get(k); if (!l) return;
     const was = l.slow;
     l.got = got; if (size > 0) l.size = size;
-    l.slow = false;
+    l.slow = false; l.words = '';
     if ((el && !el.hidden) || was) paint();
   }
+  /* A load's own words for a moment (22 Nov 2026, the Nintendo 64's fetch in pieces: "Checking the game is
+     whole", "The connection dropped; trying again (2 of 4)"); the next step goes back to "Loading the game". */
+  function say(k, words) { const l = loads.get(k); if (!l) return; l.words = String(words || ''); if (el && !el.hidden) paint(); }
   function done(k) { if (loads.delete(k)) paint(); }
 
   /* The game server's downloads (cws.js events). */
@@ -128,5 +132,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchWindows, { once: true }); else watchWindows();
 
-  window.CwLoadBar = { start, step, done, _state: () => ({ loads: Array.from(loads.entries()), shown: !!(el && !el.hidden) }) };
+  window.CwLoadBar = { start, step, done, say, _state: () => ({ loads: Array.from(loads.entries()), shown: !!(el && !el.hidden) }) };
 })();

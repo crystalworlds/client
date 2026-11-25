@@ -24,7 +24,7 @@
 (function () {
   'use strict';
   if (window.CwSiteRelay) return;
-  const BUILD = '2.2.2';
+  const BUILD = '2.3.0';
 
   /* Per console: how a game id and a firmware id are found. Each `pack` / `site` / `server`
      returns base64 or null. Added to per phase (the build plan, section 5). */
@@ -239,6 +239,164 @@
     server: what => (/^kv:/.test(what) ? kidVidTape(what.slice(3)) : /^bios(@|$)/.test(what) ? atariServerBios(sys, what.split('@')[1]) : ((window.CWS && CWS.has(what)) ? CWS.fetchB64(what) : null)),
   };
 
+  /* THE SEGA 8-BIT DEVICES (20 Nov 2026; play/cores/sega8/). A game id is the site's whole device id
+     (sms-x<12 hex>). No content pack and no baked shelf: the visit's own cache (a file the site already
+     holds), then a game server. The start-up firmware is asked for by slot (the core's manifest:
+     sms1, sms2, smsj, gg) and answered with the game server's generic file of that role, by hash;
+     none answers "none" and the core runs ours, the firmware order. Never another emulator's. */
+  const SEGA_FW_ROLE = { sms: { sms1: 'sms1', sms2: 'sms2', smsj: 'smsj', smsk: 'smsk' }, gg: { gg: 'boot' }, sg1000: {} };
+  /* A firmware a cartridge may prefer that the game servers list under no role of its own (20 Nov 2026):
+     smsk, Samsung's Korean Master System II firmware (the only known dump), asked for by its hash when a
+     Korean cartridge's record names it. The game server lists it among its other start-up images. */
+  const SEGA_FW_SHA = { smsk: '57abf3c00c82a8e042ebeb2bfe412adac9ba005e9009845236390de3ee645248' };
+  async function segaServerFw(sys, role) {
+    if (!window.CWS || typeof CWS.bootGeneric !== 'function' || typeof CWS.fetchBootSha !== 'function') return null;
+    const g = CWS.bootGeneric(sys, role, false);
+    const sha = g ? g.sha256 : SEGA_FW_SHA[role];
+    const u = sha ? await CWS.fetchBootSha(sha) : null;
+    return u ? b64of(u) : null;
+  }
+  /* A game built into the Master System's start-up firmware (21 Nov 2026; index.html SEGA8_BUILT_IN): its "game" is
+     the firmware image itself, by its hash, from a game server; the core starts it with an empty cartridge slot. */
+  async function segaBuiltIn(id) {
+    let d = null; try { d = typeof ALL_DEVICES !== 'undefined' ? ALL_DEVICES.find(x => x && x.id === id) : null; } catch (_) {}
+    if (!d || !d.builtIn || !window.CWS || typeof CWS.fetchBootSha !== 'function') return null;
+    const u = await CWS.fetchBootSha(d.builtIn.sha);
+    return u ? b64of(u) : null;
+  }
+  for (const sys of Object.keys(SEGA_FW_ROLE)) SOURCES[sys] = {
+    key: (kind, id) => kind === 'firmware' ? (SEGA_FW_ROLE[sys][id] ? 'fw:' + SEGA_FW_ROLE[sys][id] : null) : id,
+    pack: () => null,
+    site: what => {
+      if (/^fw:/.test(what)) return null;
+      try { if (typeof _atariCartBytes !== 'undefined' && _atariCartBytes.has(what)) return b64of(_atariCartBytes.get(what)); } catch (_) {}
+      return null;
+    },
+    server: what => (/^fw:/.test(what) ? segaServerFw(sys, what.slice(3)) : ((window.CWS && CWS.has(what)) ? CWS.fetchB64(what) : segaBuiltIn(what))),
+  };
+
+  /* THE SUPER NINTENDO (23 Nov 2026; play/cores/snes/). A game id is the site's device id (snes-x<12 hex>): the
+     visit's own cache (a file the site already holds), then a game server, as the Sega devices'. The cartridge
+     chips' program images come by role (the core's manifest: dsp1, dsp1b, dsp2, dsp3, dsp4, cx4, st010, st011,
+     st018, the game server's roles of the same names), asked for only when a cartridge's header names such a
+     chip; sufami (the Sufami Turbo base cartridge's program, asked for only by a Sufami Turbo cartridge); none
+     answers "none". Never another emulator's. */
+  const SNES_FW_ROLE = { dsp1: 1, dsp1b: 1, dsp2: 1, dsp3: 1, dsp4: 1, cx4: 1, st010: 1, st011: 1, st018: 1, sufami: 1 };
+  SOURCES.snes = {
+    key: (kind, id) => kind === 'firmware' ? (SNES_FW_ROLE[id] ? 'fw:' + id : null) : id,
+    pack: () => null,
+    site: what => {
+      if (/^fw:/.test(what)) return null;
+      try { if (typeof _atariCartBytes !== 'undefined' && _atariCartBytes.has(what)) return b64of(_atariCartBytes.get(what)); } catch (_) {}
+      return null;
+    },
+    server: what => (/^fw:/.test(what) ? segaServerFw('snes', what.slice(3)) : ((window.CWS && CWS.has(what)) ? CWS.fetchB64(what) : null)),
+  };
+
+  /* THE NINTENDO 64 (22 Nov 2026; play/cores/n64/). A game id is the site's device id (n64-x<12 hex>).
+     A game is 4 to 64 MB and the whole file must be in the machine before it starts, so it is not sent
+     as one piece of text like the others: the core's own fetch (play/cores/n64/fetch.mjs) asks the game
+     server for it in pieces of 4 MB, checks the whole against the server's name for its bytes, and keeps
+     it in this browser (its database cw-n64-games, by SHA-256), so a second visit fetches nothing. The
+     site's load bar shows the pieces arriving (loadbar.js); the bytes go to the play window whole
+     (n64Game below). The start-up programs come by role, as the Sega devices' do: the game server's
+     generic file for pif-ntsc, pif-pal or pif-mpal; none answers "none" and the core starts with its own. */
+  const N64_FW_ROLE = { 'pif-ntsc': 'pif-ntsc', 'pif-pal': 'pif-pal', 'pif-mpal': 'pif-mpal', 'dd-ipl': 'dd-ipl' };   // dd-ipl: the 64DD drive's start-up program (26 Nov 2026)
+  SOURCES.n64 = {
+    key: (kind, id) => kind === 'firmware' ? (N64_FW_ROLE[id] ? 'fw:' + N64_FW_ROLE[id] : null) : null,   // the game itself: n64Game
+    pack: () => null,
+    site: () => null,
+    server: what => (/^fw:/.test(what) ? segaServerFw('n64', what.slice(3)) : null),
+  };
+  let n64FetchMod = null;
+  /* TIME LIMITS (23 Nov 2026): the browser's storage can hold a request for ever (a database another
+     tab keeps open at an older version, a store that never answers); a game is then fetched rather than read,
+     and one fetched is played from memory rather than kept, so a start never waits on the storage. */
+  const within = (p, ms, fallback) => { let t = 0; return Promise.race([Promise.resolve(p), new Promise(r => { t = setTimeout(() => r(fallback), ms); })]).finally(() => clearTimeout(t)); };
+  function n64Store(mod) {
+    const own = mod.browserStore('cw-n64-games');
+    return {
+      /* A game this device pre-loaded (Settings, Pre-load on device; preload.js) is used as it is; the pre-load
+         store has 10 seconds, this core's own store 15 (none: the game server's copy). */
+      get: async sha => {
+        try { const P = window.CwPreload; const u = P && typeof P.bytes === 'function' ? await within(P.bytes(sha), 10000, null) : null; if (u && u.length) return u; } catch (_) {}
+        return within(Promise.resolve(own.get(sha)).catch(() => null), 15000, null);
+      },
+      /* keeping it has 30 seconds (none: the game plays from memory and is fetched again next time) */
+      put: (sha, bytes) => within(Promise.resolve(own.put(sha, bytes)).catch(() => false), 30000, false),
+      /* (22 Nov 2026, the core's 512 MiB store) the game being loaded is never let go to make room */
+      hold: sha => { try { if (typeof own.hold === 'function') own.hold(sha); } catch (_) {} },
+    };
+  }
+  /* One N64 game, whole: { bytes (Uint8Array), source } or { bytes: null, why } with the fetch's own words. */
+  async function n64Game(id) {
+    if (!/^n64-x[0-9a-f]{12}$/.test(id)) return { bytes: null };
+    if (!window.CWS || typeof CWS.rangedSources !== 'function') return { bytes: null };
+    const list = CWS.rangedSources(id);
+    if (!list.length) return { bytes: null };
+    try { n64FetchMod = n64FetchMod || await within(import(new URL('play/cores/n64/fetch.mjs?v=0095606f96d9', document.baseURI).href), 30000, null); } catch (_) { n64FetchMod = null; }
+    if (!n64FetchMod) return { bytes: null, why: 'the part of the site that fetches the game did not arrive. Check the connection and try again' };
+    const M = n64FetchMod, store = n64Store(M);
+    const bar = window.CwLoadBar || null;
+    let why = null;
+    for (const s of list) {
+      const k = bar ? bar.start(s.size, 'n64:' + id) : null;
+      try {
+        const got = await M.fetchGame({ url: s.url, fetchImpl: s.fetch, store, onProgress: e => {
+          if (!bar || !k) return;
+          if (e.kind === 'progress' || e.kind === 'kept') bar.step(k, e.got || 0, e.total || s.size);
+          else if (e.words && typeof bar.say === 'function') bar.say(k, e.words);
+        } });
+        if (bar && k) bar.done(k);
+        /* The listing's SHA-256 is the file asked for (API.md 6.3, verify every download). */
+        if (got.sha256 !== s.sha256) { why = 'the game server sent another file than the one it lists'; continue; }
+        return { bytes: got.bytes, source: got.from === 'store' ? 'this device' : serverName(id) };
+      } catch (e) {
+        if (bar && k) bar.done(k);
+        why = (e && e.message) || String(e);
+        if (e && e.kind === 'changed') { try { const again = await M.fetchGame({ url: s.url, fetchImpl: s.fetch, store }); if (again.sha256 === s.sha256) return { bytes: again.bytes, source: serverName(id) }; } catch (_) {} }
+      }
+    }
+    return { bytes: null, why };
+  }
+
+  /* THE CARTRIDGE A 64DD DISK EXPANDS (26 Nov 2026; play/cores/n64/disk.mjs, slot dd-cart). A disk whose own code
+     begins "E" asks for the cartridge it expands by that cartridge's header code (role 'cart:CFZJ'), naming no game.
+     A game server lists no header codes, so the cartridge is looked for by its title among the joined servers' N64
+     cartridges (N64_DD_CART: the code's game; a known copy by hash first, then any other copy whose name carries no
+     [..] tag, so a bad, altered or hacked copy is never used), and each one's own header is read first (64 bytes, in
+     any of the three byte orders): only a cartridge whose code is the one asked for is fetched, whole, as an N64 game
+     is (n64Game). None found: no answer, and the disk starts alone and says what it needs (Settings, Boot programs,
+     Choose a file), as before. TABLE-READ (26 Nov 2026, the codes of the library's 33 disks read): the one disk that
+     expands a cartridge is the F-Zero X Expansion Kit (EFZJ), which asks for CFZJ, F-Zero X (Japan). */
+  const N64_DD_CART = { CFZJ: { sha256: ['fa28ed5fd250ee7a948919a28720b8d02bd2b5dd59c5c629e04dde8875bd90d5'], title: /^f-?zero x\b/i } };
+  function n64HeaderCode(h) {
+    if (!h || h.length < 0x40) return null;
+    const at = h[0] === 0x80 ? (i => h[i]) : h[0] === 0x37 ? (i => h[i ^ 1]) : h[0] === 0x40 ? (i => h[i ^ 3]) : null;   // big-endian, pairs swapped, words reversed
+    if (!at) return null;
+    let s = ''; for (let i = 0x3B; i < 0x3F; i++) s += String.fromCharCode(at(i));
+    return /^[0-9A-Z]{4}$/.test(s) ? s : null;
+  }
+  async function n64DiskCart(role) {
+    const m = /^cart:([0-9A-Z]{4})$/.exec(String(role || '')), want = m && N64_DD_CART[m[1]];
+    if (!want || !window.CWS || typeof CWS.titles !== 'function' || typeof CWS.readRange !== 'function') return { bytes: null };
+    const known = t => want.sha256.indexOf(t.sha256) >= 0;
+    let list = [];
+    try {
+      list = CWS.titles().filter(t => t.system === 'n64' && String(t.format || '').toLowerCase() !== 'ndd' && t.available && /^n64-x[0-9a-f]{12}$/.test(t.id) &&
+        (known(t) || (want.title.test(String(t.title || '')) && !/\[(?!!\])[^\]]*\]/.test(String(t.title || '')))));
+    } catch (_) { list = []; }
+    list.sort((a, b) => (known(b) ? 1 : 0) - (known(a) ? 1 : 0) || String(a.title).localeCompare(String(b.title)));
+    for (const t of list.slice(0, 8)) {
+      let code = null;
+      try { code = n64HeaderCode(await within(CWS.readRange(t.id, 0, 64), 20000, null)); } catch (_) { code = null; }
+      if (code !== m[1]) continue;
+      const r = await n64Game(t.id);
+      if (r && r.bytes) return { bytes: r.bytes, source: `${r.source}: ${t.title}` };
+    }
+    return { bytes: null };
+  }
+
   /* Game & Watch (Phase 5, the G&W migration): a game id is the site's device id
      (silver-ball); the unit's key comes from GNW_EMULATED_GAMES. Its files are the old
      window's {key: {program, melody}} map, from the same three places in the same order: a
@@ -343,6 +501,10 @@
     if (ATARI_FW[sys] && id === 'bios') return { slot: 'atari-bios', system: sys, roles: ATARI_ROLES[sys] || ['boot'], want: 'boot' };
     if (sys === 'a2600' && (id === 'arfw' || id === 'arfwpal')) { const r = id === 'arfw' ? 'supercharger' : 'supercharger-pal'; return { slot: 'atari-bios', system: 'a2600', roles: [r], want: r }; }
     if (sys === 'a7800' && id === 'hsc') return { slot: 'atari-bios', system: 'a7800', roles: ['highscore'], want: 'highscore' };
+    /* the Sega devices (20 Nov 2026): one slot per start-up firmware, the game server's role of that name */
+    if (SEGA_FW_ROLE[sys] && SEGA_FW_ROLE[sys][id]) return { slot: 'atari-bios', system: sys, roles: [SEGA_FW_ROLE[sys][id]], want: SEGA_FW_ROLE[sys][id] };
+    /* the Nintendo 64 (22 Nov 2026): one slot per start-up program, the game server's role of that name */
+    if (sys === 'n64' && N64_FW_ROLE[id]) return { slot: 'atari-bios', system: 'n64', roles: [N64_FW_ROLE[id]], want: N64_FW_ROLE[id] };
     return null;
   }
   function firmwareChoices(sys, id, role) {
@@ -435,6 +597,24 @@
       const g = window.CWS && typeof CWS.bootGeneric === 'function' ? CWS.bootGeneric('a7800', 'highscore') : null;
       Promise.resolve(g && g.size === 4096 ? CWS.fetchBootSha(g.sha256) : null)
         .then(u => answer(u ? { b64: b64of(u), source: serverName('a7800') } : {}), () => answer({}));
+      return;
+    }
+    /* A Nintendo 64 game (22 Nov 2026): fetched in pieces (n64Game) and handed over whole as bytes, not
+       text; `why` carries the fetch's own words when it could not come. */
+    /* The cartridge a 64DD disk expands (26 Nov 2026): asked for as firmware dd-cart with its code as the role, found
+       on a game server (n64DiskCart) and handed over whole as an N64 game is. */
+    const n64DdCart = d.cwNeed === 'firmware' && d.sys === 'n64' && d.id === 'dd-cart' && !d.pick;
+    if ((d.cwNeed === 'game' && d.sys === 'n64') || n64DdCart) {
+      stats.asked++;
+      const answer = r => {
+        const u = r && r.bytes;
+        if (u) { stats.answered++; const k = r.source || 'none'; stats.bySource[k] = (stats.bySource[k] || 0) + 1; }
+        try {
+          if (u) { const buf = u.byteOffset === 0 && u.byteLength === u.buffer.byteLength ? u.buffer : u.slice().buffer; ev.source.postMessage({ cwFile: d.n, bytes: buf, source: r.source || null }, '*', [buf]); }
+          else ev.source.postMessage({ cwFile: d.n, b64: null, source: null, why: (r && r.why) || null }, '*');
+        } catch (_) {}
+      };
+      (n64DdCart ? n64DiskCart(String(d.role || '')) : n64Game(String(d.id || ''))).then(answer, () => answer(null));
       return;
     }
     stats.asked++;

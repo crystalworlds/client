@@ -37,7 +37,7 @@
   'use strict';
   if (window.CompatList) return;
 
-  const VERSION = '2.2.2';
+  const VERSION = '2.3.0';
   const BASE = 'firmware/compat/';
   /* Status 4 (28 Oct 2026): a known release (No-Intro) that has not been found, so it has never been
      tested. Listed and filterable, never counted: not in the bar, its percentages or "games tested". */
@@ -68,8 +68,11 @@
     ['gnw', 'Game & Watch', ['gnw']], ['tft', 'Game & Watch colour', ['tft']], ['gb', 'Game Boy, Color and Super Game Boy', ['gb', 'gbc', 'sgb']],
     ['nes', 'NES, Famicom and Disk System', ['nes', 'famicom', 'fds']], ['pm', 'Pokémon mini', ['pm']], ['tj', 'Tetris Jr.', ['tj']],
     ['a2600', 'Atari 2600', ['atari2600']], ['a5200', 'Atari 5200', ['atari5200']], ['a7800', 'Atari 7800', ['atari7800']], ['alynx', 'Atari Lynx', ['atarilynx']],
+    ['sg1000', 'SG-1000', ['sg1000']], ['sms', 'Master System', ['mastersystem']], ['gg', 'Game Gear', ['gamegear']],
+    ['n64', 'Nintendo 64', ['n64']],
+    ['snes', 'Super Nintendo', ['snes']],
   ];
-  const SHELF_LABEL = { gnw: 'Game & Watch', tft: 'Game & Watch colour', tj: 'Tetris Jr.', gb: 'Game Boy', gbc: 'Game Boy Color', sgb: 'Super Game Boy', nes: 'NES', famicom: 'Famicom', fds: 'Disk System', pm: 'Pokémon mini', atari2600: 'Atari 2600', atari5200: 'Atari 5200', atari7800: 'Atari 7800', atarilynx: 'Atari Lynx' };
+  const SHELF_LABEL = { gnw: 'Game & Watch', tft: 'Game & Watch colour', tj: 'Tetris Jr.', gb: 'Game Boy', gbc: 'Game Boy Color', sgb: 'Super Game Boy', nes: 'NES', famicom: 'Famicom', fds: 'Disk System', pm: 'Pokémon mini', atari2600: 'Atari 2600', atari5200: 'Atari 5200', atari7800: 'Atari 7800', atarilynx: 'Atari Lynx', sg1000: 'SG-1000', mastersystem: 'Master System', gamegear: 'Game Gear', n64: 'Nintendo 64', snes: 'Super Nintendo' };
 
   /* ART AND CLIPS: the buckets and names the tiles use (emby.js GB_ART_BASE, GBC_ART_BASE,
      NES_ART_SHELVES, PM_ART_BASE, ATARI_ART_BASES; gbvideo.js BASE; nesvideo.js BASE / FDS_BASE;
@@ -89,6 +92,10 @@
     pm: [R2('eee982432b794252aea6267b28610d68')],
     atari2600: [R2('5a6bb80d82784ad39e3c174bef3c277f')], atari5200: [R2('c75c6bbea160407d91b051774522eb4c')],
     atari7800: [R2('0e40e9ded6d040ffb50e8e6c90a7c6f4')], atarilynx: [R2('6a52666460d64b4a8b732cfc2d1ca0ee')],
+    /* The Sega 8-bit family (20 Nov 2026): sg1000-covers-2d, sms-covers-2d, gg-covers-2d, named like the Atari covers */
+    sg1000: [R2('172174e21b8847c49b4205c2358adda6')], mastersystem: [R2('62873088d8c44a32954ea1ec5c2a36d2')], gamegear: [R2('67d416b00308450382d33c630f9b75c1')],
+    n64: [R2('84001b5c96714c34898dbe219cfe5055')],   // n64-covers-2d (22 Nov 2026), named like the Sega covers
+    snes: [R2('fb9d36bc6e4444f9a39418933369b83f')],  // snes-covers-2d (23 Nov 2026)
   };
   const CLIP = {
     gb: [R2('b1cac080319747d4a79d4d5607505a33'), R2('38743c0e5f494a10ae96bd434893fa89')],
@@ -303,7 +310,7 @@
       + '<div class="loading-card cl-loading" data-cl-loading role="status" hidden><div class="loading-spinner" aria-hidden="true"></div><div class="loading-title">COMPATIBILITY</div>'
       + '<div class="loading-sub">Loading the list…</div><div class="loading-bar" aria-hidden="true"><div class="loading-bar-fill" data-cl-load-fill></div></div><div class="loading-stat" data-cl-load-stat>Connecting…</div></div>'
       + '<p class="cl-lede">How each game runs on our emulators. A game&rsquo;s versions (regions, revisions, translations) are grouped under it; open a game to see them. Each game is counted once.</p>'
-      + '<p class="cl-lede">Each clip on this page is a pre-recorded video that proves how the game booted at the time of recording. Choose a clip to see it larger.</p>'
+      + '<p class="cl-lede">Each game on this page is shown as it starts in our emulator. Choose one to see it larger.</p>'
       + '<div class="cl-bar-wrap" data-cl-bar></div>'
       + '<div class="cl-controls" data-cl-controls>'
       + '<div class="cl-search"><span aria-hidden="true">⌕</span><input type="text" data-cl-q placeholder="Search by name, game ID or hash" autocomplete="off" readonly inputmode="none" enterkeyhint="search" aria-label="Search the compatibility list"></div>'
@@ -349,7 +356,17 @@
     const want = S.card ? CARDS.find(x => x[0] === S.card)[2] : null;
     return games.some(g => (g.st === st || ((st === 3 || st === 4) && g.f.some(x => x.st === st))) && (!want || want.includes(g.sh)) && (!S.kind || g.k === S.kind));
   }
-  function barHTML() {
+  /* AN EVALUATION PREVIEW (23 Nov 2026; index.html ATARI_SYSTEMS preview, window.cwSysPreview): one line above
+     the bar while that system's part is shown (the Nintendo 64). */
+  function previewHTML() {
+    const want = S.card ? (CARDS.find(x => x[0] === S.card) || [])[2] || [] : [];
+    const sys = want.find(k => window.cwSysPreview && window.cwSysPreview(k));
+    if (!sys) return '';
+    const card = CARDS.find(x => x[0] === S.card);
+    return `<p class="cw-preview-line">${window.CW_PREVIEW_TAG || ''}The ${esc(card[1])} is new here and still being tuned, so these results will change as it improves.</p>`;
+  }
+  function barHTML() { return previewHTML() + barInner(); }
+  function barInner() {
     const c = counts(), total = c[0] + c[1] + c[2];
     if (S.kind === 'test') return '<p class="cl-line">Testing and diagnostics cartridges are not games, so they are not counted. They are listed below.</p>';
     if (!total) return '<p class="cl-line">Loading…</p>';

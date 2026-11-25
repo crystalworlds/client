@@ -1,0 +1,41 @@
+{
+ "format": 1,
+ "list": "sg1000",
+ "label": "SG-1000",
+ "guards": [
+  "sg1000"
+ ],
+ "count": 5,
+ "entries": {
+  "06f80b5e300ec0690549f15f9c95b9fdbb8ff2ab049f62c853c2ec4452182ae7": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Cross Shuriken (20230703)"
+  },
+  "58d4081b98f47bbce5aa3693a9b480c6a63c7c0a9137c0e2223ec13de60c79eb": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it was made for a Master System cartridge board; a real SG-1000 stops on it too.",
+   "title": "Minesweeper [under4mhz] (1.03)"
+  },
+  "b2d6be145fe3450a40ae901b781d8d0d9666b49d9d0a5c34d4db5022cff7a4e0": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it was made for a Master System cartridge board; a real SG-1000 stops on it too.",
+   "title": "Vexed (1.15)"
+  },
+  "b4017ff04ef1bec991d9577b6a61ce7017f244cf33c3e507d38ff9093f091d31": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it hangs at start.",
+   "title": "Omikuji (1.00)"
+  },
+  "be0c0e56b7643674c8b480346d407944202f808387378d28d2f5861043bf4f8a": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it was made for a Master System cartridge board; a real SG-1000 stops on it too.",
+   "title": "Bloktris (1.03)"
+  }
+ }
+}

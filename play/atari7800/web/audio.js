@@ -17,7 +17,7 @@
  * note play/atari2600/web/audio.js carries.
  */
 import { AUDIO_HZ } from './core.js';
-import { AudioQueue } from '../../shared/audio-queue.js?v=2.2.2';
+import { AudioQueue } from '../../shared/audio-queue.js?v=2.3.0';
 
 export class Audio {
   constructor() {

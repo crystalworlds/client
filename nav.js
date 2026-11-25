@@ -431,8 +431,27 @@
     const set = new Set(cands);
     const nestedIn = el => { for (let p = el.parentElement; p; p = p.parentElement) if (set.has(p)) return true; return false; };
     const fromNested = !!(from && from.__gnNested);
+    /* A FLOATING CONTROL IS NEVER "BELOW" (22 Nov 2026): a control in its own position:fixed holder (the Change Log's
+       Close button on a phone) stays put while the text scrolls under it, so a long entry scrolled up behind it
+       found the button "below" itself and Down landed there. Down skips a control in the top half of the window
+       whose nearest fixed holder does not also hold the place the move starts from (a whole fixed window holds
+       both: no change there). Text scrolled up behind such a control is not above it in reading order. A
+       floating bar at the bottom stays reachable, and Up and the sideways moves still reach the top ones. */
+    const holderSeen = new Map();   // per call: each ancestor's nearest fixed holder, so a long list reads each style once
+    const fixedHolderOf = el => {
+      const path = []; let h = null;
+      for (let p = el; p && p !== document.body; p = p.parentElement) {
+        if (holderSeen.has(p)) { h = holderSeen.get(p); break; }
+        path.push(p);
+        if (getComputedStyle(p).position === 'fixed') { h = p; break; }
+      }
+      for (const p of path) holderSeen.set(p, h);
+      return h;
+    };
+    const skipFloating = dir === 'down' && !!from;
     for (const c of cands) {
       const q = rectOf(c);
+      if (skipFloating && q.bottom < window.innerHeight / 2) { const h = fixedHolderOf(c); if (h && !h.contains(from)) continue; }
       const qx = (q.left + q.right) / 2, qy = (q.top + q.bottom) / 2;
       let primary, cross, off;
       const tolY = Math.min(8, r.height / 3), tolX = Math.min(8, r.width / 3);

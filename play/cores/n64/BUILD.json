@@ -1,0 +1,210 @@
+{
+ "madeFrom": {
+  "commit": "b6f50ce1432f1c38c6f546798955973f1d046f93",
+  "changedSinceIt": false
+ },
+ "modeB": {
+  "label": "Performance (Mode B, approximate): an engine a player may choose under Settings, Machine, Engine; never the default, and nothing read on it is evidence of the accurate machine",
+  "plain": {
+   "file": "machine/n64core-modeb.wasm",
+   "modeB": 91,
+   "fasterRoads": 13510,
+   "sha256": "27fc07d7a2aa53eacbdd97bdb880de3481037e9485952d1c0353335d2c59b662"
+  },
+  "thread": {
+   "file": "machine/n64core-modeb-thread.wasm",
+   "modeB": 91,
+   "fasterRoads": 2112710,
+   "sha256": "cb11e23a104153d987006740c26e921a7d028b179ad2429a30e2112b93e9a505"
+  },
+  "threads": {
+   "file": "machine/n64core-modeb-threads.wasm",
+   "modeB": 91,
+   "fasterRoads": 7617734,
+   "sha256": "37ecd490c0877395a84cf543f0aa0c52866f6d23c3b94c32953371c9fe5714c6"
+  }
+ },
+ "cardRoads": 74792191,
+ "cardCore": {
+  "file": "machine/n64core-threads-card.wasm",
+  "sha256": "3cd3a931ba798717e331656499d38c4e27630d05c6ea31b1848fbd26023f79b8"
+ },
+ "threadsRoads": 7683327,
+ "threadsCore": {
+  "file": "machine/n64core-threads.wasm",
+  "sha256": "32b476d134dfc206a7bca288b20f393e3073723c049ab6c50a9f60ef266f0b90"
+ },
+ "threadRoads": 2178303,
+ "threadCore": {
+  "file": "machine/n64core-thread.wasm",
+  "sha256": "769d186c8ed1f1aaf968d6a1ff13a0426b6af18509516d42e0dc41d5a813f838"
+ },
+ "fasterRoads": 79103,
+ "fastBuild": "the faster build of the core: every faster road but the drawing thread; one WebAssembly file, no shared memory",
+ "core": {
+  "file": "machine/n64core.wasm",
+  "sha256": "3b5c6f5fc4471b36236dbc67a7af24373480020c84c482efcbd91092d921e49b"
+ },
+ "files": [
+  {
+   "file": "card-worker.mjs",
+   "sha256": "1a0bb93318c70409e424db49f5539939453481ed765928ad845908c3ad6a3719"
+  },
+  {
+   "file": "core.mjs",
+   "sha256": "33e4b0c51dc2aa4a5def5cb27dc4ededdd314f5536ed9b7525435a2fa0d20a32"
+  },
+  {
+   "file": "disk.mjs",
+   "sha256": "b3dd58d1f949130b1cf82c6bbdb77868872c5fd8d333e8fdbb3e5c4ae99eda16"
+  },
+  {
+   "file": "draw-worker.mjs",
+   "sha256": "65724dc5d8565af465b9b40b0ed73f06363715e6281950cf497558a5a2670e3a"
+  },
+  {
+   "file": "fetch.mjs",
+   "sha256": "0095606f96d9f024c47bbd18c8407939887c5268c237eef1e9c39a6d5b14e615"
+  },
+  {
+   "file": "machine/ai-runs.mjs",
+   "sha256": "934158910438663874f9a78a4a279d1a499eb1bc6e52ad825ff99abb3f2bea81"
+  },
+  {
+   "file": "machine/byte-order.mjs",
+   "sha256": "44ab6b171d43565a3d32a7713cada0316e6072c3c2ee369629e183c6cc3dccff"
+  },
+  {
+   "file": "machine/bytes.mjs",
+   "sha256": "9a33ecdacdc2132f70f9ec122b7f68682138a8ffa20cfe9d1e2454f0e750edde"
+  },
+  {
+   "file": "machine/card-choose.mjs",
+   "sha256": "8bb37d8b9931c2d42f74120ee456497acf8268a810a250cd52f7c8333c6e3c09"
+  },
+  {
+   "file": "machine/card-mode-0.json",
+   "sha256": "71aff140cb3b66f9a2cbb28047349242f7333c04e2a54ccf2145c74ff7e54f14"
+  },
+  {
+   "file": "machine/card.mjs",
+   "sha256": "8339d6272279d3a23cdd763d334239d2b92c906c9bb1570a0ad00c786e89993a"
+  },
+  {
+   "file": "machine/controller.mjs",
+   "sha256": "34783f38ad7a492834bee4a828f1c3cb2c2649368bbcff6312ee2de3f7c3a4e3"
+  },
+  {
+   "file": "machine/core-host.mjs",
+   "sha256": "6aeda4313354e9776ef32e305f1e99143de12659f7fa782196757b080630fb94"
+  },
+  {
+   "file": "machine/disk-drive.mjs",
+   "sha256": "dc1be0c6937e7a35a17c40aeaf224cfae7de89b1d6b6b132e9177ff1f4dda81a"
+  },
+  {
+   "file": "machine/firmware-rule.mjs",
+   "sha256": "3caf6089a39c8c153d35ef1f56ed949f098a641d49abed902053ddb42f8ae16f"
+  },
+  {
+   "file": "machine/firmware-time.json",
+   "sha256": "569158a6898b709032dcbad35d4d87bb9b45c9f33488ccc554532fe02779ba8b"
+  },
+  {
+   "file": "machine/flash-chips-seen.json",
+   "sha256": "4a78d59a5ea8f80811d43848144744c00ad20fd97c773a9f7497d981ffc2115f"
+  },
+  {
+   "file": "machine/game-table.mjs",
+   "sha256": "8f85dd5af7bfa1f150a000e08bc8e468e5811c61093976e83a689eed8a7b5718"
+  },
+  {
+   "file": "machine/modeb-card.mjs",
+   "sha256": "92e6c3449e2bcf3543b572df1b65445318a0776bb385eef1ce3aa821ad1e1822"
+  },
+  {
+   "file": "machine/n64core-modeb-thread.wasm",
+   "sha256": "cb11e23a104153d987006740c26e921a7d028b179ad2429a30e2112b93e9a505"
+  },
+  {
+   "file": "machine/n64core-modeb-threads.wasm",
+   "sha256": "37ecd490c0877395a84cf543f0aa0c52866f6d23c3b94c32953371c9fe5714c6"
+  },
+  {
+   "file": "machine/n64core-modeb.wasm",
+   "sha256": "27fc07d7a2aa53eacbdd97bdb880de3481037e9485952d1c0353335d2c59b662"
+  },
+  {
+   "file": "machine/n64core-thread.wasm",
+   "sha256": "769d186c8ed1f1aaf968d6a1ff13a0426b6af18509516d42e0dc41d5a813f838"
+  },
+  {
+   "file": "machine/n64core-threads-card.wasm",
+   "sha256": "3cd3a931ba798717e331656499d38c4e27630d05c6ea31b1848fbd26023f79b8"
+  },
+  {
+   "file": "machine/n64core-threads.wasm",
+   "sha256": "32b476d134dfc206a7bca288b20f393e3073723c049ab6c50a9f60ef266f0b90"
+  },
+  {
+   "file": "machine/n64core.wasm",
+   "sha256": "3b5c6f5fc4471b36236dbc67a7af24373480020c84c482efcbd91092d921e49b"
+  },
+  {
+   "file": "machine/open-game.mjs",
+   "sha256": "23a81c63a54997e40c6ee99a7f09b42bfbf12fb5c72180012b9b3ce711ce63d6"
+  },
+  {
+   "file": "machine/rdp-list.mjs",
+   "sha256": "e23ffc6534cb38b6bdd4eb304bbc15316f58319b0cc8ea8640e3b9ff87aedc9c"
+  },
+  {
+   "file": "machine/save-by-hash.json",
+   "sha256": "67b5047b8b85545be0ac2ec4e7399224e1b63d4a1c8e43daa7a0bf91002fca9e"
+  },
+  {
+   "file": "machine/save-memory.mjs",
+   "sha256": "c6ee6fefce5c635395e685148ce9468ceb377594e9d0c00038d4629bddf351d1"
+  },
+  {
+   "file": "machine/save-types.json",
+   "sha256": "73874d7241ffd9a3abd5804fa0e195374a0811ebaacbf4a018ebd723c25c5b6c"
+  },
+  {
+   "file": "machine/sha256.mjs",
+   "sha256": "5ca4ef310af22e211aa948335ac69fe4cfa980d60377191157fe1decd453627e"
+  },
+  {
+   "file": "machine/si-host.mjs",
+   "sha256": "47f9e207851d09134b50d2a78378bf48f6abf87ce9acfd3dad8bd8f2608069e8"
+  },
+  {
+   "file": "machine/vi-field.mjs",
+   "sha256": "2c55599185362bff697fdb0e5fd5ee15a1bb5d9d02e7c063bec5615cea087fa2"
+  },
+  {
+   "file": "pads.mjs",
+   "sha256": "29e40393f9c949b0976506d0872432379044bc23765049d0243e67df2d46d671"
+  },
+  {
+   "file": "ports.mjs",
+   "sha256": "ac70dba3f1d1ded0bf4900626c9eb73aa5b2ef8687d636f6d45db6d78c400678"
+  },
+  {
+   "file": "rumble.mjs",
+   "sha256": "0e3adb7e6e562d70b394b923c755d983e73b28838d3b0bbc210ec9731502b928"
+  },
+  {
+   "file": "site-table.json",
+   "sha256": "16068d1cd36e1f753fb617a206e1ebf92263ae325d7418b43057f30166556958"
+  },
+  {
+   "file": "sound.mjs",
+   "sha256": "e0b1ca2d327a24eb819119a055cff46952f841803ac46c1d76d429751dee6ac5"
+  },
+  {
+   "file": "tpak.mjs",
+   "sha256": "32a45e0391475bc8609638b8e06f3e9d4bf6b8072d52f7c4b890556b613887b5"
+  }
+ ]
+}

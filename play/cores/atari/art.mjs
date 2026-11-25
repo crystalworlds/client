@@ -24,10 +24,10 @@ const GEOM = {
      atari-artwork/aperture.py. An earlier change swapped the pictures under these keys without moving these
      numbers; the full photographs' were 2600 734x539 (144,55,309,228) (105,19,477,301), 5200 859x564
      (240,70,325,245) (208,21,477,322), 7800 761x584 (148,61,338,253) (112,21,505,330). */
-  a2600: ['Atari2600Console.png', 520, 624, 58, 65, 309, 228, 20, 29, 476, 301],   // body 301 tall since the rebuilt tile of 22 Oct
-  a5200: ['Atari5200Console.png', 520, 624, 54, 70, 325, 245, 22, 21, 477, 322],
-  a7800: ['Atari7800Console.png', 550, 660, 59, 57, 338, 253, 23, 18, 505, 329],
-  alynx: ['AtariLynxConsole.png', 1009, 540, 363, 149, 292, 183, 21, 12, 968, 517],
+  a2600: ['Atari2600Console.png', 790, 948, 93, 100, 463, 341, 33, 46, 724, 483],   // 2026-11-25: the COLORFUL kit picture
+  a5200: ['Atari5200Console.png', 780, 936, 80, 105, 487, 368, 33, 32, 713, 515],   // 2026-11-25: the COLORFUL kit picture
+  a7800: ['Atari7800Console.png', 825, 990, 88, 85, 506, 381, 34, 27, 757, 507],   // 2026-11-25: the COLORFUL kit picture
+  alynx: ['AtariLynxConsole.png', 1273, 686, 469, 156, 350, 219, 75, 3, 1133, 534],   // 2026-11-25: the COLORFUL kit picture
 }[SYS];
 
 const cache = new Map();

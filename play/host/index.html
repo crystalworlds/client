@@ -81,7 +81,7 @@
   body.paused #pausedBadge { display:flex; }
   #pausedBadge span { background:rgba(16,18,22,.82); border:1px solid var(--line); border-radius:10px; color:var(--ink);
     font-weight:700; font-size:15px; letter-spacing:.18em; padding:10px 20px; box-shadow:0 8px 26px rgba(0,0,0,.5); }
-  #rewindHud { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:62; display:none; white-space:nowrap;
+  #rewindHud { position:absolute; top:calc(52px + var(--cw-top-over, 0px)); left:50%; transform:translateX(-50%); z-index:62; display:none; white-space:nowrap;
     background:rgba(16,18,22,.82); border:1px solid var(--line); border-radius:8px; color:var(--cw-bar-host-speed-ink,#ffd27a); font-size:13px; font-weight:700;
     letter-spacing:.08em; padding:5px 12px; font-variant-numeric:tabular-nums; box-shadow:0 8px 26px rgba(0,0,0,.5); }
   body.rewinding #rewindHud { display:block; }
@@ -113,6 +113,9 @@
   #msg button { font:inherit; font-weight:600; color:var(--ink); background:var(--cw-bar-field,#1d2026); border:1px solid var(--line); border-radius:9px; padding:8px 14px; cursor:pointer; }
   #msg button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   /* Files opened on this device before (2026-10-19): one button each, then Forget. */
+  #msgFw { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+  #msgFw[hidden] { display:none; }
+  #msgFw .m-sub { margin:0; font-size:13px; }
   #msgRecent { margin-top:14px; }
   #msgRecent[hidden] { display:none; }
   #msgRecent .m-sub { margin:0 0 6px; font-size:13px; }
@@ -159,7 +162,7 @@
      Log and Settings); on a large screen it is the same toggle as the status line's Log button. */
 
   /* The speed, shown briefly when it changes (Ctrl+Right or the Speed menu). */
-  #speedHud { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:62; display:none; white-space:nowrap;
+  #speedHud { position:absolute; top:calc(52px + var(--cw-top-over, 0px)); left:50%; transform:translateX(-50%); z-index:62; display:none; white-space:nowrap;
     background:rgba(16,18,22,.82); border:1px solid var(--line); border-radius:8px; color:var(--cw-bar-host-rewind-ink,#9fe0ff); font-size:13px; font-weight:700;
     letter-spacing:.08em; padding:5px 12px; box-shadow:0 8px 26px rgba(0,0,0,.5); pointer-events:none; }
   #speedHud.show { display:block; }
@@ -199,6 +202,9 @@
   .host-xhair::before { left:50%; top:-6px; bottom:-6px; width:2px; margin-left:-1px; }
   .host-xhair::after { top:50%; left:-6px; right:-6px; height:2px; margin-top:-1px; }
   .host-xhair[hidden] { display:none; }
+  /* The second gun's crosshair (two Justifiers): pink, as the second Justifier was. */
+  .host-xhair-2 { border-color:rgba(255,105,200,.95); }
+  .host-xhair-2::before, .host-xhair-2::after { background:rgba(255,105,200,.95); }
   body.host-pointer #screenBox { cursor:crosshair; touch-action:none; }
   .host-portlabel { margin:10px 0 4px; font-weight:700; font-size:12px; letter-spacing:.06em; color:var(--dim); text-transform:uppercase; }
 </style>
@@ -217,7 +223,7 @@
   <div id="rewindHud" aria-hidden="true">◄◄ REW</div>
   <div id="speedHud" aria-hidden="true"></div>
   <pre id="hostLog" hidden aria-label="Log"></pre>
-  <div id="msg" hidden><div class="m-card"><h2 id="msgTitle"></h2><p id="msgBody"></p><button type="button" id="msgOpen" hidden>Choose a file…</button><div id="msgRecent" hidden><p class="m-sub">Opened on this device before:</p><ul></ul><button type="button" id="msgForget">Forget this list</button></div></div></div>
+  <div id="msg" hidden><div class="m-card"><h2 id="msgTitle"></h2><p id="msgBody"></p><button type="button" id="msgOpen" hidden>Choose a file…</button><div id="msgFw" hidden></div><div id="msgRecent" hidden><p class="m-sub">Opened on this device before:</p><ul></ul><button type="button" id="msgForget">Forget this list</button></div></div></div>
   <div id="startScreen" hidden role="button" tabindex="0" aria-label="Start sound">
     <div class="ss-card">
       <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="9" width="9.5" height="6" rx="2.4"/><rect x="4.5" y="6.8" width="3.5" height="2.3" rx="0.8"/><path d="M1.5 11.3h9.5"/><rect x="13" y="9" width="9.5" height="6" rx="2.4"/><rect x="16" y="14.9" width="3.5" height="2.3" rx="0.8"/><path d="M13 12.7h9.5"/></svg>
@@ -240,16 +246,16 @@
 <script>/* Every key physically held, seen before any other listener (the Control Bar and play-keys.js take
    the keyboard while a panel is open): the Keys diagram lights from it (input.mjs litSet). Codes only. */
 (function(){var s=window.__cwRawKeys=new Set();addEventListener('keydown',function(e){s.add(e.code);},true);addEventListener('keyup',function(e){s.delete(e.code);},true);addEventListener('blur',function(){s.clear();});})();</script>
-<script src="../shared/select-list.js?v=2.2.2"></script>
-<script src="../../firmware/site/sha.js?v=2.2.2"></script>
-<script src="../../firmware/repairs/alias.js?v=2.2.2-atari9"></script>
-<script src="../../firmware/site/repairs.js?v=2.2.2"></script>
-<script src="../../firmware/site/unsupported.js?v=2.2.2"></script>
-<script src="./cw-audio.js?v=2.2.2-audioservo"></script>
-<script src="../play-keys.js?v=2.2.2"></script>
-<script src="../shared/overlay.js?v=2.2.2"></script>
-<script src="../play-pill.js?v=2.2.2"></script>
-<script src="../shared/control-bar.js?v=2.2.2"></script>
-<script type="module" src="./host.mjs?v=2.2.2-atari9e-gbsachen-audioservo-gbmbc30"></script>
+<script src="../shared/select-list.js?v=2.3.0"></script>
+<script src="../../firmware/site/sha.js?v=2.3.0"></script>
+<script src="../../firmware/repairs/alias.js?v=2.3.0"></script>
+<script src="../../firmware/site/repairs.js?v=2.3.0"></script>
+<script src="../../firmware/site/unsupported.js?v=2.3.0"></script>
+<script src="./cw-audio.js?v=2.3.0"></script>
+<script src="../play-keys.js?v=2.3.0"></script>
+<script src="../shared/overlay.js?v=2.3.0-overlay"></script>
+<script src="../play-pill.js?v=2.3.0"></script>
+<script src="../shared/control-bar.js?v=2.3.0-overlay"></script>
+<script type="module" src="./host.mjs?v=2.3.0-overlay"></script>
 </body>
 </html>

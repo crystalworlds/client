@@ -150,40 +150,42 @@
      pixels because every surface that shows this artwork sizes it differently
      -- tile, drawer stage, play view -- and a percentage of the image is the
      one expression that is correct on all of them without being recomputed. */
-  /* 2026-10-22 (decided): the picture is now nes-tile.png, 630x756, the same
-     television at its own pixels with the console and accessories removed and the NES controller
-     below it, one column wide like a Game Boy tile. The glass is the same 429 x 323 (alpha checked
-     pixel for pixel), moved to (100,62); re-measured by aperture.py on the new file. The old
-     903x733 figures were 25.03% / 9.14% / 47.51% / 44.07%. */
-  --nes-scr-l: 15.87%;   /* 100 / 630 */
-  --nes-scr-t: 8.20%;    /*  62 / 756 */
-  --nes-scr-w: 68.10%;   /* 429 / 630 */
-  --nes-scr-h: 42.72%;   /* 323 / 756 */
+  /* 2026-11-24 (a trial): the picture is now nes-tile-colorful.png, 780x936
+     (5:6), rendered from viking's COLORFUL kit by WASM_Source/nes-artwork/nes-from-psd.py: the kit's
+     1980 television (scaled 0.75) with the left NES pad at the PSD's own pixels below it. The glass is
+     the kit's Screen mask: its box, 488 x 368 at (80,95), covers every see-through pixel and the ring
+     outside it reads alpha >= 254 all round. Before: nes-tile.png 630x756, 429 x 323 at (100,62),
+     15.87% / 8.20% / 68.10% / 42.72% (backup site-backups/2026-11-24-nesart). */
+  --nes-scr-l: 10.26%;   /*  80 / 780 */
+  --nes-scr-t: 10.15%;   /*  95 / 936 */
+  --nes-scr-w: 62.56%;   /* 488 / 780 */
+  --nes-scr-h: 39.32%;   /* 368 / 936 */
 
   /* The glass tone, shown for the moment before the first frame lands. Sampled
      from the photograph's own screen, not invented: an unlit CRT is dark grey. */
-  --nes-scr-bg: #4f4f4f;
+  --nes-scr-bg: #1b1b1b;   /* 2026-11-24: the kit television's own unlit screen, under the mask (was #4f4f4f) */
 
   /* Elliptical corner radius, horizontal / vertical, as percentages of the
      APERTURE box (not of the photograph) -- so it is applied to the surface
      itself, whose box those percentages resolve against. */
-  --nes-scr-radius: 3.1% / 4.1%;
+  --nes-scr-radius: 8.2% / 10.9%;   /* 2026-11-24: 40 px on the 488x368 glass; 54 px is the largest leaving no
+                                       glass under alpha 250 uncovered (was 3.1% / 4.1%) */
 
   /* THE TELEVISION BODY, for the play view's crop. A separate measurement from
      the aperture -- the silhouette above the row where the console and
      controllers widen it -- so this is not a second copy of anything.
      587 x 414 at (147,23), as percentages of the photograph. */
-  /* 2026-10-22: 582 x 414 at (24,18) of 630x756 (aperture.py's "television body"). */
-  --nes-tv-l: 3.81%;     /*  24 / 630 */
-  --nes-tv-t: 2.38%;     /*  18 / 756 */
-  --nes-tv-w: 92.38%;    /* 582 / 630 */
-  --nes-tv-h: 54.76%;    /* 414 / 756 */
+  /* 2026-11-24: 713 x 514 at (33,22) of 780x936 (alpha >= 200, feet included); was 582 x 414 at (24,18) of 630x756. */
+  --nes-tv-l: 4.23%;     /*  33 / 780 */
+  --nes-tv-t: 2.35%;     /*  22 / 936 */
+  --nes-tv-w: 91.41%;    /* 713 / 780 */
+  --nes-tv-h: 54.91%;    /* 514 / 936 */
 
   /* The crop expressed as the scale a .nes-tv-crop window needs: the photograph
      must be 903/587 of the window's width for the television to fill it. Held
      as a unitless ratio because calc() cannot divide by a percentage, which is
      the only reason this is not derived from --nes-tv-w at run time. */
-  --nes-tv-scale: 1.08247;   /* 630 / 582 (2026-10-22) */
+  --nes-tv-scale: 1.09397;   /* 780 / 713 (2026-11-24; was 630 / 582) */
 
   /* The two aspect ratios, as `aspect-ratio` values. Published because both are
      facts about this photograph, and a surface that needs one must not write it
@@ -194,8 +196,8 @@
      (a tile lays out before its image decodes).
        --nes-tv-aspect is the TELEVISION, and the play view needs it to size the
      crop window against a height budget rather than a width one. */
-  --nes-art-aspect: 630 / 756;   /* 2026-10-22: exactly 5 / 6, the tall single tile's box */
-  --nes-tv-aspect: 582 / 414;
+  --nes-art-aspect: 780 / 936;   /* exactly 5 / 6, the tall single tile's box (2026-11-24; was 630 / 756) */
+  --nes-tv-aspect: 713 / 514;
 
   /* The same two ratios as unitless NUMBERS. `aspect-ratio` accepts a `a / b`
      value; calc() does not, and a layout that fits a box to a HEIGHT budget has
@@ -203,8 +205,8 @@
      value -- which is the one duplication this file allows, because they are
      two spellings of one measurement rather than two measurements, and putting
      the number anywhere else would separate it from the box it describes. */
-  --nes-art-aspect-num: 0.83333;   /* 630 / 756 */
-  --nes-tv-aspect-num: 1.40580;    /* 582 / 414 */
+  --nes-art-aspect-num: 0.83333;   /* 780 / 936 */
+  --nes-tv-aspect-num: 1.38716;    /* 713 / 514 */
 }
 
 /* ---- THE CROP WINDOW ------------------------------------------------------
@@ -309,93 +311,101 @@
    these lines no longer match. Re-measure; never adjust by eye.
    ------------------------------------------------------------------------- */
 [data-nes-console="famicom"] {
-  /* 2026-10-22: famicom-tile.png, 520x624 (5:6), measured by famicom-artwork/aperture.py. */
-  --nes-scr-l: 10.38%;   /* 54 / 520 */
-  --nes-scr-t: 11.86%;   /* 74 / 624 */
-  --nes-scr-w: 62.12%;   /* 323 / 520 */
-  --nes-scr-h: 38.94%;   /* 243 / 624 */
-  --nes-scr-bg: #4d5353;
-  --nes-scr-radius: 10% / 13%;
-  --nes-tv-l: 4.23%;   /* 22 / 520 */
-  --nes-tv-t: 3.85%;   /* 24 / 624 */
-  --nes-tv-w: 91.35%;   /* 475 / 520 */
-  --nes-tv-h: 55.61%;   /* 347 / 624 */
-  --nes-tv-scale: 1.09474;   /* 520 / 475 */
-  --nes-art-aspect: 520 / 624;
-  --nes-tv-aspect: 475 / 347;
+  /* 2026-11-25: famicom-tile-colorful.png 780x936, the COLORFUL kit's 1980 television (famicom-from-psd.py) with the previous tile's controller; glass = the kit's Screen mask box, which covers every see-through pixel. Before: famicom-tile.png 520x624, 10.38% / 11.86% / 62.12% / 38.94% (site-backups/2026-11-25-artall/famicom). */
+  /* (2026-10-22 to 2026-11-25: famicom-tile.png, 520x624, measured by famicom-artwork/aperture.py.) */
+  --nes-scr-l: 10.26%;   /*  80 / 780 */
+  --nes-scr-t: 11.65%;   /* 109 / 936 */
+  --nes-scr-w: 62.44%;   /* 487 / 780 */
+  --nes-scr-h: 39.32%;   /* 368 / 936 */
+  --nes-scr-bg: #1a1b1b;
+  --nes-scr-radius: 8.2% / 10.9%;   /* 40 px, the largest leaving no glass uncovered is 54 */
+  --nes-tv-l: 4.23%;   /*  33 / 780 */
+  --nes-tv-t: 3.85%;   /*  36 / 936 */
+  --nes-tv-w: 91.41%;   /* 713 / 780 */
+  --nes-tv-h: 54.81%;   /* 513 / 936 */
+  --nes-tv-scale: 1.09397;   /* 780 / 713 */
+  --nes-art-aspect: 780 / 936;
+  --nes-tv-aspect: 713 / 513;
   --nes-art-aspect-num: 0.83333;
-  --nes-tv-aspect-num: 1.36888;
+  --nes-tv-aspect-num: 1.38986;
 }
 [data-nes-console="fds"] {
-  /* 2026-10-22: fds-tile.png, 520x624 (5:6), measured by famicom-artwork/aperture.py. */
-  --nes-scr-l: 10.38%;   /* 54 / 520 */
-  --nes-scr-t: 11.86%;   /* 74 / 624 */
-  --nes-scr-w: 62.12%;   /* 323 / 520 */
-  --nes-scr-h: 38.94%;   /* 243 / 624 */
-  --nes-scr-bg: #5d605d;
-  --nes-scr-radius: 10% / 13%;
-  --nes-tv-l: 4.23%;   /* 22 / 520 */
-  --nes-tv-t: 3.85%;   /* 24 / 624 */
-  --nes-tv-w: 91.35%;   /* 475 / 520 */
-  --nes-tv-h: 55.61%;   /* 347 / 624 */
-  --nes-tv-scale: 1.09474;   /* 520 / 475 */
-  --nes-art-aspect: 520 / 624;
-  --nes-tv-aspect: 475 / 347;
+  /* 2026-11-25: fds-tile-colorful.png 780x936, the same kit television (fds-from-psd.py) with the previous tile's controller and disk. Before: fds-tile.png 520x624, 10.38% / 11.86% / 62.12% / 38.94%. */
+  /* (2026-10-22 to 2026-11-25: fds-tile.png, 520x624, measured by famicom-artwork/aperture.py.) */
+  --nes-scr-l: 10.26%;   /*  80 / 780 */
+  --nes-scr-t: 11.65%;   /* 109 / 936 */
+  --nes-scr-w: 62.44%;   /* 487 / 780 */
+  --nes-scr-h: 39.32%;   /* 368 / 936 */
+  --nes-scr-bg: #1a1b1b;
+  --nes-scr-radius: 8.2% / 10.9%;   /* 40 px, the largest leaving no glass uncovered is 54 */
+  --nes-tv-l: 4.23%;   /*  33 / 780 */
+  --nes-tv-t: 3.85%;   /*  36 / 936 */
+  --nes-tv-w: 91.41%;   /* 713 / 780 */
+  --nes-tv-h: 54.81%;   /* 513 / 936 */
+  --nes-tv-scale: 1.09397;   /* 780 / 713 */
+  --nes-art-aspect: 780 / 936;
+  --nes-tv-aspect: 713 / 513;
   --nes-art-aspect-num: 0.83333;
-  --nes-tv-aspect-num: 1.36888;
+  --nes-tv-aspect-num: 1.38986;
 }
 
 /* ---- THE DRAWER SHOWS THE FULL PHOTOGRAPH (2026-10-22) ----
    "The new picture on the TILE only": the drawer stage shows the old full photographs again
    (television, console and accessories), archived beside the tile pictures as NesConsoleFull.png
    (images_nes_b64.json) and FamicomConsoleFull.webp / FdsConsoleFull.webp (images_famicom_b64.json),
-   picked by index.html showNesDeviceStage. The tile and the play window keep the tile pictures and
+   picked by drawer-unified.js for the drawer's first picture (21 Nov 2026; until then index.html showNesDeviceStage). The tile and the play window keep the tile pictures and
    the numbers above. These are the measured numbers of the full photographs, unchanged from before
    the 22 Oct tile pictures (aperture.py: nes.png 429x323 at (226,67) of 903x733, famicom.png 323x243 at (284,66) of
    948x523, fds.png 323x243 at (238,62) of 893x591); nes-artwork/verify.sh and
    famicom-artwork/verify.sh re-measure them. Scoped to the drawer stage only. */
-#device-stage .stage-card[data-nes-console="nes"] {
-  --nes-scr-l: 25.03%;   /* 226 / 903 */
-  --nes-scr-t: 9.14%;    /*  67 / 733 */
-  --nes-scr-w: 47.51%;   /* 429 / 903 */
-  --nes-scr-h: 44.07%;   /* 323 / 733 */
-  --nes-tv-l: 16.28%;    /* 147 / 903 */
-  --nes-tv-t: 3.14%;     /*  23 / 733 */
-  --nes-tv-w: 64.99%;    /* 587 / 903 */
-  --nes-tv-h: 56.48%;    /* 414 / 733 */
-  --nes-tv-scale: 1.53833;   /* 903 / 587 */
-  --nes-art-aspect: 903 / 733;
-  --nes-tv-aspect: 587 / 414;
-  --nes-art-aspect-num: 1.23192;
-  --nes-tv-aspect-num: 1.41787;
+#device-stage .stage-card[data-nes-console="nes"], .device-card[data-photo="full"][data-nes-console="nes"] {
+  /* 2026-11-24: nes-colorful.png, 1417x864, the COLORFUL kit's whole scene (television,
+     console with Super Mario Bros./Duck Hunt, two pads, Zapper) scaled 0.75 by nes-from-psd.py. Glass
+     488 x 368 at (417,76), television 713 x 514 at (370,3). Before: nes.png 903x733, 25.03% / 9.14% /
+     47.51% / 44.07%, television 16.28% / 3.14% / 64.99% / 56.48%. */
+  --nes-scr-l: 29.43%;   /* 417 / 1417 */
+  --nes-scr-t: 8.80%;    /*  76 / 864 */
+  --nes-scr-w: 34.44%;   /* 488 / 1417 */
+  --nes-scr-h: 42.59%;   /* 368 / 864 */
+  --nes-tv-l: 26.11%;    /* 370 / 1417 */
+  --nes-tv-t: 0.35%;     /*   3 / 864 */
+  --nes-tv-w: 50.32%;    /* 713 / 1417 */
+  --nes-tv-h: 59.49%;    /* 514 / 864 */
+  --nes-tv-scale: 1.98738;   /* 1417 / 713 */
+  --nes-art-aspect: 1417 / 864;
+  --nes-tv-aspect: 713 / 514;
+  --nes-art-aspect-num: 1.64005;
+  --nes-tv-aspect-num: 1.38716;
 }
-#device-stage .stage-card[data-nes-console="famicom"] {
-  --nes-scr-l: 29.96%;   /* 284 / 948 */
-  --nes-scr-t: 12.62%;   /*  66 / 523 */
-  --nes-scr-w: 34.07%;   /* 323 / 948 */
-  --nes-scr-h: 46.46%;   /* 243 / 523 */
-  --nes-tv-l: 26.58%;    /* 252 / 948 */
-  --nes-tv-t: 3.06%;     /*  16 / 523 */
-  --nes-tv-w: 50.11%;    /* 475 / 948 */
-  --nes-tv-h: 66.35%;    /* 347 / 523 */
-  --nes-tv-scale: 1.99579;   /* 948 / 475 */
-  --nes-art-aspect: 948 / 523;
-  --nes-tv-aspect: 475 / 347;
-  --nes-art-aspect-num: 1.81262;
-  --nes-tv-aspect-num: 1.36888;
+#device-stage .stage-card[data-nes-console="famicom"], .device-card[data-photo="full"][data-nes-console="famicom"] {
+  /* 2026-11-25: famicom-colorful.png, the kit's whole scene. Before: famicom.png 948x523, 29.96% / 12.62% / 34.07% / 46.46%. */
+  --nes-scr-l: 31.73%;   /* 482 / 1519 */
+  --nes-scr-t: 9.79%;   /*  76 / 776 */
+  --nes-scr-w: 32.13%;   /* 488 / 1519 */
+  --nes-scr-h: 47.42%;   /* 368 / 776 */
+  --nes-tv-l: 28.64%;   /* 435 / 1519 */
+  --nes-tv-t: 0.39%;   /*   3 / 776 */
+  --nes-tv-w: 47.00%;   /* 714 / 1519 */
+  --nes-tv-h: 66.11%;   /* 513 / 776 */
+  --nes-tv-scale: 2.12745;   /* 1519 / 714 */
+  --nes-art-aspect: 1519 / 776;
+  --nes-tv-aspect: 714 / 513;
+  --nes-art-aspect-num: 1.95747;
+  --nes-tv-aspect-num: 1.39181;
 }
-#device-stage .stage-card[data-nes-console="fds"] {
-  --nes-scr-l: 26.65%;   /* 238 / 893 */
-  --nes-scr-t: 10.49%;   /*  62 / 591 */
-  --nes-scr-w: 36.17%;   /* 323 / 893 */
-  --nes-scr-h: 41.12%;   /* 243 / 591 */
-  --nes-tv-l: 23.07%;    /* 206 / 893 */
-  --nes-tv-t: 2.03%;     /*  12 / 591 */
-  --nes-tv-w: 53.19%;    /* 475 / 893 */
-  --nes-tv-h: 58.71%;    /* 347 / 591 */
-  --nes-tv-scale: 1.88000;   /* 893 / 475 */
-  --nes-art-aspect: 893 / 591;
-  --nes-tv-aspect: 475 / 347;
-  --nes-art-aspect-num: 1.51100;
-  --nes-tv-aspect-num: 1.36888;
+#device-stage .stage-card[data-nes-console="fds"], .device-card[data-photo="full"][data-nes-console="fds"] {
+  /* 2026-11-25: fds-colorful.png 1414x864, the kit's whole scene (its layer masks applied). Before: fds.png 893x591, 26.65% / 10.49% / 36.17% / 41.12%. */
+  --nes-scr-l: 29.56%;   /* 418 / 1414 */
+  --nes-scr-t: 8.80%;   /*  76 / 864 */
+  --nes-scr-w: 34.51%;   /* 488 / 1414 */
+  --nes-scr-h: 42.59%;   /* 368 / 864 */
+  --nes-tv-l: 26.24%;   /* 371 / 1414 */
+  --nes-tv-t: 0.35%;   /*   3 / 864 */
+  --nes-tv-w: 50.42%;   /* 713 / 1414 */
+  --nes-tv-h: 59.49%;   /* 514 / 864 */
+  --nes-tv-scale: 1.98317;   /* 1414 / 713 */
+  --nes-art-aspect: 1414 / 864;
+  --nes-tv-aspect: 713 / 514;
+  --nes-art-aspect-num: 1.63657;
+  --nes-tv-aspect-num: 1.38716;
 }

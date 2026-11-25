@@ -29,7 +29,8 @@
   })();
   var LICENCE_URL = 'https://creativecommons.org/licenses/by-sa/4.0/';
   // Bumped with every pack rebuild so a cached index.json or shard is never mixed with new ones.
-  var DATA_TAG = '?v=2.2.2';   // 4 Nov: LaunchBox descriptions where no other source has one; one game, one group
+  var DATA_TAG = '?v=2.3.0-ddmeta2';   // 26 Nov: n64dd developer corrections (was 2.3.0-ddmeta1: the 64DD shelf n64dd)
+  // was '?v=2.3.0-n64site';   // 4 Nov: LaunchBox descriptions where no other source has one; one game, one group
   // LaunchBox user ratings. Turned off 2026-10-14 when testing found the links opened wrong games; back on after the audit (every scored record: name, platform, rating, votes and linked page match). false hides them.
   var SHOW_LB = true;
 
@@ -68,12 +69,17 @@
 
   // ------------------------------------------------------------ which shelf
   var ATARI_SHELF = { atari2600: 'a2600', atari5200: 'a5200', atari7800: 'a7800', atarilynx: 'alynx' };
+  var SEGA8_SHELF = { sg1000: 'sg1000', mastersystem: 'sms', gamegear: 'gg', n64: 'n64', snes: 'snes' };   // snes: the Super Nintendo (23 Nov 2026), shelf snes   // n64: the Nintendo 64 (22 Nov 2026), shelf n64
   function shelvesOf(d) {
     if (!d) return [];
     if (d.catalogue === 'game-boy') return d.system === 'gbc' ? ['gbc', 'gb'] : ['gb', 'gbc'];
     if (d.catalogue === 'nes') return d.nesConsole === 'fds' ? ['fds'] : ['nes'];
     if (ATARI_SHELF[d.catalogue]) return [ATARI_SHELF[d.catalogue]];
     if (d.catalogue === 'pokemon-mini') return ['pm'];
+    /* A 64DD disk (26 Nov 2026): the n64 catalogue's disks (index.html n64Disk) have their own shelf, n64dd, as the
+       Disk System's disks have fds in the nes catalogue. Keyed the same way (n64-x + 12 hex of the disk file's SHA-256). */
+    if (d.catalogue === 'n64' && d.n64Disk) return ['n64dd'];
+    if (SEGA8_SHELF[d.catalogue]) return [SEGA8_SHELF[d.catalogue]];   // the Sega 8-bit family (20 Nov 2026): shelves sg1000, sms, gg, the tile id prefixes
     return [];
   }
   // Game & Watch units: no cartridge, so only a review score, keyed by the
@@ -411,6 +417,7 @@
     var modal = document.getElementById('device-modal');
     if (!modal || !(shelvesOf(d).length || isGnw(d))) return;
     if (d.unreleased) return;   // a device never released has no reviews: no section at all
+    try { decoratePlayTimes(modal, d); } catch (e) {}
     var body = modal.querySelector('[data-tab-content="device"] .device-modal-body');
     if (!body) return;
     var slot = document.createElement('div');
@@ -426,6 +433,81 @@
       if (hit.shelf !== 'gnw') try { filled = fillPlaceholders(modal, hit.rec); } catch (e) {}
       var h = sectionHTML(d, hit, filled);
       if (h) slot.innerHTML = h; else slot.remove();
+    });
+  }
+
+  // ------------------------------------------------------------ play times (IGDB.com)
+  /* 21 Nov 2026: how long a game takes, in the drawer's green status panel as its PLAY TIME
+     line: Rushed, Normal and Completionist (IGDB's "hastily", "normally"
+     and "completely"), each only where IGDB has a time, the number of players it rests on
+     when under three, and "Times: IGDB.com" linking to the IGDB page the times are on (the
+     licence's clear path to the source). The data is IGDB's, not ours, so it sits in its own
+     files, metadata/playtimes-<shelf>.json.gz (WASM_Source/metadata/igdb-ttb.py --site), never
+     in the CC BY-SA packs above. Keyed by the variants table's stable group id, so every
+     version of a game shows its tile's times; Game & Watch by the unit's id. One small file
+     per shelf, fetched when a drawer on that shelf opens. */
+  var PT_TAG = '?v=2.3.0-ddmeta2';   // 26 Nov: playtimes-n64dd (was 2.3.0-prepolish1)
+  var PT_TABLE_SHELF = { gb: 'gb', gbc: 'gbc', nes: 'nes', famicom: 'famicom', fds: 'fds', atari2600: 'a2600', atari5200: 'a5200',
+    atari7800: 'a7800', atarilynx: 'alynx', pm: 'pm', sg1000: 'sg1000', mastersystem: 'sms', gamegear: 'gg', n64: 'n64', snes: 'snes' };
+  var PT_SYS = { nes: 'nes', 'game-boy': 'gb', atari2600: 'atari2600', atari5200: 'atari5200', atari7800: 'atari7800', atarilynx: 'atarilynx',
+    'pokemon-mini': 'pm', sg1000: 'sg1000', mastersystem: 'mastersystem', gamegear: 'gamegear', n64: 'n64', snes: 'snes' };
+  var _pt = {};
+  function ptShelf(shelf) {
+    if (!_pt[shelf]) _pt[shelf] = fetch(BASE + 'playtimes-' + shelf + '.json.gz' + PT_TAG).then(gunzipJson)
+      .then(function (j) { return (j && j.t) || {}; })
+      .catch(function (e) { console.warn('[gamemeta] playtimes-' + shelf + ' unavailable:', e && e.message || e); return {}; });
+    return _pt[shelf];
+  }
+  // [shelf, key] for a title's tile, or null.
+  function ptKey(d) {
+    if (!d || d.unreleased) return Promise.resolve(null);
+    if (isGnw(d)) return Promise.resolve(['gnw', d.id]);
+    var V = window.Variants, sys = d && PT_SYS[d.catalogue];
+    if (!V || !sys || typeof V.info !== 'function') return Promise.resolve(null);
+    return Promise.resolve(V.ready ? V.ready(sys) : null).catch(function () { return null; }).then(function () {
+      var e = V.info(d), gid = e && V.groupId ? V.groupId(d) : null;
+      if (!e || !gid) return null;
+      // a 64DD disk: its own file, playtimes-n64dd, as its details are on the n64dd shelf (26 Nov 2026)
+      var sh = d.catalogue === 'n64' && d.n64Disk ? 'n64dd' : (PT_TABLE_SHELF[e.shelf] || e.shelf);
+      return [sh, gid.slice(gid.indexOf(':') + 1)];
+    });
+  }
+  function playTimes(d) {
+    return ptKey(d).then(function (k) { return k ? ptShelf(k[0]).then(function (t) { return t[k[1]] || null; }) : null; }).catch(function () { return null; });
+  }
+  // "40 min", "about 2 h", "about 2.5 h", "about 14 h".
+  function ptFmt(s) {
+    var m = s / 60;
+    if (m < 55) return Math.max(5, Math.round(m / 5) * 5) + ' min';
+    var h = s / 3600;
+    if (h < 10) { var q = Math.round(h * 2) / 2; return 'about ' + (q % 1 ? q.toFixed(1) : String(q)) + ' h'; }
+    return 'about ' + Math.round(h) + ' h';
+  }
+  /* In the drawer's green status panel, before its STATUS line:
+       > PLAY TIME:  RUSHED         ABOUT 2.5 H
+                     NORMAL        ABOUT 12 H
+                     COMPLETIONIST ABOUT 2 H
+                     From 1 player. Times: IGDB.com   (small) */
+  function ptHTML(row) {
+    var lines = [['RUSHED', row[0]], ['NORMAL', row[1]], ['COMPLETIONIST', row[2]]].filter(function (x) { return x[1] > 0; });
+    if (!lines.length) return '';
+    var n = row[3] || 0;
+    var href = row[4] ? 'https://www.igdb.com/games/' + encodeURIComponent(row[4]) : 'https://www.igdb.com/';
+    return '<div class="status-row gm-ttb"><span class="status-k">&gt; PLAY TIME:</span><span class="status-v"><span class="gm-ttb-grid">' +
+      lines.map(function (x) { return '<span class="gm-ttb-k">' + x[0] + '</span><span>' + ptFmt(x[1]).toUpperCase() + '</span>'; }).join('') +
+      '</span><span class="gm-ttb-note">' + (n > 0 && n < 3 ? 'From ' + n + (n === 1 ? ' player' : ' players') + '. ' : '') +
+      'Times: <a href="' + href + '" target="_blank" rel="noopener">IGDB.com</a></span></span></div>';
+  }
+  function decoratePlayTimes(modal, d) {
+    playTimes(d).then(function (row) {
+      var html = row && ptHTML(row);
+      if (!html || !modal.isConnected) return;
+      var open = modal.dataset.udId || (function () { try { return typeof _openDeviceId !== 'undefined' ? _openDeviceId : null; } catch (e) { return null; } })();   // eslint-disable-line no-undef
+      if (open && open !== d.id) return;
+      var panel = modal.querySelector('[data-tab-content="device"] .status-panel');
+      if (!panel || panel.querySelector('.gm-ttb')) return;
+      var rows = panel.querySelectorAll(':scope > .status-row'), last = rows[rows.length - 1];
+      if (last) last.insertAdjacentHTML('beforebegin', html); else panel.insertAdjacentHTML('beforeend', html);
     });
   }
 
@@ -516,6 +598,12 @@
       '.device-modal-body .gm-score .v a{color:inherit;text-decoration:underline;text-underline-offset:2px}' +
       '.device-modal-body .gm-score .gm-score-num{font-weight:700;color:var(--text)}' +
       '.device-modal-body .gm-score-none .v{color:var(--muted);font-style:italic}' +
+      // play times from IGDB.com, in the green status panel
+      '.status-panel .gm-ttb-grid{display:grid;grid-template-columns:auto auto;column-gap:10px;justify-content:start}' +
+      '.status-panel .gm-ttb-k{color:#5db066;font-weight:400}' +
+      '.status-panel .gm-ttb-note{display:block;margin-top:2px;font-size:10.5px;font-weight:400;letter-spacing:0;line-height:1.5;color:#5db066}' +
+      '.status-panel .gm-ttb-note a{color:#b6f0bd;text-decoration:underline;text-underline-offset:2px;position:relative}' +
+      '.status-panel .gm-ttb-note a:focus-visible{outline:2px solid #6fe97a;outline-offset:2px;border-radius:2px}' +
       // cover source markers (testing aid, see COVER_SOURCE_MARKERS)
       '.device-card .img > .cover-src{position:absolute;right:10px;bottom:10px;width:16px;height:16px;border-radius:50%;z-index:4;pointer-events:none;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.6)}' +
       '.device-card .img > .cover-src-r2{background:#22c55e}' +
@@ -543,7 +631,7 @@
     if (!gnwHook()) document.addEventListener('DOMContentLoaded', gnwHook, { once: true });
   } catch (e) {}
 
-  window.GameMeta = { fillYears: fillYears, fillScores: fillScores, ratingHTML: ratingHTML, markCoverSource: markCoverSource, lookup: lookup, decorateDrawer: decorateDrawer, mountBoxArt: mountBoxArt };
+  window.GameMeta = { fillYears: fillYears, fillScores: fillScores, ratingHTML: ratingHTML, markCoverSource: markCoverSource, lookup: lookup, decorateDrawer: decorateDrawer, mountBoxArt: mountBoxArt, playTimes: playTimes };
   // A far tile put back on the page (index.html) gets the ratings that came while it was away.
   // Only those tiles, looked up by index (patchTiles' whole-list search per tile cost 0.6 s per 14 swipes at 3,200 tiles).
   document.addEventListener('cw-wall-restored', function (ev) {

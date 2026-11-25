@@ -1,0 +1,221 @@
+{
+ "format": 1,
+ "list": "mastersystem",
+ "label": "Master System",
+ "guards": [
+  "mastersystem"
+ ],
+ "count": 35,
+ "entries": {
+  "0b788676b12ef863cd6a6e89f050141c457b1fe075bb1deeef4a71a49788a24c": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Fabrica de Chocolate (Brazil) (Mega Drive 4)"
+  },
+  "14a0564ed784f862182bb0b31f3fe9a105df6daf555d89aefd0d87450818aade": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Palhacos (Brazil) (Mega Drive 4)"
+  },
+  "162eea9b9652487ba01db9fe00a59d3c3b27386cae7bc09e1f60a63686de12c6": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Acerte o Alvo (Brazil) (Mega Drive 4)"
+  },
+  "1b40a8ab31b6aade6970f06ec56cbe40f7112af61916ccd3feaac7b80aa5b483": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Enduro Racer (USA, Europe) [modified]"
+  },
+  "213d0252d5f645be3c21ec8cd519500d7c868f28b8633326c311fa098c9bd59e": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Bolhas (Brazil) (Mega Drive 4)"
+  },
+  "328fa77e91cf2f483c598dccc87149f378d680705947cd59effd51b22d497ff4": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Bombeiros (Brazil) (Mega Drive 4)"
+  },
+  "32b1b6d81f995e9d92462387b274e266b113c4232a5332ac06d03769e0cea25c": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Tangram (Brazil) (Mega Drive 4)"
+  },
+  "42c08c72ffff8a8c0bb6dc6e53ba2cc1e12c95f59c02461914c136030bcd8f7b": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Alex Kidd in Miracle World (World) (En) (Sega Ages)"
+  },
+  "43e3d41b49329e9c5121cc7b960639709f7c8607f3a35a775839720c304bd721": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Mega Mode Super Game 30 (Korea) (Unl)"
+  },
+  "478cccfa8953236d30411e7da444b8b5187789f96fc65385312084cfe87d2ca7": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Senha (Brazil) (Mega Drive 4)"
+  },
+  "4c13b83d4f2c98fba0ce2ac1b8be2891e50150dcadc5243271804524ce340f41": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Bolas e Cores (Brazil) (Mega Drive 4)"
+  },
+  "53830e9d493e91ecc6e26e29464823e290ccbf9b55bcd0ee705337abf6803c73": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Astro Warrior & Pit Pot (Brazil) (En) (Master System Evolution)"
+  },
+  "5606aa4e8c542d4b6bd2b8bf6aa0a48c95e2873081cb6d95f2d045c09535a860": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Memoria Master (Brazil) (Mega Drive 4)"
+  },
+  "5c1b78dfe6255556aaf9c839d64825cf8809191c77a52924e499efa499e8db32": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Mina Terrestre (Brazil) (Mega Drive 4)"
+  },
+  "67f568cc0b99435d45132b624b65e76b9614447a0170102a5b702dd4086c0164": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Kenseiden (USA, Europe) [modified]"
+  },
+  "68153d0c52e75fe1b2c30a98de2bc14e887caf3cd137518a55dc635ea5286f0b": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Blade Eagle (World) [modified]"
+  },
+  "68a22b12bbdc7f58fbbe4bac6e54fde46db5fe9ddb8b7487f986655909d58692": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Alex Kidd in Miracle World (USA, Europe) [modified]"
+  },
+  "6add791422db8c75bc5f6f8cef672a2275ffe197ab137572f141c7212596ed09": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Great Volleyball (USA, Europe) [modified]"
+  },
+  "7898a0ea5defdec4a316e118593c63a82fd6f67ce4745850048526fb274fd6d5": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Speedball (World) (Evercade)"
+  },
+  "78e44e2847574233c18be195311652e62fdcbd3d31ee29f0b92efde989c37518": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Creature Capture (Brazil) (Mega Drive 4)"
+  },
+  "80d038bb8b17cc7b68e4958c4d4cec3abe1f837492c878e0965739aee30027d5": {
+   "kind": "cartridge",
+   "code": "BLANK_SCREEN",
+   "reason": "it shows nothing.",
+   "title": "SMSC Text Demo (1.00 - BASIC)"
+  },
+  "82036db37818a8a4bda9c419a9f0b443b86352b6a6c48e248734bd667999ed17": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Cava-Cava (Brazil) (Mega Drive 4)"
+  },
+  "83db8f5bc3dd6465f600e79ad7cc1212e976dbe07b15b7c3ec8dd90936469300": {
+   "kind": "cartridge",
+   "code": "CRASHES_AT_BOOT",
+   "reason": "it crashes.",
+   "title": "Sushi Nights (World) (v1.00) (Aftermarket) (Unl)"
+  },
+  "88dc8e6cef5e4459db8db3a53e6a4b98b57346945d3c65dc0b9e05419f0ba7bc": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Minerador (Brazil) (Mega Drive 4)"
+  },
+  "8e10c1a7a7b75a880edcbee0f22c48a7487cd66fe816de56390ddcbf87661760": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Phantasy Star (World) (Ja) (Sega Ages)"
+  },
+  "934413dc5f79467fa47db20a7cb075b411dd86fd7e5e8be4c59594c8d16e2523": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Mega Mode Super Game 138 (Korea) (Unl)"
+  },
+  "9b5dd32aab5cc948f7d220559c6015ae85ea2978cd99ee56121bb31499743cc7": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Sudoku (Brazil) (Mega Drive 4)"
+  },
+  "a3b747c4f40d5e7418eabf51b226697989908d8f02f5b9d4d980f500452e0acc": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "NBA Jam (Europe) (Proto)"
+  },
+  "ae2b09bb5fe78bf9ba0352e925838210005fdfd48c4da62eba30b8b44ead4585": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Doze Trabalhos de Jongo, Os (Brazil) (Mega Drive 4)"
+  },
+  "aed98f406643d22e863a4dbc3bcbe09879bcdd841a17342414e7b402c8d22dd3": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Wonder Boy III - The Dragon's Trap (World) (Digital)"
+  },
+  "bcb65518c832d11b4df104ff888887f2b4fab3bf7af576483f13726600a6ce7c": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Phantasy Star (World) (En) (Sega Ages)"
+  },
+  "cddb36c38e33b32334e1071bdf57adf762104c5a9e337f3aea073350c81c25b0": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Alex Kidd in Miracle World (World) (Ja) (Sega Ages)"
+  },
+  "dc1e38ec574715ac744f7dffd91a84dfd81871c8f749f45b943958aeee4e2a1a": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "R-Type (World) (Beta)"
+  },
+  "ea45667366805f640c87a056b0f66fc55ac5b4d022d0b08e4f6c5346fab8284e": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "a real console's own start-up program refuses this cartridge too.",
+   "title": "Golvellius (USA, Europe) [modified]"
+  },
+  "ed51dd89af643282663524a51f4b138649a1295f1db7219e5ac20f3535ce02d5": {
+   "kind": "cartridge",
+   "code": "HANGS_AT_BOOT",
+   "reason": "it was made for a machine this emulator doesn't build yet.",
+   "title": "Domino (Brazil) (Mega Drive 4)"
+  }
+ }
+}

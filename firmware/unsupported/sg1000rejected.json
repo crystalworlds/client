@@ -1,0 +1,11 @@
+{
+ "format": 1,
+ "list": "sg1000rejected",
+ "label": "SG-1000: copies the site refuses (internal: bad and altered copies, unplayable fan hacks)",
+ "guards": [
+  "sg1000"
+ ],
+ "internal": true,
+ "count": 0,
+ "entries": {}
+}

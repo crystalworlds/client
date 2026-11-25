@@ -1,4 +1,5 @@
-/* atarivideo.js: RECORDED Atari 2600, 5200, 7800 and Lynx tiles for the grids.
+/* atarivideo.js: RECORDED Atari 2600, 5200, 7800 and Lynx tiles for the grids, and (20 Nov 2026)
+ * the SG-1000, Master System and Game Gear tiles, which share the Atari tile machinery.
  * ===========================================================================
  *
  * The Atari counterpart of nesvideo.js, in the same shape and for the same
@@ -39,10 +40,32 @@
     a2600: 'https://pub-b06c91c6666e4da3ae82bd1fa1d3e503.r2.dev/',   // atari2600-clips
     a5200: 'https://pub-91771962e9ff4dc5b2447e994aa567d3.r2.dev/',   // atari5200-clips
     a7800: 'https://pub-c86bedebfec5473681f448fb09f7bec4.r2.dev/',   // atari7800-clips
-    alynx: 'https://pub-69281f85c5894f8aa71dd2225e83c8e5.r2.dev/'    // atarilynx-clips
+    alynx: 'https://pub-69281f85c5894f8aa71dd2225e83c8e5.r2.dev/',   // atarilynx-clips
+    /* The Sega 8-bit walls (20 Nov 2026): the same tiles (.atari-emu, ids <prefix>-x<sha12>), one
+       bucket per wall, recorded on the play window's own core from power-on. */
+    sg1000: 'https://pub-9d010780a51b4b45ac5bc703ef41ab49.r2.dev/',  // sg1000-clips
+    sms: 'https://pub-f689888fe97d4e9aacbba913ce481ff4.r2.dev/',     // sms-clips
+    gg: 'https://pub-8cbb99dc29104b8fab1c0020d69e114b.r2.dev/',      // gg-clips
+    /* The Nintendo 64 wall (22 Nov 2026): the same tiles (ids n64-x<sha12>), recorded on the play window's core. */
+    n64: 'https://pub-3078885e3dac47c28fd5f21066a420c6.r2.dev/',     // n64-clips
+    /* The Super Nintendo wall (23 Nov 2026): the same tiles (ids snes-x<sha12>), captured from power-on on the play
+       window's core; a tile whose clip is not uploaded answers 404 and keeps its still. */
+    snes: 'https://pub-e5ab64db1e6a46f39ce512bfeb902fe1.r2.dev/'     // snes-clips
   };
-  var SYS = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx' };
-  var ID_RE = /^(a2600|a5200|a7800|alynx)-x([0-9a-f]{12})$/;
+  /* ONE CLIP FOR EVERY NINTENDO 64 TILE (22 Nov 2026). Only one N64 recording exists so far: Donkey Kong 64
+     (USA), tile n64-xb6347d9f1f75, from power-on on the play window's core (n64-clips/n64-xb6347d9f1f75.webm).
+     Every N64 tile, and the N64 drawer's first picture (drawer-unified.js asks urlFor), plays that one file.
+     When each tile has its own clip, set this to null: clipId() then names each tile's own recording (its
+     variant group's representative), as on every other wall. That one line is the whole change. */
+  var N64_ONE_CLIP = null;   // 23 Nov 2026: each N64 tile plays its own clip; a tile without one shows the television switched off
+  /* A re-recording of a whole wall (21 Nov 2026: the Sega walls' television picture and start-up
+     screen) reuses each clip's address, and the buckets send no caching rule, so a browser may
+     keep the old file for hours. A version on that wall's addresses makes it fetch the new one.
+     One value per wall, never per clip: still no list. Change it after a wall's re-upload. */
+  var VER = { sg1000: '?v=s8clips2b', sms: '?v=s8clips2c', gg: '?v=s8clips2b', n64: '?v=n64clips2', snes: '?v=snesclips1' };
+  var SYS = { a2600: 'atari2600', a5200: 'atari5200', a7800: 'atari7800', alynx: 'atarilynx',
+              sg1000: 'sg1000', sms: 'mastersystem', gg: 'gamegear', n64: 'n64', snes: 'snes' };
+  var ID_RE = /^(a2600|a5200|a7800|alynx|sg1000|sms|gg|n64|snes)-x([0-9a-f]{12})$/;
   var NEAR_PX = 300;
   var CYCLE_MS = 120000;
   var FULL_SECS = 119;
@@ -67,6 +90,7 @@
   function clipId(id) {
     var m = ID_RE.exec(id || '');
     if (!m) return null;
+    if (m[1] === 'n64' && N64_ONE_CLIP) return N64_ONE_CLIP;   // see N64_ONE_CLIP above
     var V = window.Variants;
     if (!V || typeof V.repOf !== 'function') return id;
     var r;
@@ -79,7 +103,7 @@
     var base = m && BASES[m[1]];
     if (!base) return null;
     var c = clipId(id);
-    return (c && !MISSING[c]) ? base + c + '.webm' : null;
+    return (c && !MISSING[c]) ? base + c + '.webm' + (VER[m[1]] || '') : null;
   }
 
   /* Asked by index.html's live sweep BEFORE it builds an iframe. */
@@ -347,7 +371,7 @@
   css();
 
   window.addEventListener('gnw-variants', function (e) {
-    if (e && e.detail && /^atari/.test(String(e.detail.system || ''))) remount();
+    if (e && e.detail && /^(atari|sg1000$|mastersystem$|gamegear$|n64$|snes$)/.test(String(e.detail.system || ''))) remount();
   });
 
   window.ATARIVIDEO = { clipId: clipId, arm: arm, claims: claims, stats: stats, urlFor: urlFor, release: release, trim: trim,

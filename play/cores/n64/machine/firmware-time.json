@@ -1,0 +1,127 @@
+{
+ "what": "How long the console's boot firmware takes before it hands over to the cartridge's boot code, in ticks of 1/187,500,000 s, and how many instructions it runs, by the SHA-256 of the boot code (bytes 0x40 to 0xFFF of the cartridge) and the television type of the console the firmware was made for. A host that starts a game without the firmware gives these to the stand-in, so that the COUNT and Random registers stand as after the firmware.",
+ "label": "INSTRUMENT-MEASURED on this core, by running the user's own three firmware images over every game of the private test set; no console was asked, and a console's own figure would correct these",
+ "measuredBy": "tools/game-firmware-time.mjs",
+ "byBootCode": {
+  "bf3620d30817007091ebe9bddd1b88c23b8a0052170b3309cde5b6b4238e45e7": {
+   "chip": "6103",
+   "PAL": {
+    "ticks": 42535176,
+    "instructions": 409744
+   },
+   "NTSC": {
+    "ticks": 42499896,
+    "instructions": 409738
+   },
+   "MPAL": {
+    "ticks": 42535176,
+    "instructions": 409744
+   }
+  },
+  "04b7bc6717a9f0eb724cf927e74ad3876c381cbb280d841736fc5e55580b756b": {
+   "chip": "6105",
+   "PAL": {
+    "ticks": 42539352,
+    "instructions": 409784
+   },
+   "NTSC": {
+    "ticks": 42504072,
+    "instructions": 409778
+   },
+   "MPAL": {
+    "ticks": 42539352,
+    "instructions": 409784
+   }
+  },
+  "61e88238552c356c23d19409fe5570ee6910419586bc6fc740f638f761adc46e": {
+   "chip": "6102",
+   "PAL": {
+    "ticks": 42546114,
+    "instructions": 409944
+   },
+   "NTSC": {
+    "ticks": 42510834,
+    "instructions": 409938
+   },
+   "MPAL": {
+    "ticks": 42546114,
+    "instructions": 409944
+   }
+  },
+  "9af0486848d80319c03c7a4c76dfa412259821c9a4d29aed926745896e97b1c8": {
+   "chip": "not known",
+   "PAL": {
+    "ticks": 42375696,
+    "instructions": 406556
+   },
+   "NTSC": {
+    "ticks": 42340416,
+    "instructions": 406550
+   },
+   "MPAL": {
+    "ticks": 42375696,
+    "instructions": 406556
+   }
+  },
+  "7d9978ed11e23fdb98a9251da90ed9a3c299066e104d69c32f161a9b86d119b9": {
+   "chip": "not known",
+   "PAL": {
+    "ticks": 43534746,
+    "instructions": 394162
+   },
+   "NTSC": {
+    "ticks": 43499466,
+    "instructions": 394156
+   },
+   "MPAL": {
+    "ticks": 43534746,
+    "instructions": 394162
+   }
+  },
+  "b99f06c4802c2377e31e388435955ef3e99c618a6d55d24699d828eb1075f1eb": {
+   "chip": "6101",
+   "PAL": {
+    "ticks": 42556392,
+    "instructions": 410108
+   },
+   "NTSC": {
+    "ticks": 42521112,
+    "instructions": 410102
+   },
+   "MPAL": {
+    "ticks": 42556392,
+    "instructions": 410108
+   }
+  },
+  "36adc40148af56f0d78cd505eb6a90117d1fd6f11c6309e52ed36bc4c6ba340e": {
+   "chip": "6106",
+   "PAL": {
+    "ticks": 42470046,
+    "instructions": 409090
+   },
+   "NTSC": {
+    "ticks": 42434766,
+    "instructions": 409084
+   },
+   "MPAL": {
+    "ticks": 42470046,
+    "instructions": 409090
+   }
+  },
+  "1d639e5721a5819c25fb44edc33fdd1e9e87ee3aa4916d2cf413c506a473f6e4": {
+   "chip": "6102",
+   "PAL": {
+    "ticks": 42366630,
+    "instructions": 407646
+   },
+   "NTSC": {
+    "ticks": 42331350,
+    "instructions": 407640
+   },
+   "MPAL": {
+    "ticks": 42366630,
+    "instructions": 407646
+   }
+  }
+ }
+}

@@ -23,7 +23,7 @@
 import { GBHost, FRAME_HZ, SCREEN_W, SCREEN_H } from '../play/gameboy/web/core.js';
 import { paletteLUT, blitInto } from '../play/gameboy/web/shell.js';
 import { cgbAppliesTo, cgbAssignmentFor } from '../play/gameboy/cgb-assign.js';
-import { cgbStartup } from '../play/gameboy/cgb-boot.js?v=2.2.2';
+import { cgbStartup } from '../play/gameboy/cgb-boot.js?v=2.3.0';
 
 export { FRAME_HZ, SCREEN_W, SCREEN_H };
 export const MODELS = ['DMG', 'CGB', 'SGB'];

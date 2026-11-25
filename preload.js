@@ -106,7 +106,8 @@
      window runs from a file (not a Game & Watch unit, a tape or a cassette). */
   function applies(id) { var t = titleOf(id); return !!(t && KINDS[t.kind]); }
   var SYS = { gb: 'Game Boy', gbc: 'Game Boy Color', sgb: 'Super Game Boy', nes: 'NES', famicom: 'Famicom', fds: 'Disk System',
-    a2600: 'Atari 2600', a5200: 'Atari 5200', a7800: 'Atari 7800', alynx: 'Atari Lynx', pokemini: 'Pokémon mini' };
+    a2600: 'Atari 2600', a5200: 'Atari 5200', a7800: 'Atari 7800', alynx: 'Atari Lynx', pokemini: 'Pokémon mini',
+    sg1000: 'SG-1000', sms: 'Master System', gg: 'Game Gear', n64: 'Nintendo 64', snes: 'Super Nintendo' };
   function nameOf(id, t) {
     try { var d = (typeof ALL_DEVICES !== 'undefined' ? ALL_DEVICES : []).filter(function (x) { return x.id === id; })[0]; if (d && d.name) return d.name; } catch (e) {}   // eslint-disable-line no-undef
     return (t && t.title) || id;

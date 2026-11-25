@@ -23,11 +23,18 @@
  */
 import { CoreError } from './core-api.mjs';
 
-export async function createWorkerCore(url, env, { channels = 1 } = {}) {
-  const w = new Worker(new URL('./core-worker.js?v=2.2.2-audioservo', import.meta.url), { type: 'module' });
-  let seq = 0, inFlight = 0, video = null, wantState = false, wantVideo = true, latest = null, inputs = [], mirror = { frames: 0, model: null, ready: true, bdirty: null };
+/* everyPicture (22 Nov 2026, the N64): the worker composes the picture of EVERY frame, not only of the frame
+   asked after a paint. With two frames in flight a picture asked at a paint comes two frames later, so a core
+   whose frames take most of a screen refresh showed a new picture only every second or third paint (the N64 at
+   48 frames a second: 15 pictures a second). Off for every other system: their frames are short and the
+   picture costs them more than it gives. */
+export async function createWorkerCore(url, env, { channels = 1, maxInFlight = 2, everyPicture = false, createMs = 0 } = {}) {
+  const w = new Worker(new URL('./core-worker.js?v=2.3.0-prepush1', import.meta.url), { type: 'module' });
+  const t0 = performance.now(); let lastSign = 'none';
+  let seq = 0, inFlight = 0, video = null, wantState = false, wantVideo = true, latest = null, latestVideo = null, inputs = [], mirror = { frames: 0, model: null, ready: true, bdirty: null };
   let audioQ = [], audioFrames = 0, options = null, details = null, dead = null, ports = [];
   const waits = new Map();
+  const keepPic = new Set();          // unserialize answers whose picture is not taken (the caller showed its own)
   const battery = new Map();
   const ask = (m, tr) => new Promise((res, rej) => { const id = ++seq; waits.set(id, { res, rej }); w.postMessage(Object.assign({ id }, m), tr || []); });
   const errOf = d => new CoreError(d.code || 'damaged', d.message || 'the core refused');
@@ -45,16 +52,17 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
       if (d.video) video = d.video;
       // Sound is handed on the moment it arrives (onAudio), not on the page's next tick.
       if (d.audio && d.audio.frames) { if (proxy.onAudio) proxy.onAudio(d.audio.data, d.audio.frames); else { audioQ.push(d.audio.data); audioFrames += d.audio.frames; } }
-      if (d.state) latest = d.state;
+      if (d.state) { latest = d.state; latestVideo = d.video || null; }   // the picture of the same frame as the state (rewind)
       take(d.mirror);
       if (d.video && proxy.onFrame) proxy.onFrame();
     } else if (d.t === 'emit') { if (d.ev === 'ports' && Array.isArray(d.data)) ports = d.data; env.emit(d.ev, d.data); }
     else if (d.t === 'log') env.log(d.lv, d.m);
+    else if (d.t === 'alive') { lastSign = d.stage; env.log('info', `worker start: ${d.stage === 'worker' ? 'the worker runs' : 'the console’s program arrived'} (${Math.round(performance.now() - t0)} ms)`); if (createArm) createArm(); }
     else if (d.t === 'created') { options = d.options; createdRes && createdRes(d); }
     else if (d.t === 'loaded') { details = d.details; options = d.options || options; if (d.ports) ports = d.ports; take(d.mirror); loadedRes && loadedRes(d.result); }
     else if (d.t === 'state' || d.t === 'done') {
-      if (d.video) { video = d.video; if (proxy.onFrame) proxy.onFrame(); }
-      if (d.state) latest = d.state.slice();
+      if (d.video && !keepPic.delete(d.id)) { video = d.video; if (proxy.onFrame) proxy.onFrame(); }
+      if (d.state) { latest = d.state.slice(); latestVideo = null; }
       if (d.options) options = d.options;
       if (d.ports) ports = d.ports;
       take(d.mirror);
@@ -68,7 +76,23 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
     }
   };
   w.onerror = e => { const err = new CoreError('unsupported', 'the core worker stopped: ' + (e && e.message || 'error')); dead = err; createdRej && createdRej(err); loadedRej && loadedRej(err); };
-  const created = await new Promise((res, rej) => { createdRes = res; createdRej = rej; w.postMessage({ t: 'create', url, audioRate: env.audioRate ? env.audioRate() : 48000 }); });
+  /* createMs (23 Nov 2026): a worker whose program, or the core's own files, never arrive (a stalled
+     request) would leave its start waiting for ever; past the limit the worker is stopped and the start refused,
+     so the host can say why or run the core on the page instead. 0: no limit. */
+  /* The limit counts from the worker's last sign of life (core-worker.js 'alive'): a worker slowed by a busy
+     machine that is still moving gets the time again at each step (twice over for the program's own start, which
+     compiles its machine and may start workers of its own); one that never moves is stopped. */
+  let createTimer = 0, createArm = null;
+  const WHERE = { none: 'the worker did not start', worker: 'the console’s program did not arrive in the worker', imported: 'the console’s program did not finish starting' };
+  const created = await new Promise((res, rej) => {
+    createdRes = res; createdRej = rej;
+    if (createMs > 0) {
+      createArm = () => { clearTimeout(createTimer); const ms = lastSign === 'imported' ? createMs * 2 : createMs; createTimer = setTimeout(() => { try { w.terminate(); } catch (_) {} rej(new CoreError('unsupported', `${WHERE[lastSign] || WHERE.none} within ${Math.round(ms / 1000)} seconds`)); }, ms); };
+      createArm();
+    }
+    w.postMessage({ t: 'create', url, audioRate: env.audioRate ? env.audioRate() : 48000 });
+  }).finally(() => { clearTimeout(createTimer); createArm = null; });
+  env.log('info', `worker start: ready (${Math.round(performance.now() - t0)} ms)`);
   const has = created.has || {};
 
   const proxy = {
@@ -87,7 +111,10 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
       // Two in flight, not three (29 Oct 2026): one frame runs while one waits, which is all the
       // worker needs to never idle; a third only sat in the queue, holding every press and every sound
       // block back by a frame (17 ms) and making the sound arrive in bigger bursts.
-      if (inFlight >= 2) return false;
+      // A core that asks for it may keep THREE (22 Nov 2026, the Nintendo 64 only): on a screen whose
+      // animation frames come at 30 Hz, a slow core waited up to a frame for the next ask, every other frame.
+      // A third in flight is taken only while the core is behind; the light cores keep two.
+      if (inFlight >= maxInFlight) return false;
       inFlight++;
       // The picture is composed in the worker only for a frame the page will paint: the main
       // thread's core composes on paint too, not every frame (a catch-up tick runs several).
@@ -95,7 +122,7 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
       // sound at env.audioRate(), and the servo is in that rate. Sent only at create, a worker core
       // kept the first reading (+0.5 %, an empty queue) and its queue was cleared twice a minute.
       const m = { t: 'run', now: env.now(), audioRate: env.audioRate ? env.audioRate() : 0, inputs, wantState, wantVideo, channels };
-      inputs = []; wantState = false; wantVideo = false;
+      inputs = []; wantState = false; wantVideo = everyPicture;
       w.postMessage(m);
       return true;
     },
@@ -109,15 +136,24 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
       return r;
     },
     serialize() {
-      wantState = true;
+      wantState = true; wantVideo = true;                               // the state's frame comes with its picture
       if (inFlight === 0) ask({ t: 'serialize' }).catch(() => {});     // paused: refresh it now
       return latest ? latest.slice() : null;
     },
+    /* The picture of the frame serialize() last returned (21 Nov 2026): the rewind ring keeps it
+       with the state, so a step back shows that moment and not the newest frame (the newest frame
+       is up to one capture later, and a core whose state holds no picture answers an unserialize
+       with the picture it had before). Null when the state came without one. */
+    stateVideo() { return latestVideo; },
     async serializeAsync() { const d = await ask({ t: 'serialize' }); return d.state ? d.state.slice() : null; },
-    unserialize(st) {
+    /* o.picture (21 Nov 2026, the rewind ring): the picture of that state, already shown by the host.
+       It becomes the newest frame, and the worker's answer does not replace it: a core whose state
+       holds no picture answers with the one it had before the step. */
+    unserialize(st, o) {
       audioQ = []; audioFrames = 0;
       const copy = st instanceof Uint8Array ? st.slice() : new Uint8Array(st);
-      latest = copy.slice();
+      latest = copy.slice(); latestVideo = null;
+      if (o && o.picture) { video = o.picture; latestVideo = o.picture; keepPic.add(seq + 1); }
       ask({ t: 'unserialize', state: copy, now: env.now() }, [copy.buffer]).catch(e => env.log('warn', 'state refused: ' + e.message));
     },
     async unserializeAsync(st) {
@@ -125,12 +161,15 @@ export async function createWorkerCore(url, env, { channels = 1 } = {}) {
       const copy = st instanceof Uint8Array ? st.slice() : new Uint8Array(st);
       const keep = copy.slice();
       await ask({ t: 'unserialize', state: copy, now: env.now() }, [copy.buffer]);
-      latest = keep;
+      latest = keep; latestVideo = null;
     },
-    reset() { audioQ = []; audioFrames = 0; latest = null; ask({ t: 'reset' }).catch(e => env.log('warn', 'reset refused: ' + e.message)); },
+    reset() { audioQ = []; audioFrames = 0; latest = null; latestVideo = null; ask({ t: 'reset' }).catch(e => env.log('warn', 'reset refused: ' + e.message)); },
     get frames() { return mirror.frames; },
     get timedInput() { return !!mirror.timed; },      // input changes carry their place in the frame (2026-10-22)
     get model() { return mirror.model; },
+    get rumble() { return mirror.rumble | 0; },
+    get fps() { return typeof mirror.fps === 'number' ? mirror.fps : null; },   // the N64's fields a second, live (core-worker.js mirror)
+    get engine() { return mirror.engine || null; },                            // the N64's engine running: 'accurate' or 'fast'
     destroy() { try { w.terminate(); } catch (_) {} },
   };
   if (has.details) proxy.details = () => details || '';

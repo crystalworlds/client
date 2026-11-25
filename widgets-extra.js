@@ -19,6 +19,18 @@
  * play history's sessions (continuerow.js, window.CwPlayHistory), which counts play in this
  * browser only. A game with no sessions says "Not played in this browser yet".
  *
+ * ACHIEVEMENTS (23 Nov 2026; asked for as "make it configurable from settings like the other
+ * widgets. Also it shouldn't show on the wall if RA is not connected"): the player's RetroAchievements.org
+ * account on the wall. Small: the latest achievement earned (badge, name, game, when). Medium: that, the
+ * total points (hardcore and casual) and the game played last with its progress bar. Large: the latest
+ * achievements and up to three games in progress. On by default, 1 in 30, Medium. Placed ONLY while
+ * RetroAchievements is connected and switched on and has answered with this key (retroachievements.js
+ * widgetState 'ready'): never while the key is refused, never an error tile. Every tile draws from one
+ * shared summary kept by retroachievements.js (asked at most every 12 minutes, only while a tile is on
+ * screen); offline it shows the kept one and says when it was updated. A game opens its drawer when it is
+ * in the library (the drawer's own table, read backwards: CwRA.tileFor); one that is not opens its page on
+ * RetroAchievements.org in a new tab, so a press is never dead and the player can still see the set.
+ *
  * Silent: nothing here makes a sound.
  */
 (function () {
@@ -29,8 +41,11 @@
   /* Play Time turns its page as Cast turns its face (emby.js ROT_MIN, ROT_SPREAD): each page holds
      18 s plus up to 14 s more, chosen afresh each time, so tiles drift apart (8 s was too quick). */
   const PT_HOLD_MS = 18000, PT_SPREAD_MS = 14000;
-  const holdFor = el => el.classList.contains('vw-playtime') ? PT_HOLD_MS + Math.random() * PT_SPREAD_MS : ROTATE_MS;
+  const holdFor = el => el.classList.contains('vw-playtime') ? PT_HOLD_MS + Math.random() * PT_SPREAD_MS : el.classList.contains('vw-ach') ? ACH_HOLD_MS : ROTATE_MS;
   const SIZES = [['1', '1x: one tile'], ['2', '2x: two tiles wide'], ['4', '4x: two by two']];
+  /* Achievements: the same three sizes, named by what they hold. */
+  const ACH_SIZES = [['1', 'Small: one tile'], ['2', 'Medium: two tiles wide'], ['4', 'Large: two by two']];
+  const ACH_HOLD_MS = 60000;   // an Achievements tile looks again once a minute (its "Updated" line; new data when the summary has it)
 
   let H = null;   // emby.js helpers: esc, styles, save, cfg, redraw, mostOn
   const esc = s => (H ? H.esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
@@ -44,13 +59,15 @@
   const fitOf = v => (v === 'fill' || v === 'pan') ? v : 'fit';
   /* From the stored gnw.widgets record: off by default, frequency 1 in 30 like the text cards. */
   function readCfg(c) {
-    const im = (c && c.image) || {}, pt = (c && c.playtime) || {};
+    const im = (c && c.image) || {}, pt = (c && c.playtime) || {}, ac = (c && c.achievements) || {};
     const list = Array.isArray(im.list) ? im.list.filter(w => w && typeof w.id === 'string').slice(0, 20).map(w => ({
       id: w.id, name: String(w.name || '').slice(0, 40), every: clampEvery(w.every, 30), size: sizeOf(w.size), n: Math.max(0, parseInt(w.n, 10) || 0), fit: fitOf(w.fit),
     })) : [];
     return {
       image: { on: im.on === true, list },
       playtime: { on: pt.on === true, every: clampEvery(pt.every, 30), size: sizeOf(pt.size), games: Array.isArray(pt.games) ? pt.games.filter(x => typeof x === 'string').slice(0, 60) : [] },
+      /* Achievements: ON by default (it shows nothing until RetroAchievements is connected), 1 in 30, Medium. */
+      achievements: { on: ac.on !== false, every: clampEvery(ac.every, 30), size: ac.size == null ? '2' : sizeOf(ac.size) },
     };
   }
 
@@ -63,8 +80,42 @@
     const out = [];
     if (cfg.image.on) for (const w of cfg.image.list) out.push(['img:' + w.id, { on: true, every: w.every }, seedOf('img:' + w.id)]);
     if (cfg.playtime.on && cfg.playtime.games.length) out.push(['playtime', { on: true, every: cfg.playtime.every }, seedOf('playtime')]);
+    /* Achievements only with an answer from RetroAchievements for this key; until then the first one is asked for. */
+    if (cfg.achievements && cfg.achievements.on) {
+      const st = raState();
+      if (st === 'ready') out.push(['achievements', { on: true, every: cfg.achievements.every }, seedOf('achievements')]);
+      else if (st === 'none') raKick();
+    }
     return out;
   }
+  const raState = () => { try { return window.CwRA && CwRA.widgetState ? CwRA.widgetState() : 'off'; } catch (e) { return 'off'; } };
+  let _raKickT = 0;
+  function raKick() {
+    try { if (window.CwRA && CwRA.summary) CwRA.summary(); } catch (e) {}
+    /* No answer yet (offline at first, say): ask again now and then, while the page is in front. */
+    if (!_raKickT) _raKickT = setInterval(() => {
+      const c = H ? readCfg(H.raw()) : null;
+      if (!c || !c.achievements.on || raState() !== 'none') { clearInterval(_raKickT); _raKickT = 0; return; }
+      if (!document.hidden) { try { CwRA.summary(); } catch (e) {} }
+    }, 3 * 60 * 1000);
+  }
+  /* The wall is drawn again when the widget may come or go: connected, disconnected, switched,
+     the first answer, a refused key (retroachievements.js sends cw:ra-widget). */
+  let _raRedrawT = 0;
+  function raRedraw() {
+    clearTimeout(_raRedrawT);
+    _raRedrawT = setTimeout(() => {
+      try { if (H && H.rerender) H.rerender(); } catch (e) {}
+      document.querySelectorAll('#w-achievements-card').forEach(paintAchState);
+    }, 250);
+  }
+  window.addEventListener('cw:ra-widget', raRedraw);
+  /* A new summary: every Achievements tile on the page shows it. */
+  window.addEventListener('cw:ra-summary', () => { document.querySelectorAll('#video-grid > .vw-ach').forEach(el => { if (el.__wxFilled) turnAch(el); }); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (document.querySelector('#video-grid > .vw-ach')) { try { CwRA.summary(); } catch (e) {} }   // fresh enough: answered from the kept one
+  });
 
   /* ------------------------------------------------------------ the picture store */
   let _dbp = null, _storeOk = null;
@@ -190,6 +241,16 @@
   /* ------------------------------------------------------------ the tiles */
   const sizeCls = s => s === '4' ? ' vw-size-4 tile-wide' : s === '2' ? ' vw-size-2 tile-wide' : '';
   function tileHTML(key, cfg) {
+    if (key === 'achievements') {
+      if (raState() !== 'ready') return '';
+      const a = cfg.achievements;
+      return `<div class="vgrid-widget vw-wx vw-ach${sizeCls(a.size)}" role="group" tabindex="0" aria-label="Achievements from RetroAchievements.org. Press OK to pick one.">
+      <div class="vw-main vw-ach-main"><i class="vw-sizer" aria-hidden="true"></i>
+        <div class="ach-body ach-waiting"></div>
+      </div>
+      <div class="vw-cap"><div class="vw-title">Achievements</div><div class="vw-sub">RetroAchievements.org</div></div>
+    </div>`;
+    }
     if (key === 'playtime') {
       const p = cfg.playtime;
       /* PLAY TIME (redone 8 Nov): the name in the caption like Weather; inside, three games a
@@ -257,6 +318,7 @@
   function turn(el) {
     if (el.classList.contains('vw-image')) return turnImage(el);
     if (el.classList.contains('vw-playtime')) return turnPlay(el);
+    if (el.classList.contains('vw-ach')) return turnAch(el);
   }
   function note(el, text) { const n = el.querySelector('.wi-note'); if (n) { n.textContent = text; n.hidden = !text; } }
   async function turnImage(el) {
@@ -348,6 +410,117 @@
     });
   }
 
+  /* ------------------------------------------------------------ Achievements: the tile */
+  const fmtN = n => { try { return Number(n || 0).toLocaleString('en-AU'); } catch (e) { return String(n || 0); } };
+  const ptsWord = n => (n === 1 ? ' point' : ' points');
+  function whenText(dt) {
+    if (!dt) return '';
+    const m = Math.round((Date.now() - dt.getTime()) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m === 1 ? '1 minute ago' : m + ' minutes ago';
+    const h = Math.round(m / 60);
+    if (h < 24) return h === 1 ? '1 hour ago' : h + ' hours ago';
+    const d = Math.round(h / 24);
+    if (d < 7) return d === 1 ? 'yesterday' : d + ' days ago';
+    try { return CwRA.dayText(dt); } catch (e) { return dt.toISOString().slice(0, 10); }
+  }
+  const updatedText = t => 'Updated ' + whenText(new Date(t));
+  const raWhen = s => { try { return CwRA.raDate(s); } catch (e) { return null; } };
+  /* A press: the game's drawer when it is in the library, else its page on RetroAchievements.org. */
+  function goAttrs(tileId, gid, label) {
+    if (tileId) return { tag: 'button', attrs: `type="button" data-gid="${esc(tileId)}" aria-label="${esc(label + '. Open it.')}"` };
+    return { tag: 'a', attrs: `href="${esc(CwRA.SITE + '/game/' + (+gid || 0))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(label + '. Not in the library: opens on RetroAchievements.org.')}"` };
+  }
+  const badgeImg = (b, cls) => `<span class="ach-badge${cls ? ' ' + cls : ''}">${b ? `<img alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${esc(CwRA.MEDIA + '/Badge/' + encodeURIComponent(b) + '.png')}" onerror="this.remove()">` : ''}</span>`;
+  const modeTag = x => x.hc ? '<i class="ach-mode ach-hc">Hardcore</i>' : '<i class="ach-mode">Casual</i>';
+  const achLabel = (x, when) => x.t + ', ' + x.p + ptsWord(x.p) + ', ' + (x.hc ? 'hardcore' : 'casual') + ', ' + when + ', in ' + x.game;
+  function latestHTML(x, tileId) {
+    if (!x) return '<div class="ach-latest ach-none"><b>No achievements yet</b><span>Earn one in any emulator RetroAchievements counts, and it shows here.</span></div>';
+    const when = whenText(raWhen(x.at));
+    const g = goAttrs(tileId, x.gid, achLabel(x, when));
+    return `<${g.tag} class="ach-go ach-latest" tabindex="-1" ${g.attrs}>${badgeImg(x.b, 'ach-big')}<span class="ach-tx"><span class="ach-k">Latest achievement</span><b class="ach-name">${esc(x.t)}</b><span class="ach-game">${esc(x.game)}</span><span class="ach-when">${modeTag(x)} ${esc(when)} · ${x.p}${ptsWord(x.p)}</span></span></${g.tag}>`;
+  }
+  function pointsHTML(d) {
+    const all = (d.pts || 0) + (d.soft || 0);
+    return `<div class="ach-pts" role="img" aria-label="${esc(fmtN(all) + ' points: hardcore ' + fmtN(d.pts) + ', casual ' + fmtN(d.soft))}"><span class="ach-pts-n"><b>${fmtN(all)}</b> points</span><span class="ach-pts-s"><i class="ach-hc-t">Hardcore ${fmtN(d.pts)}</i> · Casual ${fmtN(d.soft)}</span></div>`;
+  }
+  function gameHTML(g, tileId, head) {
+    const pct = g.n ? Math.round((g.got / g.n) * 100) : 0;
+    const prog = g.n ? g.got + ' of ' + g.n : 'No achievement set yet';
+    const g2 = goAttrs(tileId, g.id, g.title + ', ' + (g.n ? g.got + ' of ' + g.n + ' achievements earned' : 'no achievement set') + (head ? ', ' + head : ''));
+    const icon = g.icon ? `<img alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${esc(CwRA.mediaUrl(g.icon))}" onerror="this.remove()">` : '';
+    return `<${g2.tag} class="ach-go ach-gm" tabindex="-1" ${g2.attrs}><span class="ach-icon">${icon}</span><span class="ach-tx">${head ? `<span class="ach-k">${esc(head)}</span>` : ''}<b class="ach-name">${esc(g.title)}</b>`
+      + (g.n ? `<span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>` : '')
+      + `<span class="ach-n">${esc(prog)}${g.cn ? ' · ' + esc(g.cn) : ''}</span></span></${g2.tag}>`;
+  }
+  function rowHTML(x, tileId) {
+    const when = whenText(raWhen(x.at));
+    const g = goAttrs(tileId, x.gid, achLabel(x, when));
+    return `<${g.tag} class="ach-go ach-row${x.hc ? ' ach-row-hc' : ''}" tabindex="-1" ${g.attrs}>${badgeImg(x.b, 'ach-sm')}<span class="ach-tx"><b class="ach-name">${esc(x.t)}</b><span class="ach-game">${esc(x.game)} · ${esc(when)}</span></span><span class="ach-p">${x.p}</span></${g.tag}>`;
+  }
+  /* Last played: "Playing now" within 20 minutes, else when. */
+  const playHead = g => { const dt = raWhen(g.last); if (!dt) return 'Last played'; return Date.now() - dt.getTime() < 20 * 60000 ? 'Playing now' : 'Last played ' + whenText(dt); };
+  async function turnAch(el) {
+    const R = window.CwRA, body = el.querySelector('.ach-body');
+    if (!R || !body || !R.kept) return;
+    wireAchTile(el);
+    const s = R.kept();
+    if (!s) return;   // gone (disconnected, refused): the wall draws without this tile (cw:ra-widget)
+    try { R.summary(); } catch (e) {}   // asks only when the kept one is older than 12 minutes; cw:ra-summary repaints
+    const sub = el.querySelector('.vw-sub');
+    if (sub) sub.textContent = updatedText(s.t);
+    if (el.__achT === s.t) return;
+    /* Not while someone is choosing: nothing moves under the finger or the highlight. */
+    if (el.__achT && (el.contains(document.activeElement) && document.activeElement !== el || el.matches(':hover'))) return;
+    const d = s.d, size = el.classList.contains('vw-size-4') ? 'L' : el.classList.contains('vw-size-2') ? 'M' : 'S';
+    const consoleOf = new Map(d.games.map(g => [g.id, g.c]));
+    const want = new Map();
+    let games = d.games.slice(0, 1);
+    if (size === 'L') { const a = d.games.filter(g => g.n && g.got < g.n), b = d.games.filter(g => g.n && !a.includes(g)); games = a.concat(b).slice(0, 3); }
+    const achs = size === 'L' ? d.ach.slice(0, 4) : d.ach.slice(0, 1);
+    for (const g of games) want.set(g.id, g.c);
+    for (const x of achs) if (consoleOf.has(x.gid)) want.set(x.gid, consoleOf.get(x.gid));
+    const ids = new Map();
+    await Promise.all([...want].map(([gid, c]) => R.tileFor(gid, c).then(id => ids.set(gid, id), () => ids.set(gid, null))));
+    if (!el.isConnected) return;
+    const first = achs[0];
+    let h = '';
+    if (size === 'S') h = latestHTML(first, first && ids.get(first.gid));
+    else if (size === 'M') {
+      h = `<div class="ach-col ach-col-a">${latestHTML(first, first && ids.get(first.gid))}</div><div class="ach-col ach-col-b">${pointsHTML(d)}${games[0] ? gameHTML(games[0], ids.get(games[0].id), playHead(games[0])) : '<div class="ach-empty">No games played yet.</div>'}</div>`;
+    } else {
+      h = pointsHTML(d)
+        + `<div class="ach-sect"><span class="ach-h">Latest</span>${achs.length ? achs.map(x => rowHTML(x, ids.get(x.gid))).join('') : '<div class="ach-empty">No achievements yet.</div>'}</div>`
+        + `<div class="ach-sect"><span class="ach-h">In progress</span>${games.length ? games.map(g => gameHTML(g, ids.get(g.id))).join('') : '<div class="ach-empty">No games in progress.</div>'}</div>`;
+    }
+    body.className = 'ach-body ach-' + size;
+    body.innerHTML = h;
+    el.__achT = s.t;
+  }
+  function wireAchTile(el) {
+    if (el.__achWired) return;
+    el.__achWired = 1;
+    el.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('button.ach-go');
+      if (b && el.contains(b)) { e.preventDefault(); e.stopPropagation(); openGame(b.dataset.gid); return; }
+      const a = e.target.closest && e.target.closest('a.ach-go');
+      if (a && el.contains(a)) e.stopPropagation();   // the link opens its own new tab
+    });
+    el.addEventListener('keydown', e => {
+      const rows = [...el.querySelectorAll('.ach-go')], i = rows.indexOf(document.activeElement);
+      const k = e.key;
+      if (i < 0) {
+        /* OK on the tile steps in, to its first item. */
+        if (document.activeElement === el && (k === 'Enter' || k === ' ') && rows.length) { e.preventDefault(); e.stopPropagation(); rows[0].focus(); }
+        return;
+      }
+      if (k === 'Enter' || k === ' ') { e.preventDefault(); e.stopPropagation(); rows[i].click(); return; }
+      if (k === 'ArrowDown' || k === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); (rows[i + (k === 'ArrowDown' ? 1 : -1)] || el).focus(); return; }
+      /* Back, Left or Right: out to the tile, so the wall's own arrows go on from there. */
+      if (k === 'Escape' || k === 'Esc' || k === 'GoBack' || k === 'BrowserBack' || k === 'XF86Back' || k === 'Backspace' || k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); el.focus(); }
+    });
+  }
+
   /* ------------------------------------------------------------ styles */
   function ensureStyles() {
     if (document.getElementById('cw-wx-styles')) return;
@@ -406,6 +579,62 @@
       @keyframes wi-pan2 { from { transform:scale(1.04) translate(2%, 1%); } to { transform:scale(1.16) translate(-2.5%, -1%); } }
       @keyframes wi-pan3 { from { transform:scale(1.16) translate(-2%, 1.5%); } to { transform:scale(1.04) translate(1.5%, -1.5%); } }
       @media (prefers-reduced-motion: reduce) { #video-grid .vw-img-main .wi-pic.wi-pan { animation:none; } }
+      /* Achievements (23 Nov 2026): the inside dark like the other widgets, the accent on the bars */
+      #video-grid .vw-ach-main { background:radial-gradient(120% 85% at 50% 22%, #1f2536, #0b0e15 74%); }
+      #video-grid .vw-ach-main .ach-body { position:absolute; inset:0; display:flex; flex-direction:column; gap:8px; padding:12px; color:#fff; overflow:hidden; }
+      #video-grid .vw-ach-main .ach-go { display:flex; align-items:center; gap:10px; min-width:0; padding:8px 10px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.04); color:#fff; font:inherit; text-align:left; text-decoration:none; cursor:pointer; transition:background .15s ease, border-color .15s ease; }
+      #video-grid .vw-ach-main .ach-go:hover, #video-grid .vw-ach-main .ach-go:focus-visible { background:rgba(var(--accent-rgb),.18); border-color:rgba(var(--accent-rgb),.8); outline:none; }
+      #video-grid .vw-ach-main .ach-go:focus-visible { box-shadow:0 0 0 2px var(--accent); }
+      #video-grid .vw-ach-main .ach-tx { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; gap:2px; line-height:1.3; }
+      #video-grid .vw-ach-main .ach-k, #video-grid .vw-ach-main .ach-h { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#d7dce6; }
+      #video-grid .vw-ach-main .ach-name { font-size:13.5px; font-weight:800; color:#fff; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+      #video-grid .vw-ach-main .ach-game, #video-grid .vw-ach-main .ach-n { font-size:11.5px; color:#c9cfdb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+      #video-grid .vw-ach-main .ach-when { font-size:11.5px; color:#c9cfdb; }
+      #video-grid .vw-ach-main .ach-mode { font-style:normal; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:20px; border:1px solid rgba(255,255,255,.3); color:#e8ecf3; margin-right:2px; }
+      #video-grid .vw-ach-main .ach-mode.ach-hc { border-color:#d9a520; color:#f0c040; }
+      #video-grid .vw-ach-main .ach-hc-t { font-style:normal; color:#f0c040; }
+      #video-grid .vw-ach-main .ach-badge { position:relative; flex:none; width:44px; height:44px; border-radius:9px; overflow:hidden; background:rgba(var(--accent-rgb),.22); border:1px solid rgba(255,255,255,.14); }
+      #video-grid .vw-ach-main .ach-badge img { display:block; width:100%; height:100%; object-fit:cover; }
+      #video-grid .vw-ach-main .ach-badge.ach-sm { width:34px; height:34px; border-radius:7px; }
+      #video-grid .vw-ach-main .ach-row-hc .ach-badge { border-color:#d9a520; }
+      #video-grid .vw-ach-main .ach-icon { flex:none; width:40px; height:40px; border-radius:8px; overflow:hidden; background:rgba(255,255,255,.08); }
+      #video-grid .vw-ach-main .ach-icon img { display:block; width:100%; height:100%; object-fit:cover; }
+      #video-grid .vw-ach-main .ach-bar { display:block; height:6px; margin:3px 0 1px; border-radius:6px; overflow:hidden; background:rgba(255,255,255,.16); }
+      #video-grid .vw-ach-main .ach-bar i { display:block; height:100%; background:var(--accent); border-radius:6px; }
+      #video-grid .vw-ach-main .ach-pts { display:flex; flex-direction:column; gap:1px; padding:2px 2px 0; }
+      #video-grid .vw-ach-main .ach-pts-n { font-size:12px; color:#c9cfdb; font-weight:700; }
+      #video-grid .vw-ach-main .ach-pts-n b { font-size:22px; font-weight:800; color:#fff; letter-spacing:-.01em; margin-right:3px; }
+      #video-grid .vw-ach-main .ach-pts-s { font-size:11px; color:#c9cfdb; }
+      #video-grid .vw-ach-main .ach-p { flex:none; font-size:12px; font-weight:800; color:#fff; }
+      #video-grid .vw-ach-main .ach-empty, #video-grid .vw-ach-main .ach-none span { font-size:12px; line-height:1.45; color:#c9cfdb; }
+      #video-grid .vw-ach-main .ach-none { display:flex; flex-direction:column; gap:6px; justify-content:center; text-align:center; flex:1 1 auto; padding:8px; }
+      #video-grid .vw-ach-main .ach-none b { font-size:14px; }
+      #video-grid .vw-ach-main .ach-sect { display:flex; flex-direction:column; gap:6px; min-height:0; }
+      #video-grid .vw-ach-main .ach-h { padding:2px 2px 0; }
+      /* Small: the latest achievement, its badge large in the middle (Medium's left half the same) */
+      #video-grid .vw-ach-main .ach-S .ach-latest, #video-grid .vw-ach-main .ach-M .ach-latest { flex:1 1 auto; flex-direction:column; justify-content:center; text-align:center; gap:10px; padding:12px; }
+      #video-grid .vw-ach-main .ach-S .ach-latest .ach-tx, #video-grid .vw-ach-main .ach-M .ach-latest .ach-tx { align-items:center; flex:0 1 auto; max-width:100%; }
+      #video-grid .vw-ach-main .ach-big { width:min(46%, 112px); height:auto; aspect-ratio:1; border-radius:14px; box-shadow:0 8px 22px rgba(0,0,0,.5); }
+      #video-grid .vw-ach-main .ach-S .ach-name, #video-grid .vw-ach-main .ach-M .ach-latest .ach-name { font-size:15px; }
+      #video-grid .vw-ach-main .ach-S .ach-game, #video-grid .vw-ach-main .ach-M .ach-latest .ach-game { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+      /* Medium: two halves side by side (one column: one under the other) */
+      #video-grid .vw-ach-main .ach-M { flex-direction:row; }
+      #video-grid .vw-ach-main .ach-col { flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:8px; }
+      #video-grid .vw-ach-main .ach-col-b { justify-content:center; }
+      #video-grid .vw-ach-main .ach-M .ach-gm .ach-icon { width:56px; height:56px; border-radius:10px; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-M { flex-direction:column; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-M .ach-col-a { flex:1 1 auto; min-height:0; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-M .ach-col-b { flex:0 0 auto; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-M .ach-latest { gap:6px; padding:8px; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-M .ach-big { width:min(34%, 96px); }
+      /* Large: points, then the latest four, then up to three games (one column: three and two) */
+      #video-grid .vw-ach-main .ach-L { gap:10px; padding:14px; }
+      #video-grid .vw-ach-main .ach-L .ach-pts-n b { font-size:26px; }
+      #video-grid .vw-ach-main .ach-L .ach-go { padding:7px 10px; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-L { gap:6px; padding:10px; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-L .ach-sect > .ach-row:nth-child(n+5), #video-grid.vgrid-1col .vw-ach-main .ach-L .ach-sect > .ach-gm:nth-child(n+4) { display:none; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-L .ach-go { padding:5px 8px; }
+      #video-grid.vgrid-1col .vw-ach-main .ach-L .ach-pts-n b { font-size:20px; }
       /* Settings */
       .aw-card .wx-list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
       .aw-card .wx-item { border:1px solid var(--line); border-radius:10px; padding:12px; }
@@ -432,9 +661,9 @@
     const S = H.styles, num = S.inp.replace('width:100%;', 'width:64px;') + ' text-align:center;';
     return `<div><label style="${S.lbl}" for="${id}">Frequency</label><div style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted);">1 in <input id="${id}" type="number" min="3" max="200" value="${v}" style="${num}"> tiles</div></div>`;
   }
-  function sizeHTML(id, v) {
+  function sizeHTML(id, v, list) {
     const S = H.styles;
-    return `<div><label style="${S.lbl}" for="${id}">Size</label><select id="${id}" style="${S.inp} width:auto; min-width:170px;">${SIZES.map(([k, t]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
+    return `<div><label style="${S.lbl}" for="${id}">Size</label><select id="${id}" style="${S.inp} width:auto; min-width:170px;">${(list || SIZES).map(([k, t]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
   }
   function imageItemHTML(w, i) {
     const S = H.styles;
@@ -471,9 +700,20 @@
         <div class="wx-results" data-wx="results" role="group" aria-label="Games to add"></div>
       </div>`;
   }
+  function achOptsHTML(cfg) {
+    const a = cfg.achievements;
+    return `<div class="aw-opts">${freqHTML('w-achievements-every', a.every)}${sizeHTML('w-achievements-size', a.size, ACH_SIZES)}</div>
+      <p class="wx-note">Your RetroAchievements.org account among the tiles. Small: your latest achievement. Medium: that, your points and the game you played last with its progress. Large: your latest achievements and the games you are working through. Press a game to open it. A game that is not in the library opens on RetroAchievements.org.</p>
+      <p class="wx-note">Shown only while RetroAchievements is connected and switched on in Settings, Media and content, Achievements. It looks for news at most every 12 minutes, and shows what it last saw when RetroAchievements cannot be reached.</p>
+      <p class="wx-warn" data-wx="ra-state" hidden></p>`;
+  }
   function settingsHTML(cfgAll) {
     const cfg = readCfg(cfgAll);
     return `
+          <div class="aw-card" id="w-achievements-card">
+            <div class="aw-head"><span class="aw-name">Achievements</span>${sw('w-achievements-on', cfg.achievements.on)}</div>
+            <div id="w-achievements-opts" ${cfg.achievements.on ? '' : 'style="display:none"'}>${achOptsHTML(cfg)}</div>
+          </div>
           <div class="aw-card" id="w-image-card">
             <div class="aw-head"><span class="aw-name">Image</span>${sw('w-image-on', cfg.image.on)}</div>
             <div id="w-image-opts" ${cfg.image.on ? '' : 'style="display:none"'}>${imageOptsHTML(cfg)}</div>
@@ -494,6 +734,29 @@
     const imgCard = root.querySelector('#w-image-card'), ptCard = root.querySelector('#w-playtime-card');
     if (imgCard) wireImage(imgCard);
     if (ptCard) wirePlay(ptCard);
+    const acCard = root.querySelector('#w-achievements-card');
+    if (acCard) wireAch(acCard);
+  }
+  function saveAch(patch) { H.save({ achievements: Object.assign({}, cur().achievements, patch) }); }
+  /* Why the tile is not on the wall, in a line, when it is not. */
+  function paintAchState(card) {
+    const w = card && card.querySelector('[data-wx="ra-state"]'); if (!w) return;
+    const st = raState(), R = window.CwRA, conn = !!(R && R.connected && R.connected());
+    const t = st === 'ready' ? ''
+      : st === 'bad' ? 'RetroAchievements did not accept the key, so the tile is not shown. Check it in Settings, Media and content, Achievements.'
+      : st === 'none' ? 'Waiting for the first answer from RetroAchievements. The tile appears once there is one.'
+      : conn ? 'Achievements is switched off in Settings, Media and content, so the tile is not shown.'
+      : 'RetroAchievements is not connected, so the tile is not shown. Connect it in Settings, Media and content, Achievements.';
+    w.textContent = t; w.hidden = !t;
+  }
+  function wireAch(card) {
+    const on = card.querySelector('#w-achievements-on'), opts = card.querySelector('#w-achievements-opts');
+    on.addEventListener('change', () => { opts.style.display = on.checked ? '' : 'none'; saveAch({ on: on.checked }); });
+    const every = opts.querySelector('#w-achievements-every'), size = opts.querySelector('#w-achievements-size');
+    every.addEventListener('change', () => { const v = clampEvery(every.value, 30); every.value = v; saveAch({ every: v }); });
+    size.addEventListener('change', () => saveAch({ size: sizeOf(size.value) }));
+    paintAchState(card);
+    card.addEventListener('focusin', () => paintAchState(card));
   }
   function wireImage(card) {
     const on = card.querySelector('#w-image-on'), opts = card.querySelector('#w-image-opts');

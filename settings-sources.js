@@ -38,7 +38,7 @@
 (function () {
   'use strict';
   if (window.GnwSources) return;
-  const BUILD = '20261104-q1a';
+  const BUILD = '20261121-raphasea';
 
   const ICON = {
     emby: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 5 2.5-5 2.5z"/></svg>',
@@ -47,6 +47,7 @@
     stories: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.2 5 7.2 4.5 3.5 5v13.5c3.7-.5 6.7 0 8.5 1.5 1.8-1.5 4.8-2 8.5-1.5V5c-3.7-.5-6.7 0-8.5 1.5z"/><path d="M12 6.5V20"/></svg>',
     pack: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M10 9h1M10 12h1M10 15h1M10 18h1"/></svg>',
     file: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m10 11.5 5 3-5 3z"/></svg>',
+    ra: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.5M17 6h2.5a2.5 2.5 0 0 1-2.6 3.5"/></svg>',
     host: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10M12 16v4"/><path d="m9 8-2 2 2 2M15 8l2 2-2 2"/></svg>',
   };
   /* The site's source on GitHub, for "Host it yourself" (28 Oct). README names no
@@ -66,6 +67,10 @@
     /* Stories (7 Nov): for 16-Bit sponsors, read from GitHub with their own sign-in (stories.js). This tile holds no story content. */
     { id: 'stories', name: 'Stories', kind: 'Sign in with GitHub', content: 'Stories', where: 'GitHub',
       provides: 'Stories for 16-Bit sponsors, to read and listen to here. They stay on GitHub, and this site reads them with your own sign-in.' },
+    /* RetroAchievements, read only (21 Nov 2026, seat RAPHASEA; retroachievements.js draws its panel and keeps the key in
+       this browser only). Set up with a user name and Web API key; the switch hides achievements from the drawers. */
+    { id: 'ra', name: 'Achievements', kind: 'RetroAchievements', content: 'Achievements', where: 'RetroAchievements.org',
+      provides: 'The achievements you earned on RetroAchievements.org, shown in each game\'s drawer: what you earned, your points and every badge in the set. You earn them in emulators that support RetroAchievements, for example RetroArch; they are not earned on this site. Connect with your RetroAchievements user name and Web API key.' },
     /* 28 Oct ("bridging the gap between what we support and what's in the
        interface"): a game file played at once from memory (play-file.js), and how to run a copy
        of the site with the firmware folder (instructions only, from README "Setting it up"). */
@@ -163,7 +168,7 @@
       /* The on/off switch of a set-up source (28 Oct): the look of the Systems strip's
          Movies and Widgets switches (emby.js .vgsw), a button of its own in the tile's top right. */
       .src-grid > div { position: relative; }
-      .src-tile[data-src="emby"], .src-tile[data-src="jellyfin"], .src-tile[data-src="cws"], .src-tile[data-src="pack"] { padding-right: 60px; }
+      .src-tile[data-src="emby"], .src-tile[data-src="jellyfin"], .src-tile[data-src="cws"], .src-tile[data-src="pack"], .src-tile[data-src="ra"] { padding-right: 60px; }
       .src-tile[data-off="1"] .src-ico, .src-tile[data-off="1"] .src-main, .src-tile[data-off="1"] .src-facts { opacity: .55; }
       .src-tile[data-off="1"] { border-color: var(--line); background: rgba(127,127,127,.05); }
       .src-tile[data-off="1"] .src-state { color: var(--muted); border-color: var(--line); background: none; }
@@ -180,7 +185,7 @@
       body.gnw-tv .src-sw::before { width: 46px; height: 26px; left: 5px; border-radius: 13px; }
       body.gnw-tv .src-sw .src-sw-knob { width: 18px; height: 18px; top: 8px; left: 9px; }
       body.gnw-tv .src-sw[aria-checked="true"] .src-sw-knob { left: 29px; }
-      body.gnw-tv .src-tile[data-src="emby"], body.gnw-tv .src-tile[data-src="jellyfin"], body.gnw-tv .src-tile[data-src="cws"], body.gnw-tv .src-tile[data-src="pack"] { padding-right: 72px; }
+      body.gnw-tv .src-tile[data-src="emby"], body.gnw-tv .src-tile[data-src="jellyfin"], body.gnw-tv .src-tile[data-src="cws"], body.gnw-tv .src-tile[data-src="pack"], body.gnw-tv .src-tile[data-src="ra"] { padding-right: 72px; }
       @media (prefers-reduced-motion: reduce) { .src-sw::before, .src-sw .src-sw-knob { transition: none; } }
       /* Play a file, Host it yourself (28 Oct). */
       .src-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
@@ -306,7 +311,7 @@
       top = document.createElement('div');
       top.id = 'src-top';
       top.innerHTML = '<h3 class="src-h" id="src-h-sources">Sources</h3>' +
-        '<p class="src-intro">Where the site gets your films, series and games. Choose one to set it up, or to change it once it is set up.</p>' +
+        '<p class="src-intro">Where the site gets your films, series, games and achievements. Choose one to set it up, or to change it once it is set up.</p>' +
         '<div class="src-grid" role="list" aria-labelledby="src-h-sources">' + SOURCES.map(s =>
           '<div role="listitem"><button type="button" class="src-tile" data-src="' + s.id + '" id="src-tile-' + s.id + '">' +
             '<span class="src-ico">' + ICON[s.id] + '</span>' +
@@ -351,6 +356,7 @@
         '</div>' +
         '<div class="src-body" data-for="pack" hidden></div>' +
         '<div class="src-body" data-for="stories" hidden><p class="src-note">Stories are for <a href="https://github.com/sponsors/crystalworlds" target="_blank" rel="noopener noreferrer">16-Bit sponsors</a>.</p></div>' +
+        '<div class="src-body" data-for="ra" hidden></div>' +
         '<div class="src-body" data-for="file" hidden>' + fileBodyHTML() + '</div>' +
         '<div class="src-body" data-for="host" hidden>' + hostBodyHTML() + '</div>' +
         '<div class="src-foot">' +
@@ -423,7 +429,7 @@
      to log out or disconnect a source I want but don't want right now"). A set-up source shows a
      switch in its tile's top right corner; off, it stays set up (sign-in, addresses, vault code,
      pack all kept) and the site reads it as not set up (source-switch.js). */
-  const SWITCHABLE = { emby: 1, jellyfin: 1, cws: 1, pack: 1 };
+  const SWITCHABLE = { emby: 1, jellyfin: 1, cws: 1, pack: 1, ra: 1 };
   const switchOn = id => { try { return !window.CwSources || window.CwSources.on(id); } catch (_) { return true; } };
   function flip(id) {
     if (!window.CwSources || !SWITCHABLE[id]) return;
@@ -459,6 +465,7 @@
       return { on, off, detail: off ? 'Switched off' : on ? 'Open' : '' };
     }
     if (id === 'stories') return window.CwStories ? window.CwStories.tileState() : { on: false, detail: '' };
+    if (id === 'ra') return window.CwRA ? window.CwRA.tileState() : { on: false, detail: '' };
     // Nothing to set up on these two: they say what they are instead.
     if (id === 'file') return { on: false, text: (window.CwPlayFile && window.CwPlayFile.playing()) ? 'Playing' : 'Ready' };
     if (id === 'host') return { on: false, text: 'Steps to follow' };
@@ -538,6 +545,7 @@
       if (isMedia(openId)) { const b = document.getElementById('emby-submit'); label = b ? b.textContent.trim() : 'Sign in'; disabled = !b || b.disabled; }
       else if (openId === 'pack') { const b = document.getElementById('content-pack-btn'); label = b ? b.textContent.trim() : 'Open content pack (.zip)…'; disabled = !window.__GNW_PACK; }
       else if (openId === 'stories') label = 'Sign in with GitHub';
+      else if (openId === 'ra') { label = 'Connect'; disabled = !window.CwRA; }
     }
     if (prim) {
       // The other media server's tile while one is signed in shows its own Sign out, no form.
@@ -585,6 +593,7 @@
     openId = id;
     if (id !== 'cws') cwsBusy = false;
     if (id === 'stories' && window.cwStoriesLoad) window.cwStoriesLoad(m => m.drawPanel());
+    if (id === 'ra' && window.CwRA) window.CwRA.onOpen();
     gather();
     render();
     if (id === 'pack' && window.__GNW_PACK && typeof window.gnwRenderContentStatus === 'function') { try { window.gnwRenderContentStatus(); } catch (_) {} }
@@ -618,6 +627,7 @@
     }
     if (openId === 'pack') { if (typeof window.gnwContentPackToggle === 'function') window.gnwContentPackToggle(); return; }
     if (openId === 'stories') { if (window.cwStoriesLoad) window.cwStoriesLoad(m => m.signIn()); return; }
+    if (openId === 'ra') { if (window.CwRA) window.CwRA.connect(); return; }
     if (openId === 'cws') {
       const inp = document.getElementById('src-cws-addr'), msg = document.getElementById('src-cws-msg');
       if (!window.CWS || typeof window.CWS.directConnect !== 'function') { msg.textContent = 'The game server part of the site has not loaded. Reload the page and try again.'; msg.style.color = '#f08a5d'; return; }
